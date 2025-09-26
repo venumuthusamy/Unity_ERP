@@ -1,0 +1,78 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <!-- User List -->
+    <section class="users-list-wrapper">
+      <div class="card">
+        <div class="row">
+          <div class="col-md-6 col-12" >
+            <h4 class="card-text" style="margin-left: 0.85rem; margin-top: 0.75rem;" >Approval List</h4>
+            <div class="d-flex justify-content-between align-items-center m-1" >
+
+              <label class="d-flex align-items-center">Show
+                <select class="form-control mx-25">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                entries</label>
+                
+            </div>
+          </div>
+          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end" >
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+             
+              <label class="d-flex align-items-center ml-1 ml-md-0">Search:<input [(ngModel)]="searchValue"
+                  name="searchValue" type="search" class="form-control ml-25" (keyup)="filterUpdate($event)"
+                  (search)="filterUpdate($event)" /></label>
+              <button  id="Add" class="btn btn-primary m-1" rippleEffect>
+                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
+                  class="d-none d-sm-inline-block">Add</span>
+              </button>
+
+            </div>
+          </div>
+        </div>
+        <ngx-datatable [rows]="rows" [rowHeight]="50" class="bootstrap core-bootstrap " [limit]="selectedOption"
+          [columnMode]="ColumnMode.force" [headerHeight]="50" [footerHeight]="50" [scrollbarH]="true"
+          [reorderable]="true" [scrollbarH]="true">
+
+          <ngx-datatable-column name="Name" prop="orgName">
+            <ng-template let-row="row" let-name="value" ngx-datatable-cell-template>
+              <div class="text-primary  d-flex align-items-center ">
+
+                <div class="avatar mr-1 ml-0" [ngClass]="getRandomColor(row.id)"><div class="avatar-content">{{ getInitial(row.orgName) }}</div></div>
+
+
+                <a class="font-weight-bold">{{ row.orgName }}</a>
+
+              </div>
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Email" prop="emailAddress"></ngx-datatable-column>
+          <ngx-datatable-column name="Contact Number" prop="phoneNo"></ngx-datatable-column>
+          <ngx-datatable-column name="Contact Name" prop="contactName"></ngx-datatable-column>
+          <ngx-datatable-column name="Organization Status" prop="isActive" [width]="200">
+            <ng-template let-isActive="value" let-row="row" ngx-datatable-cell-template>
+              <div class="badge badge-pill text-center" style="cursor: pointer;" [ngClass]="{
+                        'badge-light-danger': isActive == false,
+                        'badge-light-success': isActive == true 
+                      }">
+                {{ isActive == false ? 'InActive': 'Active' }}</div>
+            </ng-template>
+          </ngx-datatable-column>
+        </ngx-datatable>
+      </div>
+    </section>
+    <!--/ User List -->
+  </div>
+</div>
+
+<!--Add Certificate Sidebar -->
+<!-- <core-sidebar class="modal modal-slide-in sidebar-todo-modal fade" name="app-organization-add"
+  overlayClass="modal-backdrop">
+  <app-organization-add (addOrganizationChange)="listenForChildChange($event)"
+    [isAdditionalFieldAdded]="isAdditionalFieldAdded"></app-organization-add>
+</core-sidebar> -->
+<!--Add Certificate Sidebar -->

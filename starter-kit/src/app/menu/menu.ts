@@ -3,35 +3,53 @@ import { CoreMenu } from '@core/types'
 export const menu: CoreMenu[] = [
   {
     id: 'home',
-    title: 'Home',
+    title: 'Dashboard',
     translate: 'MENU.HOME',
     type: 'item',
     icon: 'home',
     url: 'home'
   },
+ 
+     {
+    id: 'master',
+    title: 'Master',
+    type: 'collapsible',
+    icon: 'settings',
+    children: [
+    {
+  id: 'approval-level',
+  title: 'Approval Level',
+  type: 'item',
+  icon: 'circle',
+  url: '/master/approval-level'   // ✅ must start with /master
+},
+
+      {
+        id: 'cities',
+        title: 'Cities',
+        type: 'item',
+        icon: 'circle',
+        url: '/master/cities' 
+      },
+    ]
+    
+  },
   {
-    id: 'sample',
-    title: 'Sample',
-    translate: 'MENU.SAMPLE',
-    type: 'collapsible', 
+    id: 'purchase',
+    title: 'Purchase',
+    translate: 'MENU.PURCHASE',
+    type: 'collapsible',
     icon: 'file',
     children: [
       {
-        id: 'sample-sub1',
-        title: 'Sub Item 1',
-        translate: 'MENU.SAMPLE_SUB1',
+        id: 'PR',
+        title: 'PR',
+        translate: 'MENU.PURCHASE.PR',
         type: 'item',
         icon: 'circle',
-        url: 'sample/sub1'
-      },
-      {
-        id: 'sample-sub2',
-        title: 'Sub Item 2',
-        translate: 'MENU.SAMPLE_SUB2',
-        type: 'item',
-        icon: 'circle',
-        url: 'sample/sub2'
+        url: 'purchase/list-PurchaseRequest'
       }
+   
     ]
   }
 ];

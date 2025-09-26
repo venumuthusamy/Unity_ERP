@@ -7,7 +7,7 @@ import { HttpClientModule } from '@angular/common/http';
 import 'hammerjs';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule } from '@ngx-translate/core';
-import { ToastrModule } from 'ngx-toastr'; // For auth after login toast
+import { ToastrModule } from 'ngx-toastr';
 
 import { CoreModule } from '@core/core.module';
 import { CoreCommonModule } from '@core/common.module';
@@ -18,11 +18,22 @@ import { coreConfig } from 'app/app-config';
 import { AppComponent } from 'app/app.component';
 import { LayoutModule } from 'app/layout/layout.module';
 import { SampleModule } from 'app/main/sample/sample.module';
+import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 
 const appRoutes: Routes = [
   {
     path: 'pages',
-    loadChildren: () => import('./main/pages/pages.module').then(m => m.PagesModule)
+    loadChildren: () =>
+      import('./main/pages/pages.module').then(m => m.PagesModule)
+  },
+  {
+    path: 'master',
+    loadChildren: () =>
+      import('./main/master/master.module').then(m => m.MasterModule)  // ✅ lazy loading only
+  },
+  {
+    path: 'purchase',
+    loadChildren: () => import('./main/purchase/purchase.module').then(m => m.PurchaseModule)
   },
   {
     path: '',
@@ -31,7 +42,7 @@ const appRoutes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '/pages/miscellaneous/error' //Error 404 - Page not found
+    redirectTo: '/pages/miscellaneous/error'
   }
 ];
 
@@ -41,27 +52,22 @@ const appRoutes: Routes = [
     BrowserModule,
     BrowserAnimationsModule,
     HttpClientModule,
+    NgxDatatableModule,
     RouterModule.forRoot(appRoutes, {
-      scrollPositionRestoration: 'enabled', // Add options right here
+      scrollPositionRestoration: 'enabled',
       relativeLinkResolution: 'legacy'
     }),
     TranslateModule.forRoot(),
-
-    //NgBootstrap
     NgbModule,
     ToastrModule.forRoot(),
-
-    // Core modules
     CoreModule.forRoot(coreConfig),
     CoreCommonModule,
     CoreSidebarModule,
     CoreThemeCustomizerModule,
-
-    // App modules
     LayoutModule,
     SampleModule
+    // ❌ Removed MasterModule from here
   ],
-
   bootstrap: [AppComponent]
 })
 export class AppModule {}
