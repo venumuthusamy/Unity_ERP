@@ -1,0 +1,94 @@
+<div class="row">
+  <div class="col-lg-6 col-md-6">
+    <div class="card card-transaction">
+
+      <div class="card-header">
+        <div>
+          <h4 class="card-title">Mode List</h4>
+        </div>
+        <button  class="btn btn-primary" (click)="createMode()">Create</button>
+      </div>
+
+      <div class="card-body">
+        <ul class="list-group">
+          <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let item of modeList">
+            <div class="avatar bg-light-primary mr-2 align-items-center avatar-lg">
+              <div class="avatar-content">
+                <!-- <i *ngIf="item.modeName === 'Training'" class="fas fa-chalkboard-teacher cursor-pointer"
+                  style="width: 2rem; font-size: 1.5rem; height: 1.5rem;"></i> -->
+                <!-- <i *ngIf="item.modeName === 'Assessment'" class="fas fa-clipboard-list cursor-pointer"
+                  style="width: 2rem; font-size: 1.5rem; height: 1.5rem;"></i> -->
+                <i [ngClass]="item.modeName === 'Assessment' ? 'fas fa-clipboard-list cursor-pointer' : 
+                          item.modeName === 'Training' ? 'fas fa-chalkboard-teacher cursor-pointer' : 
+                          'fas fa-calendar cursor-pointer'" style="width: 2rem; font-size: 1.5rem; height: 1.5rem;">
+                </i>
+              </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center w-100">
+              <div class="m-l-16 m-r-auto">
+                <h6 class="mat-subtitle-1 f-s-16 f-w-600">{{ item.modeName }}</h6>
+                <span class="mat-body-1">{{ item.description }}</span>
+              </div>
+              <div class="mt-md-0 mt-1 d-flex justify-content-md-end">
+                <button *ngIf="ISUPDATE" type="button" class="btn btn-primary btn-sm"
+                  (click)="getModeDetails(item.id, item.isUsed)">
+                  <i class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span [data-feather]="'edit'"
+                    [class]="'cursor-pointer'"></span>
+                </button>
+                <button *ngIf="ISDELETE" type="button" class="btn btn-danger ml-1 btn-sm align-items-md-center"
+                  (click)="deleteMode(item.id,item.isUsed)" [disabled]="isEditMode">
+                  <i class="d-sm-none d-inline-block"></i><span [data-feather]="'trash'"
+                    [class]="'cursor-pointer'"></span>
+                </button>
+
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-12 col-xs-12 col-lg-6 col-md-6 " *ngIf="isDisplay">
+    <div class="card ">
+      <div class="card-header">
+        <h4 class="card-title">{{modeHeader}}</h4>
+      </div>
+      <div class="card-body">
+        <form class="form" (ngSubmit)="ModeForm.form.valid" #ModeForm="ngForm">
+          <div class="form-group">
+            <label for="first-name-column">Mode Name</label>
+            <input type="text" id="first-name-column" class="form-control" placeholder="Mode Name" name="fname-column"
+              [(ngModel)]="modeName" [maxlength]="50" required />
+
+          </div>
+          <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea type="text" class="form-control" id="description" placeholder="Description" name="description"
+              [(ngModel)]="description" required></textarea>
+
+          </div>
+          <div class="form-group">
+            <div class=" form-group custom-control  custom-switch" style="margin-left:7px;">
+              <p class="mb-50">Mode Status <span class="text-muted">( Active / InActive)</span></p>
+              <input type="checkbox" class="custom-control-input" [(ngModel)]="modeStatus" name="modestatus"
+                id="modestatus" />
+              <label class="custom-control-label" for="modestatus"></label>
+
+            </div>
+
+          </div>
+          <div class="row justify-content-start p-1">
+
+            <button type="submit" rippleEffect class="btn btn-primary mr-1" [disabled]="!ModeForm.form.valid"
+              (click)="saveMode()">Submit</button>
+            <button type="cancel" rippleEffect class="btn btn-danger mr-1" (click)="cancel()">Cancel</button>
+            <button type="reset" *ngIf="resetButton" rippleEffect class="btn btn-secondary"
+              (click)="reset()">Reset</button>
+
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
