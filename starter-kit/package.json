@@ -32,6 +32,7 @@
     "@circlon/angular-tree-component": "11.0.4",
     "@ctrl/ngx-csv": "4.0.0",
     "@ctrl/ngx-rightclick": "4.0.0",
+    "@fortawesome/fontawesome-free": "^7.0.1",
     "@fullcalendar/angular": "5.7.1",
     "@fullcalendar/daygrid": "5.7.2",
     "@fullcalendar/interaction": "5.7.2",

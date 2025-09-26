@@ -1,102 +1,133 @@
- <div class="bg-white rounded-2xl shadow p-3 border border-gray-100">
-     <div class="flex items-center justify-between mb-2">
-  <h2 class="text-lg font-semibold text-gray-800">Purchase Requisition List</h2>
-
-    <button class="px-3 py-2 rounded-xl text-sm font-medium text-white"
-        style="background-color: #0e3a4c;"
-        (mouseenter)="hover=true" (mouseleave)="hover=false"
-        [style.background-color]="hover ? '#0b2e3d' : '#0e3a4c'"
-        (click)="goToRequisition()" type="button">
-        + Create
-      </button>
-</div>
-
-
-          <table class="min-w-full text-sm">
-            <thead class="text-white">
-
-                <tr>
-                  <th class="text-left px-3 py-2 font-medium">Purchase Order Number</th>
-                <th class="text-left px-3 py-2 font-medium">Requester Name</th>
-                  <th class="text-left px-3 py-2 font-medium">Department</th>
-                  <th class="text-left px-3 py-2 font-medium">Delivery Date</th>
-                  <!-- <th class="text-left px-3 py-2 font-medium">Location</th>
-                  <th class="text-left px-3 py-2 font-medium">Quantity</th> -->
-                  <th class="text-left px-3 py-2 font-medium">Description</th>
-                  <!-- <th class="text-left px-3 py-2 font-medium">Remarks</th> -->
-                  <th class="text-left px-3 py-2 font-medium">Action</th>
-                  
-                </tr>
-              </thead>
-              <tbody>
-  <tr *ngIf="!purchaseRequests || purchaseRequests.length === 0">
-    <td class="px-3 py-6 text-center text-gray-400" [attr.colspan]="7">No requests found.</td>
-  </tr>
-
-<tr *ngFor="let req of purchaseRequests">
-  <td>
-    <!-- PR Number Button -->
-    <div class="flex items-center space-x-2">
-  <!-- Purchase Order Number -->
-   <button (click)="toggleLines(req)" class="p-1 rounded hover:bg-gray-100" title="View Details">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-    </svg>
-  </button>
-  <span class="text-gray-800 font-medium">{{ req.purchaseRequestNo }}</span>
-
-  <!-- Details Icon -->
-  
-</div>
-
-
-    <!-- Lines Table -->
-    <div *ngIf="req.showLines" class="lines-container">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th>ItemName</th>
-            <th>Location</th>
-            <th>Qty</th>
-            
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let line of req.prLines">
-            <td>{{ line.itemName }}</td>
-            <td>{{ line.location }}</td>
-            <td>{{ line.qty }}</td>
-            
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </td>
-  <td>{{ req.requester }}</td>
-  <td>{{ req.departmentName }}</td>
-  <td>{{ req.deliveryDate | date:'dd-MM-yyyy' }}</td>
-   <td>{{ req.description || '-' }}</td>
-
-  
-  <td>
-  <div class="space-x-2">
-            <i class="fas fa-pen"
-                style="color: #05a743; margin-right: 15px; cursor: pointer;"
-                (click)="editRequest(req.id)">
-            </i>
-            <i class="fas fa-trash"
-                style="color: red; cursor: pointer;"
-                (click)="deleteRequest(req.id)">
-            </i>
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <!-- User List -->
+    <section class="users-list-wrapper">
+      <div class="card">
+        <div class="row">
+          <div class="col-md-6 col-12" >
+            <h4 class="card-text" style="margin-left: 0.85rem; margin-top: 0.75rem;" >PR List</h4>
+            <div class="d-flex justify-content-between align-items-center m-1" >
+             <label class="d-flex align-items-center">Show
+                <select class="form-control mx-25">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                entries
+            </label>
+            </div>
           </div>
-</td>
-</tr>
+          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end" >
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+             
+              <label class="d-flex align-items-center ml-1 ml-md-0">Search:<input [(ngModel)]="searchValue"
+                  name="searchValue" type="search" class="form-control ml-25" (keyup)="filterUpdate($event)"
+                  (search)="filterUpdate($event)" /></label>
+              <button  id="Add" class="btn btn-primary m-1" rippleEffect>
+                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
+                  class="d-none d-sm-inline-block">Add</span>
+              </button>
 
-</tbody>
+            </div>
+          </div>
+        </div>
+        <ngx-datatable
+  class="bootstrap core-bootstrap"
+  [rows]="rows"
+  [rowHeight]="50"
+  [headerHeight]="50"
+  [footerHeight]="50"
+  [limit]="selectedOption"
+  [columnMode]="ColumnMode.force"
+  [scrollbarH]="true"
+  [reorderable]="true">
+
+ <!-- Purchase Request No -->
+<ngx-datatable-column name="Purchase Order Number" prop="purchaseRequestNo" [width]="220">
+  ...
+</ngx-datatable-column>
+
+<!-- Requester -->
+<ngx-datatable-column name="Requester" prop="requester" [width]="180">
+</ngx-datatable-column>
+
+<!-- Department -->
+<ngx-datatable-column name="Department" prop="departmentName" [width]="180">
+</ngx-datatable-column>
+
+<!-- Delivery Date -->
+<ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="160">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    {{ row.deliveryDate | date:'dd-MM-yyyy' }}
+  </ng-template>
+</ngx-datatable-column>
+
+<!-- Description -->
+<ngx-datatable-column name="Description" prop="description" [width]="150">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    {{ row.description || '-' }}
+  </ng-template>
+</ngx-datatable-column>
+ <ngx-datatable-column name="Status" prop="isActive" [width]="200">
+            <ng-template let-isActive="value" let-row="row" ngx-datatable-cell-template>
+              <div class="badge badge-pill text-center" style="cursor: pointer;" [ngClass]="{
+                        'badge-light-danger': isActive == false,
+                        'badge-light-success': isActive == true 
+                      }">
+                {{ isActive == false ? 'InActive': 'Active' }}</div>
+            </ng-template>
+          </ngx-datatable-column>
+
+<!-- Actions -->
+<ngx-datatable-column name="Action" [width]="150">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    <i class="fas fa-pen"
+       style="color: #05a743; margin-right: 15px; cursor: pointer;"
+       (click)="editRequest(row.id)">
+    </i>
+    <i class="fas fa-trash"
+       style="color: red; cursor: pointer;"
+       (click)="deleteRequest(row.id)">
+    </i>
+  </ng-template>
+</ngx-datatable-column>
 
 
-            </table>
+  <!-- Expandable Row Template -->
+  <ngx-datatable-row-detail [rowHeight]="150" #myDetailRow>
+    <ng-template let-row="row" let-expanded="expanded" ngx-datatable-row-detail-template>
+      <div class="p-3 bg-gray-50 rounded">
+        <table class="table table-sm table-bordered w-full">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Location</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of row.prLines">
+              <td>{{ line.itemName }}</td>
+              <td>{{ line.location }}</td>
+              <td>{{ line.qty }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </ng-template>
+  </ngx-datatable-row-detail>
+</ngx-datatable>
+
+      </div>
+    </section>
+   </div>
+</div>
+
+<!--Add Certificate Sidebar -->
+<!-- <core-sidebar class="modal modal-slide-in sidebar-todo-modal fade" name="app-organization-add"
+  overlayClass="modal-backdrop">
+  <app-organization-add (addOrganizationChange)="listenForChildChange($event)"
+    [isAdditionalFieldAdded]="isAdditionalFieldAdded"></app-organization-add>
+</core-sidebar> -->
+<!--Add Certificate Sidebar -->

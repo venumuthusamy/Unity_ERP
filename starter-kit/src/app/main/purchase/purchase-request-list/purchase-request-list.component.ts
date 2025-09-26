@@ -1,19 +1,27 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CreatePurchaseRequestComponent } from '../create-purchase-request/create-purchase-request.component';
 import { PurchaseService } from '../purchase.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 
 
 @Component({
   selector: 'app-purchase-request-list',
   templateUrl: './purchase-request-list.component.html',
-  styleUrls: ['./purchase-request-list.component.scss']
+  styleUrls: ['./purchase-request-list.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
 
 export class PurchaseRequestListComponent implements OnInit {
  @ViewChild(CreatePurchaseRequestComponent) purchaseForm?: CreatePurchaseRequestComponent;
-
+ @ViewChild(DatatableComponent) table: DatatableComponent;
+ colors = ['bg-light-primary', 'bg-light-success', 'bg-light-danger', 'bg-light-warning', 'bg-light-info'];
+ rows: any[] = [];
+ tempData: any[] = [];
+  public searchValue = '';
+  public ColumnMode = ColumnMode;
+  public selectedOption = 10;
     purchaseRequests: any[] = []; 
       prHeader: any = {
     requester: '',
@@ -23,16 +31,43 @@ export class PurchaseRequestListComponent implements OnInit {
     multiLoc: false,
     oversea: false
   };
+
   prLines: any[] = [];
   hover = false;
   constructor(private purchaseService: PurchaseService, private router: Router,) {}
    ngOnInit(): void {
     this.loadRequests();
   }
+  filterUpdate(event) {
+
+    const val = event.target.value.toLowerCase();
+    const temp = this.tempData.filter(function (d) {
+
+      if (d.orgName.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.orgName.toLowerCase().indexOf(val) !== -1 || !val;
+      }
+      if (d.orgCode.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.orgCode.toLowerCase().indexOf(val) !== -1 || !val;
+      }
+
+    });
+    this.rows = temp;
+    this.table.offset = 0;
+  }
+   getRandomColor(index: number): string {     
+    return this.colors[index % this.colors.length]; 
+  }
+
+
+  getInitial(orgName: string): string {
+    // Get the first two characters, or the entire string if it's shorter
+    const initials = orgName.slice(0, 2).toUpperCase();
+    return initials;
+  }
   loadRequests() {
     this.purchaseService.getAll().subscribe({
       next: (res: any) => {
-        this.purchaseRequests = res.data.map((req: any) => {
+        this.rows = res.data.map((req: any) => {
           return {
             ...req,
             prLines: req.prLines ? JSON.parse(req.prLines) : []
