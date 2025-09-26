@@ -1,0 +1,102 @@
+ <div class="bg-white rounded-2xl shadow p-3 border border-gray-100">
+     <div class="flex items-center justify-between mb-2">
+  <h2 class="text-lg font-semibold text-gray-800">Purchase Requisition List</h2>
+
+    <button class="px-3 py-2 rounded-xl text-sm font-medium text-white"
+        style="background-color: #0e3a4c;"
+        (mouseenter)="hover=true" (mouseleave)="hover=false"
+        [style.background-color]="hover ? '#0b2e3d' : '#0e3a4c'"
+        (click)="goToRequisition()" type="button">
+        + Create
+      </button>
+</div>
+
+
+          <table class="min-w-full text-sm">
+            <thead class="text-white">
+
+                <tr>
+                  <th class="text-left px-3 py-2 font-medium">Purchase Order Number</th>
+                <th class="text-left px-3 py-2 font-medium">Requester Name</th>
+                  <th class="text-left px-3 py-2 font-medium">Department</th>
+                  <th class="text-left px-3 py-2 font-medium">Delivery Date</th>
+                  <!-- <th class="text-left px-3 py-2 font-medium">Location</th>
+                  <th class="text-left px-3 py-2 font-medium">Quantity</th> -->
+                  <th class="text-left px-3 py-2 font-medium">Description</th>
+                  <!-- <th class="text-left px-3 py-2 font-medium">Remarks</th> -->
+                  <th class="text-left px-3 py-2 font-medium">Action</th>
+                  
+                </tr>
+              </thead>
+              <tbody>
+  <tr *ngIf="!purchaseRequests || purchaseRequests.length === 0">
+    <td class="px-3 py-6 text-center text-gray-400" [attr.colspan]="7">No requests found.</td>
+  </tr>
+
+<tr *ngFor="let req of purchaseRequests">
+  <td>
+    <!-- PR Number Button -->
+    <div class="flex items-center space-x-2">
+  <!-- Purchase Order Number -->
+   <button (click)="toggleLines(req)" class="p-1 rounded hover:bg-gray-100" title="View Details">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  </button>
+  <span class="text-gray-800 font-medium">{{ req.purchaseRequestNo }}</span>
+
+  <!-- Details Icon -->
+  
+</div>
+
+
+    <!-- Lines Table -->
+    <div *ngIf="req.showLines" class="lines-container">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>ItemName</th>
+            <th>Location</th>
+            <th>Qty</th>
+            
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let line of req.prLines">
+            <td>{{ line.itemName }}</td>
+            <td>{{ line.location }}</td>
+            <td>{{ line.qty }}</td>
+            
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </td>
+  <td>{{ req.requester }}</td>
+  <td>{{ req.departmentName }}</td>
+  <td>{{ req.deliveryDate | date:'dd-MM-yyyy' }}</td>
+   <td>{{ req.description || '-' }}</td>
+
+  
+  <td>
+  <div class="space-x-2">
+            <i class="fas fa-pen"
+                style="color: #05a743; margin-right: 15px; cursor: pointer;"
+                (click)="editRequest(req.id)">
+            </i>
+            <i class="fas fa-trash"
+                style="color: red; cursor: pointer;"
+                (click)="deleteRequest(req.id)">
+            </i>
+          </div>
+</td>
+</tr>
+
+</tbody>
+
+
+            </table>
+      </div>
