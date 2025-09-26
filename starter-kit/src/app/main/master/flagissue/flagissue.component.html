@@ -5,10 +5,10 @@
                 style="background-color: #ffffff; padding: 12px 20px;">
 
                 <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">
-                    ApprovalLevel List
+                    FlagIssue List
                 </h4>
 
-                <button (click)="createApprovalLevel()"
+                <button (click)="createFlagIssue()"
                     style="background-color: #2E5F73; color: white; border: none; padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
                     Create
                 </button>
@@ -18,7 +18,7 @@
             <div class="card-body">
                 <ul class="list-group">
                     <li class="list-group-item d-flex justify-content-between align-items-center"
-                        *ngFor="let item of approvalLevelList">
+                        *ngFor="let item of flagIssueList">
 
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center w-100">
                             <div style="display: flex; align-items: center; gap: 8px; padding: 4px 10px;">
@@ -28,7 +28,7 @@
                                 </div>
                                 <h6
                                     style="margin: 0; font-weight: 600; font-size: 1rem; display: flex; align-items: center;">
-                                    {{ item.name }}
+                                    {{ item.flagIssuesNames }}
                                 </h6>
                             </div>
 
@@ -36,14 +36,14 @@
                                 <!-- Edit Button -->
                                 <button type="button"
                                     class="btn btn-outline-primary p-0 d-flex align-items-center justify-content-center"
-                                    style="width: 28px; height: 28px;" (click)="editApprovalLevel(item)">
+                                    style="width: 28px; height: 28px;" (click)="editFlagIssue(item)">
                                     <i data-feather="edit" style="width: 14px; height: 14px;"></i>
                                 </button>
 
                                 <!-- Delete Button -->
                                 <button type="button"
                                     class="btn btn-outline-danger p-0 d-flex align-items-center justify-content-center ml-1"
-                                    style="width: 28px; height: 28px;" (click)="confirmdeleteApprovalLevel(item)"
+                                    style="width: 28px; height: 28px;" (click)="confirmdeleteFlagIssue(item)"
                                     [disabled]="isEditMode">
                                     <i data-feather="trash" style="width: 14px; height: 14px;"></i>
                                 </button>
@@ -62,9 +62,9 @@
             <div class="card-body">
                 <form class="form" #addForm="ngForm">
                     <div class="form-group">
-                        <label for="first-name-column">ApprovalLevel Name</label>
-                        <input type="text" id="first-name-column" class="form-control" placeholder="ApprovalLevel Name"
-                            name="fname-column" [(ngModel)]="approvalLevelName" [maxlength]="50" required />
+                        <label for="first-name-column">FlagIssue Name</label>
+                        <input type="text" id="first-name-column" class="form-control" placeholder="FlagIssue Name"
+                            name="fname-column" [(ngModel)]="flagIssueName" [maxlength]="50" required />
 
                     </div>
                     <!-- <div class="form-group">

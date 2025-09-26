@@ -32,11 +32,32 @@ export const menu: CoreMenu[] = [
         url: '/master/cities' 
       },
        {
+        id: 'countries',
+        title: 'Countries',
+        type: 'item',
+        icon: 'circle',
+        url: '/master/countries'
+      },
+       {
         id: 'uom',
         title: 'UOM',
         type: 'item',
         icon: 'circle',
         url: '/master/uom' 
+      },
+       {
+        id: 'incoterms',
+        title: 'Incoterms',
+        type: 'item',
+        icon: 'circle',
+        url: '/master/incoterms' 
+      },
+       {
+        id: 'flagissue',
+        title: 'FlagIssue',
+        type: 'item',
+        icon: 'circle',
+        url: '/master/flagIssue' 
       },
     ]
     
