@@ -16,6 +16,8 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 export class PurchaseRequestListComponent implements OnInit {
  @ViewChild(CreatePurchaseRequestComponent) purchaseForm?: CreatePurchaseRequestComponent;
  @ViewChild(DatatableComponent) table: DatatableComponent;
+   @ViewChild('tableRowDetails') tableRowDetails: any;
+   @ViewChild('SweetAlertFadeIn') SweetAlertFadeIn: any;
  colors = ['bg-light-primary', 'bg-light-success', 'bg-light-danger', 'bg-light-warning', 'bg-light-info'];
  rows: any[] = [];
  tempData: any[] = [];
@@ -113,5 +115,16 @@ goToRequisition() {
     toggleLines(req: any) {
   // Toggle showLines only for the clicked PR
   req.showLines = !req.showLines;
+}
+ 
+  rowDetailsToggleExpand(row: any) {
+  row.$$expanded = !row.$$expanded; // toggle expand
+}
+onRowExpandClick(row: any) {
+  // Expand/Collapse the row
+  this.rowDetailsToggleExpand(row);
+
+  // Show SweetAlert fade-in
+  this.SweetAlertFadeIn.fire();
 }
 }

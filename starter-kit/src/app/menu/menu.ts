@@ -31,6 +31,13 @@ export const menu: CoreMenu[] = [
         icon: 'circle',
         url: '/master/cities' 
       },
+       {
+        id: 'uom',
+        title: 'UOM',
+        type: 'item',
+        icon: 'circle',
+        url: '/master/uom' 
+      },
     ]
     
   },

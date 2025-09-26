@@ -52,7 +52,7 @@
     "bs-stepper": "1.7.0",
     "chart.js": "2.9.4",
     "core-js": "3.14.0",
-    "feather-icons": "4.28.0",
+    "feather-icons": "^4.29.2",
     "flatpickr": "4.6.9",
     "hammerjs": "2.0.8",
     "katex": "0.13.11",
