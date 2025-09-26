@@ -135,6 +135,15 @@
 
     // Main menu items
     li {
+      &.has-sub {
+        > ul {
+          display: none; // 🔒 Hide by default
+        }
+        &.open > ul {
+          display: block; // ✅ Show only when open
+        }
+      }
+
       &.has-sub > a {
         transition: all 0.3s ease;
       }
