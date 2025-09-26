@@ -5,6 +5,8 @@ import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { Router } from '@angular/router';
 import { CoreConfigService } from '@core/services/config.service';
+import {AuthService} from '../auth-service'
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-auth-login-v2',
@@ -34,7 +36,8 @@ export class AuthLoginV2Component implements OnInit {
     private _coreConfigService: CoreConfigService,
     private _formBuilder: UntypedFormBuilder,
     private _route: ActivatedRoute,
-    private _router: Router
+    private _router: Router,
+    private authService:AuthService,
   ) {
     this._unsubscribeAll = new Subject();
 
@@ -82,15 +85,48 @@ export class AuthLoginV2Component implements OnInit {
     // stop here if form is invalid
     if (this.loginForm.invalid) {
       return;
+    }else{
+      this.authService.userLogin(this.loginForm.value).subscribe((res :any)=>{
+      localStorage.setItem("username",this.loginForm.value.username)
+      localStorage.setItem("token",res.token)
+      
+      this._router.navigate(['/']);
+      
+      },(err:any)=>{
+
+         let errorMessage = 'Something went wrong!';
+             
+                     // If your API sends { message: "error text" }
+                     if (err.error && err.error.message) {
+                       errorMessage = err.error.message;
+                     } 
+                     // If backend sends plain text instead of JSON
+                     else if (typeof err.error === 'string') {
+                       errorMessage = err.error;
+                     }
+                     // If backend sends status code details
+                     else if (err.status) {
+                       errorMessage = `Error ${err.status}: ${err.statusText}`;
+                     }
+                   Swal.fire({
+                     icon: 'error',
+                     title: 'Error',
+                     text: errorMessage,
+                     confirmButtonText: 'OK',
+                     confirmButtonColor: '#d33'
+                   });
+      })
+
+      
     }
 
     // Login
     this.loading = true;
 
     // redirect to home page
-    setTimeout(() => {
-      this._router.navigate(['/']);
-    }, 100);
+    // setTimeout(() => {
+    //   this._router.navigate(['/']);
+    // }, 100);
   }
 
   // Lifecycle Hooks
@@ -101,7 +137,7 @@ export class AuthLoginV2Component implements OnInit {
    */
   ngOnInit(): void {
     this.loginForm = this._formBuilder.group({
-      email: ['', [Validators.required, Validators.email]],
+      username: ['', Validators.required],
       password: ['', Validators.required]
     });
 
