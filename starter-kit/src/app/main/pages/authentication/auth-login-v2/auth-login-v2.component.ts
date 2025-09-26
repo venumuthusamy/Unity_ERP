@@ -61,6 +61,14 @@ export class AuthLoginV2Component implements OnInit {
     return this.loginForm.controls;
   }
 
+  images = [
+  'assets/images/pages/image1.JPG',
+  'assets/images/pages/image2.JPG',
+  'assets/images/pages/image3.JPG'
+  ];
+  currentImage = this.images[0];
+  i = 0;
+
   /**
    * Toggle password
    */
@@ -104,6 +112,11 @@ export class AuthLoginV2Component implements OnInit {
     this._coreConfigService.config.pipe(takeUntil(this._unsubscribeAll)).subscribe(config => {
       this.coreConfig = config;
     });
+
+    setInterval(() => {
+    this.i = (this.i + 1) % this.images.length;
+    this.currentImage = this.images[this.i];
+    }, 4000);
   }
 
   /**
