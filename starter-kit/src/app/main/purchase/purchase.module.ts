@@ -8,6 +8,8 @@ import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
+import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
+
 const routes = [
   {
     path: 'Create-PurchaseRequest',
@@ -28,7 +30,8 @@ const routes = [
     RouterModule.forChild(routes),
     NgxDatatableModule,
     FormsModule,
-    NgbModule
+    NgbModule,
+    SweetAlert2Module.forRoot()
   ]
 })
 export class PurchaseModule { }

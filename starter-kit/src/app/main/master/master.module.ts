@@ -8,14 +8,16 @@ import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CountriesComponent } from './countries/countries.component';
+import { UomComponent } from './uom/uom.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
-   { path: 'cities', component: CitiesComponent }
+   { path: 'cities', component: CitiesComponent },
+   { path: 'uom', component: UomComponent }
 ];
 
 @NgModule({
-  declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent],
+  declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent],
   imports: [
     CommonModule,
     RouterModule.forChild(routes)  ,
