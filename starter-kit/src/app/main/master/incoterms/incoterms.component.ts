@@ -31,9 +31,9 @@ export class IncotermsComponent implements OnInit {
   }
   // Load data from API
   loadIncoterms() {
-  this.incotermsService.getAllIncoterms().subscribe((data: any) => {
+  this.incotermsService.getAllIncoterms().subscribe((res: any) => {
     // Filter only active ones
-    this.incotermsList = data.filter((item: any) => item.isActive === true);
+    this.incotermsList = res.data.filter((item: any) => item.isActive === true);
     setTimeout(() => feather.replace(), 0);
   });
 }

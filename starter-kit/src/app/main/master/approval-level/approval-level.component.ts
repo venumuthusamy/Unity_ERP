@@ -36,8 +36,8 @@ export class ApprovalLevelComponent implements OnInit {
    // Load data from API
    loadApprovalLevel() {
   this.approvallevelService.getAllApprovalLevel().subscribe((response: any) => {
-  if (response.status) {
-    this.approvalLevelList = response.data; // ✅ array
+  if (response.isSuccess) {
+   this.approvalLevelList = response.data.filter((item: any) => item.isActive);
   } else {
     this.approvalLevelList = [];
   }
@@ -183,7 +183,7 @@ export class ApprovalLevelComponent implements OnInit {
          Swal.fire({
            icon: 'error',
            title: 'Error',
-           text: 'Failed to delete Uom',
+           text: 'Failed to delete ApprovalLevel',
            confirmButtonColor: '#d33'
          });
        }
