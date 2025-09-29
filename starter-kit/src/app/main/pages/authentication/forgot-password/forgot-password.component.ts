@@ -81,8 +81,10 @@ export class ForgotPasswordComponent implements OnInit {
                     icon: 'success',
                     title: 'Created!',
                     text: 'Reset link sent to your email, please check and proceed further',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#0e3a4c'
+                    // confirmButtonText: 'OK',
+                    confirmButtonColor: '#0e3a4c',
+                    showConfirmButton: false, 
+                    timer: 2000 
                   });
                   
                 setTimeout(() => {

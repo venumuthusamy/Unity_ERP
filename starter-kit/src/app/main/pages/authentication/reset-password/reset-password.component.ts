@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { CoreConfigService } from '@core/services/config.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth-service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-reset-password',
@@ -98,15 +99,49 @@ export class ResetPasswordComponent implements OnInit {
     // stop here if form is invalid
     if (this.resetPasswordForm.invalid) {
       return;
-    }else{
-      this.authService.resetPassword( rawvalue).subscribe((res :any) => {
-      // this.toast.showSuccess(res.message)
-        setTimeout(() => {
-          this._router.navigateByUrl('/pages/authentication/login-v2');
-        }, 700);
-      },(err:any)=>{
-      // this.toast.showWarning(err.error.message)
-      });       
+    }else{       
+      
+       this.authService.resetPassword(rawvalue).subscribe({
+                      next: () => {
+                        Swal.fire({
+                          icon: 'success',
+                          title: 'Created!',
+                          text: 'Password Reset Successfully',
+                          // confirmButtonText: 'OK',
+                          confirmButtonColor: '#0e3a4c',
+                          showConfirmButton: false,
+                          timer: 2000 
+                        });
+                        
+                      setTimeout(() => {
+                           this._router.navigateByUrl('/pages/authentication/login-v2'); 
+                      }, 700);
+                      
+                      },
+                      error: (err) => {
+                         let errorMessage = 'Something went wrong!';
+                  
+                          // If your API sends { message: "error text" }
+                          if (err.error && err.error.message) {
+                            errorMessage = err.error.message;
+                          } 
+                          // If backend sends plain text instead of JSON
+                          else if (typeof err.error === 'string') {
+                            errorMessage = err.error;
+                          }
+                          // If backend sends status code details
+                          else if (err.status) {
+                            errorMessage = `Error ${err.status}: ${err.statusText}`;
+                          }
+                        Swal.fire({
+                          icon: 'error',
+                          title: 'Error',
+                          text: errorMessage,
+                          confirmButtonText: 'OK',
+                          confirmButtonColor: '#d33'
+                        });
+                      }
+                  });
     } 
 
   }
