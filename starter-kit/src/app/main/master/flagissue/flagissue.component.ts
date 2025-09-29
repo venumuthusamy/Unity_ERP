@@ -32,9 +32,9 @@ export class FlagissueComponent implements OnInit {
   }
   // Load data from API
   loadFlagIssue() {
-  this.flagIssueService.getAllFlagIssue().subscribe((data: any) => {
+  this.flagIssueService.getAllFlagIssue().subscribe((res: any) => {
     // Filter only active ones
-    this.flagIssueList = data.filter((item: any) => item.isActive === true);
+    this.flagIssueList = res.data.filter((item: any) => item.isActive === true);
     setTimeout(() => feather.replace(), 0);
   });
 }

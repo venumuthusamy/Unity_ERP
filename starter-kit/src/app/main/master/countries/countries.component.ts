@@ -102,6 +102,7 @@ public countryName = "";
 
       this.getAllCountries();
       this.isDisplay = false;
+      this.isEditMode=false;
     }
   });
 }
@@ -117,6 +118,7 @@ else{
 
       this.getAllCountries();
       this.isDisplay = false;
+      this.isEditMode=false;
     }
   });
 }
