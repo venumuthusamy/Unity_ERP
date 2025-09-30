@@ -1,31 +1,33 @@
-import { AfterViewInit, AfterViewChecked, Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
+import { ServiceService } from './service.service';
 import * as feather from 'feather-icons';
-import { CountriesService } from './countries.service';
 import Swal from 'sweetalert2';
 
 @Component({
-  selector: 'app-countries',
-  templateUrl: './countries.component.html',
-  styleUrls: ['./countries.component.scss']
+  selector: 'app-service',
+  templateUrl: './service.component.html',
+  styleUrls: ['./service.component.scss']
 })
-export class CountriesComponent implements OnInit, AfterViewInit, AfterViewChecked {
-  @ViewChild('addForm') countryForm!: NgForm;
+export class ServiceComponent implements OnInit, AfterViewInit, AfterViewChecked {
+  @ViewChild('serviceForm') serviceForm!: NgForm;
   public id = 0;
-  public countryName = "";
+  public serviceName = "";
   isDisplay: boolean = false;
-  modeHeader: string = 'Add Country';
+  modeHeader: string = 'Add Service';
   resetButton: boolean = true;
  rows: any[] = [];
   tempData: any;
-  countryValue: any;
   isEditMode: boolean;
-
-  constructor(private _countriesService: CountriesService) { }
+ public description= '';
+ public tax = 0;
+ public charges = 0;
+  serviceValue: any;
+  constructor(private _service: ServiceService) { }
 
   ngOnInit(): void 
   {
-    this.getAllCountries();
+    this.getAllService();
   }
 
   ngAfterViewInit(): void {
@@ -51,35 +53,41 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
     this.isEditMode = false;
   }
 
-  createCountry() {
+  createService() {
     this.isDisplay = true;
    
-    this.modeHeader = 'Add Country';
+    this.modeHeader = 'Add Service';
     this.reset();
   }
 
 
     reset() {
-    this.modeHeader = "Create Country";
-    this.countryName = "";
+    this.modeHeader = "Create Service";
+    this.serviceName = "";
+    this.description = "";
+    this.tax =0;
+    this.charges =0;
     this.id = 0;
   }
 
 
-   getAllCountries() {
-    this._countriesService.getCountry().subscribe((response: any) => {
+   getAllService() {
+    this._service.getService().subscribe((response: any) => {
       this.rows = response.data;
       this.tempData = this.rows;
     })
   }
 
 
-  CreateCountry(data: any) {
+  CreateService(data: any) {
     debugger
    
   const obj = {
-    id:this.id,
-    countryName: this.countryName,
+    Id:this.id,
+    Name: this.serviceName,
+    Charge:this.charges,
+    Tax:this.tax,
+    Description:this.description,
     createdBy: '1',
     createdDate: new Date(),
     updatedBy: '1',
@@ -87,7 +95,7 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
     isActive: true,
   };
  if(this.id == 0){
-  this._countriesService.insertCountry(obj).subscribe((res) => {
+  this._service.insertService(obj).subscribe((res) => {
     if (res.isSuccess) {
       Swal.fire({
         title: "Hi",
@@ -96,14 +104,14 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
         allowOutsideClick: false,
       });
 
-      this.getAllCountries();
+      this.getAllService();
       this.isDisplay = false;
       this.isEditMode=false;
     }
   });
 }
 else{
-   this._countriesService.updateCountry(obj).subscribe((res) => {
+   this._service.updateService(obj).subscribe((res) => {
     if (res.isSuccess) {
       Swal.fire({
         title: "Hi",
@@ -112,7 +120,7 @@ else{
         allowOutsideClick: false,
       });
 
-      this.getAllCountries();
+      this.getAllService();
       this.isDisplay = false;
       this.isEditMode=false;
     }
@@ -122,20 +130,24 @@ else{
 
 
 
-  getCountryDetails(id: any) {
+  getServiceDetails(id: any) {
     debugger
-    this._countriesService.getCountryById(id).subscribe((arg: any) => {
-      this.countryValue = arg.data;
-      this.id = this.countryValue.id;
-      this.countryName = this.countryValue.countryName;
+    this._service.getServiceById(id).subscribe((arg: any) => {
+      this.serviceValue = arg.data;
+      console.log("servicevalue",this.serviceValue)
+      this.id = this.serviceValue.id;
+      this.serviceName = this.serviceValue.name;
+      this.charges=this.serviceValue.charge;
+      this.tax=this.serviceValue.tax;
+      this.description = this.serviceValue.description;
       this.isDisplay = true;
       this.resetButton = false;
-      this.modeHeader = "Edit Country";
+      this.modeHeader = "Edit Service";
       this.isEditMode = true;
     });
   }
 
-  deleteCountry(id) {
+  deleteService(id) {
     const _self = this;
     Swal.fire({
       title: "Are you sure?",
@@ -152,7 +164,7 @@ else{
       allowOutsideClick: false,
     }).then(function (result) {
       if (result.value) {
-        _self._countriesService.deleteCountry(id).subscribe((response: any) => {
+        _self._service.deleteService(id).subscribe((response: any) => {
           if (response.isSuccess) {
             Swal.fire({
               icon: "success",
@@ -168,7 +180,7 @@ else{
               allowOutsideClick: false,
             });
           }
-          _self.getAllCountries();
+          _self.getAllService();
         });
       }
     });
