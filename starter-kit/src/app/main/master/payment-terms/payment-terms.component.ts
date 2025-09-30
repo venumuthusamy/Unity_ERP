@@ -1,30 +1,31 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { IncotermsService } from './incoterms.service';
+import { PaymentTermsService } from './payment-terms.service';
 import * as feather from 'feather-icons';
+
 @Component({
-  selector: 'app-incoterms',
-  templateUrl: './incoterms.component.html',
-  styleUrls: ['./incoterms.component.scss']
+  selector: 'app-payment-terms',
+  templateUrl: './payment-terms.component.html',
+  styleUrls: ['./payment-terms.component.scss']
 })
-export class IncotermsComponent implements OnInit {
+export class PaymentTermsComponent implements OnInit {
  @ViewChild('addForm') addForm!: NgForm;
-  incotermsList: any[] = [];
-  incotermsName: string = '';
+  PaymentTermsList: any[] = [];
+  PaymentTermsName: string = '';
   description: string = '';
   isEditMode = false;
-  selectedIncoterms: any = null;
+  selectedPaymentTerms: any = null;
   public isDisplay = false;
   private iconsReplaced = false;
   userId: string;
   constructor(private fb: FormBuilder,
-    private incotermsService: IncotermsService,) { 
+    private PaymentTermsService: PaymentTermsService,) { 
        this.userId = localStorage.getItem('id');
     }
 
   ngOnInit(): void {
-    this.loadIncoterms();
+    this.loadPaymentTerms();
   }
   ngAfterViewChecked(): void {
     feather.replace();  // remove the guard so icons refresh every cycle
@@ -33,29 +34,30 @@ export class IncotermsComponent implements OnInit {
     feather.replace();
   }
   // Load data from API
-  loadIncoterms() {
-  this.incotermsService.getAllIncoterms().subscribe((res: any) => {
-    // Filter only active ones
-    this.incotermsList = res.data.filter((item: any) => item.isActive === true);
-    setTimeout(() => feather.replace(), 0);
-  });
-}
- // Show form for creating
-  createIncoterms() {
+  loadPaymentTerms() {
+    debugger
+    this.PaymentTermsService.getAllPaymentTerms().subscribe((res: any) => {
+      this.PaymentTermsList = res.data.filter((item: any) => item.isActive === true);
+      setTimeout(() => feather.replace(), 0);
+    });
+  }
+
+  // Show form for creating
+  createPaymentTerms() {
     this.isDisplay = true;
     this.isEditMode = false;
-    this.selectedIncoterms = null;
+    this.selectedPaymentTerms = null;
     this.reset();
   }
 
   // Show form for editing
-  editIncoterms(data: any) {
+  editPaymentTerms(data: any) {
     this.isDisplay = true;       // show the form
     this.isEditMode = true;      // enable edit mode
-    this.selectedIncoterms = data;
+    this.selectedPaymentTerms = data;
 
     // patch the form fields
-    this.incotermsName = data.incotermsName;       // bind to input
+    this.PaymentTermsName = data.paymentTermsName;       // bind to input
     this.description = data.description; // bind to textarea
   }
   cancel() {
@@ -65,7 +67,7 @@ export class IncotermsComponent implements OnInit {
   }
 
   reset() {
-    this.incotermsName = '';
+    this.PaymentTermsName = '';
     this.description = '';
   }
 
@@ -83,55 +85,55 @@ export class IncotermsComponent implements OnInit {
     }
 
     const payload = {
-      IncotermsName: this.incotermsName,
+      PaymentTermsName: this.PaymentTermsName,
+      description: this.description,
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
-      CreatedDate: new Date(),
       UpdatedDate: new Date()
     };
 
     if (this.isEditMode) {
-      const updatedIncoterms = { ...this.selectedIncoterms, ...payload };
-      this.incotermsService.updateIncoterms(this.selectedIncoterms.id, updatedIncoterms).subscribe({
+      const updatedPaymentTerms = { ...this.selectedPaymentTerms, ...payload };
+      this.PaymentTermsService.updatePaymentTerms(this.selectedPaymentTerms.id, updatedPaymentTerms).subscribe({
         next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Updated!',
-            text: 'Incoterms updated successfully',
+            text: 'PaymentTerms updated successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
-          this.loadIncoterms();
+          this.loadPaymentTerms();
           this.cancel();
         },
         error: () => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to update Incoterms',
+            text: 'Failed to update PaymentTerms',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
         }
       });
     } else {
-      this.incotermsService.createIncoterms(payload).subscribe({
+      this.PaymentTermsService.createPaymentTerms(payload).subscribe({
         next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Created!',
-            text: 'Incoterms created successfully',
+            text: 'PaymentTerms created successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
-          this.loadIncoterms();
+          this.loadPaymentTerms();
           this.cancel();
         },
         error: () => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to create Incoterms',
+            text: 'Failed to create PaymentTerms',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
@@ -140,7 +142,7 @@ export class IncotermsComponent implements OnInit {
     }
   }
   // Delete
-  confirmdeleteIncoterms(data: any) {
+  confirmdeletePaymentTerms(data: any) {
     Swal.fire({
       title: 'Confirm Delete',
       text: 'Are you sure you want to delete this item?',
@@ -152,24 +154,24 @@ export class IncotermsComponent implements OnInit {
       cancelButtonColor: '#3085d6'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.deleteIncoterms(data);
+        this.deletePaymentTerms(data);
         Swal.fire({
           icon: 'success',
           title: 'Deleted!',
-          text: 'Incoterms has been deleted.',
+          text: 'Item has been deleted.',
           confirmButtonColor: '#3085d6'
         });
       }
     });
   }
   // Delete
-  deleteIncoterms(item: any) {
-    this.incotermsService.deleteIncoterms(item.id).subscribe({
+  deletePaymentTerms(item: any) {
+    this.PaymentTermsService.deletePaymentTerms(item.id).subscribe({
       next: (res) => {
         Swal.fire({
           icon: 'success',
           title: 'Deleted!',
-          text: 'Incoterms deleted successfully',
+          text: 'PaymentTerms deleted successfully',
           confirmButtonColor: '#3085d6'
         });
         this.ngOnInit();
@@ -178,11 +180,10 @@ export class IncotermsComponent implements OnInit {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Failed to delete Uom',
+          text: 'Failed to delete PaymentTerms',
           confirmButtonColor: '#d33'
         });
       }
     });
   }
-
 }

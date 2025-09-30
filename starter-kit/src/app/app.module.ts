@@ -19,6 +19,7 @@ import { AppComponent } from 'app/app.component';
 import { LayoutModule } from 'app/layout/layout.module';
 import { SampleModule } from 'app/main/sample/sample.module';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
+import { ChartofaccountComponent } from './main/financial/chartofaccount/chartofaccount-list/chartofaccount.component';
 
 const appRoutes: Routes = [
   {
@@ -34,6 +35,10 @@ const appRoutes: Routes = [
   {
     path: 'purchase',
     loadChildren: () => import('./main/purchase/purchase.module').then(m => m.PurchaseModule)
+  },
+   {
+    path: 'financial',
+    loadChildren: () => import('./main/financial/financial.module').then(m => m.FinancialModule)
   },
   {
     path: '',

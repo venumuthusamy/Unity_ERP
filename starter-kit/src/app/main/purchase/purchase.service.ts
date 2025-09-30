@@ -8,12 +8,10 @@ import { PurchaseAPIUrls } from 'Urls/PurchaseAPIUrls';
   providedIn: 'root'
 })
 export class PurchaseService {
-
- 
-  private url = environment.apiUrl
+ private url = environment.apiUrl
  private requestSource = new BehaviorSubject<any>(null);
-  currentRequest = this.requestSource.asObservable();
-  constructor(private http: HttpClient) { }
+ currentRequest = this.requestSource.asObservable();
+ constructor(private http: HttpClient) { }
    getAll(): Observable<any> {
     return this.http.get<any[]>(this.url + PurchaseAPIUrls.GetAllPurchaseRequests);
   }

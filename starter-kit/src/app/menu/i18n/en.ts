@@ -8,6 +8,10 @@ export const locale = {
         PURCHASE:{
       PR:'Pr'
      
+    },
+     FINANCIAL:{
+      CHARTOFACCOUNT:'Chart of Account'
+     
     }
     }
   }

@@ -1,30 +1,31 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { IncotermsService } from './incoterms.service';
 import * as feather from 'feather-icons';
+import { FormBuilder, NgForm } from '@angular/forms';
+import { CurrencyService } from './currency.service';
+
 @Component({
-  selector: 'app-incoterms',
-  templateUrl: './incoterms.component.html',
-  styleUrls: ['./incoterms.component.scss']
+  selector: 'app-currency',
+  templateUrl: './currency.component.html',
+  styleUrls: ['./currency.component.scss']
 })
-export class IncotermsComponent implements OnInit {
+export class CurrencyComponent implements OnInit {
  @ViewChild('addForm') addForm!: NgForm;
-  incotermsList: any[] = [];
-  incotermsName: string = '';
+  CurrencyList: any[] = [];
+  CurrencyName: string = '';
   description: string = '';
   isEditMode = false;
-  selectedIncoterms: any = null;
+  selectedCurrency: any = null;
   public isDisplay = false;
   private iconsReplaced = false;
   userId: string;
   constructor(private fb: FormBuilder,
-    private incotermsService: IncotermsService,) { 
+    private CurrencyService: CurrencyService,) {
        this.userId = localStorage.getItem('id');
-    }
+     }
 
   ngOnInit(): void {
-    this.loadIncoterms();
+    this.loadCurrency();
   }
   ngAfterViewChecked(): void {
     feather.replace();  // remove the guard so icons refresh every cycle
@@ -33,29 +34,30 @@ export class IncotermsComponent implements OnInit {
     feather.replace();
   }
   // Load data from API
-  loadIncoterms() {
-  this.incotermsService.getAllIncoterms().subscribe((res: any) => {
-    // Filter only active ones
-    this.incotermsList = res.data.filter((item: any) => item.isActive === true);
-    setTimeout(() => feather.replace(), 0);
-  });
-}
- // Show form for creating
-  createIncoterms() {
+  loadCurrency() {
+    debugger
+    this.CurrencyService.getAllCurrency().subscribe((res: any) => {
+     this.CurrencyList = res.data.filter((item: any) => item.isActive === true);
+      setTimeout(() => feather.replace(), 0);
+    });
+  }
+
+  // Show form for creating
+  createCurrency() {
     this.isDisplay = true;
     this.isEditMode = false;
-    this.selectedIncoterms = null;
+    this.selectedCurrency = null;
     this.reset();
   }
 
   // Show form for editing
-  editIncoterms(data: any) {
+  editCurrency(data: any) {
     this.isDisplay = true;       // show the form
     this.isEditMode = true;      // enable edit mode
-    this.selectedIncoterms = data;
+    this.selectedCurrency = data;
 
     // patch the form fields
-    this.incotermsName = data.incotermsName;       // bind to input
+    this.CurrencyName = data.currencyName;       // bind to input
     this.description = data.description; // bind to textarea
   }
   cancel() {
@@ -65,7 +67,7 @@ export class IncotermsComponent implements OnInit {
   }
 
   reset() {
-    this.incotermsName = '';
+    this.CurrencyName = '';
     this.description = '';
   }
 
@@ -83,55 +85,55 @@ export class IncotermsComponent implements OnInit {
     }
 
     const payload = {
-      IncotermsName: this.incotermsName,
+      CurrencyName: this.CurrencyName,
+      description: this.description,
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
-      CreatedDate: new Date(),
       UpdatedDate: new Date()
     };
 
     if (this.isEditMode) {
-      const updatedIncoterms = { ...this.selectedIncoterms, ...payload };
-      this.incotermsService.updateIncoterms(this.selectedIncoterms.id, updatedIncoterms).subscribe({
+      const updatedCurrency = { ...this.selectedCurrency, ...payload };
+      this.CurrencyService.updateCurrency(this.selectedCurrency.id, updatedCurrency).subscribe({
         next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Updated!',
-            text: 'Incoterms updated successfully',
+            text: 'Currency updated successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
-          this.loadIncoterms();
+          this.loadCurrency();
           this.cancel();
         },
         error: () => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to update Incoterms',
+            text: 'Failed to update Currency',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
         }
       });
     } else {
-      this.incotermsService.createIncoterms(payload).subscribe({
+      this.CurrencyService.createCurrency(payload).subscribe({
         next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Created!',
-            text: 'Incoterms created successfully',
+            text: 'Currency created successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
-          this.loadIncoterms();
+          this.loadCurrency();
           this.cancel();
         },
         error: () => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to create Incoterms',
+            text: 'Failed to create Currency',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
@@ -140,7 +142,7 @@ export class IncotermsComponent implements OnInit {
     }
   }
   // Delete
-  confirmdeleteIncoterms(data: any) {
+  confirmdeleteCurrency(data: any) {
     Swal.fire({
       title: 'Confirm Delete',
       text: 'Are you sure you want to delete this item?',
@@ -152,24 +154,24 @@ export class IncotermsComponent implements OnInit {
       cancelButtonColor: '#3085d6'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.deleteIncoterms(data);
+        this.deleteCurrency(data);
         Swal.fire({
           icon: 'success',
           title: 'Deleted!',
-          text: 'Incoterms has been deleted.',
+          text: 'Item has been deleted.',
           confirmButtonColor: '#3085d6'
         });
       }
     });
   }
   // Delete
-  deleteIncoterms(item: any) {
-    this.incotermsService.deleteIncoterms(item.id).subscribe({
+  deleteCurrency(item: any) {
+    this.CurrencyService.deleteCurrency(item.id).subscribe({
       next: (res) => {
         Swal.fire({
           icon: 'success',
           title: 'Deleted!',
-          text: 'Incoterms deleted successfully',
+          text: 'Currency deleted successfully',
           confirmButtonColor: '#3085d6'
         });
         this.ngOnInit();
@@ -178,7 +180,7 @@ export class IncotermsComponent implements OnInit {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Failed to delete Uom',
+          text: 'Failed to delete Currency',
           confirmButtonColor: '#d33'
         });
       }

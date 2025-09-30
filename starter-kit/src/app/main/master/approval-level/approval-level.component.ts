@@ -21,8 +21,11 @@ export class ApprovalLevelComponent implements OnInit {
    selectedApprovalLevel: any = null;
    public isDisplay = false;
    private iconsReplaced = false;
+  userId: string;
    constructor(private fb: FormBuilder,
-     private approvallevelService: ApprovallevelService,) { }
+     private approvallevelService: ApprovallevelService,) {
+       this.userId = localStorage.getItem('id');
+      }
  
    ngOnInit(): void {
      this.loadApprovalLevel();
@@ -89,8 +92,8 @@ export class ApprovalLevelComponent implements OnInit {
        Name: this.approvalLevelName,
        Description:this.description,
        IsActive:true,
-       CreatedBy: "1",
-       UpdatedBy: "1",
+       CreatedBy: this.userId,
+       UpdatedBy: this.userId,
        CreatedDate: new Date(),
        UpdatedDate: new Date()
      };
