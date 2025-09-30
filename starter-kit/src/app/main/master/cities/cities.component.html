@@ -1,47 +1,47 @@
 <div class="row">
+  <!-- Left column - City List -->
   <div class="col-lg-6 col-md-6">
     <div class="card card-transaction">
-
       <div class="card-header">
         <div>
-          <h4 class="card-title">Mode List</h4>
+          <h4 class="card-title" style="margin:0;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+            City List
+          </h4>
         </div>
-        <button  class="btn btn-primary" (click)="createMode()">Create</button>
+        <button (click)="createcity()" 
+                style="background-color:#2E5F73;color:white;border:none;padding:6px 14px;font-size:.9rem;border-radius:4px;">
+          Create
+        </button>
       </div>
-
       <div class="card-body">
         <ul class="list-group">
-          <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let item of modeList">
+          <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let item of CityList">
             <div class="avatar bg-light-primary mr-2 align-items-center avatar-lg">
               <div class="avatar-content">
-                <!-- <i *ngIf="item.modeName === 'Training'" class="fas fa-chalkboard-teacher cursor-pointer"
-                  style="width: 2rem; font-size: 1.5rem; height: 1.5rem;"></i> -->
-                <!-- <i *ngIf="item.modeName === 'Assessment'" class="fas fa-clipboard-list cursor-pointer"
-                  style="width: 2rem; font-size: 1.5rem; height: 1.5rem;"></i> -->
-                <i [ngClass]="item.modeName === 'Assessment' ? 'fas fa-clipboard-list cursor-pointer' : 
-                          item.modeName === 'Training' ? 'fas fa-chalkboard-teacher cursor-pointer' : 
-                          'fas fa-calendar cursor-pointer'" style="width: 2rem; font-size: 1.5rem; height: 1.5rem;">
-                </i>
+                <span data-feather="globe" style="width:2rem;height:2rem;font-size:1.5rem;"></span>
               </div>
             </div>
-
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center w-100">
               <div class="m-l-16 m-r-auto">
-                <h6 class="mat-subtitle-1 f-s-16 f-w-600">{{ item.modeName }}</h6>
-                <span class="mat-body-1">{{ item.description }}</span>
+                <h6 class="mat-subtitle-1 f-s-16 f-w-600">{{ item.cityName }}</h6>
               </div>
               <div class="mt-md-0 mt-1 d-flex justify-content-md-end">
-                <button *ngIf="ISUPDATE" type="button" class="btn btn-primary btn-sm"
-                  (click)="getModeDetails(item.id, item.isUsed)">
-                  <i class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span [data-feather]="'edit'"
-                    [class]="'cursor-pointer'"></span>
-                </button>
-                <button *ngIf="ISDELETE" type="button" class="btn btn-danger ml-1 btn-sm align-items-md-center"
-                  (click)="deleteMode(item.id,item.isUsed)" [disabled]="isEditMode">
-                  <i class="d-sm-none d-inline-block"></i><span [data-feather]="'trash'"
-                    [class]="'cursor-pointer'"></span>
+                <!-- Edit Button -->
+                <button type="button"
+                        class="btn btn-outline-primary p-0 d-flex align-items-center justify-content-center"
+                        style="width:28px;height:28px;"
+                        (click)="getCityDetails(item.id)">
+                  <i data-feather="edit" style="width:14px;height:14px;"></i>
                 </button>
 
+                <!-- Delete Button -->
+                <button type="button"
+                        class="btn btn-outline-danger p-0 d-flex align-items-center justify-content-center ml-1"
+                        style="width:28px;height:28px;"
+                        (click)="deleteCity(item.id)"
+                        [disabled]="isEditMode">
+                  <i data-feather="trash" style="width:14px;height:14px;"></i>
+                </button>
               </div>
             </div>
           </li>
@@ -49,44 +49,65 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-12 col-xs-12 col-lg-6 col-md-6 " *ngIf="isDisplay">
-    <div class="card ">
+
+  <!-- Right column - Create/Edit City Form -->
+  <div class="col-sm-12 col-xs-12 col-lg-6 col-md-6" *ngIf="isDisplay">
+    <div class="card">
       <div class="card-header">
         <h4 class="card-title">{{modeHeader}}</h4>
       </div>
       <div class="card-body">
-        <form class="form" (ngSubmit)="ModeForm.form.valid" #ModeForm="ngForm">
+        <form class="form" (ngSubmit)="cityForm.form.valid && CreateCity()" #cityForm="ngForm">
+          
+          <!-- City Name -->
           <div class="form-group">
-            <label for="first-name-column">Mode Name</label>
-            <input type="text" id="first-name-column" class="form-control" placeholder="Mode Name" name="fname-column"
-              [(ngModel)]="modeName" [maxlength]="50" required />
-
+            <label for="city-name">City Name</label>
+            <input id="city-name" class="form-control" placeholder="City Name"
+                   name="cityName" [(ngModel)]="cityName" [maxlength]="50" required />
           </div>
+
+          <!-- Country Dropdown -->
           <div class="form-group">
-            <label for="description">Description:</label>
-            <textarea type="text" class="form-control" id="description" placeholder="Description" name="description"
-              [(ngModel)]="description" required></textarea>
-
+            <label for="country-select">Select Country</label>
+            <select id="country-select" class="form-control" name="country"
+                    [(ngModel)]="selectedCountry" (ngModelChange)="onCountryChange($event)" required>
+              <option [ngValue]="null" disabled>Select a country</option>
+              <option *ngFor="let country of rows" [ngValue]="country.id">
+                {{ country.countryName }}
+              </option>
+            </select>
           </div>
+
+          <!-- State Dropdown -->
           <div class="form-group">
-            <div class=" form-group custom-control  custom-switch" style="margin-left:7px;">
-              <p class="mb-50">Mode Status <span class="text-muted">( Active / InActive)</span></p>
-              <input type="checkbox" class="custom-control-input" [(ngModel)]="modeStatus" name="modestatus"
-                id="modestatus" />
-              <label class="custom-control-label" for="modestatus"></label>
-
-            </div>
-
+            <label for="state-select">Select State</label>
+            <select id="state-select" class="form-control" name="state" [(ngModel)]="selectedState" required>
+              <option [ngValue]="null" disabled>Select a State</option>
+              <option *ngFor="let state of StateList" [ngValue]="state.id">
+                {{ state.stateName || state.StateName }}
+              </option>
+            </select>
           </div>
+
+          <!-- Buttons -->
           <div class="row justify-content-start p-1">
+            <button type="submit" class="btn mr-1"
+                    [disabled]="!cityForm.form.valid"
+                    style="background-color:#2E5F73;color:white;padding:6px 14px;font-size:.9rem;border-radius:4px;">
+              Submit
+            </button>
 
-            <button type="submit" rippleEffect class="btn btn-primary mr-1" [disabled]="!ModeForm.form.valid"
-              (click)="saveMode()">Submit</button>
-            <button type="cancel" rippleEffect class="btn btn-danger mr-1" (click)="cancel()">Cancel</button>
-            <button type="reset" *ngIf="resetButton" rippleEffect class="btn btn-secondary"
-              (click)="reset()">Reset</button>
+            <button type="button" class="btn btn-danger mr-1" (click)="cancel()"
+                    style="padding:6px 14px;font-size:.9rem;border-radius:4px;">
+              Cancel
+            </button>
 
+            <button type="button" class="btn btn-secondary" *ngIf="resetButton" (click)="reset()"
+                    style="padding:6px 14px;font-size:.9rem;border-radius:4px;">
+              Reset
+            </button>
           </div>
+
         </form>
       </div>
     </div>

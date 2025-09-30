@@ -1,31 +1,34 @@
-import { AfterViewInit, AfterViewChecked, Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
+import { CustomerGroupsService } from './customer-groups.service';
 import * as feather from 'feather-icons';
-import { CountriesService } from './countries.service';
 import Swal from 'sweetalert2';
-
 @Component({
-  selector: 'app-countries',
-  templateUrl: './countries.component.html',
-  styleUrls: ['./countries.component.scss']
+  selector: 'app-customer-groups',
+  templateUrl: './customer-groups.component.html',
+  styleUrls: ['./customer-groups.component.scss']
 })
-export class CountriesComponent implements OnInit, AfterViewInit, AfterViewChecked {
-  @ViewChild('addForm') countryForm!: NgForm;
+export class CustomerGroupsComponent implements OnInit, AfterViewInit, AfterViewChecked {
+  @ViewChild('addForm') addFormForm!: NgForm;
   public id = 0;
   public countryName = "";
   isDisplay: boolean = false;
-  modeHeader: string = 'Add Country';
+  modeHeader: string = 'Add CustomerGroups';
   resetButton: boolean = true;
  rows: any[] = [];
   tempData: any;
   countryValue: any;
   isEditMode: boolean;
+  customerName: string;
+  customerGroupValue: any;
+  Name: any;
+  description: any;
 
-  constructor(private _countriesService: CountriesService) { }
+  constructor(private _customerService: CustomerGroupsService) { }
 
   ngOnInit(): void 
   {
-    this.getAllCountries();
+    this.getAllCustomerGroups();
   }
 
   ngAfterViewInit(): void {
@@ -51,35 +54,37 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
     this.isEditMode = false;
   }
 
-  createCountry() {
+  createCustomerGroups() {
     this.isDisplay = true;
    
-    this.modeHeader = 'Add Country';
+    this.modeHeader = 'Add createCustomerGroups';
     this.reset();
   }
 
 
     reset() {
-    this.modeHeader = "Create Country";
-    this.countryName = "";
+    this.modeHeader = "Create createCustomerGroups";
+    this.Name = "";
+    this.description = "";
     this.id = 0;
   }
 
 
-   getAllCountries() {
-    this._countriesService.getCountry().subscribe((response: any) => {
+   getAllCustomerGroups() {
+    this._customerService.getCustomer().subscribe((response: any) => {
       this.rows = response.data;
       this.tempData = this.rows;
     })
   }
 
 
-  CreateCountry(data: any) {
+  CreateCustomerGroups(data: any) {
     debugger
    
   const obj = {
     id:this.id,
-    countryName: this.countryName,
+    name: this.Name,
+    description:this.description,
     createdBy: '1',
     createdDate: new Date(),
     updatedBy: '1',
@@ -87,7 +92,7 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
     isActive: true,
   };
  if(this.id == 0){
-  this._countriesService.insertCountry(obj).subscribe((res) => {
+  this._customerService.insertCustomer(obj).subscribe((res) => {
     if (res.isSuccess) {
       Swal.fire({
         title: "Hi",
@@ -96,14 +101,14 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
         allowOutsideClick: false,
       });
 
-      this.getAllCountries();
+      this.getAllCustomerGroups();
       this.isDisplay = false;
       this.isEditMode=false;
     }
   });
 }
 else{
-   this._countriesService.updateCountry(obj).subscribe((res) => {
+   this._customerService.updateCustomer(obj).subscribe((res) => {
     if (res.isSuccess) {
       Swal.fire({
         title: "Hi",
@@ -112,7 +117,7 @@ else{
         allowOutsideClick: false,
       });
 
-      this.getAllCountries();
+      this.getAllCustomerGroups();
       this.isDisplay = false;
       this.isEditMode=false;
     }
@@ -122,20 +127,21 @@ else{
 
 
 
-  getCountryDetails(id: any) {
+  getCustomerGroupsDetails(id: any) {
     debugger
-    this._countriesService.getCountryById(id).subscribe((arg: any) => {
-      this.countryValue = arg.data;
-      this.id = this.countryValue.id;
-      this.countryName = this.countryValue.countryName;
+    this._customerService.getCustomerById(id).subscribe((arg: any) => {
+      this.customerGroupValue = arg.data;
+      this.id = this.customerGroupValue.id;
+      this.Name = this.customerGroupValue.name;
+      this.description = this.customerGroupValue.description;
       this.isDisplay = true;
       this.resetButton = false;
-      this.modeHeader = "Edit Country";
+      this.modeHeader = "Edit CustomerGroups";
       this.isEditMode = true;
     });
   }
 
-  deleteCountry(id) {
+  deleteCustomerGroups(id) {
     const _self = this;
     Swal.fire({
       title: "Are you sure?",
@@ -152,7 +158,7 @@ else{
       allowOutsideClick: false,
     }).then(function (result) {
       if (result.value) {
-        _self._countriesService.deleteCountry(id).subscribe((response: any) => {
+        _self._customerService.deleteCustomer(id).subscribe((response: any) => {
           if (response.isSuccess) {
             Swal.fire({
               icon: "success",
@@ -168,7 +174,7 @@ else{
               allowOutsideClick: false,
             });
           }
-          _self.getAllCountries();
+          _self.getAllCustomerGroups();
         });
       }
     });
