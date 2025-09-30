@@ -11,6 +11,18 @@ import { CountriesComponent } from './countries/countries.component';
 import { UomComponent } from './uom/uom.component';
 import { IncotermsComponent } from './incoterms/incoterms.component';
 import { FlagissueComponent } from './flagissue/flagissue.component';
+import { PaymentTermsComponent } from './payment-terms/payment-terms.component';
+import { CurrencyComponent } from './currency/currency.component';
+import { StatesComponent } from './states/states.component';
+import { ServiceComponent } from './service/service.component';
+import { CustomerGroupsComponent } from './customer-groups/customer-groups.component';
+import { SupplierGroupsComponent } from './supplier-groups/supplier-groups.component';
+import { LocationComponent } from './location/location.component';
+import { CreateLocationComponent } from './location/create-location/create-location.component';
+import { RegionsComponent } from './regions/regions/regions.component';
+import { DeductionsComponent } from './deductions/deductions/deductions.component';
+import { IncomeComponent } from './income/income/income.component';
+import { DepartmentComponent } from './department/department/department.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -19,10 +31,24 @@ const routes: Routes = [
    { path: 'incoterms', component: IncotermsComponent },
    { path: 'flagIssue', component: FlagissueComponent },
    { path: 'countries', component: CountriesComponent },
+   { path: 'paymentTerms', component: PaymentTermsComponent },
+   { path: 'currency', component: CurrencyComponent },
+    { path: 'states', component: StatesComponent},
+     { path: 'service', component: ServiceComponent},
+     { path: 'customergroups', component: CustomerGroupsComponent},
+      { path: 'suppliergroups', component: SupplierGroupsComponent},
+       { path: 'location', component: LocationComponent},
+       { path: 'regions', component: RegionsComponent },
+   { path: 'deductions', component: DeductionsComponent },
+   { path: 'income', component: IncomeComponent },
+   { path: 'department', component: DepartmentComponent },
 ];
 
 @NgModule({
-  declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent],
+  declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
+    StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent
+  ],
   imports: [
     CommonModule,
     RouterModule.forChild(routes)  ,

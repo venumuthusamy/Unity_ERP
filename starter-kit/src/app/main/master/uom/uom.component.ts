@@ -18,8 +18,11 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
   selectedUom: any = null;
   public isDisplay = false;
   private iconsReplaced = false;
+  userId: string;
   constructor(private fb: FormBuilder,
-    private uomService: UomService,) { }
+    private uomService: UomService,) { 
+       this.userId = localStorage.getItem('id');
+    }
 
   ngOnInit(): void {
     this.loadUom();
@@ -33,8 +36,8 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
   // Load data from API
   loadUom() {
     debugger
-    this.uomService.getAllUom().subscribe((data: any) => {
-      this.uomList = data;
+    this.uomService.getAllUom().subscribe((res: any) => {
+     this.uomList = res.data.filter((item: any) => item.isActive === true);
       setTimeout(() => feather.replace(), 0);
     });
   }
@@ -84,8 +87,8 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
     const payload = {
       Name: this.uomName,
       description: this.description,
-      CreatedBy: "1",
-      UpdatedBy: "1",
+      CreatedBy: this.userId,
+      UpdatedBy: this.userId,
       UpdatedDate: new Date()
     };
 

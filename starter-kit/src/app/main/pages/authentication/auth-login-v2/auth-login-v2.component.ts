@@ -89,6 +89,7 @@ export class AuthLoginV2Component implements OnInit {
       this.authService.userLogin(this.loginForm.value).subscribe((res :any)=>{
       localStorage.setItem("username",this.loginForm.value.username)
       localStorage.setItem("token",res.token)
+      localStorage.setItem("id",res.userId)
       
       this._router.navigate(['/']);
       

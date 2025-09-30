@@ -1,0 +1,129 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
+/* ================================================
+   Chart of Accounts Table Styling (ngx-datatable)
+   ================================================ */
+.coa-table {
+  /* Variables */
+  --toggle-width: 48px; /* Width of expand/collapse chevron */
+  --row-h: 50px;        /* Row height */
+  --indent-width: 12px; /* Small indent for child name */
+
+  /* Remove default padding for row-detail to align flush */
+  ::ng-deep .datatable-row-detail {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Header Styling */
+  .datatable-header .datatable-header-cell {
+    font-weight: 600;
+    color: #8c8fa1;
+    background: #f5f4f8;
+    border-bottom: 0;
+  }
+
+  /* Parent table body rows */
+  .datatable-body-row .datatable-body-cell {
+    vertical-align: middle;
+  }
+
+  /* Row bottom border */
+  .datatable-body-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Amount fields - right aligned */
+.amount {
+  display: block;
+  width: 100%;
+  text-align: center;          /* Keep text centered */
+  font-variant-numeric: tabular-nums;
+  //padding-left: 86px;   
+  padding-right: 86px;        /* Adjust this value to move slightly right */
+}
+
+/* ================================================
+   Child Rows
+   ================================================ */
+.child-table {
+  width: 100%;
+  background: #fafafa; /* subtle background to differentiate children */
+}
+
+.child-row {
+  display: grid;
+  grid-template-columns:
+    var(--toggle-width) /* Spacer for chevron */
+    1fr                 /* Head Code */
+    2fr                 /* Head Name */
+    1fr                 /* Opening Balance */
+    1fr                 /* Balance */
+    1fr;                /* Action */
+  align-items: center;
+  height: var(--row-h);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 0 8px;
+}
+
+/* Only indent the child name cell */
+.child-row .cell.name {
+  padding-left: var(--indent-width);
+  display: flex;
+  align-items: center;
+}
+
+/* Child icons */
+.child-row .cell.name .icon-child {
+  margin-right: 6px;
+  color: #6c757d;
+}
+
+/* Numbers right aligned */
+.child-row .cell.money {
+  display: flex;
+  justify-content: flex-end;
+  text-align: right;
+  width: 100%;
+}
+
+/* Action buttons center aligned */
+.child-row .cell.actions {
+  display: flex;
+ // justify-content: center;
+  //align-items: center;
+  gap: 10px;
+  padding-left: 16px;  
+}
+
+/* “No child accounts” placeholder */
+.no-child {
+  padding-left: calc(var(--toggle-width) + var(--indent-width));
+  font-style: italic;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Chevron toggle button */
+.toggle-btn {
+  color: #4b4b57;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--toggle-width);
+  height: var(--row-h);
+  cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .child-row {
+    padding: 0 6px;
+  }
+}
+
+

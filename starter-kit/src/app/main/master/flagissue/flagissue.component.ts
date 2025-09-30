@@ -18,8 +18,11 @@ export class FlagissueComponent implements OnInit {
   selectedFlagIssue: any = null;
   public isDisplay = false;
   private iconsReplaced = false;
+  userId: string;
   constructor(private fb: FormBuilder,
-    private flagIssueService: FlagissueService,) { }
+    private flagIssueService: FlagissueService,) {
+       this.userId = localStorage.getItem('id');
+     }
 
   ngOnInit(): void {
     this.loadFlagIssue();
@@ -82,8 +85,8 @@ export class FlagissueComponent implements OnInit {
 
     const payload = {
       FlagIssuesNames: this.flagIssueName,
-      CreatedBy: "1",
-      UpdatedBy: "1",
+      CreatedBy: this.userId,
+      UpdatedBy: this.userId,
       CreatedDate: new Date(),
       UpdatedDate: new Date()
     };
