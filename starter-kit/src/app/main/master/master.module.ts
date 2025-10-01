@@ -5,7 +5,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { ApprovalLevelComponent } from './approval-level/approval-level.component';
 import { CitiesComponent } from './cities/cities.component';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CountriesComponent } from './countries/countries.component';
 import { UomComponent } from './uom/uom.component';
@@ -23,6 +23,11 @@ import { RegionsComponent } from './regions/regions/regions.component';
 import { DeductionsComponent } from './deductions/deductions/deductions.component';
 import { IncomeComponent } from './income/income/income.component';
 import { DepartmentComponent } from './department/department/department.component';
+import { ItemsComponent } from './items/item-list/items.component';
+import { CreateitemsidebarComponent } from './items/createitemsidebar/createitemsidebar.component';
+import { CoreSidebarModule } from '@core/components/core-sidebar/core-sidebar.module';
+import { WarehouseListComponent } from './warehouse/warehouse-list/warehouse-list.component';
+import { WarehouseCreateComponent } from './warehouse/warehouse-create/warehouse-create.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -42,19 +47,24 @@ const routes: Routes = [
    { path: 'deductions', component: DeductionsComponent },
    { path: 'income', component: IncomeComponent },
    { path: 'department', component: DepartmentComponent },
+   { path: 'items', component: ItemsComponent },
+    { path: 'warehouse', component: WarehouseListComponent },
+   { path: 'warehouse-create', component: WarehouseCreateComponent },
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
-    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent
   ],
   imports: [
     CommonModule,
     RouterModule.forChild(routes)  ,
     NgxDatatableModule,
     FormsModule,
-    NgbModule// ✅ child routes
+    NgbModule,
+    CoreSidebarModule,
+    ReactiveFormsModule,
   ]
 })
 export class MasterModule {}
