@@ -24,11 +24,13 @@ $datatables-dark-active-bg-color: $theme-dark-card-bg;
       }
 
       .datatable-header {
-        background-color: $datatables-bg-header-color;
+        //background-color: $datatables-bg-header-color;
         text-transform: uppercase;
         height: 40px !important;
         border-top: 1px solid $datatables-border-color;
-
+        background-color: #2E5F73 !important;
+        color: #fff !important;
+        border-color: #2E5F73 !important;
         .datatable-header-cell {
           border-bottom: 0;
           padding: 0.75rem 1rem;
@@ -217,4 +219,6 @@ $datatables-dark-active-bg-color: $theme-dark-card-bg;
   .pager {
     background-color: $theme-dark-pagination-bg !important;
   }
+ 
+
 }

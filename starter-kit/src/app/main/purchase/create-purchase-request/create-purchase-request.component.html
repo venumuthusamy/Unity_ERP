@@ -1,1 +1,404 @@
-<p>create-purchase-request works!</p>
+ <div  class="space-y-5">
+      <div class="bg-white rounded-2xl shadow p-3 border border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-semibold text-gray-800">PR Wizard</h2>
+         <span [ngClass]="badgeClass('emerald')" style="color: #0e3a4c;">
+  Flow: Draft → HOD Approve → Convert to PO/RFQ
+</span>
+
+        </div>
+
+        <div class="flex items-center gap-2 mb-4">
+          <div class="flex items-center gap-2" *ngFor="let s of prSteps; let i = index">
+           <div
+  [ngClass]="{
+    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold': true,
+    'text-white': i <= prStep,
+    'bg-gray-200 text-gray-600': i > prStep
+  }"
+  [ngStyle]="{
+    'background-color': i <= prStep ? '#0e3a4c' : ''
+  }"
+>
+  {{ i + 1 }}
+</div>
+
+            <span class="text-sm" [ngClass]="{ 'font-semibold': i === prStep, 'text-gray-600': i !== prStep }">{{ s }}</span>
+            <div class="w-8 h-px bg-gray-300" *ngIf="i < prSteps.length - 1"></div>
+          </div>
+        </div>
+
+        <!-- Step 0 -->
+      <div *ngIf="prStep === 0" class="space-y-4">
+  <div [ngClass]="gridColsClass(3)">
+    <!-- Requester -->
+    <div>
+      <label class="text-xs font-medium text-gray-600">Requester</label>
+      <input
+        class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
+        style="border-color: #0e3a4c"
+        placeholder="Your name"
+        [(ngModel)]="prHeader.requester"
+        name="requester"
+      />
+    </div>
+
+ <div class="relative dropdown-wrapper">
+  <label class="text-xs font-medium text-gray-600">Department</label>
+
+  <!-- Search Input with dropdown toggle -->
+  <div class="relative">
+    <input
+      type="text"
+      [(ngModel)]="searchText"
+      (input)="filterDepartments()"
+      (focus)="toggleDropdown(true)"
+      placeholder="Search Department..."
+      class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
+      style="border-color: #0e3a4c"
+    />
+
+    <!-- Dropdown Icon -->
+    <button
+      type="button"
+      (click)="toggleDropdown()"
+      class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2"
+    >
+      ▼
+    </button>
+  </div>
+
+  <!-- Dropdown Options -->
+  <ul
+    *ngIf="dropdownOpen"
+    class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto"
+  >
+    <li
+      *ngFor="let dept of filteredDepartments"
+      (click)="selectDepartment(dept)"
+      class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+    >
+      {{ dept.departmentName }}
+    </li>
+  </ul>
+</div>
+
+    <!-- Delivery Date -->
+    <div>
+  <label class="text-xs font-medium text-gray-600">Delivery Date</label>
+  <input
+    type="date"
+    class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
+    style="border-color: #0e3a4c;"
+    [(ngModel)]="prHeader.neededBy"
+    name="deliveryDate"
+    [min]="minDate"
+  />
+</div>
+
+  </div>
+
+  <!-- Second row -->
+  <div [ngClass]="gridColsClass(3)">
+    <!-- Description -->
+    <div>
+      <label class="text-xs font-medium text-gray-600">Description</label>
+      <input
+        class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
+        style="border-color: #0e3a4c"
+        placeholder="e.g., Weekly replenishment"
+        [(ngModel)]="prHeader.description"
+        name="description"
+      />
+    </div>
+
+    <!-- Multi Location Checkbox -->
+    <div class="flex items-end gap-2 ml-6">
+      <input
+        id="multiloc"
+        type="checkbox"
+        [(ngModel)]="prHeader.multiLoc"
+        name="multiLoc"
+      />
+      <label class="text-xs font-medium text-gray-600" for="multiloc">Split to multiple locations</label>
+    </div>
+
+    <div></div>
+  </div>
+
+  <!-- Oversea section -->
+  <div *ngIf="prHeader.oversea" class="rounded-xl border p-3 bg-emerald-50">
+    <p class="text-sm font-medium text-emerald-800 mb-2">Oversea details</p>
+    <div [ngClass]="gridColsClass(4)">
+      <div><label class="text-xs font-medium text-gray-600">Port of Loading</label><input class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Port of Destination</label><input class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Customs Agency Fees</label><input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" placeholder="0.00"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Both-side Tax (%)</label><input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" placeholder="0"/></div>
+    </div>
+    <div [ngClass]="gridColsClass(4)">
+      <div><label class="text-xs font-medium text-gray-600">Shipping Cost</label><input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" placeholder="0.00"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Packaging List Ref</label><input class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Delivery Order Ref</label><input class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+      <div><label class="text-xs font-medium text-gray-600">Remarks</label><input class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="flex justify-end">
+    <button
+      class="px-3 py-2 rounded-xl text-sm font-medium border border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+      (click)="prStep = 1"
+      type="button"
+    >
+      Next: Lines →
+    </button>
+  </div>
+</div>
+
+
+      <div *ngIf="prStep === 1" class="space-y-4">
+  <div class="border border-gray-600 rounded-xxl">
+   <table class="w-full table-auto border">
+  <thead>
+    <tr class="border-b">
+      <th class="px-3 py-2">Item</th>
+      <th class="px-3 py-2">Qty</th>
+      <th class="px-3 py-2">UOM</th>
+      <th class="px-3 py-2">Location</th>
+      <th class="px-3 py-2">Budget</th>
+      <th class="px-3 py-2">Remarks</th>
+      <th class="px-3 py-2">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let line of prLines; let i = index; trackBy: trackByIndex" class="border-t">
+      <td class="px-3 py-2">{{ line.itemSearch }}</td>
+      <td class="px-3 py-2">{{ line.qty }}</td>
+      <td class="px-3 py-2">{{ line.uom }}</td>
+      <td class="px-3 py-2">{{ line.location }}</td>
+      <td class="px-3 py-2">{{ line.budget }}</td>
+      <td class="px-3 py-2">{{ line.remarks }}</td>
+      <td class="px-3 py-2">
+        <button type="button" class="text-red-500" (click)="prRemoveLine(i)">Remove</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    <!-- Add Line -->
+    <div class="p-2 border-t bg-gray-50">
+      <button class="px-3 py-2 rounded-xl text-sm font-medium text-white"
+        style="background-color: #0e3a4c;"
+        (mouseenter)="hover=true" (mouseleave)="hover=false"
+        [style.background-color]="hover ? '#0b2e3d' : '#0e3a4c'"
+        (click)="prAddLine()" type="button">
+        + Add line
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="flex justify-between">
+    <button class="px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 border border-transparent"
+      (click)="prGo(-1)" type="button">← Back</button>
+
+    <button class="px-3 py-2 rounded-xl text-sm font-medium text-white"
+      style="background-color: #0e3a4c;"
+      (click)="prGo(1)" type="button">
+      Review →
+    </button>
+  </div>
+</div>
+
+
+
+        <!-- Step 2 -->
+        <div *ngIf="prStep === 2" class="space-y-4">
+          <div class="rounded-xl border p-3 bg-gray-50 text-sm">
+            <p class="font-semibold mb-2">Summary</p>
+            <p>
+  <span class="font-medium">Delivery Date:</span>
+  {{ prHeader.neededBy | date:'dd-MM-yyyy' || '-' }}
+</p>
+
+            <p>
+              <!-- <span class="font-medium">Oversea:</span> {{ prHeader.oversea ? 'Yes' : 'No' }} · -->
+               <span class="font-medium">Split to multiple locations:</span> {{ prHeader.multiLoc ? 'Yes' : 'No' }}</p>
+            <p class="mt-2 font-medium">Lines:</p>
+            <ul class="list-disc ml-5">
+             <li *ngFor="let l of prLines; let i = index">
+  {{ l['item'] || '(no item)' }} — {{ l['qty'] || 0 }} {{ l['uom'] || '' }} → {{ l['loc'] || '-' }} · {{ l['budget'] || '' }}
+</li>
+
+              <li *ngIf="prLines.length === 0">No lines</li>
+            </ul>
+          </div>
+          <div class="flex justify-between">
+            <button class="px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 border border-transparent"
+                    (click)="prGo(-1)" type="button">← Back</button>
+            <div class="flex gap-2">
+              <!-- <button class="px-3 py-2 rounded-xl text-sm font-medium border border-emerald-600 text-emerald-700 hover:bg-emerald-50" type="button"
+                      (click)="notify('Sent for HOD approval')">Send for HOD Approval</button> -->
+             <button
+  class="px-3 py-2 rounded-xl text-sm font-medium text-white"
+  style="background-color: #0e3a4c;"
+  type="button"
+  (click)="saveRequest()"
+>
+  Convert to PO / RFQ
+</button>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+     
+      
+    </div>
+    <!-- Modal Overlay -->
+<div
+  *ngIf="showModal"
+  class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+>
+  <!-- Modal Content -->
+  <div class="bg-white rounded-2xl shadow-lg w-[700px] p-6 relative max-h-[90vh] overflow-y-auto">
+    <h2 class="text-lg font-semibold mb-4">Add Purchase Request Line</h2>
+
+  <form #modalForm="ngForm">
+  <div class="grid grid-cols-6 gap-3">
+    <!-- Item (col-span-2) -->
+    <div class="col-span-2 relative dropdown-wrapper">
+      <label class="block text-sm font-medium mb-1">Item</label>
+      <input
+        type="text"
+        [(ngModel)]="modalLine.itemSearch"
+        name="itemSearch"
+        (focus)="onModalItemFocus()"
+        (input)="filterModalItems()"
+        placeholder="Search Item..."
+        class="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e3a4c] outline-none"
+      />
+      <div
+        *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length"
+        class="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50"
+      >
+        <div
+          *ngFor="let item of modalLine.filteredItems"
+          (click)="selectModalItem(item)"
+          class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
+        >
+          <span>{{ item.itemName }}</span>
+          <span class="text-gray-500 text-xs">{{ item.itemCode }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quantity (col-span-1) -->
+    <div class="col-span-1">
+      <label class="block text-sm font-medium mb-1">Quantity</label>
+      <input
+        type="number"
+        [(ngModel)]="modalLine.qty"
+        name="qty"
+        class="w-full rounded-xl border px-3 py-2 text-sm"
+      />
+    </div>
+
+    <!-- UOM (col-span-1) -->
+    <div class="col-span-1 relative dropdown-wrapper">
+      <label class="block text-sm font-medium mb-1">UOM</label>
+      <input
+        type="text"
+        [(ngModel)]="modalLine.uomSearch"
+        name="uomSearch"
+        (focus)="onModalUomFocus()"
+        (input)="filterModalUoms()"
+        placeholder="Search UOM..."
+        class="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e3a4c] outline-none"
+      />
+      <div
+        *ngIf="modalLine.uomDropdownOpen && modalLine.filteredUoms?.length"
+        class="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50"
+      >
+        <div
+          *ngFor="let uom of modalLine.filteredUoms"
+          (click)="selectModalUom(uom)"
+          class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+        >
+          {{ uom.name }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Location (col-span-2) -->
+    <div class="col-span-2 relative dropdown-wrapper">
+      <label class="block text-sm font-medium mb-1">Location</label>
+      <input
+        type="text"
+        [(ngModel)]="modalLine.locationSearch"
+        name="locationSearch"
+        (focus)="onModalLocationFocus()"
+        (input)="filterModalLocations()"
+        placeholder="Search Location..."
+        class="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-[#0e3a4c] outline-none"
+      />
+      <div
+        *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length"
+        class="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50"
+      >
+        <div
+          *ngFor="let location of modalLine.filteredLocations"
+          (click)="selectModalLocation(location)"
+          class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+        >
+          {{ location.name }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget (col-span-2) -->
+    <div class="col-span-2">
+      <label class="block text-sm font-medium mb-1">Budget Line</label>
+      <input
+        type="text"
+        [(ngModel)]="modalLine.budget"
+        name="budget"
+        class="w-full rounded-xl border px-3 py-2 text-sm"
+      />
+    </div>
+
+    <!-- Remarks (col-span-4) -->
+    <div class="col-span-4">
+      <label class="block text-sm font-medium mb-1">Remarks</label>
+      <textarea
+        [(ngModel)]="modalLine.remarks"
+        name="remarks"
+        class="w-full rounded-xl border px-3 py-2 text-sm"
+        rows="2"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="flex justify-end gap-3 mt-4">
+    <button
+      type="button"
+      class="px-4 py-2 rounded-xl text-white text-sm"
+      style="background-color: #0e3a4c"
+      (click)="addAnotherPR()"
+    >
+      Add Another PR
+    </button>
+    <button
+      type="button"
+      class="px-4 py-2 rounded-xl text-sm border"
+      (click)="closeModal()"
+    >
+      Close
+    </button>
+  </div>
+</form>
+
+  </div>
+</div>

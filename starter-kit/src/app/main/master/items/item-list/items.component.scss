@@ -1,0 +1,15 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+
+/* Header */
+/* Header */
+.ngx-datatable.items-table .datatable-header,
+.ngx-datatable.items-table .datatable-header .datatable-header-cell {
+  background-color: #2E5F73 !important;
+  color: #fff !important;
+  border-color: #2E5F73 !important;
+}
+
+
+

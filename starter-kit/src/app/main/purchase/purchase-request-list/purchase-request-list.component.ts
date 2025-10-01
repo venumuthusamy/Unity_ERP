@@ -88,7 +88,7 @@ editRequest(id:any){
 }
 
 goToRequisition() {
-  this.router.navigate(['/purchases/requisition']);
+  this.router.navigate(['/purchase/Create-PurchaseRequest']);
 }
 
  deleteRequest(id: number) {

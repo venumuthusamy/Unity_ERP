@@ -6,7 +6,7 @@
         <!-- Header / Controls -->
         <div class="row align-items-center">
           <div class="col-md-6 col-12">
-            <h4 class="card-text ml-3 mt-2 mb-0">{{ headervalue || 'Chart of Accounts' }}</h4>
+            <h4 class="card-text" style="margin-left: 0.85rem; margin-top: 0.75rem;font-size: 1.25rem; font-weight: 600; color: #2E5F73;" >{{ headervalue || 'Chart of Accounts' }}</h4>
             <div class="d-flex align-items-center m-1">
               <label class="d-flex align-items-center mb-0">
                 Show
@@ -34,7 +34,7 @@
                   (search)="filterUpdate()" />
               </label>
 
-              <button class="btn btn-primary m-1" (click)="toggleSidebar('app-chartofaccountcreate')">
+              <button class="btn m-1" style="background-color: #2E5F73; color: white;" (click)="toggleSidebar('app-chartofaccountcreate')">
                 <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
                 <span class="d-none d-sm-inline-block">Add</span>
               </button>
@@ -149,7 +149,7 @@
           <ngx-datatable-column name="Action" [flexGrow]="1">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <i class="fas fa-pen text-success mr-2" style="cursor:pointer" (click)="edit(row.id)"></i>
-              <i class="fas fa-trash text-danger" style="cursor:pointer" (click)="del(row.id)"></i>
+              <i class="fas fa-trash text-danger " style="cursor:pointer" (click)="confirmDeleteCoa(row)"></i>
             </ng-template>
           </ngx-datatable-column>
         </ngx-datatable>
@@ -165,6 +165,6 @@
     name="app-chartofaccountcreate"
     overlayClass="modal-backdrop"
   >
-    <app-chartofaccountcreate></app-chartofaccountcreate>
+    <app-chartofaccountcreate [editId]="selectedCoaId" (onDepartmentChange)="load()"></app-chartofaccountcreate>
   </core-sidebar>
 </div>

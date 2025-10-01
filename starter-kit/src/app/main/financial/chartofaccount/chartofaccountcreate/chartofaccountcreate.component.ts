@@ -1,18 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ChartofaccountService } from '../chartofaccount.service';
+import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 
 @Component({
   selector: 'app-chartofaccountcreate',
   templateUrl: './chartofaccountcreate.component.html',
   styleUrls: ['./chartofaccountcreate.component.scss']
 })
-export class ChartOfAccountCreateComponent implements OnInit {
+export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
+  @Output() onDepartmentChange = new EventEmitter<any>();
+  @Input() editId: number | null = null;   // used by sidebar flow
+
   addForm!: FormGroup;
   isEditMode = false;
-  chartOfAccountId!: number | null;
+
+  /** used by routed flow (/edit/:id) */
+  private chartOfAccountId: number | null = null;
 
   accountHeads: any[] = [];
   parentHeadList: Array<{ value: number; label: string }> = [];
@@ -21,12 +27,32 @@ export class ChartOfAccountCreateComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private chartOfAccountService: ChartofaccountService
+    private chartOfAccountService: ChartofaccountService,
+    private _coreSidebarService: CoreSidebarService
   ) {}
 
+  // ---------------- Lifecycle ----------------
   ngOnInit(): void {
+    this.initForm();
     this.loadAccountHeads();
 
+    // Routed flow support (if you navigate to /edit/:id). If you only use sidebar, this is harmless.
+    this.route.paramMap.subscribe(params => {
+      const idParam = params.get('id');
+      this.chartOfAccountId = idParam ? parseInt(idParam, 10) : null;
+      this.resolveModeAndLoad();
+    });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // When parent sets [editId] (sidebar flow), re-evaluate mode & load
+    if ('editId' in changes && !changes['editId']?.firstChange) {
+      this.resolveModeAndLoad();
+    }
+  }
+
+  // ---------------- Init helpers ----------------
+  private initForm(): void {
     this.addForm = this.fb.group({
       headName: [null, Validators.required],
       headCode: [{ value: null, disabled: true }],
@@ -38,57 +64,100 @@ export class ChartOfAccountCreateComponent implements OnInit {
       isGI: [false],
       headCodeName: [null]
     });
+  }
 
-    this.route.paramMap.subscribe((params: any) => {
-      const idParam = params.get('id');
-      this.chartOfAccountId = idParam ? parseInt(idParam, 10) : null;
+  /** Decide whether we’re in edit/create based on editId (sidebar) or chartOfAccountId (route) */
+  private resolveModeAndLoad(): void {
+    const effectiveId = this.editId ?? this.chartOfAccountId;
 
-      if (this.chartOfAccountId) {
-        this.isEditMode = true;
-        this.chartOfAccountService.getByIdChartOfAccount(this.chartOfAccountId).subscribe((res: any) => {
-          // Patch the form with server data
-          this.addForm.patchValue({
-            headName: res.data.headName,
-            headCode: res.data.headCode,
-            parentHead: res.data.parentHead,
-            pHeadName: res.data.pHeadName,
-            headLevel: res.data.headLevel,
-            headType: res.data.headType,
-            isTransaction: res.data.isTransaction,
-            isGI: res.data.isGI,
-            headCodeName: res.data.headCodeName
-          });
+    if (effectiveId) {
+      this.isEditMode = true;
+      this.loadById(effectiveId);
+    } else {
+      this.isEditMode = false;
+      this.enterCreateDefaults();
+    }
+  }
 
-          // Disable the readonly fields (already configured as disabled in form def)
-          this.addForm.get('headCode')?.disable();
-          this.addForm.get('pHeadName')?.disable();
-          this.addForm.get('headLevel')?.disable();
-          this.addForm.get('headType')?.disable();
+  private loadById(id: number): void {
+    if (!this.addForm) return;
+    this.chartOfAccountService.getByIdChartOfAccount(id).subscribe({
+      next: (res: any) => {
+        const d = res?.data || {};
+        this.addForm.patchValue({
+          headName: d.headName ?? null,
+          headCode: d.headCode ?? null,
+          parentHead: d.parentHead ?? 0,
+          pHeadName: d.pHeadName ?? null,
+          headLevel: d.headLevel ?? null,
+          headType: d.headType ?? null,
+          isTransaction: !!d.isTransaction,
+          isGI: !!d.isGI,
+          headCodeName: d.headCodeName ?? null
         });
-      } else {
-        this.isEditMode = false;
-      }
+      },
+      error: (err) => this.alert('error', 'Failed to load record', this.errMsg(err))
     });
   }
 
-  /** Use this if your modal wrapper is in the template */
-  toggleModal(show: boolean) {
-    const modal = document.getElementById('coa-modal');
-    if (modal) modal.style.display = show ? 'block' : 'none';
+   enterCreateDefaults(): void {
+    if (!this.addForm) return;
+    this.addForm.reset({
+      headName: null,
+      headCode: null,
+      parentHead: 0,
+      pHeadName: null,
+      headLevel: null,
+      headType: null,
+      isTransaction: false,
+      isGI: false,
+      headCodeName: null
+    });
   }
 
-  /** Load all COA items and build Parent dropdown list */
+toggleModal(name: string): void {
+  const sidebar = this._coreSidebarService.getSidebarRegistry(name);
+  sidebar.toggleOpen();
+
+  // If closing, reset the form
+  if (!sidebar.open) {
+    this.enterCreateDefaults();
+  }
+}
+// chartofaccountcreate.component.ts (only the new method shown)
+public resetForm(): void {
+  if (!this.addForm) return;
+  this.addForm.reset({
+    headName: null,
+    headCode: null,
+    parentHead: 0,
+    pHeadName: null,
+    headLevel: null,
+    headType: null,
+    isTransaction: false,
+    isGI: false,
+    headCodeName: null
+  });
+  this.isEditMode = false;
+  this.chartOfAccountId = null;
+}
+
+
+  // ---------------- Data needed for dropdown ----------------
   loadAccountHeads(): void {
-    this.chartOfAccountService.getAllChartOfAccount().subscribe((data: any[]) => {
-      this.accountHeads = data || [];
-      this.parentHeadList = this.accountHeads.map((head: any) => ({
-        value: head.id,
-        label: this.buildFullPath(head)
-      }));
+    this.chartOfAccountService.getAllChartOfAccount().subscribe({
+      next: (res: any) => {
+        this.accountHeads = res?.data || [];
+        this.parentHeadList = this.accountHeads.map((head: any) => ({
+          value: head.id,
+          label: this.buildFullPath(head)
+        }));
+      },
+      error: (err) => this.alert('error', 'Failed to load heads', this.errMsg(err))
     });
   }
 
-  /** Build breadcrumb label like: Parent >> Child >> This */
+  /** Build breadcrumb like: Parent >> Child >> This */
   buildFullPath(item: any): string {
     let path = item.headName;
     let current = this.accountHeads.find((x: any) => x.id === item.parentHead);
@@ -99,13 +168,12 @@ export class ChartOfAccountCreateComponent implements OnInit {
     return path;
   }
 
-  /** When typing a Head Name for a root-level node (no parent selected) */
+  // ---------------- Form auto values ----------------
   onChangeHeadName(_: any): void {
-    // We only need to compute for top-level when parentHead is 0
+    // only compute for top-level when parentHead is 0
     const parentId = Number(this.addForm.get('parentHead')?.value || 0);
     if (parentId !== 0) return;
 
-    // Compute next top-level code = count(level 1) + 1
     const levelOneItems = this.accountHeads.filter((i: any) => Number(i.headLevel) === 1);
     const nextCode = (levelOneItems?.length || 0) + 1;
 
@@ -120,14 +188,12 @@ export class ChartOfAccountCreateComponent implements OnInit {
     });
   }
 
-  /** Native <select> change handler (NO PrimeNG) */
   onChangeParentHead(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     const parentId = parseInt(value, 10);
-
     this.addForm.patchValue({ parentHead: parentId });
 
-    // If none selected, reset dependent fields to top-level defaults
+    // reset to top-level
     if (!parentId) {
       this.addForm.patchValue({
         pHeadName: 'COA',
@@ -144,7 +210,7 @@ export class ChartOfAccountCreateComponent implements OnInit {
     const parentCode = (parent.headCode ?? '').toString();
     const parentLevel = Number(parent.headLevel);
 
-    // Existing children one level below this parent
+    // children exactly one level below this parent
     const childCodes: string[] = this.accountHeads
       .filter(acc =>
         (acc.headCode ?? '').toString().startsWith(parentCode) &&
@@ -152,7 +218,6 @@ export class ChartOfAccountCreateComponent implements OnInit {
       )
       .map(acc => (acc.headCode ?? '').toString());
 
-    // Determine next numeric suffix
     const suffixes = childCodes
       .map(code => parseInt(code.substring(parentCode.length) || '0', 10))
       .filter(n => !isNaN(n))
@@ -160,7 +225,7 @@ export class ChartOfAccountCreateComponent implements OnInit {
 
     const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
 
-    // Keep suffix padding consistent with existing children (min 2)
+    // keep suffix padding consistent with siblings (min 2)
     const maxSuffixLen = Math.max(
       2,
       ...childCodes.map(code => Math.max(0, code.length - parentCode.length))
@@ -177,6 +242,7 @@ export class ChartOfAccountCreateComponent implements OnInit {
     });
   }
 
+  // ---------------- Submit ----------------
   onSubmit(): void {
     if (this.addForm.invalid) {
       Swal.fire({
@@ -188,56 +254,72 @@ export class ChartOfAccountCreateComponent implements OnInit {
       return;
     }
 
-    // Use rawValue so disabled controls are included
     const payload = this.addForm.getRawValue();
     payload.parentHead = payload.parentHead || 0;
 
-    if (this.isEditMode && this.chartOfAccountId) {
+    const effectiveId = this.editId ?? this.chartOfAccountId;
+
+    if (this.isEditMode && effectiveId) {
       // Update
-      this.chartOfAccountService.updateChartOfAccount(this.chartOfAccountId, payload).subscribe(
-        () => {
+       payload.id = effectiveId; 
+      this.chartOfAccountService.updateChartOfAccount(effectiveId, payload).subscribe({
+        next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Updated Successfully',
             text: 'Chart Of Account has been updated successfully.',
             confirmButtonColor: '#28a745'
           }).then(() => {
-            this.toggleModal(false);
-            this.router.navigateByUrl('financial/coa');
+            this.toggleModal('app-chartofaccountcreate');  // close sidebar
+            this.onDepartmentChange.emit();                // notify parent to reload
           });
         },
-        (err) => {
+        error: (err) => {
           Swal.fire({
             icon: 'error',
             title: 'Update Failed',
-            text: err?.message || 'An error occurred while updating the Chart Of Account.',
+            text: this.errMsg(err),
             confirmButtonColor: '#dc3545'
           });
         }
-      );
+      });
     } else {
       // Create
-      this.chartOfAccountService.createChartOfAccount(payload).subscribe(
-        () => {
+      this.chartOfAccountService.createChartOfAccount(payload).subscribe({
+        next: () => {
           Swal.fire({
             icon: 'success',
             title: 'Created Successfully',
             text: 'Chart Of Account has been created successfully.',
             confirmButtonColor: '#28a745'
           }).then(() => {
-            this.toggleModal(false);
-            
+            this.toggleModal('app-chartofaccountcreate');  // close sidebar
+            this.onDepartmentChange.emit();                // notify parent to reload
+            this.enterCreateDefaults();                    // reset if sidebar stays open
           });
         },
-        (err) => {
+        error: (err) => {
           Swal.fire({
             icon: 'error',
             title: 'Creation Failed',
-            text: err?.message || 'An error occurred while creating the Chart Of Account.',
+            text: this.errMsg(err),
             confirmButtonColor: '#dc3545'
           });
         }
-      );
+      });
     }
+  }
+
+  // ---------------- Utils ----------------
+  private alert(
+    icon: 'success' | 'error' | 'warning' | 'info' | 'question',
+    title: string,
+    text?: string
+  ) {
+    Swal.fire({ icon, title, text: text || undefined });
+  }
+
+  private errMsg(err: any): string {
+    return err?.error?.message || err?.message || 'An error occurred. Please try again.';
   }
 }
