@@ -30,7 +30,7 @@ interface CoaNode extends CoaFlat {
   selector: 'app-chartofaccount',
   templateUrl: './chartofaccount.component.html',
   styleUrls: ['./chartofaccount.component.scss'],
-  encapsulation:ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None
 })
 export class ChartofaccountComponent implements OnInit {
   // @ViewChild(DatatableComponent) table!: DatatableComponent;
@@ -40,7 +40,7 @@ export class ChartofaccountComponent implements OnInit {
   selectedOption = 10;          // page size (ngx-datatable [limit])
   searchValue = '';
   isLoading = false;
-
+  selectedCoaId: number | null = null;
   /** Parents only (each can have children) */
   rows: CoaNode[] = [];
   /** Bound to datatable (filtered rows) */
@@ -50,58 +50,67 @@ export class ChartofaccountComponent implements OnInit {
     private router: Router,
     private service: ChartofaccountService,
     private _coreSidebarService: CoreSidebarService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.load();
   }
 
   /** Fetch and build parent->children structure */
-  private load(): void {
-    this.isLoading = true;
-    this.service.getAllChartOfAccount().subscribe({
-      next: (res: any) => {
-        const flat: CoaFlat[] = (res.data || []).map(x => ({
-          id: Number(x.id),
-          headCode: Number(x.headCode ?? 0),
-          headName: String(x.headName ?? ''),
-          openingBalance: Number(x.openingBalance ?? 0),
-          balance: Number(x.balance ?? 0),
-          parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
-          isActive: x.isActive ?? true
-        }));
+ load(): void {
+  this.isLoading = true;
+  this.service.getAllChartOfAccount().subscribe({
+    next: (res: any) => {
+      const flat: CoaFlat[] = (res.data || []).map(x => ({
+        id: Number(x.id),
+        headCode: Number(x.headCode ?? 0),
+        headName: String(x.headName ?? ''),
+        openingBalance: Number(x.openingBalance ?? 0),
+        balance: Number(x.balance ?? 0),
+        parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
+        isActive: x.isActive ?? true
+      }));
 
-        // Group children by parent Id
-        const childrenByParent = new Map<number, CoaFlat[]>();
-        flat.forEach(r => {
-          const p = Number(r.parentHead || 0);
-          if (!p) return; // only children have a non-zero parent
-          if (!childrenByParent.has(p)) childrenByParent.set(p, []);
-          childrenByParent.get(p)!.push(r);
+      // ✅ Only keep active rows (both parents and children)
+      const flatActive = flat.filter(r => !!r.isActive);
+
+      // Group children by parent Id (ACTIVE ONLY)
+      const childrenByParent = new Map<number, CoaFlat[]>();
+      flatActive.forEach(r => {
+        const p = Number(r.parentHead || 0);
+        if (!p) return;
+        if (!childrenByParent.has(p)) childrenByParent.set(p, []);
+        childrenByParent.get(p)!.push(r);
+      });
+
+      // Parents are active rows with parentHead 0 / null
+      this.rows = flatActive
+        .filter(r => !r.parentHead || r.parentHead === 0)
+        .sort((a, b) => a.headCode - b.headCode)
+        .map(p => {
+          const kids = (childrenByParent.get(p.id) || []).sort((a, b) => a.headCode - b.headCode);
+          return {
+            ...p,
+            children: kids,
+            hasChildren: kids.length > 0
+          } as CoaNode;
         });
 
-        // Parents are rows with parentHead 0 / null
-        this.rows = flat
-          .filter(r => !r.parentHead || r.parentHead === 0)
-          .sort((a, b) => a.headCode - b.headCode)
-          .map(p => {
-            const kids = (childrenByParent.get(p.id) || []).sort((a, b) => a.headCode - b.headCode);
-            return {
-              ...p,
-              children: kids,
-              hasChildren: kids.length > 0
-            } as CoaNode;
-          });
+      this.displayRows = [...this.rows];
+      this.isLoading = false;
+    },
+    error: (err) => {
+      this.isLoading = false;
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to load Chart of Accounts',
+        text: this.errMsg(err),
+        confirmButtonColor: '#d33'
+      });
+    }
+  });
+}
 
-        this.displayRows = [...this.rows];
-        this.isLoading = false;
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.alert('error', 'Failed to load Chart of Accounts', this.errMsg(err));
-      }
-    });
-  }
 
   /** Expand/collapse a parent row */
   toggleRow(row: CoaNode) {
@@ -148,67 +157,63 @@ export class ChartofaccountComponent implements OnInit {
       ));
   }
 
-  /** Actions */
-  create(): void {
-    this.router.navigateByUrl('financial/coa/create');
-  }
 
   edit(id: number): void {
-    this.router.navigateByUrl(`financial/coa/edit/${id}`);
+    this.selectedCoaId = id;                             // pass id to child
+    this._coreSidebarService.getSidebarRegistry('app-chartofaccountcreate').toggleOpen(); // open sidebar
   }
 
-  async del(id: number): Promise<void> {
-    const result = await Swal.fire({
-      title: 'Confirm Delete',
-      text: 'Are you sure you want to delete this item?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#d33'
-    });
+  onChildSaved(): void {
+    this.load();                                          // refresh list
+    this.selectedCoaId = null;                            // reset (optional)
+  }
 
-    if (!result.isConfirmed) return;
+confirmDeleteCoa(data: any) {
+  Swal.fire({
+    title: 'Confirm Delete',
+    text: 'Are you sure you want to delete this item?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    cancelButtonText: 'Cancel',
+    buttonsStyling: false,
+    customClass: {
+      confirmButton: 'btn btn-danger',
+      cancelButton: 'btn btn-primary ml-2'   // ← blue
+    }
+  }).then(r => { if (r.isConfirmed) this.deleteCoa(data); });
+}
 
-    this.service.deleteChartOfAccount(id).subscribe({
+
+  // Actual delete call
+  deleteCoa(item: any) {
+    this.service.deleteChartOfAccount(item.id).subscribe({
       next: () => {
-        this.toast('success', 'Deleted successfully');
-        this.load();
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Chart of Account deleted successfully.',
+          confirmButtonColor: '#3085d6'
+        });
+        this.load(); // refresh your table
       },
       error: (err) => {
-        this.alert('error', 'Delete failed', this.errMsg(err));
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: this.errMsg?.(err) || 'Failed to delete Chart of Account.',
+          confirmButtonColor: '#d33'
+        });
       }
     });
   }
 
-  // ---------- SweetAlert helpers ----------
-  private alert(
-    icon: 'success' | 'error' | 'warning' | 'info' | 'question',
-    title: string,
-    text?: string
-  ) {
-    Swal.fire({ icon, title, text: text || undefined });
-  }
 
-  private toast(
-    icon: 'success' | 'error' | 'warning' | 'info' | 'question',
-    title: string
-  ) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon,
-      title,
-      showConfirmButton: false,
-      timer: 1800,
-      timerProgressBar: true
-    });
-  }
 
   private errMsg(err: any): string {
     return err?.error?.message || err?.message || 'Please try again.';
   }
-    toggleSidebar(name): void {
+  toggleSidebar(name): void {
     this._coreSidebarService.getSidebarRegistry(name).toggleOpen();
   }
 }

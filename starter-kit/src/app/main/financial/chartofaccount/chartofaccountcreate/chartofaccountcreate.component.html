@@ -5,11 +5,7 @@
       <form class="modal-content pt-0" [formGroup]="addForm" (ngSubmit)="onSubmit()">
 
         <!-- Close button -->
-        <button
-          type="button"
-          class="close"
-          aria-label="Close"
-          (click)="toggleModal(false)">
+        <button type="button" class="close" aria-label="Close" (click)="toggleModal('app-chartofaccountcreate')">
           ×
         </button>
 
@@ -26,13 +22,10 @@
           <!-- Head Name -->
           <div class="form-group">
             <label class="form-label">Head Name <span class="text-danger">*</span></label>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Enter Head Name"
-              formControlName="headName"
+            <input type="text" class="form-control" placeholder="Enter Head Name" formControlName="headName"
               [class.error]="addForm.controls.headName.invalid && addForm.controls.headName.touched"
-              (change)="onChangeHeadName($event)" />
+              (input)="onChangeHeadName($event)" />
+
 
             <span *ngIf="addForm.controls.headName.invalid && addForm.controls.headName.touched" class="invalid-form">
               <small class="text-danger">This field is required!</small>
@@ -42,21 +35,13 @@
           <!-- Head Code -->
           <div class="form-group">
             <label class="form-label">Head Code</label>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Auto Generated"
-              formControlName="headCode"
-              disabled />
+            <input type="text" class="form-control" placeholder="Auto Generated" formControlName="headCode" disabled />
           </div>
 
           <!-- Parent Head (Replaced p-dropdown with normal select) -->
           <div class="form-group">
             <label class="form-label">Parent Head</label>
-            <select
-              class="form-control"
-              formControlName="parentHead"
-              (change)="onChangeParentHead($event)">
+            <select class="form-control" formControlName="parentHead" (change)="onChangeParentHead($event)">
               <option value="0">-- Choose Parent Head --</option>
               <option *ngFor="let head of parentHeadList" [value]="head.value">
                 {{ head.label }}
@@ -67,30 +52,18 @@
           <!-- P Head Name -->
           <div class="form-group">
             <label class="form-label">P Head Name</label>
-            <input
-              type="text"
-              class="form-control"
-              formControlName="pHeadName"
-              disabled />
+            <input type="text" class="form-control" formControlName="pHeadName" disabled />
           </div>
 
           <!-- Head Level and Type -->
           <div class="form-row">
             <div class="form-group col-md-6">
               <label class="form-label">Head Level</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="headLevel"
-                disabled />
+              <input type="text" class="form-control" formControlName="headLevel" disabled />
             </div>
             <div class="form-group col-md-6">
               <label class="form-label">Head Type</label>
-              <input
-                type="text"
-                class="form-control"
-                formControlName="headType"
-                disabled />
+              <input type="text" class="form-control" formControlName="headType" disabled />
             </div>
           </div>
 
@@ -105,16 +78,16 @@
               <input type="checkbox" formControlName="isGI" />
             </div>
           </div>
-
-        </div>
-
-        <!-- Modal Footer -->
-        <div class="modal-footer text-right">
-          <button type="button" class="btn btn-outline-secondary" (click)="toggleModal(false)">Cancel</button>
-          <button type="submit" class="btn btn-success">
+ <div class="modal-footer  pt-3 ">
+          <button type="submit" class="btn"
+          style="background-color: #2E5F73; color: white; ">
             {{ isEditMode ? 'Update' : 'Save' }}
           </button>
+           <button type="button" class="btn btn-outline-danger"
+           (click)="toggleModal('app-chartofaccountcreate')">Cancel</button>
         </div>
+        </div>
+
       </form>
     </div>
   </div>
