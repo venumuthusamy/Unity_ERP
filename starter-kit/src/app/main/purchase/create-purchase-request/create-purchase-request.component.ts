@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { DepartmentService } from 'app/main/master/department/department.service';
@@ -11,7 +11,8 @@ import { PurchaseService } from '../purchase.service';
 @Component({
   selector: 'app-create-purchase-request',
   templateUrl: './create-purchase-request.component.html',
-  styleUrls: ['./create-purchase-request.component.scss']
+  styleUrls: ['./create-purchase-request.component.scss'],
+  encapsulation:ViewEncapsulation.None
 })
 export class CreatePurchaseRequestComponent implements OnInit {
  prStep = 0;

@@ -46,7 +46,6 @@
             "tsConfig": "src/tsconfig.app.json",
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": [
-              "src/styles.scss",
                "node_modules/@ng-select/ng-select/themes/default.theme.css",
               "node_modules/highlight.js/scss/atom-one-dark.scss",
               "src/assets/fonts/feather/iconfont.css",
@@ -56,7 +55,8 @@
               "./node_modules/@fullcalendar/daygrid/main.css",
               "./node_modules/@fullcalendar/timegrid/main.css",
               "./node_modules/@fullcalendar/list/main.css",
-             "node_modules/@fortawesome/fontawesome-free/css/all.min.css"
+             "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
+             "src/styles.scss"
             ],
             "stylePreprocessorOptions": {
               "includePaths": ["node_modules", "src/assets/"]
