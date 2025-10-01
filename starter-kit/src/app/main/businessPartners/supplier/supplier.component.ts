@@ -1,9 +1,11 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ColumnMode, SelectionType } from '@swimlane/ngx-datatable';
-import { LocationService } from './location.service';
+
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 import Swal from 'sweetalert2';
-interface LocationRow {
+import { SupplierService } from './supplier.service';
+import { Router } from '@angular/router';
+interface SupplierRow {
   id: number;
   name: string;
   address: string;
@@ -22,15 +24,15 @@ interface LocationRow {
   updatedDate: string | Date;
 }
 @Component({
-  selector: 'app-location',
-  templateUrl: './location.component.html',
-  styleUrls: ['./location.component.scss'],
-    encapsulation:ViewEncapsulation.None
+  selector: 'app-supplier',
+  templateUrl: './supplier.component.html',
+  styleUrls: ['./supplier.component.scss'],
+   encapsulation:ViewEncapsulation.None
 })
-export class LocationComponent implements OnInit {
+export class SupplierComponent implements OnInit {
 
- rows: LocationRow[] = [];
-  tempData: LocationRow[] = []; // backup for filtering
+ rows: SupplierRow[] = [];
+  tempData: SupplierRow[] = []; // backup for filtering
 
   searchValue = '';
   pageSize = 10;
@@ -38,10 +40,12 @@ export class LocationComponent implements OnInit {
   ColumnMode = ColumnMode;
   SelectionType = SelectionType;
 
-  selected: LocationRow[] = [];
-  selectedLocationId: number;
+  selected: SupplierRow[] = [];
+  selectedSupplierId: number;
 
-constructor(private _locationService : LocationService, private _coreSidebarService: CoreSidebarService,){
+constructor(private _SupplierService : SupplierService,
+   private _coreSidebarService: CoreSidebarService,
+  private router: Router){
 
 }
   filterUpdate(): void {
@@ -68,40 +72,34 @@ constructor(private _locationService : LocationService, private _coreSidebarServ
 
 
   ngOnInit(): void {
-    this.getAllLocations();
+    this.getAllSupplier();
   }
 
  toggleSidebar(name): void {
     this._coreSidebarService.getSidebarRegistry(name).toggleOpen();
   }
-  getAllLocations(): void {
-    this._locationService.getLocationDetails().subscribe((response: any) => {
-      const data: LocationRow[] = response?.data ?? [];
-      data.forEach(d => {
-        d.createdDate = d.createdDate ? new Date(d.createdDate) : d.createdDate;
-        d.updatedDate = d.updatedDate ? new Date(d.updatedDate) : d.updatedDate;
-      });
-
-      this.rows = data;
-      this.tempData = [...data];
-    });
+   getAllSupplier() {
+    this._SupplierService.GetAllSupplier().subscribe((response: any) => {
+      this.rows = response.data;
+      this.tempData = this.rows;
+    })
   }
 
 edit(id: number) {
   debugger
-  this.selectedLocationId = id;      // Save selected ID
-  this.toggleSidebar('app-create-location');  // Open sidebar
+  this.selectedSupplierId = id;      // Save selected ID
+  this.toggleSidebar('app-create-Supplier');  // Open sidebar
 }
   onActivate(event: any) {
     // optional: row hover/click events
   }
 
-  onSelect({ selected }: { selected: LocationRow[] }) {
+  onSelect({ selected }: { selected: SupplierRow[] }) {
     this.selected = [...selected];
   }
 
 
-  deleteLocation(id: number) {
+  deleteSupplier(id: number) {
   Swal.fire({
     title: 'Are you sure?',
     text: "You won't be able to revert this!",
@@ -117,14 +115,14 @@ edit(id: number) {
     allowOutsideClick: false,
   }).then((result) => {
     if (result.isConfirmed) {  // note: SweetAlert2 uses isConfirmed instead of value in recent versions
-      this._locationService.deleteLocation(id).subscribe((response: any) => {
+      this._SupplierService.deleteSupplier(id).subscribe((response: any) => {
         Swal.fire({
           icon: response.isSuccess ? 'success' : 'error',
           title: response.isSuccess ? 'Deleted!' : 'Error!',
           text: response.message,
           allowOutsideClick: false,
         });
-        this.getAllLocations();  // Refresh the list after deletion
+        this.getAllSupplier();  // Refresh the list after deletion
       }, error => {
         Swal.fire({
           icon: 'error',
@@ -136,4 +134,13 @@ edit(id: number) {
   });
 }
 
+
+  addSupplier() {
+  this.router.navigate(['/Businesspartners/supplier/create']);
+}
+
+
+  editSupplier(id: number) {
+    this.router.navigate(['/suppliers/edit', id]); // ✅ navigate to Edit Supplier page
+  }
 }

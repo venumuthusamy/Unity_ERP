@@ -1,2 +1,7 @@
 @import '@core/scss/core.scss';
 @import './assets/scss/styles';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+

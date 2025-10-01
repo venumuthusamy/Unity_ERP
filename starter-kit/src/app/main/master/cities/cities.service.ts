@@ -34,4 +34,8 @@ export class CitiesService {
       GetStateWithCountryId(id:any): Observable<any[]> {
         return this.http.get<any[]>(this.url +CitiesApiUrls.GetStateWithCountryId+ id);
       }
+
+       GetCityWithStateId(id:any): Observable<any[]> {
+        return this.http.get<any[]>(this.url +CitiesApiUrls.GetCityWithStateId+ id);
+      }
 }

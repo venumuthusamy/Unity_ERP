@@ -47,6 +47,7 @@
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": [
               "src/styles.scss",
+               "node_modules/@ng-select/ng-select/themes/default.theme.css",
               "node_modules/highlight.js/scss/atom-one-dark.scss",
               "src/assets/fonts/feather/iconfont.css",
               "src/assets/fonts/font-awesome/css/font-awesome.min.css",
