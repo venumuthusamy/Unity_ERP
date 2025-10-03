@@ -17,6 +17,11 @@ const routes = [
     data: { animation: 'createpurchaserequest' }
   },
   {
+    path: 'Edit-PurchaseRequest/:id',
+    component: CreatePurchaseRequestComponent,
+    
+  },
+  {
     path: 'list-PurchaseRequest',
     component: PurchaseRequestListComponent,
     data: { animation: 'listpurchaserequest' }

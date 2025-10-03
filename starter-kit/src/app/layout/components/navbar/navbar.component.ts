@@ -15,6 +15,7 @@ import { User } from 'app/auth/models';
 
 import { coreConfig } from 'app/app-config';
 import { Router } from '@angular/router';
+import * as feather from 'feather-icons';
 
 @Component({
   selector: 'app-navbar',
@@ -225,5 +226,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // Unsubscribe from all subscriptions
     this._unsubscribeAll.next();
     this._unsubscribeAll.complete();
+  }
+  ngAfterViewInit() {
+    feather.replace(); // ✅ Required to render the icons
   }
 }
