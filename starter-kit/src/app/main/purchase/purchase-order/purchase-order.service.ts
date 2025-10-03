@@ -2,7 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { POApiUrls } from 'Urls/PurchaseOrderAPIUrls';
+import { POApiUrls } from 'Urls/POApiurls';
+
 
 
 @Injectable({
