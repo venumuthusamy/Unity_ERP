@@ -40,7 +40,8 @@
   &.has-sub {
     > a:after {
       content: '';
-      background-image: url(str-replace(str-replace($chevron-right, 'currentColor', $body-color), '#', '%23'));
+      // background-image: url(str-replace(str-replace($chevron-right, 'currentColor', $body-color), '#', '%23'));
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white'><path d='M4 2l4 4-4 4z'/></svg>");
       background-repeat: no-repeat;
       background-position: center;
       background-size: $arrow-font-size;
