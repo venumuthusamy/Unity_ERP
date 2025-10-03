@@ -33,29 +33,35 @@ export class PurchaseRequestListComponent implements OnInit {
     multiLoc: false,
     oversea: false
   };
-
+showLinesModal = false;
+modalLines: any[] = [];
+modalTotalQty = 0;
   prLines: any[] = [];
   hover = false;
   constructor(private purchaseService: PurchaseService, private router: Router,) {}
    ngOnInit(): void {
     this.loadRequests();
   }
-  filterUpdate(event) {
+  filterUpdate(event: any) {
+  const val = (event.target.value || '').toLowerCase();
 
-    const val = event.target.value.toLowerCase();
-    const temp = this.tempData.filter(function (d) {
-
-      if (d.orgName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.orgName.toLowerCase().indexOf(val) !== -1 || !val;
-      }
-      if (d.orgCode.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.orgCode.toLowerCase().indexOf(val) !== -1 || !val;
-      }
-
-    });
-    this.rows = temp;
+  // reset if empty
+  if (!val) {
+    this.rows = [...this.tempData];
     this.table.offset = 0;
+    return;
   }
+
+  this.rows = this.tempData.filter((d: any) =>
+    (d.purchaseRequestNo || '').toLowerCase().includes(val) ||
+    (d.requester || '').toLowerCase().includes(val) ||
+    (d.departmentName || '').toLowerCase().includes(val) ||
+    (d.deliveryDate || '').toLowerCase().includes(val)
+  );
+
+  this.table.offset = 0;
+}
+
    getRandomColor(index: number): string {     
     return this.colors[index % this.colors.length]; 
   }
@@ -66,25 +72,29 @@ export class PurchaseRequestListComponent implements OnInit {
     const initials = orgName.slice(0, 2).toUpperCase();
     return initials;
   }
-  loadRequests() {
-    this.purchaseService.getAll().subscribe({
-      next: (res: any) => {
-        this.rows = res.data.map((req: any) => {
-          return {
-            ...req,
-            prLines: req.prLines ? JSON.parse(req.prLines) : []
-          };
-        });
-      },
-      error: (err: any) => console.error('Error loading list', err)
-    });
-  }
+ loadRequests() {
+  this.purchaseService.getAll().subscribe({
+    next: (res: any) => {
+      const mapped = (res.data || []).map((req: any) => ({
+        ...req,
+        prLines: req.prLines ? JSON.parse(req.prLines) : []
+      }));
+
+      this.rows = mapped;
+      this.tempData = [...mapped];   // 🔑 set tempData here
+      this.table.offset = 0;
+    },
+    error: (err: any) => console.error('Error loading list', err)
+  });
+}
+
+
 // editRequest(req: any) {
 //   this.router.navigate(['/purchases/requisition'], { state: { request: req } });
 // }
 
 editRequest(id:any){
-  this.router.navigateByUrl(`/purchases/requisition/edit/${id}`)
+  this.router.navigateByUrl(`/purchase/Edit-PurchaseRequest/${id}`)
 }
 
 goToRequisition() {
@@ -127,4 +137,25 @@ onRowExpandClick(row: any) {
   // Show SweetAlert fade-in
   this.SweetAlertFadeIn.fire();
 }
+openLinesModal(row: any) {
+  // Normalize lines (supports array or JSON string)
+  let lines: any[] = [];
+  try {
+    lines = Array.isArray(row?.prLines) ? row.prLines : JSON.parse(row?.prLines || '[]');
+  } catch {
+    lines = [];
+  }
+
+  // Compute total qty
+  const total = lines.reduce((sum, l) => sum + (Number(l?.qty) || 0), 0);
+
+  this.modalLines = lines;
+  this.modalTotalQty = total;
+  this.showLinesModal = true;
+}
+
+closeLinesModal() {
+  this.showLinesModal = false;
+}
+
 }
