@@ -36,13 +36,21 @@
                 </div>
 
                 <!-- Approval Status Badge -->
-                <span class="px-3 py-1 rounded-full text-xs font-medium" [ngClass]="{
+
+                <!-- <span class="px-3 py-1 rounded-full text-xs font-medium" [ngClass]="{
             'bg-yellow-100 text-yellow-700': poHdr.approvalStatus === 'Pending',
             'bg-green-100 text-green-700': poHdr.approvalStatus === 'Approved',
             'bg-red-100 text-red-700': poHdr.approvalStatus === 'Rejected'
           }">
                     {{ poHdr.approvalStatus || 'Pending' }}
-                </span>
+                </span> -->
+
+                  <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50" 
+                    (mouseenter)="hover = true" (mouseleave)="hover = false"
+                     type="button"
+                    (click)="setApprovalStatus('Pending')">
+                    Pending
+                </button>
 
                 <!-- Approve Button -->
                 <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" style="background-color: #2E5F73"
@@ -303,7 +311,7 @@
                     <tr *ngFor="let r of poLines; let i = index; trackBy: trackByIndex" class="border-t">
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].prNo" (focus)="openDropdown(i, 'prNo')"
-                                (input)="filterOptions(i, 'prNo')" placeholder="Search PO No..."
+                                (input)="filterOptions(i, 'prNo')" placeholder="Search PR No..."
                                 class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
 
                             <div *ngIf="poLines[i].dropdownOpen === 'prNo'"
@@ -311,7 +319,7 @@
                                 <div *ngFor="let option of poLines[i].filteredOptions"
                                     (click)="selectOption(i, 'prNo', option)"
                                     class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm">
-                                    {{ option }}
+                                    {{ option.purchaseRequestNo }}
                                 </div>
                             </div>
                         </td>
@@ -337,7 +345,7 @@
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].budget" (focus)="openDropdown(i, 'budget')"
                                 (input)="filterOptions(i, 'budget')" placeholder="Search Budget..."
-                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
+                                class="w-[300px] rounded-xl border px-3 py-2 text-sm" />
 
                             <div *ngIf="poLines[i].dropdownOpen === 'budget'"
                                 class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">

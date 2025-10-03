@@ -42,19 +42,23 @@
                     <ngx-datatable-column name="PO Number" prop="purchaseOrderNo" [width]="120"></ngx-datatable-column>
 
 
-                    <ngx-datatable-column name="Supplier Name" prop="supplierId" [width]="140"></ngx-datatable-column>
+                    <ngx-datatable-column name="Supplier Name" prop="supplierName" [width]="140"></ngx-datatable-column>
 
                     <ngx-datatable-column name="Currency/FX" prop="currencyName" [width]="120"></ngx-datatable-column>
-
-                    <ngx-datatable-column name="Delivery To" prop="deliveryName" [width]="120"></ngx-datatable-column>
-                     
-                    <ngx-datatable-column name="PO Date"  [width]="120">
+                    
+                      <ngx-datatable-column name="PO Date"  [width]="120">
                         <ng-template let-row="row" ngx-datatable-cell-template>
                             {{ row.poDate | date:'dd-MM-yyyy' }}
                         </ng-template>
                     </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Status" prop="approveStatus" [width]="120"></ngx-datatable-column>
+                    <ngx-datatable-column name="Delivery Date" [width]="120">
+                        <ng-template let-row="row" ngx-datatable-cell-template>
+                            {{ row.deliveryDate | date:'dd-MM-yyyy' }}
+                        </ng-template>
+                    </ngx-datatable-column>
+
+                    <ngx-datatable-column name="Status" prop="approvalStatus" [width]="120"></ngx-datatable-column>
 
                     <!-- Edit/Delete Actions -->
                     <ngx-datatable-column name="Action" [width]="120">
