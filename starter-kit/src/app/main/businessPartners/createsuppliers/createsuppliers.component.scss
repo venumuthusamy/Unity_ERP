@@ -1,31 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer components {
-  /* Oval input fields */
-  .input {
-    @apply w-full rounded-full border border-gray-300 px-4 py-2 text-sm
-           focus:outline-none focus:ring focus:ring-indigo-300;
-  }
-
-  /* Oval textarea */
-  .textarea {
-    @apply w-full min-h-[90px] rounded-full border border-gray-300 px-4 py-2 text-sm
-           focus:outline-none focus:ring focus:ring-indigo-300;
-  }
-
-  /* Square buttons */
-  .btn {
-    @apply inline-flex items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
-  }
-  .btn-primary {
-    @apply text-white bg-indigo-500 hover:bg-indigo-600;
-  }
-  .btn-success {
-    @apply text-white bg-emerald-500 hover:bg-emerald-600;
-  }
-  .btn-outline {
-    @apply text-gray-600 border border-gray-300 hover:bg-gray-50;
-  }
+// Force number input to always show the spinner buttons
+input[type='number'] {
+  -moz-appearance: number-input;        // Firefox
+  -webkit-appearance: number-input;     // Chrome, Safari, Edge
+  appearance: number-input;
 }

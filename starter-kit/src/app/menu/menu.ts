@@ -47,7 +47,8 @@ export const menu: CoreMenu[] = [
     type: 'collapsible',
     icon: 'file',
     children: [
-      { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' }
+      { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' },
+        { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },{ id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' }
     ]
   },
 

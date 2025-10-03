@@ -89,7 +89,8 @@ export class PaymentTermsComponent implements OnInit {
       description: this.description,
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
-      UpdatedDate: new Date()
+      UpdatedDate: new Date(),
+      isActive : true
     };
 
     if (this.isEditMode) {

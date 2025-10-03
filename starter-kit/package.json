@@ -75,6 +75,7 @@
     "plyr": "3.6.8",
     "quill": "1.3.7",
     "rxjs": "6.6.0",
+    "signature_pad": "^5.1.1",
     "sweetalert2": "^9.17.4",
     "swiper": "6.7.0",
     "tslib": "2.2.0",

@@ -89,7 +89,8 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
       description: this.description,
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
-      UpdatedDate: new Date()
+      UpdatedDate: new Date(),
+      isActive: true,
     };
 
     if (this.isEditMode) {
