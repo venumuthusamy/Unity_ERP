@@ -34,4 +34,6 @@ export class SupplierService {
     deleteSupplier(id: any) {
       return this.http.delete<any>(this.url + SupplierApiUrls.DeleteSupplier + id);
     }
+
+    
 }

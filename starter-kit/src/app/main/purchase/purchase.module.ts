@@ -9,6 +9,10 @@ import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
+import { PurchaseGoodreceiptComponent } from './purchase-goodreceipt/purchase-goodreceipt.component';
+import { PurchaseGoodreceiptlistComponent } from './purchase-goodreceipt/purchase-goodreceiptlist/purchase-goodreceiptlist.component';
+import { PurchaseOrdeListComponent } from './purchase-order/purchase-orde-list/purchase-orde-list.component';
+import { PurchaseOrderCreateComponent } from './purchase-order/purchase-order-create/purchase-order-create.component';
 
 const routes = [
   {
@@ -25,11 +29,37 @@ const routes = [
     path: 'list-PurchaseRequest',
     component: PurchaseRequestListComponent,
     data: { animation: 'listpurchaserequest' }
+  },
+  {
+    path: 'list-Purchasegoodreceipt',
+    component: PurchaseGoodreceiptlistComponent,
+    data: { animation: 'listpurchasegoodreceipt' }
+  },
+   {
+    path: 'createpurchasegoodreceipt',
+    component: PurchaseGoodreceiptComponent,
+    data: { animation: 'createpurchasegoodreceipt' }
+  },
+   {
+    path: 'list-purchaseorder',
+    component: PurchaseOrdeListComponent,
+    data: { animation: 'listpurchaseorder' }
+  },
+   {
+    path: 'create-purchaseorder',
+    component: PurchaseOrderCreateComponent,
+    data: { animation: 'createpurchaseorder' }
+  },
+  {
+    path: 'edit-purchaseorder/:id',
+    component: PurchaseOrderCreateComponent,
+    data: { animation: 'editpurchaseorder' }
   }
+
 ];
 
 @NgModule({
-  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent],
+  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent,PurchaseGoodreceiptComponent, PurchaseGoodreceiptlistComponent,PurchaseOrdeListComponent, PurchaseOrderCreateComponent],
   imports: [
     CommonModule,
     RouterModule.forChild(routes),

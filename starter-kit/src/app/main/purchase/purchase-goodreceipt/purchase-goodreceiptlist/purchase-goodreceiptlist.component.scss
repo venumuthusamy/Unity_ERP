@@ -1,0 +1,49 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
+
+
+// .highlight-link {
+//     // color: blue !important;
+//     font-weight: bold;
+   
+// }
+
+.highlight-link:hover {
+    color: darkblue !important;
+}
+
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; /* Adjust as needed */
+    height: 40px; /* Adjust as needed */
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .avatar-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // height: 100%;
+    width: 100%;
+  }
+  
+
+.avatar-blue {
+    background-color: #007bff; /* Blue color */
+  }
+  
+  .avatar-red {
+    background-color: #dc3545; /* Red color */
+  }
+  
+  .avatar-green {
+    background-color: #28a745; /* Green color */
+  }
+ 
+  

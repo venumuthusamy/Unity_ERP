@@ -1,0 +1,73 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card">
+        <div class="row">
+          <div class="col-md-6 col-12">
+            <h4 class="card-text ml-2 mt-2">GRN List</h4>
+            <div class="d-flex justify-content-between align-items-center m-1">
+              <label class="d-flex align-items-center">Show
+                <select class="form-control mx-2" [(ngModel)]="selectedOption">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                entries
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+              <label class="d-flex align-items-center ml-1 ml-md-0">Search:
+                <input [(ngModel)]="searchValue" type="search" class="form-control ml-2" 
+                       (keyup)="filterUpdate($event)" />
+              </label>
+              <button id="Add" class="btn btn-primary m-1" (click)="goToCreateGRN()">
+                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
+                <span class="d-none d-sm-inline-block">Add</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NGX DATATABLE -->
+        <ngx-datatable
+          class="bootstrap core-bootstrap"
+          [rows]="rows"
+          [rowHeight]="50"
+          [headerHeight]="50"
+          [footerHeight]="50"
+          [limit]="selectedOption"
+          [columnMode]="'force'"
+          [scrollbarH]="true"
+          [reorderable]="true"
+        >
+
+          <ngx-datatable-column name="GRN No" prop="grnNo" [width]="120"></ngx-datatable-column>
+          <ngx-datatable-column name="Product" prop="product" [width]="100"></ngx-datatable-column>
+          <ngx-datatable-column name="Supplier" prop="supplier" [width]="100"></ngx-datatable-column>
+          <ngx-datatable-column name="Type" prop="type" [width]="100"></ngx-datatable-column>
+          <ngx-datatable-column name="Surface Temp" prop="surfaceTemp" [width]="120"></ngx-datatable-column>
+          <ngx-datatable-column name="Expiry Date" prop="expiryDate" [width]="130">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.expiryDate | date: 'yyyy' }}
+            </ng-template>
+          </ngx-datatable-column>
+
+          <!-- ACTIONS -->
+          <ngx-datatable-column name="Action" [width]="120">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <i class="fas fa-pen text-success mr-2" style="cursor: pointer;" (click)="editGRN(row.id)"></i>
+              <i class="fas fa-trash text-danger" style="cursor: pointer;" (click)="deleteGRN(row.id)"></i>
+            </ng-template>
+          </ngx-datatable-column>
+        </ngx-datatable>
+
+        <div class="px-2 py-1 text-muted">
+          {{ rows.length }} total
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

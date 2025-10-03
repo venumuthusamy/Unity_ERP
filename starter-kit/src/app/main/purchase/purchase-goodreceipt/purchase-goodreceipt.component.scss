@@ -1,0 +1,16 @@
+/* Softer horizontal scrollbar like your sample */
+.ui-compact ::-webkit-scrollbar {
+  height: 10px;
+}
+.ui-compact ::-webkit-scrollbar-track {
+  background: #eef2f7;
+  border-radius: 10px;
+}
+.ui-compact ::-webkit-scrollbar-thumb {
+  background: #c8d2de;
+  border-radius: 10px;
+}
+.ui-compact ::-webkit-scrollbar-thumb:hover {
+  background: #aab8c6;
+}
+

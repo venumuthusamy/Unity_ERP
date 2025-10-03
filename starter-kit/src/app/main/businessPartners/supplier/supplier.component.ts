@@ -86,9 +86,7 @@ constructor(private _SupplierService : SupplierService,
   }
 
 edit(id: number) {
-  debugger
-  this.selectedSupplierId = id;      // Save selected ID
-  this.toggleSidebar('app-create-Supplier');  // Open sidebar
+  this.router.navigate(['/Businesspartners/supplier/edit', id]);
 }
   onActivate(event: any) {
     // optional: row hover/click events
