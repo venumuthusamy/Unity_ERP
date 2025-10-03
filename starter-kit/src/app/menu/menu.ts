@@ -48,7 +48,8 @@ export const menu: CoreMenu[] = [
     icon: 'file',
     children: [
       { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' },
-        { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },{ id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' }
+      { id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' },
+      { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },
     ]
   },
 

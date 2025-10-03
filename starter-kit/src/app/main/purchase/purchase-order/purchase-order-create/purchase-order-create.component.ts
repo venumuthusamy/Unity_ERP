@@ -10,6 +10,8 @@ import { ApprovallevelService } from 'app/main/master/approval-level/approvallev
 import Swal from 'sweetalert2';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
+import { PurchaseService } from '../../purchase.service';
+import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 type LineRow = { [k: string]: any };
 
 @Component({
@@ -46,7 +48,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
   approvalLevel: any;
   paymentTerms: any;
   currencies: any;
-  incoterms: any
+  incoterms: any;
+  allPrNos: any;
   allItems: any;
   accounthead:any
   allBudgets: any
@@ -102,16 +105,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
   };
 
 
-  allPrNos = ['PO123', 'PO456', 'PO789'];
-
-  // allItems = [
-  //   { code: 'ITM001', name: 'Printer' },
-  //   { code: 'ITM002', name: 'Scanner' },
-  //   { code: 'ITM003', name: 'Monitor' }
-  // ];
-
-  // allBudgets = ['Marketing', 'IT', 'HR'];
-
   allRecurring = ['One-Time', 'Monthly', 'Yearly'];
 
   allTaxCodes = ['STD', 'ZRL', 'EXM'];
@@ -122,6 +115,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     private paymentTermsService: PaymentTermsService, private currencyService: CurrencyService,
     private locationService: LocationService, private incotermsService: IncotermsService,
     private itemsService: ItemsService, private chartOfAccountService: ChartofaccountService,
+    private purchaseService: PurchaseService,private _SupplierService : SupplierService,
   ) { }
 
 
@@ -134,20 +128,22 @@ export class PurchaseOrderCreateComponent implements OnInit {
         // ✅ Edit mode
         forkJoin({
           approval: this.approvalLevelService.getAllApprovalLevel(),
-           //suppliers: this.supplierService.getAll(),
+          suppliers: this._SupplierService.GetAllSupplier(),
           paymentTerms: this.paymentTermsService.getAllPaymentTerms(),
           currency: this.currencyService.getAllCurrency(),
           incoterms: this.incotermsService.getAllIncoterms(),
+          prlist: this.purchaseService.getAll(),
           items: this.itemsService.getAllItem(),
           accounthead:this.chartOfAccountService.getAllChartOfAccount(),
           delivery: this.locationService.getLocation(),
           poHdr: this.poService.getPOById(this.purchaseOrderId)
         }).subscribe((results: any) => {
           this.approvalLevel = results.approval.data;
-          //this.suppliers = results.suppliers.data;
+          this.suppliers = results.suppliers.data;
           this.paymentTerms = results.paymentTerms.data;
           this.currencies = results.currency.data;
           this.incoterms = results.incoterms.data;
+          this.allPrNos = results.prlist.data;
           this.allItems = results.items.data;
           this.accounthead = results.accounthead.data
           this.allBudgets = this.accounthead.map((head: any) => ({
@@ -205,19 +201,21 @@ export class PurchaseOrderCreateComponent implements OnInit {
         // ✅ Create mode
         forkJoin({
           approval: this.approvalLevelService.getAllApprovalLevel(),
-          //suppliers: this.supplierService.getAll()
+          suppliers: this._SupplierService.GetAllSupplier(),
           paymentTerms: this.paymentTermsService.getAllPaymentTerms(),
           currency: this.currencyService.getAllCurrency(),
           incoterms: this.incotermsService.getAllIncoterms(),
+          prlist: this.purchaseService.getAll(),
           items: this.itemsService.getAllItem(),
           accounthead:this.chartOfAccountService.getAllChartOfAccount(),
           delivery: this.locationService.getLocation(),
         }).subscribe((results: any) => {
           this.approvalLevel = results.approval.data;
-           //this.suppliers = results.suppliers.data;
+          this.suppliers = results.suppliers.data;
           this.paymentTerms = results.paymentTerms.data;
           this.currencies = results.currency.data;
           this.incoterms = results.incoterms.data;
+          this.allPrNos = results.prlist.data;
           this.allItems = results.items.data;
           this.accounthead = results.accounthead.data
           this.allBudgets = this.accounthead.map((head: any) => ({
@@ -407,7 +405,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
     if (field === 'prNo') {
       this.poLines[index].filteredOptions = this.allPrNos
-        .filter(x => x.toLowerCase().includes(searchValue));
+        .filter(x => x.purchaseRequestNo.toLowerCase().includes(searchValue));
     }
 
     if (field === 'item') {
@@ -439,18 +437,88 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
 
   selectOption(index: number, field: string, option: any) {
-    if (field === 'item') {
+    if (field === 'prNo') {
+      const chosenNo: string = option?.purchaseRequestNo ?? option;
+      const pr = this.allPrNos.find((p: any) => p.purchaseRequestNo === chosenNo);
+      if (!pr) return;
+
+      // show chosen PR no in the input
+      this.poLines[index].prNo = pr.purchaseRequestNo;
+
+      // close dropdown
+      this.poLines[index].dropdownOpen = '';
+      this.poLines[index].filteredOptions = [];
+
+      // ✅ Replace all poLines with the lines of this PR
+      this.bindPRToPOLines(pr);
+      return;
+    } 
+    else if (field === 'item') {
       this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
-    }else if(field === 'budget') {
+    } 
+    else if (field === 'budget') {
       this.poLines[index][field] = option.label;
-    }else if(field === 'location') {
+    } 
+    else if (field === 'location') {
       this.poLines[index][field] = option.name;
-    } else {
+    } 
+    else {
       this.poLines[index][field] = option;
     }
 
     this.poLines[index].dropdownOpen = ''; // close dropdown
   }
+
+  bindPRToPOLines(pr: any) {
+    const lines = this.safeParsePrLines(pr.prLines);
+    if (!lines.length) return;
+
+    // map each PR line into a PO line
+    this.poLines = lines.map((l: any) => this.mapPRLineToPOLine(pr.purchaseRequestNo, l));
+  }
+
+  private safeParsePrLines(raw: any): any[] {
+    if (Array.isArray(raw)) return raw;
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(String(raw));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  mapPRLineToPOLine(prNo: string, line: any) {
+    const po = this.makeEmptyPOLine();
+    po.prNo = prNo;
+    po.item = line.itemCode || line.itemSearch || '';
+    po.description = line.remarks || '';
+    po.budget = line.budget || '';
+    po.location = line.location || line.locationSearch || '';
+    po.qty = Number(line.qty) || 0;
+    return po;
+  }
+
+  makeEmptyPOLine() {
+    return {
+      prNo: '',
+      item: '',
+      description: '',
+      budget: '',
+      recurring: '',
+      taxCode: '',
+      location: '',
+      contactNumber: '',
+      qty: 0,
+      price: '',
+      discount: '',
+
+      dropdownOpen: '',
+      filteredOptions: []
+    };
+  }
+
+
 
   poAddLine() {
     // this.poLines = [...this.poLines, { tax: 'STD' }]; 
@@ -460,22 +528,23 @@ export class PurchaseOrderCreateComponent implements OnInit {
       description: '',
       budget: '',
       recurring: '',
-      qty: 0,
-      price: '',
-      discount: '',
       taxCode: '',
       location: '',
       contactNumber: '',
-
+      qty: 0,
+      price: '',
+      discount: '',     
 
       dropdownOpen: '',
       filteredOptions: []
     });
   }
+
   poRemoveLine(i: number) {
     // this.poLines = this.poLines.filter((_, idx) => idx !== i); 
     this.poLines.splice(i, 1);
   }
+
   poChange(i: number, key: string, val: any) {
     const copy = [...this.poLines]; copy[i] = { ...copy[i], [key]: val }; this.poLines = copy;
   }
