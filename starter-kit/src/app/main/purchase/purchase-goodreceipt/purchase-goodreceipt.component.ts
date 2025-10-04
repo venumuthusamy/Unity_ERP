@@ -1,21 +1,20 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import Swal from 'sweetalert2';
 import SignaturePad from 'signature_pad';
-import { of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 
 import { PurchaseGoodreceiptService } from './purchase-goodreceipt.service';
 import { FlagissueService } from 'app/main/master/flagissue/flagissue.service';
-import { PurchaseOrderService } from '../purchase-order.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
-
+import { POService } from '../purchase-order/purchase-order.service';
 
 export interface LineRow {
   // Read-only from PO
-  itemText: string;           // e.g. "ITM001 - Printer"
-  itemCode: string;           // e.g. "ITM001"
-  supplierId: number | null;  // from PO
-  supplierName: string;       // fetched via supplier API
+  itemText: string;
+  itemCode: string;
+  supplierId: number | null;
+  supplierName: string;
 
   // Editable in GRN
   storageType: string;
@@ -28,12 +27,21 @@ export interface LineRow {
   defectLabels: string;
   damagedPackage: string;
   time: string;
-  initial: string;            // image/signature dataURL
+  initial: string;  // dataURL of image/signature
   remarks: string;
 
   // Meta
   createdAt: Date;
   photos: string[];
+}
+
+// Structure for fetched GRN summary
+interface GeneratedGRN {
+  id: number;
+  grnNo: string;
+  poid: number;
+   poNo?: string;
+  grnJson: any[];  // array of row data
 }
 
 @Component({
@@ -93,29 +101,33 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   flagIssuesList: any[] = [];
   isPostInventoryDisabled = false;
 
+  /* -------- Generated GRN summary -------- */
+  generatedGRN: GeneratedGRN | null = null;
+
   constructor(
     private purchaseGoodReceiptService: PurchaseGoodreceiptService,
     private flagIssuesService: FlagissueService,
-    private purchaseorderService: PurchaseOrderService,
-    private _SupplierService: SupplierService
+    private purchaseorderService: POService,
+    private _SupplierService: SupplierService,
+    private cdRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    this.loadFlagIssues();
+    // this.loadFlagIssues();
     this.loadPOs();
   }
 
   /* ===================== SAVE ===================== */
   saveGRN() {
+    debugger
     if (!this.selectedPO) {
       alert('Please select a PO.');
       return;
     }
 
-    // Build minimal, API-ready rows
     const rowsForApi = this.grnRows.map(r => ({
-      itemCode: r.itemCode,        // <-- from PO string
-      supplierId: r.supplierId,    // <-- from PO
+      itemCode: r.itemCode,
+      supplierId: r.supplierId,
       storageType: r.storageType,
       surfaceTemp: r.surfaceTemp,
       expiry: r.expiry,
@@ -132,7 +144,7 @@ export class PurchaseGoodreceiptComponent implements OnInit {
 
     const payload = {
       poid: this.selectedPO,
-      supplierId: this.currentSupplierId, // if your API expects it at top level
+      supplierId: this.currentSupplierId,
       receptionDate: this.receiptDate ? new Date(this.receiptDate) : new Date(),
       overReceiptTolerance: this.overReceiptTolerance,
       grnJson: JSON.stringify(rowsForApi),
@@ -148,11 +160,98 @@ export class PurchaseGoodreceiptComponent implements OnInit {
           text: res?.message || 'Your purchase GoodReceipt has been created.',
           confirmButtonColor: '#0e3a4c'
         });
-        this.resetForm();
+
+        const createdId = res?.data;
+        if (createdId) {
+          this.fetchGRNById(createdId);
+        }
+
+        // don’t immediately reset form if you want to view the summary
+        // but you may clear the input sections if desired
+        // this.resetForm();
       },
-      error: (err) => console.error('Save failed', err)
+      error: (err) => {
+        console.error('Save failed', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to create GRN. Please try again.',
+          confirmButtonColor: '#0e3a4c'
+        });
+      }
     });
   }
+
+  /** Fetch the saved GRN details by its ID to show the summary */
+ 
+fetchGRNById(id: number) {
+  this.purchaseGoodReceiptService.getByIdGRN(id).subscribe({
+    next: (data: any) => {
+      const payload = data?.data ?? data;
+
+      let grnJsonArr: any[] = [];
+      try {
+        grnJsonArr = JSON.parse(payload?.grnJson ?? '[]');
+      } catch {
+        grnJsonArr = [];
+      }
+
+      // 1️⃣ Fetch supplier name for each row
+      const supplierFetches = grnJsonArr.map((row: any) => {
+        const supplierId = row?.supplierId;
+        if (!supplierId) return of({ ...row, supplierName: 'Unknown' });
+
+        return this._SupplierService.getSupplierById(supplierId).pipe(
+          map((res: any) => {
+            const name =
+              res?.data?.name ??
+              res?.data?.supplierName ??
+              res?.name ??
+              res?.supplierName ??
+              'Unknown';
+            return { ...row, supplierName: name };
+          }),
+          catchError(() => of({ ...row, supplierName: 'Unknown' }))
+        );
+      });
+
+      // 2️⃣ Combine all fetches and wait for them to finish
+      forkJoin(supplierFetches).subscribe((rowsWithNames: any[]) => {
+        this.generatedGRN = {
+          id: payload?.id,
+          grnNo: payload?.grnNo,
+          poid: payload?.poid,
+          grnJson: rowsWithNames,
+          poNo: ''
+        };
+
+        // 3️⃣ Load PO Number
+        const poId = Number(payload?.poid);
+        if (poId) {
+          this.purchaseorderService.getPOById(poId).subscribe({
+            next: (poRes: any) => {
+              const po = poRes?.data ?? poRes;
+              const poNo =
+                po?.purchaseOrderNo ??
+                po?.PurchaseOrderNo ??
+                po?.[0]?.purchaseOrderNo ??
+                po?.[0]?.PurchaseOrderNo ??
+                '';
+
+              this.generatedGRN = {
+                ...this.generatedGRN,
+                poNo
+              };
+            },
+            error: (err) => console.error('Failed to load PO by id', err)
+          });
+        }
+      });
+    },
+    error: (err) => console.error('Failed to fetch GRN details', err)
+  });
+}
+
 
   /* ================= Flag Issues ================= */
   loadFlagIssues() {
@@ -168,8 +267,8 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   loadPOs() {
     const anySvc: any = this.purchaseorderService as any;
     const obs$ =
-      typeof this.purchaseorderService.getAllPurchaseOrder === 'function'
-        ? this.purchaseorderService.getAllPurchaseOrder()
+      typeof this.purchaseorderService.getPO === 'function'
+        ? this.purchaseorderService.getPO()
         : typeof anySvc.getAllPurchaseOrder === 'function'
           ? anySvc.getAllPurchaseOrder()
           : null;
@@ -194,29 +293,28 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   }
 
   onPOChange(selectedId: number | null) {
-    if (!selectedId) { this.resetForm(); return; }
-
+    if (!selectedId) {
+      this.resetForm();
+      return;
+    }
     const po = this.purchaseOrder.find(p => p.id === selectedId);
-    if (!po) return;
+    if (!po) {
+      this.resetForm();
+      return;
+    }
 
     this.currentSupplierId = po.supplierId ?? null;
 
-    // Fetch supplier name, then build rows from PO lines
-    const id = this.currentSupplierId ?? 0;
-    this.loadSupplierById(id).subscribe((name: string) => {
+    this.loadSupplierById(this.currentSupplierId ?? 0).subscribe((name: string) => {
       this.currentSupplierName = name || '';
       this.buildRowsFromPo(po, this.currentSupplierId, this.currentSupplierName);
     });
   }
 
   /* ================= Supplier Helper ================= */
-  // Your method, upgraded to return the supplier name string
   private loadSupplierById(id: number) {
     if (!id) return of('');
     return this._SupplierService.getSupplierById(id).pipe(
-      tap((api: any) => {
-        try { this.hydrateFromApi(api); } catch { /* optional */ }
-      }),
       map((api: any) =>
         api?.data?.name ??
         api?.data?.supplierName ??
@@ -228,9 +326,6 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     );
   }
 
-  // Only needed because your previous method referenced it; safe no-op
-  private hydrateFromApi(_api: any) { /* optional hydrate */ }
-
   /* ================= Build rows from PO ================= */
   private buildRowsFromPo(
     po: { poLines?: string },
@@ -238,18 +333,25 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     supplierName: string
   ) {
     let lines: any[] = [];
-    try { lines = po.poLines ? JSON.parse(po.poLines) : []; } catch { lines = []; }
+    try {
+      lines = po.poLines ? JSON.parse(po.poLines) : [];
+    } catch {
+      lines = [];
+    }
 
-    this.grnRows = (lines.length ? lines : [{}]).map(line => {
-      const itemText = String(line?.item || '').trim();   // e.g. "ITM001 - Printer"
-      const itemCode = this.extractItemCode(itemText);    // -> "ITM001"
+    if (!lines.length) {
+      lines = [ {} ];
+    }
+
+    this.grnRows = lines.map(line => {
+      const itemText = String(line?.item || '').trim();
+      const itemCode = this.extractItemCode(itemText);
 
       return {
         itemText,
         itemCode,
         supplierId,
         supplierName,
-
         storageType: '',
         surfaceTemp: '',
         expiry: '',
@@ -269,7 +371,6 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   }
 
   private extractItemCode(itemText: string): string {
-    // "ITM001 - Printer" -> "ITM001"
     const m = String(itemText).match(/^\s*([A-Za-z0-9_-]+)/);
     return m ? m[1] : '';
   }
@@ -350,6 +451,36 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     const dataURL = this.signaturePad.toDataURL('image/png');
     this.grnRows[this.selectedRowIndex].initial = dataURL;
     this.closeInitialModal();
+  }
+
+  /* ================= Actions: Flag & Post Inventory ================= */
+  flagIssues(grnId: number) {
+    console.log('Flagging issues for GRN ID:', grnId);
+    // Navigate or open modal or call API for flagging issues
+  }
+
+  postInventory(grnId: number) {
+    // console.log('Posting inventory for GRN ID:', grnId);
+    // this.purchaseGoodReceiptService.postInventory(grnId).subscribe({
+    //   next: () => {
+    //     Swal.fire({
+    //       icon: 'success',
+    //       title: 'Inventory Posted',
+    //       text: `GRN #${grnId} has been posted to inventory.`,
+    //       confirmButtonColor: '#0e3a4c'
+    //     });
+    //     this.isPostInventoryDisabled = true;
+    //   },
+    //   error: (err) => {
+    //     console.error('Inventory post failed', err);
+    //     Swal.fire({
+    //       icon: 'error',
+    //       title: 'Error',
+    //       text: 'Inventory post failed. Please try again.',
+    //       confirmButtonColor: '#0e3a4c'
+    //     });
+    //   }
+    // });
   }
 
   /* ================= Utils ================= */
