@@ -1,7 +1,6 @@
-<div class="ui-compact">
-  <!-- CARD / CONTAINER -->
+<!-- ========== ENTRY FORM ========== -->
+<div class="ui-compact mb-8">
   <div class="bg-white rounded-[28px] shadow-sm border border-gray-200 p-5 md:p-6">
-
     <!-- Title -->
     <div class="flex items-center justify-between mb-5">
       <h2 class="text-xl font-semibold text-gray-800">Goods Receipt (GRN)</h2>
@@ -59,10 +58,9 @@
       </div>
     </div>
 
-    <!-- TABLE WRAPPER with FULL-WIDTH + OUTLINE -->
+    <!-- Lines Table -->
     <div class="overflow-x-auto rounded-2xl ring-1 ring-gray-300">
       <table class="w-full min-w-[1500px] text-sm border-separate [border-spacing:0]">
-        <!-- HEADER -->
         <thead>
           <tr class="bg-[#0e3a4c] text-white">
             <th class="px-3 py-3 font-medium text-left border border-gray-300 first:rounded-tl-2xl">Item / Product</th>
@@ -82,10 +80,9 @@
           </tr>
         </thead>
 
-        <!-- BODY -->
         <tbody class="bg-white">
           <tr *ngFor="let r of grnRows; let i = index; trackBy: trackByIndex">
-            <!-- Item (read-only; shows full text + small code) -->
+            <!-- Item + code -->
             <td class="px-3 py-3 border border-gray-300">
               <div class="w-52">
                 <input [value]="r.itemText || ''" readonly
@@ -94,12 +91,13 @@
               </div>
             </td>
 
-            <!-- Supplier (read-only; name) -->
+            <!-- Supplier -->
             <td class="px-3 py-3 border border-gray-300">
               <input [value]="r.supplierName || ''" readonly
                 class="w-52 rounded-2xl border border-gray-200 px-3 py-2 bg-gray-50 text-gray-800" />
             </td>
 
+            <!-- Storage type -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.storageType"
                 class="w-40 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -110,16 +108,19 @@
               </select>
             </td>
 
+            <!-- Surface Temp -->
             <td class="px-3 py-3 border border-gray-300">
               <input [(ngModel)]="r.surfaceTemp" placeholder="°C"
                 class="w-28 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]" />
             </td>
 
+            <!-- Expiry -->
             <td class="px-3 py-3 border border-gray-300">
               <input type="date" [(ngModel)]="r.expiry"
                 class="w-40 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]" />
             </td>
 
+            <!-- Pest Sign -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.pestSign"
                 class="w-28 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -129,6 +130,7 @@
               </select>
             </td>
 
+            <!-- Dry/Spillage -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.drySpillage"
                 class="w-28 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -138,6 +140,7 @@
               </select>
             </td>
 
+            <!-- Odor -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.odor"
                 class="w-28 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -147,11 +150,13 @@
               </select>
             </td>
 
+            <!-- Plate Number -->
             <td class="px-3 py-3 border border-gray-300">
               <input [(ngModel)]="r.plateNumber"
                 class="w-36 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]" />
             </td>
 
+            <!-- Defect Labels -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.defectLabels"
                 class="w-32 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -161,6 +166,7 @@
               </select>
             </td>
 
+            <!-- Damaged Package -->
             <td class="px-3 py-3 border border-gray-300">
               <select [(ngModel)]="r.damagedPackage"
                 class="w-32 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
@@ -170,11 +176,13 @@
               </select>
             </td>
 
+            <!-- Time -->
             <td class="px-3 py-3 border border-gray-300">
               <input type="time" [(ngModel)]="r.time"
                 class="w-32 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]" />
             </td>
 
+            <!-- Initial (image/signature) -->
             <td class="px-3 py-3 border border-gray-300">
               <button type="button" (click)="openInitialModal(r, i)"
                 class="inline-flex items-center justify-center h-10 w-24 rounded-2xl border border-gray-200 hover:bg-gray-50">
@@ -183,6 +191,7 @@
               </button>
             </td>
 
+            <!-- Remarks -->
             <td class="px-3 py-3 border border-gray-300">
               <input [(ngModel)]="r.remarks"
                 class="w-56 rounded-2xl border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]" />
@@ -194,23 +203,118 @@
   </div>
 </div>
 
-<!-- ========= INITIAL / SIGNATURE MODAL ========= -->
+<!-- ========== GENERATED GRN SUMMARY ========== -->
+<div *ngIf="generatedGRN" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 md:p-6">
+  <h3 class="text-lg font-semibold text-gray-800 mb-4">Generated GRN Summary</h3>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div><span class="font-semibold text-gray-600">GRN No:</span> {{ generatedGRN.grnNo }}</div>
+   <div>
+  <span class="font-semibold text-gray-600">PO No:</span>
+  {{ generatedGRN.poNo || generatedGRN.poid }}
+</div>
+  </div>
+
+  <div class="overflow-x-auto rounded-xl border border-gray-300 mb-5">
+    <table class="w-full min-w-[1300px] text-sm">  <!-- was w-full text-sm -->
+    <thead class="bg-[#0e3a4c] text-white">  
+        <tr>
+            <th class="px-4 py-2 text-left font-medium border border-gray-300">Item Code</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Supplier</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Storage Type</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Surface Temp</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Expiry</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Pest Sign</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Dry / Spillage</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Odor</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Plate #</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Defect Labels</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Damaged Pkg</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Time</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Initial</th>
+        <th class="px-4 py-2 text-left font-medium border border-gray-300">Remarks</th>
+        </tr>
+      </thead>
+
+      <tbody>
+          <tr *ngFor="let row of generatedGRN.grnJson">
+          <td class="px-4 py-2">{{ row.itemCode || row.item }}</td>
+          <td class="px-4 py-2">{{ row.supplierName }}</td>
+          <td class="px-4 py-2">{{ row.storageType }}</td>
+          <td class="px-4 py-2">{{ row.surfaceTemp }}</td>
+          <td class="px-4 py-2">{{ row.expiry | date:'yyyy-MM-dd' }}</td>
+          <td class="px-4 py-2">{{ row.pestSign }}</td>
+          <td class="px-4 py-2">{{ row.drySpillage }}</td>
+          <td class="px-4 py-2">{{ row.odor }}</td>
+          <td class="px-4 py-2">{{ row.plateNumber }}</td>
+          <td class="px-4 py-2">{{ row.defectLabels }}</td>
+          <td class="px-4 py-2">{{ row.damagedPackage }}</td>
+          <td class="px-4 py-2">{{ row.time }}</td>
+          <td class="px-4 py-2">
+            <img *ngIf="row.initial" [src]="row.initial" alt="initial" class="h-8 w-8 object-contain rounded" />
+          </td>
+          <td class="px-4 py-2">{{ row.remarks }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+<div class="flex gap-3">
+  <button
+    type="button"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
+    (click)="flagIssues(generatedGRN.id)"
+  >
+    <span>Flag Issues</span>
+  </button>
+
+  <button
+    type="button"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-green-700 hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+    (click)="postInventory(generatedGRN.id)"
+    [disabled]="isPostInventoryDisabled"
+  >
+    <span>Post Inventory</span>
+  </button>
+</div>
+
+
+</div>
+
+<!-- ========== INITIAL / SIGNATURE MODAL ========== -->
 <div *ngIf="showInitialModal" class="fixed inset-0 z-[1000] flex items-center justify-center" (keydown.escape)="closeInitialModal()">
   <div class="absolute inset-0 bg-black/40" (click)="closeInitialModal()"></div>
+
   <div class="relative bg-white rounded-2xl w-[92vw] max-w-3xl shadow-lg" role="dialog" aria-modal="true">
-    <button type="button" class="absolute top-3 right-3 h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100"
-      (click)="closeInitialModal()" aria-label="Close" title="Close">✕</button>
+    <button
+      type="button"
+      class="absolute top-3 right-3 h-9 w-9 grid place-items-center rounded-full hover:bg-gray-100"
+      (click)="closeInitialModal()"
+      aria-label="Close"
+      title="Close"
+    >✕</button>
 
     <!-- Tabs -->
     <div class="px-6 pt-6">
       <div class="flex gap-10 border-b">
-        <button type="button" class="pb-2 text-base font-medium" [class.text-[#0e3a4c]]="activeTab === 'image'"
-          [class.border-b-2]="activeTab === 'image'" [class.border-[#0e3a4c]]="activeTab === 'image'" (click)="switchTab('image')">
+        <button
+          type="button"
+          class="pb-2 text-base font-medium"
+          [class.text-[#0e3a4c]]="activeTab === 'image'"
+          [class.border-b-2]="activeTab === 'image'"
+          [class.border-[#0e3a4c]]="activeTab === 'image'"
+          (click)="switchTab('image')"
+        >
           Image
         </button>
-        <button type="button" class="pb-2 text-base font-medium" [class.text-[#0e3a4c]]="activeTab === 'signature'"
-          [class.border-b-2]="activeTab === 'signature'" [class.border-[#0e3a4c]]="activeTab === 'signature'"
-          (click)="switchTab('signature')">
+        <button
+          type="button"
+          class="pb-2 text-base font-medium"
+          [class.text-[#0e3a4c]]="activeTab === 'signature'"
+          [class.border-b-2]="activeTab === 'signature'"
+          [class.border-[#0e3a4c]]="activeTab === 'signature'"
+          (click)="switchTab('signature')"
+        >
           Signature
         </button>
       </div>
@@ -229,7 +333,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <button type="button" class="px-5 py-2 rounded-full text-white" [style.backgroundColor]="'#0e3a4c'" (click)="saveImage()">
+          <button type="button" class="px-5 py-2 rounded-full text-white bg-[#0e3a4c]" (click)="saveImage()">
             Save Image
           </button>
           <button type="button" class="px-4 py-2 rounded-full border" (click)="clearImage()">Clear</button>
@@ -243,7 +347,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <button type="button" class="px-5 py-2 rounded-full text-white" [style.backgroundColor]="'#0e3a4c'" (click)="saveSignature()">
+          <button type="button" class="px-5 py-2 rounded-full text-white bg-[#0e3a4c]" (click)="saveSignature()">
             Save Signature
           </button>
           <button type="button" class="px-4 py-2 rounded-full border" (click)="clearSignature()">Clear</button>
