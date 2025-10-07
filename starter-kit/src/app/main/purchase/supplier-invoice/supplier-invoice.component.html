@@ -1,0 +1,243 @@
+<button class="btn mb-2" style="background-color: #2E5F73; color: white;" (click)="goToSupplierInvoice()">
+  Go to Supplier Invoice list
+</button>
+<form class="ui-compact" [formGroup]="form">
+  <div class="max-w-[1120px] mx-auto">
+    <div class="bg-white rounded-2xl shadow p-2 border border-gray-100">
+
+      <!-- Title -->
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-800">Supplier Invoice (PIN)</h2>
+        <span
+          class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+          3-way match: PO · GRN · PIN
+        </span>
+      </div>
+
+      <!-- Header fields -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
+        <!-- GRN combobox -->
+        <div class="relative grn-combobox">
+          <label class="text-[11px] font-medium text-gray-600 block">GRN #</label>
+          <div class="relative">
+            <input
+              type="text"
+              [value]="grnSearch"
+              (input)="onGrnSearch($event)"
+              (focus)="onGrnFocus()"
+              placeholder="Search GRN…"
+              class="w-full rounded-lg border px-2.5 h-8 text-[13px] pr-7"
+              [attr.aria-autocomplete]="'list'"
+              [attr.aria-expanded]="grnOpen"
+            />
+            <button
+              type="button"
+              class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-[11px]"
+              (click)="grnOpen = !grnOpen"
+              aria-label="Toggle GRN list">▼</button>
+          </div>
+
+          <!-- actual form value -->
+          <input type="hidden" formControlName="grnNo"/>
+
+          <!-- dropdown -->
+          <ul *ngIf="grnOpen"
+              class="absolute left-0 right-0 mt-1 max-h-48 overflow-auto bg-white border rounded-md shadow z-20">
+            <li *ngFor="let g of grnFiltered; trackBy: trackByGrn"
+                (click)="selectGrn(g)"
+                class="px-3 py-2 cursor-pointer hover:bg-blue-50 text-[13px]">
+              <span class="font-medium">{{ g.grnNo }}</span>
+              <small class="text-gray-500 ml-1" *ngIf="g.poNo">· PO: {{ g.poNo }}</small>
+              <small class="text-gray-400 ml-1" *ngIf="g.supplierName">· {{ g.supplierName }}</small>
+            </li>
+            <li *ngIf="!grnFiltered?.length" class="px-3 py-2 text-gray-400 text-[13px]">No results</li>
+          </ul>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-medium text-gray-600 block">Invoice Date</label>
+          <input type="date" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="invoiceDate"/>
+        </div>
+        <div>
+          <label class="text-[11px] font-medium text-gray-600 block">Amount</label>
+          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="amount"/>
+        </div>
+        <div>
+          <label class="text-[11px] font-medium text-gray-600 block">Tax</label>
+          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="tax"/>
+        </div>
+      </div>
+
+      <!-- GRN Items preview (from GRNJson) -->
+      <!-- <div *ngIf="selectedGrnItems?.length" class="mt-2 rounded-xl border border-gray-200">
+        <div class="flex items-center justify-between px-2.5 py-2 bg-gray-50 rounded-t-xl">
+          <div class="text-[13px] text-gray-700">
+            <span class="font-medium">GRN Items:</span>
+            <span class="text-gray-500" *ngIf="selectedGrn?.grnNo">for {{ selectedGrn.grnNo }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="px-2.5 h-8 rounded-lg text-[13px] font-medium text-white"
+              [style.backgroundColor]="'#0e3a4c'"
+              (click)="importAllFromGrn()">
+              Import All to Lines
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#0e3a4c] text-white">
+              <tr class="whitespace-nowrap">
+                <th class="px-2.5 py-2 text-left font-medium">Item Code</th>
+                <th class="px-2.5 py-2 text-left font-medium">Supplier</th>
+                <th class="px-2.5 py-2 text-left font-medium">Storage</th>
+                <th class="px-2.5 py-2 text-left font-medium">Surface Temp</th>
+                <th class="px-2.5 py-2 text-left font-medium">Expiry</th>
+                <th class="px-2.5 py-2 text-left font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let it of selectedGrnItems" class="border-t">
+                <td class="px-2.5 py-1.5">{{ it.itemCode || it.item }}</td>
+                <td class="px-2.5 py-1.5">{{ it.supplierId }}</td>
+                <td class="px-2.5 py-1.5">{{ it.storageType }}</td>
+                <td class="px-2.5 py-1.5">{{ it.surfaceTemp }}</td>
+                <td class="px-2.5 py-1.5">{{ it.expiry | date:'yyyy-MM-dd' }}</td>
+                <td class="px-2.5 py-1.5">
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium hover:bg-gray-100 border border-gray-200"
+                    (click)="addLineFromGrn(it)">
+                    Add
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div> -->
+
+      <!-- Lines -->
+      <div class="rounded-xl border border-gray-200 mt-2">
+        <!-- Header row -->
+        <div
+          class="grid grid-cols-[2fr_0.8fr_1fr_1fr_1.3fr_0.9fr] text-[12px] font-medium
+                 bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
+          <div class="px-2.5 py-2">Item</div>
+          <div class="px-2.5 py-2">Qty</div>
+          <div class="px-2.5 py-2">Price</div>
+          <div class="px-2.5 py-2">Match</div>
+          <div class="px-2.5 py-2">Debit/Credit Note</div>
+          <div class="px-2.5 py-2 text-right">Remove</div>
+        </div>
+
+        <!-- Body -->
+        <div formArrayName="lines">
+          <div *ngIf="lines.length === 0" class="text-center text-[12.5px] text-gray-400 py-3">
+            No lines yet.
+          </div>
+
+          <div
+            *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
+            [formGroupName]="i"
+            class="grid grid-cols-[2fr_0.8fr_1fr_1fr_1.3fr_0.9fr] items-center border-t">
+
+            <div class="px-2.5 py-1.5">
+              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="item" />
+            </div>
+
+            <div class="px-2.5 py-1.5">
+              <input
+                type="number"
+                class="w-full rounded-lg border px-2.5 h-8 text-[13px] "
+                formControlName="qty"
+                (input)="onCellChange(i)" />
+            </div>
+
+            <div class="px-2.5 py-1.5">
+              <input
+                type="number"
+                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                formControlName="price"
+                (input)="onCellChange(i)" />
+            </div>
+
+            <div class="px-2.5 py-1.5">
+              <span
+                class="text-[11px] px-2 py-0.5 rounded-full border align-middle"
+                [ngClass]="(row.value.matchStatus||'')==='OK'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : ( (row.value.matchStatus||'')==='NOT FOUND'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200')">
+                {{ row.value.matchStatus || 'OK' }}
+              </span>
+              <ng-container *ngIf="row.value.mismatchFields">
+                <span class="text-[11px] text-gray-500"> ({{ row.value.mismatchFields }})</span>
+              </ng-container>
+            </div>
+
+            <div class="px-2.5 py-1.5">
+              <input
+                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                formControlName="dcNoteNo"
+                placeholder="DC Note #" />
+            </div>
+
+            <div class="px-2.5 py-1.5 text-right">
+  <button
+    type="button"
+    class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium border border-red-500 text-red-600 hover:bg-red-50 transition"
+    (click)="removeLine(i)">
+    Remove
+  </button>
+</div>
+
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <!-- <div class="p-2 border-t bg-gray-50 rounded-b-xl">
+          <button
+            class="px-2.5 h-8 rounded-lg text-[13px] font-medium text-white"
+            type="button"
+            [style.backgroundColor]="'#0e3a4c'"
+            (click)="addLine()">
+            + Add line
+          </button>
+        </div> -->
+      </div>
+
+      <!-- Actions -->
+    <div class="flex justify-end gap-2 mt-2">
+    <button
+      class="px-2.5 h-8 rounded-lg text-[13px] font-medium border border-amber-600 text-amber-700 hover:bg-amber-50"
+      type="button"
+      (click)="save('HOLD')">
+      Hold/Review
+    </button>
+
+    <!-- submit button -->
+    <button
+      class="px-3 h-8 rounded-lg text-[13px] font-medium text-white disabled:opacity-60"
+      type="submit"
+      [style.backgroundColor]="'#0e3a4c'"
+      [disabled]="form.invalid"
+      (click)="save('POST')">
+      Post to A/P
+    </button>
+  </div>
+    </div>
+  </div>
+</form>
+
+<style>
+  .ui-compact label { margin-bottom: 2px !important; }
+  .ui-compact input[type="text"],
+  .ui-compact input[type="number"],
+  .ui-compact input[type="date"] { line-height: 1.25rem; }
+  .ui-compact th { white-space: nowrap; }         /* Keep table headers on a single line */
+  .ui-compact .grn-combobox ul { overscroll-behavior: contain; } /* prevent weird scroll chaining */
+</style>

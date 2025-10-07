@@ -11,7 +11,8 @@ export const locale = {
       PURCHASE: {
         TITLE: 'Purchase',
         PR: 'Purchase Request',
-        GRN: 'Purchase Good Receipt'
+        GRN: 'Purchase Good Receipt',
+        SupplierInvoice: 'Supplier Invoice'
       },
 
       FINANCIAL: {

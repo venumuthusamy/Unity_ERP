@@ -118,18 +118,18 @@
           />
         </div>
 
-     <div class="flex items-center gap-2 ml-6">
-  <input 
-    id="multiloc" 
-    type="checkbox" 
-    [(ngModel)]="prHeader.multiLoc" 
-    name="multiLoc" 
-    class="h-4 w-4"
-  />
-  <label class="text-xs font-medium text-gray-600" for="multiloc">
-    Split to multiple locations
-  </label>
-</div>
+        <div class="flex items-center gap-2 ml-6">
+          <input 
+            id="multiloc" 
+            type="checkbox" 
+            [(ngModel)]="prHeader.multiLoc" 
+            name="multiLoc" 
+            class="h-4 w-4"
+          />
+          <label class="text-xs font-medium text-gray-600" for="multiloc">
+            Split to multiple locations
+          </label>
+        </div>
 
       </div>
 
@@ -227,102 +227,96 @@
         </button>
       </div>
     </div>
-<div *ngIf="prStep === 2" class="space-y-3">
-  <!-- Card -->
-  <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-    <!-- Header -->
-    <div class="bg-[#0e3a4c] px-4 py-2 flex items-center justify-between">
-      <h3 class="text-white font-semibold text-sm">Purchase Request Preview</h3>
-    </div>
 
-    <!-- Body -->
-    <div class="p-4 space-y-3 text-[13px]">
-      <!-- Info grid (3 columns) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <p class="text-gray-500 text-[11px] font-medium">Requester</p>
-          <p class="text-gray-900 font-semibold truncate">{{ prHeader.requester || '-' }}</p>
+    <!-- Step 2: Review -->
+    <div *ngIf="prStep === 2" class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div class="bg-[#0e3a4c] px-4 py-2 flex items-center justify-between">
+          <h3 class="text-white font-semibold text-sm">Purchase Request Preview</h3>
         </div>
-        <div>
-          <p class="text-gray-500 text-[11px] font-medium">Department</p>
-          <p class="text-gray-900 font-semibold truncate">{{ searchText || '-' }}</p>
-        </div>
-        <div>
-          <p class="text-gray-500 text-[11px] font-medium">Delivery Date</p>
-          <p class="text-gray-900 font-semibold">{{ prHeader.neededBy | date:'dd-MM-yyyy' || '-' }}</p>
-        </div>
-        <div>
-          <p class="text-gray-500 text-[11px] font-medium">Multi Location</p>
-          <p class="text-gray-900 font-semibold">{{ prHeader.multiLoc ? 'Yes' : 'No' }}</p>
-        </div>
-        <div class="md:col-span-2">
-          <p class="text-gray-500 text-[11px] font-medium">Description</p>
-          <p class="text-gray-900 leading-snug">{{ prHeader.description || '-' }}</p>
-        </div>
-      </div>
 
-      <!-- Line items (compact cards, 3 columns on md+) -->
-      <div>
-        <h4 class="text-gray-700 font-semibold text-[12px] mb-1">Line Items</h4>
-        <div *ngIf="prLines.length > 0; else noLines" class="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div *ngFor="let l of prLines; let i = index"
-               class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <p class="font-semibold text-gray-800 text-[13px] truncate">
-              {{ l['item'] || l['itemSearch'] || '(no item)' }}
-            </p>
-            <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-gray-600">
-              <span>Qty</span><span class="text-right font-medium">
-                {{ l['qty'] || 0 }} {{ l['uom'] || l['uomSearch'] || '' }}
-              </span>
-              <span>Location</span><span class="text-right truncate">
-                {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
-              </span>
-              <span>Budget</span><span class="text-right font-semibold text-[#0e3a4c]">
-                {{ l['budget'] || '-' }}
-              </span>
+        <div class="p-4 space-y-3 text-[13px]">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <p class="text-gray-500 text-[11px] font-medium">Requester</p>
+              <p class="text-gray-900 font-semibold truncate">{{ prHeader.requester || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-[11px] font-medium">Department</p>
+              <p class="text-gray-900 font-semibold truncate">{{ searchText || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-[11px] font-medium">Delivery Date</p>
+              <p class="text-gray-900 font-semibold">{{ prHeader.neededBy | date:'dd-MM-yyyy' || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 text-[11px] font-medium">Multi Location</p>
+              <p class="text-gray-900 font-semibold">{{ prHeader.multiLoc ? 'Yes' : 'No' }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <p class="text-gray-500 text-[11px] font-medium">Description</p>
+              <p class="text-gray-900 leading-snug">{{ prHeader.description || '-' }}</p>
             </div>
           </div>
+
+          <div>
+            <h4 class="text-gray-700 font-semibold text-[12px] mb-1">Line Items</h4>
+            <div *ngIf="prLines.length > 0; else noLines" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div *ngFor="let l of prLines; let i = index"
+                   class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                <p class="font-semibold text-gray-800 text-[13px] truncate">
+                  {{ l['item'] || l['itemSearch'] || '(no item)' }}
+                </p>
+                <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-gray-600">
+                  <span>Qty</span><span class="text-right font-medium">
+                    {{ l['qty'] || 0 }} {{ l['uom'] || l['uomSearch'] || '' }}
+                  </span>
+                  <span>Location</span><span class="text-right truncate">
+                    {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
+                  </span>
+                  <span>Budget</span><span class="text-right font-semibold text-[#0e3a4c]">
+                    {{ l['budget'] || '-' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noLines>
+              <p class="text-gray-400 italic text-xs">No lines added</p>
+            </ng-template>
+          </div>
+
+          <div class="flex justify-end pt-2 border-t border-gray-200">
+            <p class="text-[12px] font-semibold text-gray-700">
+              Total Qty: <span class="text-[#0e3a4c]">{{ totalQty }}</span>
+            </p>
+          </div>
         </div>
-        <ng-template #noLines>
-          <p class="text-gray-400 italic text-xs">No lines added</p>
-        </ng-template>
       </div>
 
-      <!-- Totals (tight) -->
-      <div class="flex justify-end pt-2 border-t border-gray-200">
-        <p class="text-[12px] font-semibold text-gray-700">
-          Total Qty: <span class="text-[#0e3a4c]">{{ totalQty }}</span>
-        </p>
+      <div class="flex justify-between">
+        <button
+          class="px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 hover:bg-gray-100"
+          (click)="prGo(-1)" type="button">
+          ← Back
+        </button>
+        <button
+          class="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow hover:opacity-90"
+          style="background-color:#0e3a4c;" type="button" (click)="saveRequest()">
+          Convert to PO / RFQ
+        </button>
       </div>
     </div>
-  </div>
-
-  <!-- Footer buttons (compact) -->
-  <div class="flex justify-between">
-    <button
-      class="px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 hover:bg-gray-100"
-      (click)="prGo(-1)" type="button">
-      ← Back
-    </button>
-    <button
-      class="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow hover:opacity-90"
-      style="background-color:#0e3a4c;" type="button" (click)="saveRequest()">
-      Convert to PO / RFQ
-    </button>
-  </div>
-</div>
 
   </div>
 </div>
 
-<!-- Modal overlay (clicking overlay closes modal) -->
-<div *ngIf="showModal" class="prl-overlay" (click)="closeModal()">
+<!-- Modal overlay (outside click DOES NOT close the modal now) -->
+<div *ngIf="showModal" class="prl-overlay" aria-modal="true" role="dialog">
   <!-- Modal: we handle internal clicks to close dropdowns but keep modal open -->
   <div
     class="prl-modal"
     (click)="onModalRootClick($event)"
     role="dialog"
-    aria-modal="true"
     aria-labelledby="prl-title"
   >
     <!-- Header -->

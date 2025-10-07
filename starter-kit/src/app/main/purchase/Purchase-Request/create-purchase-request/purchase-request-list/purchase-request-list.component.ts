@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { CreatePurchaseRequestComponent } from '../create-purchase-request/create-purchase-request.component';
-import { PurchaseService } from '../purchase.service';
+import { CreatePurchaseRequestComponent } from '../create-purchase-request.component';
+import { PurchaseService } from 'app/main/purchase/purchase.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
