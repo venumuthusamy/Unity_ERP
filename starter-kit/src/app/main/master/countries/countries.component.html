@@ -42,6 +42,7 @@
             </div>
           </li>
         </ul>
+        
       </div>
     </div>
   </div>
@@ -56,6 +57,11 @@
             <label for="first-name-column">Country Name</label>
             <input type="text" id="first-name-column" class="form-control" placeholder="Country Name" name="fname-column"
               [(ngModel)]="countryName" [maxlength]="50" required />
+          </div>
+          <div class="form-group">
+            <label for="first-gst-column">GST Percentage</label>
+            <input type="number" id="first-gst-column" class="form-control" placeholder="GST Percentage" name="fgst-column"
+              [(ngModel)]="gstPercentage" [maxlength]="50" required />
           </div>
           
 

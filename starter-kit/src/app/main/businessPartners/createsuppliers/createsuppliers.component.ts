@@ -9,10 +9,12 @@ import { IncotermsService } from 'app/main/master/incoterms/incoterms.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
 import { SupplierService } from '../supplier/supplier.service';
+import { CountriesService } from 'app/main/master/countries/countries.service';
 
 /* =========================
    Types
 ========================= */
+type Country = { id: number; countryName: string; isActive?: boolean };
 type Term = { id: number; paymentTermsName: string; isActive?: boolean };
 type Currency = { id: number; currencyName: string; currencyCode?: string; isActive?: boolean };
 type Incoterm = { id: number; incotermsName: string; code?: string; name?: string; isActive?: boolean };
@@ -25,6 +27,7 @@ interface SupplierModel {
   code?: string;
   statusId: number;
   leadTime: number | null;
+  countryId: number | null;
   termsId: number | null;
   currencyId: number | null;
   taxReg: string;
@@ -68,6 +71,10 @@ export class CreatesuppliersComponent implements OnInit {
   /* =========================
      Master lists / selections
   ========================= */
+  CountryList: Country[] = []
+  filteredCountry: Country[] = [];
+  selectedCountry: Country | null = null;
+
   PaymentTermsList: Term[] = [];
   filteredTerms: Term[] = [];
   selectedTerm: Term | null = null;
@@ -89,6 +96,9 @@ export class CreatesuppliersComponent implements OnInit {
   ========================= */
   hover = false;
   preferredText = '';
+
+  countryDropdownOpen = false;
+  countrySearch = '';
 
   termsDropdownOpen = false;
   termsSearch = '';
@@ -117,6 +127,7 @@ export class CreatesuppliersComponent implements OnInit {
     code: '',
     statusId: 1,
     leadTime: null,
+    countryId: null,
     termsId: null,
     currencyId: null,
     taxReg: '',
@@ -137,6 +148,7 @@ export class CreatesuppliersComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private _countriesService: CountriesService,
     private paymentTermsService: PaymentTermsService,
     private _SupplierService: SupplierService,
     private CurrencyService: CurrencyService,
@@ -163,6 +175,11 @@ export class CreatesuppliersComponent implements OnInit {
         },
         error: (err) => console.error('Init failed', err)
       });
+
+    this._countriesService.getCountry().subscribe((res:any)=>{
+      this.CountryList = (res?.data ?? []).filter((x: any) => x.isActive);
+      this.filteredCountry = [...this.CountryList];
+    })
   }
 
   /* =========================
@@ -175,7 +192,8 @@ export class CreatesuppliersComponent implements OnInit {
       incoterms: this.incotermsService.getAllIncoterms(),
       items: this.itemsService.getAllItem()
     }).pipe(
-      switchMap(({ terms, currencies, incoterms, items }) => {
+      switchMap(({terms, currencies, incoterms, items }) => {        
+
         this.PaymentTermsList = (terms?.data ?? []).filter((x: any) => x.isActive === true);
         this.filteredTerms = [...this.PaymentTermsList];
 
@@ -219,6 +237,7 @@ export class CreatesuppliersComponent implements OnInit {
       code: item.code ?? '',
       statusId: item.statusId ?? 1,
       leadTime: item.leadTime ?? null,
+      countryId: item.countryId ?? null,
       termsId: item.termsId ?? null,
       currencyId: item.currencyId ?? null,
       taxReg: item.taxReg ?? '',
@@ -238,6 +257,11 @@ export class CreatesuppliersComponent implements OnInit {
     // Dropdown selections from IDs
     this.selectedStatus = this.statuses.find(x => x.id === this.supplier.statusId) ?? this.statuses[0];
     this.statusSearch = this.selectedStatus.name;
+
+    this.selectedCountry = this.supplier.countryId
+      ? (this.CountryList.find(x => x.id === this.supplier.countryId) || null)
+      : null;
+    this.countrySearch = this.selectedCountry?.countryName ?? '';
 
     this.selectedTerm = this.supplier.termsId
       ? (this.PaymentTermsList.find(x => x.id === this.supplier.termsId) || null)
@@ -379,6 +403,19 @@ export class CreatesuppliersComponent implements OnInit {
   /* =========================
      Terms / Currency / Incoterms / Status
   ========================= */
+   filterCountry() {
+    const q = (this.countrySearch || '').toLowerCase();
+    this.filteredCountry = this.CountryList.filter(t =>
+      t.countryName.toLowerCase().includes(q)
+    );
+  }
+  selectCountry(t: Country) {
+    debugger
+    this.selectedCountry = t;
+    this.countrySearch = t.countryName;
+    this.supplier.countryId = t.id;
+    this.countryDropdownOpen = false;
+  }
   filterTerms() {
     const q = (this.termsSearch || '').toLowerCase();
     this.filteredTerms = this.PaymentTermsList.filter(t =>
@@ -534,6 +571,7 @@ export class CreatesuppliersComponent implements OnInit {
       address: this.supplier.address,
 
       statusId: this.supplier.statusId ?? null,
+      countryId: this.supplier.countryId ?? null,
       termsId: this.supplier.termsId ?? null,
       currencyId: this.supplier.currencyId ?? null,
       incotermsId: this.supplier.incotermsId ?? null,
@@ -593,6 +631,7 @@ export class CreatesuppliersComponent implements OnInit {
       code: '',
       statusId: 1,
       leadTime: null,
+      countryId: null,
       termsId: null,
       currencyId: null,
       taxReg: '',

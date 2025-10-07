@@ -12,6 +12,9 @@ import { ItemsService } from 'app/main/master/items/items.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { PurchaseService } from '../../purchase.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
+import { RecurringService } from 'app/main/master/recurring/recurring.service';
+import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
+import { CountriesService } from 'app/main/master/countries/countries.service';
 type LineRow = { [k: string]: any };
 
 @Component({
@@ -28,24 +31,21 @@ export class PurchaseOrderCreateComponent implements OnInit {
     approveLevelId: 0,
     paymentTermId: 0,
     currencyId: 0,
-    // deliveryId: 0,
-    // contactNumber: '',
     incotermsId: 0,
     poDate: new Date(),
-    deliveryDate: new Date(),
+    deliveryDate: '',
     remarks: '',
-    // currency: 'SGD',
     fxRate: 0,
-    tax: 0.00,
+    tax: 0,
     shipping: 0.00,
     discount: 0.00,
     subTotal: 0,
-    netTotal: 0,
-    // approvalLevel: 'DeptHead',     
+    netTotal: 0,  
     approvalStatus: '',
   };
   purchaseOrderId: any;
   approvalLevel: any;
+  suppliers:any
   paymentTerms: any;
   currencies: any;
   incoterms: any;
@@ -53,7 +53,12 @@ export class PurchaseOrderCreateComponent implements OnInit {
   allItems: any;
   accounthead:any
   allBudgets: any
+  allRecurring: any
+  allTaxCodes: any
   deliveries: any;
+  submitted: boolean;
+  iserrorDelivery: boolean;
+  countries:any
 
 
   formatDate(date: Date | string): string {
@@ -71,8 +76,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     supplier: '',
     paymentTerms: '',
     currency: '',
-    delivery: '',
-    incoterms: ''
+    incoterms: '',
   };
 
   dropdownOpen: { [key: string]: boolean } = {
@@ -80,19 +84,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     supplier: false,
     paymentTerms: false,
     currency: false,
-    delivery: false,
     incoterms: false
   };
-  // approvalLevel = [
-  //   { id: 1, name: 'Department Head' },
-  //   { id: 2, name: 'Management' },
-  //   { id: 3, name: 'Auto-Approve' },
-  // ];
-  suppliers = [
-    { id: 1, name: 'Sangeetha Restaurants' },
-    { id: 2, name: 'Rajbhavan' },
-    { id: 3, name: 'Crescent' },
-  ];
 
 
   filteredLists: { [key: string]: any[] } = {
@@ -100,14 +93,15 @@ export class PurchaseOrderCreateComponent implements OnInit {
     supplier: [],
     paymentTerms: [],
     currency: [],
-    delivery: [],
     incoterms: []
   };
 
+  requiredKeys = ['supplier','approval','paymentTerms']; // add more if needed
 
-  allRecurring = ['One-Time', 'Monthly', 'Yearly'];
+  isEmpty(v: any): boolean {
+    return (v ?? '').toString().trim() === '';
+  }
 
-  allTaxCodes = ['STD', 'ZRL', 'EXM'];
 
 
   constructor(private poService: POService, private router: Router,
@@ -116,6 +110,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     private locationService: LocationService, private incotermsService: IncotermsService,
     private itemsService: ItemsService, private chartOfAccountService: ChartofaccountService,
     private purchaseService: PurchaseService,private _SupplierService : SupplierService,
+    private recurringService: RecurringService,private taxCodeService: TaxCodeService,
+    private _countriesService: CountriesService
   ) { }
 
 
@@ -135,7 +131,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
           prlist: this.purchaseService.getAll(),
           items: this.itemsService.getAllItem(),
           accounthead:this.chartOfAccountService.getAllChartOfAccount(),
+          recurring:this.recurringService.getRecurring(),
+          taxcode: this.taxCodeService.getTaxCode(),
           delivery: this.locationService.getLocation(),
+          country: this._countriesService.getCountry(),
           poHdr: this.poService.getPOById(this.purchaseOrderId)
         }).subscribe((results: any) => {
           this.approvalLevel = results.approval.data;
@@ -150,7 +149,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
           value: head.id,
           label: this.buildFullPath(head)
           }));
+          this.allRecurring = results.recurring.data;
+          this.allTaxCodes = results.taxcode.data;
           this.deliveries = results.delivery.data;
+          this.countries = results.country.data;
 
           this.poHdr = {
             ...results.poHdr.data,
@@ -164,7 +166,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
             paymentTerms: [...this.paymentTerms],
             currency: [...this.currencies],
             incoterms: [...this.incoterms],
-            // delivery: [...this.deliveries],
           };
 
 
@@ -188,13 +189,11 @@ export class PurchaseOrderCreateComponent implements OnInit {
           if (selectedIncoterms) {
             this.searchTexts['incoterms'] = selectedIncoterms.incotermsName;
           }
-            // const selectedDelivery = this.deliveries?.find((d: any) => d.id === this.poHdr.deliveryId);
-          // if (selectedDelivery) {
-          //   this.searchTexts['delivery'] = selectedDelivery.name;
-          // }
+          
 
 
           this.poLines = JSON.parse(results.poHdr.data.poLines);
+          this.calculateFxTotal()
         });
       } else {
         debugger
@@ -208,7 +207,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
           prlist: this.purchaseService.getAll(),
           items: this.itemsService.getAllItem(),
           accounthead:this.chartOfAccountService.getAllChartOfAccount(),
+          recurring:this.recurringService.getRecurring(),
+          taxcode: this.taxCodeService.getTaxCode(),
           delivery: this.locationService.getLocation(),
+          country: this._countriesService.getCountry(),
         }).subscribe((results: any) => {
           this.approvalLevel = results.approval.data;
           this.suppliers = results.suppliers.data;
@@ -222,11 +224,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
           value: head.id,
           label: this.buildFullPath(head)
           }));
-          this.deliveries = results.delivery.data;
-
-
-
-         
+          this.allRecurring = results.recurring.data;
+          this.allTaxCodes = results.taxcode.data;
+          this.deliveries = results.delivery.data;   
+          this.countries = results.country.data;      
 
           this.filteredLists = {
             approval: [...this.approvalLevel],
@@ -234,11 +235,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
             paymentTerms: [...this.paymentTerms],
             currency: [...this.currencies],
             incoterms: [...this.incoterms],
-             // delivery: [...this.deliveries],
           };
 
-          // default poHdr for create
-          //this.poHdr = { id: 0, poDate: new Date(), deliveryDate: this.toISODate(new Date()), ... };
         });
       }
     });
@@ -308,13 +306,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
         case 'paymentTerms': this.filteredLists[field] = [...this.paymentTerms]; break;
         case 'currency': this.filteredLists[field] = [...this.currencies]; break;
         case 'incoterms': this.filteredLists[field] = [...this.incoterms]; break;
-         // case 'delivery': this.filteredLists[field] = [...this.deliveries]; break;
       }
     }
   }
 
   // Filter function
   filter(field: string) {
+
     const search = this.searchTexts[field].toLowerCase();
 
     switch (field) {
@@ -332,15 +330,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
         break;
       case 'incoterms':
         this.filteredLists[field] = this.incoterms.filter((s: any) => s.incotermsName.toLowerCase().includes(search));
-        break;
-       // case 'delivery':
-      //   this.filteredLists[field] = this.deliveries.filter((s: any) => s.name.toLowerCase().includes(search));
-      //   break;  
+        break; 
     }
   }
 
   //  Select item
   select(field: string, item: any) {
+    
     this.searchTexts[field] = item.name || item.paymentTermsName || item.currencyName || item.incotermsName;
     switch (field) {
       case 'approval':
@@ -348,6 +344,21 @@ export class PurchaseOrderCreateComponent implements OnInit {
         break;
       case 'supplier':
         this.poHdr.supplierId = item.id;
+          // find matching currency in currency list
+          const found = this.currencies.find(x => x.id === item.currencyId);
+
+          // update header + input
+          this.poHdr.currencyId = item.currencyId;
+          this.poHdr.currencyName = found?.currencyName || found?.name || '';
+          if(this.poHdr.currencyName === 'SGD'){
+            this.poHdr.fxRate = 1
+          }else{
+            this.poHdr.fxRate = 0
+          }
+          this.searchTexts['currency'] = this.poHdr.currencyName;
+
+          const foundGst = this.countries.find(x => x.id === item.countryId);
+          this.poHdr.tax = foundGst?.gstPercentage || '';
         break;
       case 'paymentTerms':
         this.poHdr.paymentTermId = item.id;
@@ -356,16 +367,16 @@ export class PurchaseOrderCreateComponent implements OnInit {
         this.poHdr.currencyId = item.id;
         this.poHdr.currencyName = item.currencyName;
         break;
-      // case 'delivery':
-      //   this.poHdr.deliveryId = item.id;
-      //   break;
       case 'incoterms':
         this.poHdr.incotermsId = item.id;
         break;
     }
     this.dropdownOpen[field] = false;
   }
-
+  isSGDCurrency(): boolean {
+  const code = (this.poHdr.currencyName || '').toUpperCase();
+  return code === 'SGD';
+  }
   // Clear search
   onClearSearch(field: string) {
     this.searchTexts[field] = '';
@@ -394,7 +405,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     if (field === 'taxCode') {
       this.poLines[index].filteredOptions = [...this.allTaxCodes];
     }
-      if (field === 'location') {
+    if (field === 'location') {
       this.poLines[index].filteredOptions = [...this.deliveries];
     }
   }
@@ -436,89 +447,150 @@ export class PurchaseOrderCreateComponent implements OnInit {
     }
   }
 
-  selectOption(index: number, field: string, option: any) {
-    if (field === 'prNo') {
-      const chosenNo: string = option?.purchaseRequestNo ?? option;
-      const pr = this.allPrNos.find((p: any) => p.purchaseRequestNo === chosenNo);
-      if (!pr) return;
+    selectOption(index: number, field: string, option: any) {
+      debugger
+      if (field === 'prNo') {
+        const chosenNo: string = option?.purchaseRequestNo ?? option;
+        const pr = this.allPrNos.find((p: any) => p.purchaseRequestNo === chosenNo);
+        if (!pr) return;
 
-      // show chosen PR no in the input
-      this.poLines[index].prNo = pr.purchaseRequestNo;
+        // Close dropdown on the clicked row
+        this.poLines[index].dropdownOpen = '';
+        this.poLines[index].filteredOptions = [];
 
-      // close dropdown
-      this.poLines[index].dropdownOpen = '';
-      this.poLines[index].filteredOptions = [];
+        // ✅ Append PR lines
+        this.appendPRToPOLines(pr);
 
-      // ✅ Replace all poLines with the lines of this PR
-      this.bindPRToPOLines(pr);
-      return;
-    } 
-    else if (field === 'item') {
-      this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
-    } 
-    else if (field === 'budget') {
-      this.poLines[index][field] = option.label;
-    } 
-    else if (field === 'location') {
-      this.poLines[index][field] = option.name;
-    } 
-    else {
-      this.poLines[index][field] = option;
+        // ✅ Remove the picker row if it's empty or only has PR No
+        if (this.isOnlyPrNo(this.poLines[index]) || this.isEmptyLine(this.poLines[index])) {
+          this.poLines.splice(index, 1);
+        }
+
+        return;
+      }
+
+      // Other fields
+      if (field === 'item') {
+        this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
+      } else if (field === 'budget') {
+        this.poLines[index][field] = option.label;
+      } else if (field === 'location') {
+        this.poLines[index][field] = option.name;
+      }else if (field === 'recurring') {
+        this.poLines[index][field] = option.recurringName;
+      }else if (field === 'taxCode') {
+        this.poLines[index][field] = option.name;
+      } else {
+        this.poLines[index][field] = option;
+      }
+
+      this.poLines[index].dropdownOpen = ''; // close dropdown
     }
 
-    this.poLines[index].dropdownOpen = ''; // close dropdown
-  }
+    /** ========= APPEND PR → PO LINES (no replace) ========= */
+    private appendPRToPOLines(pr: any) {
+      const lines = this.safeParsePrLines(pr?.prLines);
+      if (!lines.length) return;
 
-  bindPRToPOLines(pr: any) {
-    const lines = this.safeParsePrLines(pr.prLines);
-    if (!lines.length) return;
+      const newPOLines = lines.map((l: any) =>
+        this.mapPRLineToPOLine(pr.purchaseRequestNo, l)
+      );
 
-    // map each PR line into a PO line
-    this.poLines = lines.map((l: any) => this.mapPRLineToPOLine(pr.purchaseRequestNo, l));
-  }
+      // ✅ 1) Remove ALL empty/placeholder rows before appending
+      this.poLines = this.poLines.filter(line => !this.isEmptyLine(line) && !this.isOnlyPrNo(line));
 
-  private safeParsePrLines(raw: any): any[] {
-    if (Array.isArray(raw)) return raw;
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(String(raw));
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+      // ✅ 2) Append new PR lines (avoid duplicates — or merge qty)
+      for (const nl of newPOLines) {
+        const dupIdx = this.poLines.findIndex(pl => this.isSameLine(pl, nl));
+        if (dupIdx === -1) {
+          this.poLines.push(nl);
+        } else {
+          // If you prefer merging quantities for identical lines, uncomment:
+          // this.poLines[dupIdx].qty = (Number(this.poLines[dupIdx].qty) || 0) + (Number(nl.qty) || 0);
+        }
+      }
     }
-  }
 
-  mapPRLineToPOLine(prNo: string, line: any) {
-    const po = this.makeEmptyPOLine();
-    po.prNo = prNo;
-    po.item = line.itemCode || line.itemSearch || '';
-    po.description = line.remarks || '';
-    po.budget = line.budget || '';
-    po.location = line.location || line.locationSearch || '';
-    po.qty = Number(line.qty) || 0;
-    return po;
-  }
+    private safeParsePrLines(raw: any): any[] {
+      if (Array.isArray(raw)) return raw;
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(String(raw));
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
 
-  makeEmptyPOLine() {
-    return {
-      prNo: '',
-      item: '',
-      description: '',
-      budget: '',
-      recurring: '',
-      taxCode: '',
-      location: '',
-      contactNumber: '',
-      qty: 0,
-      price: '',
-      discount: '',
+    private mapPRLineToPOLine(prNo: string, line: any) {
+      const po = this.makeEmptyPOLine();
+      po.prNo = prNo;
 
-      dropdownOpen: '',
-      filteredOptions: []
-    };
-  }
+      // Prefer "code - name" if both exist; fallback to whatever is present
+      const itemCode = line.itemCode ?? line.itemSearch ?? '';
+      const itemName = line.itemName ?? line.itemSearch ?? '';
+      po.item = itemName && itemCode ? `${itemCode} - ${itemName}` : (itemCode || itemName || '');
 
+      po.description = line.remarks ?? '';
+      po.budget = line.budget ?? '';
+      po.location = line.location ?? line.locationSearch ?? '';
+      po.qty = Number(line.qty) || 0;
 
+      return po;
+    }
+
+    private makeEmptyPOLine() {
+      return {
+        prNo: '',
+        item: '',
+        description: '',
+        budget: '',
+        recurring: '',
+        taxCode: '',
+        location: '',
+        contactNumber: '',
+        qty: 0,
+        price: '',
+        discount: '',
+        total:'',
+
+        dropdownOpen: '',
+        filteredOptions: []
+      };
+    }
+
+    /** Treat a row with no meaningful data as empty */
+    private isEmptyLine(line: any): boolean {
+      return !line?.prNo &&
+            !line?.item &&
+            !line?.budget &&
+            !line?.location &&
+            !String(line?.description ?? '').trim() &&
+            (Number(line?.qty) || 0) === 0;
+    }
+
+    /** Row that has ONLY a PR number (typical "picker" row after selection) */
+    private isOnlyPrNo(line: any): boolean {
+      const empty = (v: any) => !String(v ?? '').trim();
+      return !!line?.prNo &&
+            empty(line?.item) &&
+            empty(line?.budget) &&
+            empty(line?.location) &&
+            empty(line?.description) &&
+            (Number(line?.qty) || 0) === 0;
+    }
+
+    /** Equality used to prevent duplicate rows */
+    private isSameLine(a: any, b: any): boolean {
+      const norm = (v: any) => String(v ?? '').trim().toLowerCase();
+      return (
+        norm(a.prNo) === norm(b.prNo) &&
+        norm(a.item) === norm(b.item) &&
+        norm(a.location) === norm(b.location) &&
+        norm(a.budget) === norm(b.budget) &&
+        norm(a.description) === norm(b.description)
+      );
+    }
 
   poAddLine() {
     // this.poLines = [...this.poLines, { tax: 'STD' }]; 
@@ -533,7 +605,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       contactNumber: '',
       qty: 0,
       price: '',
-      discount: '',     
+      discount: '',
+      total:'',     
 
       dropdownOpen: '',
       filteredOptions: []
@@ -548,38 +621,103 @@ export class PurchaseOrderCreateComponent implements OnInit {
   poChange(i: number, key: string, val: any) {
     const copy = [...this.poLines]; copy[i] = { ...copy[i], [key]: val }; this.poLines = copy;
   }
-  get poTotals() {
-    return this.calcTotals(this.poLines, this.poHdr.tax, this.poHdr.shipping, this.poHdr.discount);
-  }
+    
   trackByIndex = (i: number, _: any) => i;
 
 
-  calcTotals(lines: LineRow[], taxRate = 0, shipping = 0, discount = 0) {
-    const sum = lines.reduce((acc, l) => {
-      const qty = Number(l['qty'] || 0);
-      const price = Number(l['price'] || 0);
-      const discPct = Number(l['discount'] || 0);
-      return acc + qty * price * (1 - discPct / 100);
-    }, 0);
+  calculateLineTotal(line: any) {
+    const qty = Number(line.qty) || 0;
+    const price = Number(line.price) || 0;
+    const discount = Number(line.discount) || 0;
 
-    const tax = sum * (Number(taxRate) / 100);
-    const grand = sum + tax + Number(shipping || 0) - Number(discount || 0);
+    // If discount is percentage
+    const sub = qty * price;
+    line.total = sub - (sub * discount) / 100;
+
+    // Round to 2 decimals
+    line.total = Number(line.total.toFixed(2));
+
+    // Recalculate overall totals whenever a line changes
+    this.recalculateTotals();
+  }
+
+  recalculateTotals() {
+    // Just force Angular change detection by re-assigning the header object
+    this.poHdr = { ...this.poHdr };
+     this.calculateFxTotal();
+  }
+
+
+  /** Compute totals dynamically */
+ get poTotals() {
+    return this.calcTotals(this.poLines, this.poHdr.shipping, this.poHdr.discount, this.poHdr.tax);
+  }
+
+  /** Do the math: subtotal → +shipping → -discount → +GST */
+  calcTotals(lines: any[], shipping = 0, discount = 0, gstPercent = 0) {
+    const subTotal = lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0);
+
+    const afterShipping = subTotal + Number(shipping || 0);
+    const afterDiscount = afterShipping - Number(discount || 0);
+    const gstAmount = afterDiscount * (Number(gstPercent) / 100);
+    const netTotal = afterDiscount + gstAmount;
 
     return {
-      sum: this.round(sum),
-      tax: this.round(tax),
-      grand: this.round(grand),
+      subTotal: this.round(subTotal),
+      gstAmount: this.round(gstAmount),
+      netTotal: this.round(netTotal)
     };
   }
 
-  round(n: any) { return Math.round((Number(n) || 0) * 100) / 100; }
+  /** Utility rounder */
+  round(value: number) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
 
+calculateFxTotal() {
+  const fx = Number(this.poHdr.fxRate) || 1;
+  const netTotal = this.poTotals?.netTotal || 0;
+
+  if (this.isSGDCurrency()) {
+    // Base currency = SGD → no conversion needed
+    this.poHdr.netTotalBase = netTotal;
+  } else {
+    // Convert to base SGD
+    this.poHdr.netTotalBase = Number((netTotal * fx).toFixed(2));
+  }
+}
   notify(msg: string) {
     alert(msg);
   }
-
+  deliveryChange(){
+    this.iserrorDelivery = false
+  }
   saveRequest() {
-    debugger
+    
+    this.submitted = true;
+
+    const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
+    if (missing.length || !this.poHdr.deliveryDate) {
+    this.iserrorDelivery = true
+          Swal.fire({
+            icon: 'warning',
+            title: 'Required',
+            text: 'Please fill required Fields',
+            confirmButtonColor: '#0e3a4c'
+          });
+          return;
+    }
+   
+
+     if ( this.poLines.length ==0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Required',
+            text: 'Line Items are required',
+            confirmButtonColor: '#0e3a4c'
+          });
+          return;
+    }
     const payload = {
       id: this.poHdr.id ? this.poHdr.id : 0,
       purchaseOrderNo: this.poHdr.purchaseOrderNo ? this.poHdr.purchaseOrderNo : '',
@@ -588,19 +726,15 @@ export class PurchaseOrderCreateComponent implements OnInit {
       paymentTermId: this.poHdr.paymentTermId,
       currencyId: this.poHdr.currencyId,
       fxRate: this.poHdr.fxRate,
-      // deliveryId: this.poHdr.deliveryId,
-      // contactNumber: this.poHdr.contactNumber,
       incotermsId: this.poHdr.incotermsId,
       poDate: this.poHdr.poDate,
       deliveryDate: this.poHdr.deliveryDate,
-      remarks: this.poHdr.remarks,
-      // currency: 'SGD',                  
+      remarks: this.poHdr.remarks,                
       tax: this.poHdr.tax,
       shipping: this.poHdr.shipping,
       discount: this.poHdr.discount,
-      subTotal: parseFloat(this.poTotals.sum.toFixed(2)),
-      netTotal: parseFloat(this.poTotals.grand.toFixed(2)),
-      // approvalLevel: 'DeptHead',     
+      subTotal: Number(this.poTotals.subTotal.toFixed(2)),
+      netTotal: Number(this.poTotals.netTotal.toFixed(2)),   
       approvalStatus: this.poHdr.approvalStatus,
       poLines: JSON.stringify(this.poLines)
     };
@@ -611,7 +745,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
        next: () => {
                       Swal.fire({
                         icon: 'success',
-                        title: 'Created!',
+                        title: 'Updated!',
                         text: 'PO updated successfully',
                         confirmButtonText: 'OK',
                         confirmButtonColor: '#0e3a4c'
@@ -657,6 +791,9 @@ export class PurchaseOrderCreateComponent implements OnInit {
     }
   }
 
+  goToPurchaseorder() {
+    this.router.navigate(['/purchase/list-purchaseorder']);
+  }
   cancel() {
     this.router.navigate(['/purchase/list-purchaseorder']);
   }

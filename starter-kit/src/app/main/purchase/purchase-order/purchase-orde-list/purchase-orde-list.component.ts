@@ -4,12 +4,14 @@ import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 import { POService } from '../purchase-order.service';
+import { DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-purchase-orde-list',
   templateUrl: './purchase-orde-list.component.html',
   styleUrls: ['./purchase-orde-list.component.scss'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  providers: [DatePipe]
 })
 export class PurchaseOrdeListComponent implements OnInit {
 
@@ -24,8 +26,12 @@ export class PurchaseOrdeListComponent implements OnInit {
   public selectedOption = 10;
   hover = false;
   passData: any;
+  showLinesModal = false;
+  modalLines: any[] = [];
+  modalTotal: any;
+
   constructor(private poService: POService, private router: Router,
-    private _coreSidebarService: CoreSidebarService,
+    private _coreSidebarService: CoreSidebarService,private datePipe: DatePipe
   ) { }
   ngOnInit(): void {
     this.loadRequests();
@@ -33,23 +39,25 @@ export class PurchaseOrdeListComponent implements OnInit {
   filterUpdate(event) {
 
     const val = event.target.value.toLowerCase();
-    const temp = this.tempData.filter(function (d) {
+    const temp = this.tempData.filter((d) => {
 
-      if (d.name.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.name.toLowerCase().indexOf(val) !== -1 || !val;
+      const poDate = this.datePipe.transform(d.poDate, 'dd-MM-yyyy')?.toLowerCase() || '';
+      const deliveryDate = this.datePipe.transform(d.deliveryDate, 'dd-MM-yyyy')?.toLowerCase() || '';
+
+      if (d.purchaseOrderNo.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.purchaseOrderNo.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.countryName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.countryName.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.supplierName.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.supplierName.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.stateName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.stateName.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.currencyName.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.currencyName.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.cityName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.cityName.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.approvalStatus.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.approvalStatus.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.phone.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.phone.toLowerCase().indexOf(val) !== -1 || !val;
-      }
+       if (poDate.includes(val) || !val) return true;
+       if (deliveryDate.includes(val) || !val) return true;
 
     });
     this.rows = temp;
@@ -124,6 +132,28 @@ export class PurchaseOrdeListComponent implements OnInit {
     this.router.navigate(['/purchase/create-purchaseorder']);
     
   } 
+
+  openLinesModal(row: any) {
+    debugger
+  // Normalize lines (supports array or JSON string)
+  let lines: any[] = [];
+  try {
+    lines = Array.isArray(row?.poLines) ? row.poLines : JSON.parse(row?.poLines || '[]');
+  } catch {
+    lines = [];
+  }
+
+  // Compute total 
+  const total = lines.reduce((sum, l) => sum + (Number(l?.total) || 0), 0);
+
+  this.modalLines = lines;
+  this.modalTotal = total;
+  this.showLinesModal = true;
+}
+
+closeLinesModal() {
+  this.showLinesModal = false;
+}
 
 }
 
