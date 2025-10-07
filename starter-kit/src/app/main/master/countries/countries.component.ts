@@ -13,6 +13,7 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
   @ViewChild('addForm') countryForm!: NgForm;
   public id = 0;
   public countryName = "";
+  public gstPercentage = "";
   isDisplay: boolean = false;
   modeHeader: string = 'Add Country';
   resetButton: boolean = true;
@@ -62,6 +63,7 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
     reset() {
     this.modeHeader = "Create Country";
     this.countryName = "";
+    this.gstPercentage = "";
     this.id = 0;
   }
 
@@ -80,6 +82,7 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
   const obj = {
     id:this.id,
     countryName: this.countryName,
+    gstPercentage: this.gstPercentage,
     createdBy: '1',
     createdDate: new Date(),
     updatedBy: '1',
@@ -128,6 +131,7 @@ else{
       this.countryValue = arg.data;
       this.id = this.countryValue.id;
       this.countryName = this.countryValue.countryName;
+      this.gstPercentage = this.countryValue.gstPercentage;
       this.isDisplay = true;
       this.resetButton = false;
       this.modeHeader = "Edit Country";

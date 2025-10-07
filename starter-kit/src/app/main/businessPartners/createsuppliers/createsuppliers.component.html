@@ -10,7 +10,7 @@
     </div>
 
     <!-- Row 1 -->
-    <div [ngClass]="gridColsClass(3)">
+    <div [ngClass]="gridColsClass(4)">
       <div>
         <label class="text-xs font-medium text-gray-600">Supplier Name *</label>
         <input
@@ -18,6 +18,38 @@
           [(ngModel)]="supplier.name"
           placeholder="e.g., FreshFoods Pte Ltd"
         />
+      </div>
+      <div class="relative">
+        <label class="text-xs font-medium text-gray-600">Country</label>
+        <div class="relative">
+          <input
+            type="text"
+            [(ngModel)]="countrySearch"
+            (input)="filterCountry()"
+            (focus)="countryDropdownOpen = true"
+            placeholder="Search Country..."
+            class="w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring"
+            style="border-color:#0e3a4c"
+          />
+          <button
+            type="button"
+            (click)="countryDropdownOpen = !countryDropdownOpen"
+            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-1 text-xs"
+          >▼</button>
+
+          <ul
+            *ngIf="countryDropdownOpen && filteredCountry.length"
+            class="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50"
+          >
+            <li
+              *ngFor="let t of filteredCountry"
+              (click)="selectCountry(t)"
+              class="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+            >
+              {{ t.countryName }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- Status -->
