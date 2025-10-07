@@ -64,7 +64,7 @@
    <ngx-datatable-column name="Actions" [width]="80" [sortable]="false">
   <ng-template let-row="row" ngx-datatable-cell-template>
     <div class="d-flex align-items-center">
-      <i class="fas fa-pen text-success mr-2" style="cursor:pointer" (click)="edit(row.id)"></i>
+      <i class="fas fa-pen text-blue-600 mr-2 cursor-pointer" style="cursor:pointer" (click)="edit(row.id)"></i>
       <i class="fas fa-trash text-danger" style="cursor:pointer" (click)="deleteLocation(row.id)"></i>
     </div>
   </ng-template>

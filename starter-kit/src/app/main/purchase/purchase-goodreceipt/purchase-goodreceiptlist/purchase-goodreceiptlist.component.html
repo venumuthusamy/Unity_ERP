@@ -17,23 +17,27 @@
               </label>
             </div>
           </div>
+
           <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
             <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
               <label class="d-flex align-items-center ml-1 ml-md-0">Search:
-                <input [(ngModel)]="searchValue" type="search" class="form-control ml-2" 
+                <input [(ngModel)]="searchValue" type="search" class="form-control ml-2"
                        (keyup)="filterUpdate($event)" />
               </label>
-              <button id="Add" class="btn btn-primary m-1" (click)="goToCreateGRN()">
-                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
-                <span class="d-none d-sm-inline-block">Add</span>
+                <button  id="Add" class="btn  m-1" style="background-color: #2E5F73; color: white;" rippleEffect (click)="goToCreateGRN()">
+                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
+                  class="d-none d-sm-inline-block">Add</span>
               </button>
+
             </div>
           </div>
         </div>
 
+
+         
         <!-- NGX DATATABLE -->
         <ngx-datatable
-          class="bootstrap core-bootstrap"
+          class="bootstrap core-bootstrap grn-table"
           [rows]="rows"
           [rowHeight]="50"
           [headerHeight]="50"
@@ -41,33 +45,100 @@
           [limit]="selectedOption"
           [columnMode]="'force'"
           [scrollbarH]="true"
-          [reorderable]="true"
-        >
+          [reorderable]="true">
 
-          <ngx-datatable-column name="GRN No" prop="grnNo" [width]="120"></ngx-datatable-column>
-          <ngx-datatable-column name="Product" prop="product" [width]="100"></ngx-datatable-column>
-          <ngx-datatable-column name="Supplier" prop="supplier" [width]="100"></ngx-datatable-column>
-          <ngx-datatable-column name="Type" prop="type" [width]="100"></ngx-datatable-column>
-          <ngx-datatable-column name="Surface Temp" prop="surfaceTemp" [width]="120"></ngx-datatable-column>
-          <ngx-datatable-column name="Expiry Date" prop="expiryDate" [width]="130">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              {{ row.expiryDate | date: 'yyyy' }}
+          <!-- Core IDs -->
+          <ngx-datatable-column name="GRN No" prop="grnNo" [width]="140"></ngx-datatable-column>
+          <ngx-datatable-column name="PO NO" prop="pono" [width]="160"></ngx-datatable-column>
+          <ngx-datatable-column name="Item Name" prop="itemName" [width]="180"></ngx-datatable-column>
+          <ngx-datatable-column name="Supplier Name" prop="name" [width]="160"></ngx-datatable-column>
+
+          <!-- Quality / Conditions -->
+          <ngx-datatable-column name="Storage Type" prop="storageType" [width]="140"></ngx-datatable-column>
+<ngx-datatable-column name="Surface Temp" prop="surfaceTemp" [width]="140">
+  <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
+    {{ value }}&deg;C
+  </ng-template>
+</ngx-datatable-column>
+
+          <ngx-datatable-column name="Pest Sign" prop="pestSign" [width]="110"></ngx-datatable-column>
+          <ngx-datatable-column name="Dry Spillage" prop="drySpillage" [width]="130"></ngx-datatable-column>
+          <ngx-datatable-column name="Odor" prop="odor" [width]="100"></ngx-datatable-column>
+          <ngx-datatable-column name="Plate No" prop="plateNumber" [width]="120"></ngx-datatable-column>
+          <ngx-datatable-column name="Defect Labels" prop="defectLabels" [width]="140"></ngx-datatable-column>
+          <ngx-datatable-column name="Damaged Pkg" prop="damagedPackage" [width]="140"></ngx-datatable-column>
+
+          <!-- Time -->
+          <ngx-datatable-column name="Time" prop="time" [width]="140">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <ng-container *ngIf="isDateLike(row.time); else rawTime">
+                {{ row.time | date:'HH:mm' }}
+              </ng-container>
+              <ng-template #rawTime>
+                {{ row.time }}
+              </ng-template>
             </ng-template>
           </ngx-datatable-column>
 
+          <!-- Initial (thumbnail -> modal) -->
+          <ngx-datatable-column name="Initial" prop="initial" [width]="120">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <img
+                *ngIf="isDataUrl(row.initial); else initialText"
+                [src]="row.initial"
+                class="initial-thumb"
+                alt="Initial"
+                (click)="openImage(row.initial)"
+              />
+              <ng-template #initialText>
+                <span class="text-truncate d-inline-block" style="max-width:110px">{{ row.initial }}</span>
+              </ng-template>
+            </ng-template>
+          </ngx-datatable-column>
+
+          <!-- STATUS (derived from DB flags, no TS changes needed) -->
+<ngx-datatable-column name="Status" [width]="160" [sortable]="false">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <span class="badge" [ngClass]="row?.isFlagIssue ? 'badge-warning' : 'badge-success'">
+      {{ row?.isFlagIssue ? 'Pending' : 'Posted' }}
+    </span>
+  </ng-template>
+</ngx-datatable-column>
+
           <!-- ACTIONS -->
-          <ngx-datatable-column name="Action" [width]="120">
+          <ngx-datatable-column name="Action" [width]="120" [sortable]="false" [canAutoResize]="false">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              <i class="fas fa-pen text-success mr-2" style="cursor: pointer;" (click)="editGRN(row.id)"></i>
+              <i class="fas fa-pen text-blue-600 mr-2 cursor-pointer" (click)="editGRN(row.id)"></i>
               <i class="fas fa-trash text-danger" style="cursor: pointer;" (click)="deleteGRN(row.id)"></i>
             </ng-template>
           </ngx-datatable-column>
         </ngx-datatable>
 
-        <div class="px-2 py-1 text-muted">
-          {{ rows.length }} total
-        </div>
+        
       </div>
     </section>
+  </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div *ngIf="imageViewer.open" class="img-modal" (click)="closeImage()">
+  <div class="img-modal__backdrop"></div>
+
+  <div class="img-modal__dialog" (click)="$event.stopPropagation()">
+    <div class="img-modal__header">
+      <h5 class="m-0">Preview</h5>
+      <button type="button" class="btn btn-light btn-sm" (click)="closeImage()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="img-modal__body">
+      <img [src]="imageViewer.src" alt="Preview" class="img-fluid" (load)="onImageLoaded()" />
+    </div>
+
+    <div class="img-modal__footer">
+      <a *ngIf="imageViewer.src" [href]="imageViewer.src" download="image.png" class="btn btn-outline-secondary btn-sm">
+        Download
+      </a>
+      <button type="button" class="btn btn-primary btn-sm" (click)="closeImage()">Close</button>
+    </div>
   </div>
 </div>
