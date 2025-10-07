@@ -16,6 +16,9 @@ private url = environment.apiUrl;
     return this.http.get<any[]>(this.url + GRNApiUrls.GetAllGRN);
   }
 
+    getAllDetails(): Observable<any> {
+    return this.http.get<any[]>(this.url + GRNApiUrls.GetAllDetails);
+  }
   createGRN(data: any): Observable<any> {
     return this.http.post(this.url + GRNApiUrls.CreateGRN, data);
   }
@@ -23,14 +26,13 @@ private url = environment.apiUrl;
     getByIdGRN(id: number): Observable<any> {
     return this.http.get(`${this.url + GRNApiUrls.GetGRNById}${id}`);
   }
+   UpdateFlagIssues(data: any): Observable<any> {
+        return this.http.put<any>(this.url + GRNApiUrls.UpdateFlagIssues, data);
+      }
 
-  // updatePaymentTerms(id: number, data: any): Observable<any> {
-  //   return this.http.put(`${this.url + GRNApiUrls.UpdatePaymentTerms}${id}`, data);
-  // }
-
-  // deletePaymentTerms(id: number): Observable<any> {
-  //   return this.http.delete(`${this.url + GRNApiUrls.DeletePaymentTerms}${id}`);
-  // }
+  deleteGRN(id: number): Observable<any> {
+    return this.http.delete(`${this.url + GRNApiUrls.DeleteGRN}${id}`);
+  }
 
 
 }

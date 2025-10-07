@@ -1,9 +1,38 @@
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
-import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
+import Swal from 'sweetalert2';
 
+interface GrnRow {
+  id: number;
+  receptionDate: string | Date | null;
+  poid: number | null;
+  grnNo: string;
+  pono: string;
+
+  itemCode: string;
+  itemName: string;
+
+  supplierId: number | null;
+  name: string; // supplier name
+
+  storageType: string;
+  surfaceTemp: string;
+  expiry: string | Date | null;
+
+  pestSign: string;
+  drySpillage: string;
+  odor: string;
+  plateNumber: string;
+  defectLabels: string;
+  damagedPackage: string;
+
+  time: string | Date | null;
+  initial: string; // base64 data URL
+}
+
+type ViewerState = { open: boolean; src: string | null };
 
 @Component({
   selector: 'app-grn-list',
@@ -12,110 +41,182 @@ import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
   encapsulation: ViewEncapsulation.None
 })
 export class PurchaseGoodreceiptlistComponent implements OnInit {
-  @ViewChild(DatatableComponent) table: DatatableComponent;
-  @ViewChild('SweetAlertFadeIn') SweetAlertFadeIn: any;
+  @ViewChild(DatatableComponent) table!: DatatableComponent;
 
   public ColumnMode = ColumnMode;
   public selectedOption = 10;
   public searchValue = '';
 
-  rows: any[] = [];
-  tempData: any[] = [];
+  rows: GrnRow[] = [];
+  allRows: GrnRow[] = [];
 
-  constructor(private grnService: PurchaseGoodreceiptService, private router: Router) {}
+  // Image modal state
+  imageViewer: ViewerState = { open: false, src: null };
+
+  constructor(
+    private grnService: PurchaseGoodreceiptService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadGrns();
   }
 
-    /** Safely parse GRNJson whether it is a string or already an object */
-  private parseLines(grnJson: any): any[] {
-    if (!grnJson) return [];
-    if (Array.isArray(grnJson)) return grnJson;
-    try {
-      const parsed = JSON.parse(grnJson);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
- loadGrns() {
-    this.grnService.getAllGRN().subscribe({
+  /** Load and normalize API payload -> table rows */
+  private loadGrns(): void {
+    this.grnService.getAllDetails().subscribe({
       next: (res: any) => {
-        const data = Array.isArray(res?.data) ? res.data : [];
+        const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        this.allRows = (list || []).map<GrnRow>((g: any) => ({
+          id: g.id ?? g.ID ?? null,
+          receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
+          poid: g.poid ?? g.POID ?? g.poId ?? null,
+          grnNo: g.grnNo ?? g.GrnNo ?? '',
+          pono: g.pono ?? g.Pono ?? '',
 
-        this.rows = data.map((g: any) => {
-          const lines = this.parseLines(g.grnJson ?? g.GRNJson);
-          const first = lines.length ? lines[0] : {};
+          itemCode: g.itemCode ?? g.ItemCode ?? '',
+          itemName: g.itemName ?? g.ItemName ?? '',
 
-          return {
-            id: g.id ?? g.Id,
-            grnNo: g.grnNo ?? g.GrnNo ?? '',
-            receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
-            poId: g.poId ?? g.POID ?? null,
+          supplierId: g.supplierId ?? g.SupplierId ?? null,
+          name: g.name ?? g.Name ?? '',
 
-            // Flatten from first GRNJson line (if present)
-            storageType: first.storageType ?? '',
-            surfaceTemp: first.surfaceTemp ?? '',
-            expiryDate: first.expiry ? new Date(first.expiry) : null,
-            supplierId: first.supplier ?? null,
-            plateNumber: first.plateNumber ?? '',
-            pestSign: first.pestSign ?? '',
-            damagedPackage: first.damagedPackage ?? '',
-            remarks: first.remarks ?? g.remarks ?? g.Remarks ?? ''
-          };
-        });
+          storageType: g.storageType ?? g.StorageType ?? '',
+          surfaceTemp: (g.surfaceTemp ?? g.SurfaceTemp ?? '').toString(),
+          expiry: g.expiry ?? g.Expiry ?? null,
 
-        // Keep a copy for filtering
-        this.tempData = [...this.rows];
+          pestSign: g.pestSign ?? g.PestSign ?? '',
+          drySpillage: g.drySpillage ?? g.DrySpillage ?? '',
+          odor: g.odor ?? g.Odor ?? '',
+          plateNumber: g.plateNumber ?? g.PlateNumber ?? '',
+          defectLabels: g.defectLabels ?? g.DefectLabels ?? '',
+          damagedPackage: g.damagedPackage ?? g.DamagedPackage ?? '',
+
+          time: g.time ?? g.Time ?? null,
+          initial: g.initial ?? g.Initial ?? '',
+              isFlagIssue: g.isFlagIssue ?? g.isFlagIssue ?? ''
+        }));
+
+        this.rows = [...this.allRows];
+        if (this.table) this.table.offset = 0;
       },
-      error: (err: any) => console.error('Error loading GRN list', err)
+      error: (err) => {
+        console.error('Error loading GRN list', err);
+        this.allRows = [];
+        this.rows = [];
+      }
     });
   }
 
-  filterUpdate(event) {
-    const val = event.target.value.toLowerCase();
+  /** Global client-side search across common fields */
+  filterUpdate(event: Event): void {
+    const val = (event.target as HTMLInputElement).value?.toLowerCase().trim() ?? '';
+    this.searchValue = val;
 
-    const temp = this.tempData.filter((d: any) => {
+    if (!val) {
+      this.rows = [...this.allRows];
+      if (this.table) this.table.offset = 0;
+      return;
+    }
+
+    this.rows = this.allRows.filter(r => {
+      const dateStr = (r.receptionDate ? new Date(r.receptionDate).toISOString().slice(0, 10) : '');
+      const expiryStr = (r.expiry ? new Date(r.expiry).toISOString().slice(0, 10) : '');
       return (
-        d.grnNo?.toLowerCase().includes(val) ||
-        d.product?.toString().includes(val) ||
-        d.supplier?.toString().includes(val) ||
-        d.type?.toLowerCase().includes(val)
+        (r.grnNo ?? '').toLowerCase().includes(val) ||
+        (r.pono ?? '').toLowerCase().includes(val) ||
+        (r.itemCode ?? '').toLowerCase().includes(val) ||
+        (r.itemName ?? '').toLowerCase().includes(val) ||
+        (r.name ?? '').toLowerCase().includes(val) ||
+        (r.storageType ?? '').toLowerCase().includes(val) ||
+        (r.surfaceTemp ?? '').toLowerCase().includes(val) ||
+        (r.pestSign ?? '').toLowerCase().includes(val) ||
+        (r.drySpillage ?? '').toLowerCase().includes(val) ||
+        (r.odor ?? '').toLowerCase().includes(val) ||
+        (r.plateNumber ?? '').toLowerCase().includes(val) ||
+        (r.defectLabels ?? '').toLowerCase().includes(val) ||
+        (r.damagedPackage ?? '').toLowerCase().includes(val) ||
+        dateStr.includes(val) ||
+        expiryStr.includes(val)
       );
     });
 
-    this.rows = temp;
-    this.table.offset = 0;
+    if (this.table) this.table.offset = 0;
   }
 
-  goToCreateGRN() {
+  isDateLike(v: any): boolean {
+    // Simple guard so HH:mm strings won't throw
+    return !!v && !/^\d{1,2}:\d{2}$/.test(String(v));
+  }
+
+  isDataUrl(v: string | null | undefined): boolean {
+    const s = String(v ?? '');
+    // Accept common image data URLs
+    return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(s);
+  }
+
+  /** Thumbnail click -> open modal */
+  openImage(src: string): void {
+    if (!this.isDataUrl(src)) return;
+    this.imageViewer = { open: true, src };
+    document.body.style.overflow = 'hidden'; // lock scroll
+  }
+
+  closeImage(): void {
+    this.imageViewer = { open: false, src: null };
+    document.body.style.overflow = ''; // restore scroll
+  }
+
+  onImageLoaded(): void {
+    // hook for spinner if needed
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEsc(): void {
+    if (this.imageViewer.open) this.closeImage();
+  }
+
+  goToCreateGRN(): void {
     this.router.navigate(['/purchase/createpurchasegoodreceipt']);
   }
 
-  editGRN(id: number) {
-    this.router.navigateByUrl(`/purchase/grn/edit/${id}`);
-  }
+editGRN(id:any){
+  this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`)
+}
 
-  // deleteGRN(id: number) {
-  //   Swal.fire({
-  //     title: 'Are you sure?',
-  //     text: 'This will permanently delete the GRN.',
-  //     icon: 'warning',
-  //     showCancelButton: true,
-  //     confirmButtonColor: '#d33',
-  //     cancelButtonColor: '#3085d6',
-  //     confirmButtonText: 'Yes, delete it!'
-  //   }).then((result) => {
-  //     if (result.isConfirmed) {
-  //       this.grnService.delete(id).subscribe({
-  //         next: () => {
-  //           this.loadGrns();
-  //           Swal.fire('Deleted!', 'GRN has been deleted.', 'success');
-  //         },
-  //         error: (err) => console.error('Error deleting GRN', err)
-  //       });
-  //     }
-  //   });
-  // }
+
+
+    deleteGRN(id: number) {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#7367F0',
+      cancelButtonColor: '#E42728',
+      confirmButtonText: 'Yes, Delete it!',
+      customClass: {
+        confirmButton: 'btn btn-primary',
+        cancelButton: 'btn btn-danger ml-1'
+      },
+      allowOutsideClick: false,
+    }).then((result) => {
+      if (result.isConfirmed) {  // note: SweetAlert2 uses isConfirmed instead of value in recent versions
+        this.grnService.deleteGRN(id).subscribe((response: any) => {
+          Swal.fire({
+            icon: response.isSuccess ? 'success' : 'error',
+            title: response.isSuccess ? 'Deleted!' : 'Error!',
+            text: response.message,
+            allowOutsideClick: false,
+          });
+          this.loadGrns();  // Refresh the list after deletion
+        }, error => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Something went wrong while deleting.',
+          });
+        });
+      }
+    });
+  }
 }

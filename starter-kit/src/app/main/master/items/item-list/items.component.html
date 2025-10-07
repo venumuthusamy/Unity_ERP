@@ -78,7 +78,7 @@
   <!-- Edit/Delete Actions -->
   <ngx-datatable-column name="Action" [width]="60">
     <ng-template let-row="row" ngx-datatable-cell-template>
-      <i class="fas fa-pen text-success mr-2" style="cursor: pointer;" (click)="editRequest(row.id)"></i>
+      <i class="fas fa-pen text-blue-600 mr-2 cursor-pointer" style="cursor: pointer;" (click)="editRequest(row.id)"></i>
       <i class="fas fa-trash text-danger" style="cursor: pointer;" (click)="deleteRequest(row.id)"></i>
     </ng-template>
   </ngx-datatable-column>
