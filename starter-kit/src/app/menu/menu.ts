@@ -35,8 +35,9 @@ export const menu: CoreMenu[] = [
       { id: 'income',          title: 'Income',          type: 'item', icon: 'circle', url: '/master/income' },
       { id: 'department',      title: 'Department',      type: 'item', icon: 'circle', url: '/master/department' },
       { id: 'items', title: 'Item',   type: 'item',   icon: 'circle',   url: '/master/items'},
-       { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse'
-      },
+       { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse'},
+        { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring'},
+      { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode'},
     ]
   },
 
@@ -50,6 +51,7 @@ export const menu: CoreMenu[] = [
       { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' },
       { id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' },
       { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },
+      { id: 'Supplier Invoice', title: 'Supplier Invoice', translate: 'MENU.PURCHASE.SupplierInvoice', type: 'item', icon: 'circle', url: '/purchase/list-SupplierInvoice' },
     ]
   },
 

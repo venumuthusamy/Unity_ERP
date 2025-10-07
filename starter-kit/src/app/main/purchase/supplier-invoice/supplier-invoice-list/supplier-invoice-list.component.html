@@ -1,0 +1,178 @@
+<div class="content-wrapper p-0 pin-page">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card">
+
+        <!-- Header row -->
+        <div class="row">
+          <div class="col-md-6 col-12">
+            <h4 class="card-text pin-title">Supplier Invoice List</h4>
+
+            <div class="d-flex justify-content-between align-items-center m-1">
+              <label class="d-flex align-items-center">Show
+                <select class="form-control mx-25" [(ngModel)]="selectedOption">
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                  <option [ngValue]="100">100</option>
+                </select>
+                entries
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+              <label class="d-flex align-items-center ml-1 ml-md-0">
+                Search:
+                <input [(ngModel)]="searchValue"
+                       name="searchValue"
+                       type="search"
+                       class="form-control ml-25"
+                       (keyup)="filterUpdate($event)"
+                       (search)="filterUpdate($event)" />
+              </label>
+
+              <button id="Add"
+                      class="btn m-1"
+                      style="background-color:#2E5F73;color:#fff;"
+                      (click)="goToCreate()">
+                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
+                <span class="d-none d-sm-inline-block">Add</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <ngx-datatable
+          class="bootstrap core-bootstrap pin-table"
+          [rows]="rows"
+          [rowHeight]="50"
+          [headerHeight]="50"
+          [footerHeight]="50"
+          [limit]="selectedOption"
+          [columnMode]="'force'"
+          [scrollbarH]="false"
+          [reorderable]="true">
+
+          <!-- Eye column -->
+          <ngx-datatable-column
+            [width]="50"
+            [resizeable]="false"
+            [sortable]="false"
+            [draggable]="false"
+            [canAutoResize]="false">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <span (click)="openLinesModal(row)"
+                    title="View lines"
+                    class="pin-eye">
+                <i class="fas fa-eye"></i>
+              </span>
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Invoice No" prop="invoiceNo" [width]="140"></ngx-datatable-column>
+
+          <ngx-datatable-column name="Invoice Date" prop="invoiceDate" [width]="140">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.invoiceDate | date:'dd-MM-yyyy' }}
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Amount" prop="amount" [width]="120">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.amount | number : '1.2-2' }}
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Tax" prop="tax" [width]="100">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.tax | number : '1.2-2' }}
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Currency" prop="currency" [width]="110"></ngx-datatable-column>
+
+          <ngx-datatable-column name="Status" prop="status" [width]="130">
+            <ng-template let-value="value" ngx-datatable-cell-template>
+              <div class="badge badge-pill text-center"
+                   [ngClass]="{
+                     'badge-light-secondary': value === 0,
+                     'badge-light-warning'  : value === 1,
+                     'badge-light-success'  : value === 2
+                   }">
+                {{ value === 0 ? 'Draft' : value === 1 ? 'Hold' : value === 2 ? 'Posted' : 'Unknown' }}
+              </div>
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Action" [width]="140">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <i class="fas fa-pen text-blue-600 mr-2 pin-action"
+                 title="Edit"
+                 (click)="editInvoice(row.id)"></i>
+              <i class="fas fa-trash text-danger pin-action"
+                 title="Delete"
+                 (click)="deleteInvoice(row.id)"></i>
+            </ng-template>
+          </ngx-datatable-column>
+
+        </ngx-datatable>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Lines modal -->
+<div *ngIf="showLinesModal"
+     (click)="closeLinesModal()"
+     class="pin-overlay">
+  <div (click)="$event.stopPropagation()" class="pin-modal">
+    <div class="pin-modal-head">
+      <h3>PIN Lines</h3>
+      <button (click)="closeLinesModal()" aria-label="Close">×</button>
+    </div>
+
+    <div class="pin-modal-body">
+      <div class="pin-modal-table">
+        <table>
+          <thead>
+          <tr>
+             <th>Item</th>
+            <th >Qty</th>
+            <th >Price</th>
+            <th>Match</th>
+            <th>DC Note #</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let l of modalLines; let i = index" [class.alt]="i % 2 === 0">
+            <td class="truncate">{{ l.item || '-' }}</td>
+            <td >{{ l.qty || 0 }}</td>
+            <td >{{ (l.price || 0) | number:'1.2-2' }}</td>
+            <td>{{ l.matchStatus || 'OK' }}</td>
+            <td>{{ l.dcNoteNo || '-' }}</td>
+          </tr>
+          <tr *ngIf="!modalLines?.length">
+            <td colspan="7" class="empty">No lines</td>
+          </tr>
+          </tbody>
+        <tfoot *ngIf="modalLines?.length">
+  <tr class="font-semibold bg-gray-50">
+    <td>Total</td>
+    <td>{{ modalTotalQty }}</td>
+    <td>{{ modalTotalAmt | number:'1.2-2' }}</td>
+    <td colspan="2"></td>
+  </tr>
+</tfoot>
+
+        </table>
+      </div>
+    </div>
+
+    <div class="pin-modal-foot">
+      <button (click)="closeLinesModal()">Close</button>
+    </div>
+  </div>
+</div>

@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   NgZone,
   OnInit,
   OnDestroy,
@@ -14,7 +15,7 @@ import { DepartmentService } from 'app/main/master/department/department.service
 import { ItemsService } from 'app/main/master/items/items.service';
 import { LocationService } from 'app/main/master/location/location.service';
 import { UomService } from 'app/main/master/uom/uom.service';
-import { PurchaseService } from '../purchase.service';
+import { PurchaseService } from '../../purchase.service';
 
 @Component({
   selector: 'app-create-purchase-request',
@@ -115,8 +116,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Capture-phase global click: closes dropdowns when clicking anywhere
-    // outside any dropdown wrapper/menu (even inside the modal)
+    // Capture-phase global click: close dropdowns when clicking anywhere outside dropdowns
     this.captureHandler = (ev: MouseEvent) => this.onGlobalClickCapture(ev);
     document.addEventListener('click', this.captureHandler, { capture: true });
   }
@@ -156,7 +156,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
 
   // ====== Clicks inside the modal (don’t close modal; do close dropdowns if click isn’t on dropdown) ======
   onModalRootClick(ev: MouseEvent) {
-    ev.stopPropagation(); // keep overlay from closing modal
+    ev.stopPropagation(); // keep overlay from closing modal (overlay has no click handler now)
 
     const t = ev.target as HTMLElement;
     const insideDropdown = t.closest('.prl-dropdown') || t.closest('.prl-menu');
@@ -167,6 +167,10 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.modalLine.uomDropdownOpen = false;
     this.modalLine.locationDropdownOpen = false;
   }
+
+  // Block ESC → modal stays open
+  @HostListener('document:keydown.escape', ['$event'])
+  onEsc(_e: KeyboardEvent) { /* do nothing (keeps modal open) */ }
 
   // ===== Helpers / UI =====
   badgeClass(color: string) {
@@ -546,7 +550,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
       IsActive: true,
-      Status:1,
+      Status: 1,
       prLines: JSON.stringify(strippedLines)
     };
 
@@ -604,11 +608,11 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   goToPurchaseRequest() {
     this.router.navigateByUrl('/purchase/list-PurchaseRequest');
   }
-  get totalQty(): number {
-  return (this.prLines || []).reduce((sum: number, l: any) => {
-    const q = Number(l?.qty) || 0;
-    return sum + q;
-  }, 0);
-}
 
+  get totalQty(): number {
+    return (this.prLines || []).reduce((sum: number, l: any) => {
+      const q = Number(l?.qty) || 0;
+      return sum + q;
+    }, 0);
+  }
 }
