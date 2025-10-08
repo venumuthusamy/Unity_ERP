@@ -47,48 +47,67 @@
           />
         </div>
 
-        <!-- Department -->
-        <div class="relative dropdown-wrapper">
-          <label class="text-xs font-medium text-gray-600">Department</label>
-          <div class="relative">
-            <input
-              type="text"
-              [(ngModel)]="searchText"
-              (input)="filterDepartments()"
-              (focus)="toggleDropdown(true)"
-              placeholder="Search Department..."
-              class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-              style="border-color:#0e3a4c"
-              name="departmentSearch"
-              autocomplete="off"
-            />
-            <button
-              type="button"
-              (click)="toggleDropdown()"
-              class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2"
-              aria-label="Toggle department dropdown"
-            >
-              ▼
-            </button>
-          </div>
-          <ul
-            *ngIf="dropdownOpen"
-            class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto prl-menu"
-            role="listbox"
-          >
-            <li
-              *ngFor="let dept of filteredDepartments"
-              (click)="selectDepartment(dept)"
-              class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm"
-              role="option"
-            >
-              {{ dept.departmentName }}
-            </li>
-            <li *ngIf="filteredDepartments?.length === 0" class="px-3 py-2 text-gray-400 text-sm">
-              No results
-            </li>
-          </ul>
-        </div>
+   <div class="dropdown-wrapper">
+  <label class="text-xs font-medium text-gray-600">Department</label>
+
+  <div class="flex items-center gap-2">
+    <!-- Input + chevron -->
+    <div class="relative flex-1">
+      <input
+        type="text"
+        [(ngModel)]="searchText"
+        (input)="filterDepartments()"
+        (focus)="toggleDropdown(true)"
+        placeholder="Search Department..."
+        class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm pr-10"
+        style="border-color:#0e3a4c"
+        name="departmentSearch"
+        autocomplete="off"
+      />
+
+      <!-- Dropdown toggle inside the input -->
+      <button
+        type="button"
+        (click)="toggleDropdown()"
+        class="absolute inset-y-0 right-2 my-auto w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100"
+        aria-label="Toggle department dropdown"
+      >
+        <i class="fas fa-chevron-down"></i>
+      </button>
+
+      <!-- Dropdown list -->
+      <ul
+        *ngIf="dropdownOpen"
+        class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto prl-menu"
+        role="listbox"
+      >
+        <li
+          *ngFor="let dept of filteredDepartments"
+          (click)="selectDepartment(dept)"
+          class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+          role="option"
+        >
+          {{ dept.departmentName }}
+        </li>
+        <li *ngIf="filteredDepartments?.length === 0" class="px-3 py-2 text-gray-400 text-sm">
+          No results
+        </li>
+      </ul>
+    </div>
+
+    <!-- ADD icon OUTSIDE the field -->
+    <button
+      type="button"
+      (click)="onAddDepartmentClick()"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+      title="Add department"
+      aria-label="Add department"
+    >
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+</div>
+
 
         <!-- Delivery Date -->
         <div>
@@ -118,18 +137,18 @@
           />
         </div>
 
-        <div class="flex items-center gap-2 ml-6">
-          <input 
-            id="multiloc" 
-            type="checkbox" 
-            [(ngModel)]="prHeader.multiLoc" 
-            name="multiLoc" 
-            class="h-4 w-4"
-          />
-          <label class="text-xs font-medium text-gray-600" for="multiloc">
-            Split to multiple locations
-          </label>
-        </div>
+     <div class="flex items-center gap-2 ml-6">
+  <input 
+    id="multiloc" 
+    type="checkbox" 
+    [(ngModel)]="prHeader.multiLoc" 
+    name="multiLoc" 
+    class="h-4 w-4"
+  />
+  <label class="text-xs font-medium text-gray-600" for="multiloc">
+    Split to multiple locations
+  </label>
+</div>
 
       </div>
 
@@ -227,85 +246,90 @@
         </button>
       </div>
     </div>
+<div *ngIf="prStep === 2" class="space-y-3">
+  <!-- Card -->
+  <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <!-- Header -->
+    <div class="bg-[#0e3a4c] px-4 py-2 flex items-center justify-between">
+      <h3 class="text-white font-semibold text-sm">Purchase Request Preview</h3>
+    </div>
 
-    <!-- Step 2: Review -->
-    <div *ngIf="prStep === 2" class="space-y-3">
-      <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div class="bg-[#0e3a4c] px-4 py-2 flex items-center justify-between">
-          <h3 class="text-white font-semibold text-sm">Purchase Request Preview</h3>
+    <!-- Body -->
+    <div class="p-4 space-y-3 text-[13px]">
+      <!-- Info grid (3 columns) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <p class="text-gray-500 text-[11px] font-medium">Requester</p>
+          <p class="text-gray-900 font-semibold truncate">{{ prHeader.requester || '-' }}</p>
         </div>
-
-        <div class="p-4 space-y-3 text-[13px]">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <p class="text-gray-500 text-[11px] font-medium">Requester</p>
-              <p class="text-gray-900 font-semibold truncate">{{ prHeader.requester || '-' }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500 text-[11px] font-medium">Department</p>
-              <p class="text-gray-900 font-semibold truncate">{{ searchText || '-' }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500 text-[11px] font-medium">Delivery Date</p>
-              <p class="text-gray-900 font-semibold">{{ prHeader.neededBy | date:'dd-MM-yyyy' || '-' }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500 text-[11px] font-medium">Multi Location</p>
-              <p class="text-gray-900 font-semibold">{{ prHeader.multiLoc ? 'Yes' : 'No' }}</p>
-            </div>
-            <div class="md:col-span-2">
-              <p class="text-gray-500 text-[11px] font-medium">Description</p>
-              <p class="text-gray-900 leading-snug">{{ prHeader.description || '-' }}</p>
-            </div>
-          </div>
-
-          <div>
-            <h4 class="text-gray-700 font-semibold text-[12px] mb-1">Line Items</h4>
-            <div *ngIf="prLines.length > 0; else noLines" class="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div *ngFor="let l of prLines; let i = index"
-                   class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                <p class="font-semibold text-gray-800 text-[13px] truncate">
-                  {{ l['item'] || l['itemSearch'] || '(no item)' }}
-                </p>
-                <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-gray-600">
-                  <span>Qty</span><span class="text-right font-medium">
-                    {{ l['qty'] || 0 }} {{ l['uom'] || l['uomSearch'] || '' }}
-                  </span>
-                  <span>Location</span><span class="text-right truncate">
-                    {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
-                  </span>
-                  <span>Budget</span><span class="text-right font-semibold text-[#0e3a4c]">
-                    {{ l['budget'] || '-' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <ng-template #noLines>
-              <p class="text-gray-400 italic text-xs">No lines added</p>
-            </ng-template>
-          </div>
-
-          <div class="flex justify-end pt-2 border-t border-gray-200">
-            <p class="text-[12px] font-semibold text-gray-700">
-              Total Qty: <span class="text-[#0e3a4c]">{{ totalQty }}</span>
-            </p>
-          </div>
+        <div>
+          <p class="text-gray-500 text-[11px] font-medium">Department</p>
+          <p class="text-gray-900 font-semibold truncate">{{ searchText || '-' }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500 text-[11px] font-medium">Delivery Date</p>
+          <p class="text-gray-900 font-semibold">{{ prHeader.neededBy | date:'dd-MM-yyyy' || '-' }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500 text-[11px] font-medium">Multi Location</p>
+          <p class="text-gray-900 font-semibold">{{ prHeader.multiLoc ? 'Yes' : 'No' }}</p>
+        </div>
+        <div class="md:col-span-2">
+          <p class="text-gray-500 text-[11px] font-medium">Description</p>
+          <p class="text-gray-900 leading-snug">{{ prHeader.description || '-' }}</p>
         </div>
       </div>
 
-      <div class="flex justify-between">
-        <button
-          class="px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 hover:bg-gray-100"
-          (click)="prGo(-1)" type="button">
-          ← Back
-        </button>
-        <button
-          class="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow hover:opacity-90"
-          style="background-color:#0e3a4c;" type="button" (click)="saveRequest()">
-          Convert to PO / RFQ
-        </button>
+      <!-- Line items (compact cards, 3 columns on md+) -->
+      <div>
+        <h4 class="text-gray-700 font-semibold text-[12px] mb-1">Line Items</h4>
+        <div *ngIf="prLines.length > 0; else noLines" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div *ngFor="let l of prLines; let i = index"
+               class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <p class="font-semibold text-gray-800 text-[13px] truncate">
+              {{ l['item'] || l['itemSearch'] || '(no item)' }}
+            </p>
+            <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-gray-600">
+              <span>Qty</span><span class="text-right font-medium">
+                {{ l['qty'] || 0 }} {{ l['uom'] || l['uomSearch'] || '' }}
+              </span>
+              <span>Location</span><span class="text-right truncate">
+                {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
+              </span>
+              <span>Budget</span><span class="text-right font-semibold text-[#0e3a4c]">
+                {{ l['budget'] || '-' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noLines>
+          <p class="text-gray-400 italic text-xs">No lines added</p>
+        </ng-template>
+      </div>
+
+      <!-- Totals (tight) -->
+      <div class="flex justify-end pt-2 border-t border-gray-200">
+        <p class="text-[12px] font-semibold text-gray-700">
+          Total Qty: <span class="text-[#0e3a4c]">{{ totalQty }}</span>
+        </p>
       </div>
     </div>
+  </div>
+
+  <!-- Footer buttons (compact) -->
+  <div class="flex justify-between">
+    <button
+      class="px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 hover:bg-gray-100"
+      (click)="prGo(-1)" type="button">
+      ← Back
+    </button>
+    <button
+      class="px-3 py-1.5 rounded-md text-xs font-medium text-white shadow hover:opacity-90"
+      style="background-color:#0e3a4c;" type="button" (click)="saveRequest()">
+      Convert to PO / RFQ
+    </button>
+  </div>
+</div>
 
   </div>
 </div>

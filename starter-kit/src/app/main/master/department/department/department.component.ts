@@ -3,6 +3,7 @@ import { NgForm } from '@angular/forms';
 import * as feather from 'feather-icons';
 import Swal from 'sweetalert2';
 import { DepartmentService } from '../department.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-department',
@@ -10,10 +11,10 @@ import { DepartmentService } from '../department.service';
   styleUrls: ['./department.component.scss']
 })
 export class DepartmentComponent implements OnInit {
-
   @ViewChild('addForm') departmentForm!: NgForm;
+
   public id = 0;
-  departmentCode: string = "";
+  departmentCode: string = '';
   departmentName: string = '';
   isDisplay: boolean = false;
   modeHeader: string = 'Add Department';
@@ -21,24 +22,33 @@ export class DepartmentComponent implements OnInit {
 
   rows: any[] = [];
   departmentValue: any;
-  isEditMode: boolean;
+  isEditMode: boolean = false;
 
-  constructor(private _departmentService: DepartmentService) { }
+  private readonly DEFAULT_PR_CREATE_ROUTE = '/purchase/Create-PurchaseRequest';
+  private returnUrl: string | null = null;
+
+  constructor(
+    private _departmentService: DepartmentService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.getAllDepartment();
+
+    // Open create form / capture return url via navigation STATE (not query)
+    const st = window.history.state as any;
+    if (st?.openCreate) this.createDepartment();
+    this.returnUrl = st?.returnUrl || this.DEFAULT_PR_CREATE_ROUTE;
   }
 
-  ngAfterViewInit(): void {
-    feather.replace();
-  }
-
-  ngAfterViewChecked(): void {
-    feather.replace();
-  }
+  ngAfterViewInit(): void { feather.replace(); }
+  ngAfterViewChecked(): void { feather.replace(); }
 
   cancel() {
     this.isDisplay = false;
+    this.isEditMode = false;
+    this.resetButton = true;
   }
 
   createDepartment() {
@@ -48,21 +58,33 @@ export class DepartmentComponent implements OnInit {
   }
 
   reset() {
-    this.modeHeader = "Create Department";
-    this.departmentName = "";
-    this.departmentCode = "";
+    this.modeHeader = 'Create Department';
+    this.departmentName = '';
+    this.departmentCode = '';
     this.id = 0;
+    this.resetButton = true;
+    this.isEditMode = false;
   }
 
   getAllDepartment() {
     this._departmentService.getDepartment().subscribe((response: any) => {
       this.rows = response.data;
-    })
+    });
+  }
+
+  /** After successful save, navigate back to PR using STATE (no query), and replace URL */
+  private goToPrCreate(newDeptId?: number) {
+    const target = this.returnUrl || this.DEFAULT_PR_CREATE_ROUTE;
+    this.router.navigate([target], {
+      state: {
+        deptId: newDeptId || this.id || null,
+        deptName: this.departmentName || null
+      },
+      replaceUrl: true
+    });
   }
 
   saveDepartment() {
-    debugger
-
     const obj = {
       id: this.id,
       departmentName: this.departmentName,
@@ -71,67 +93,56 @@ export class DepartmentComponent implements OnInit {
       createdDate: new Date(),
       updatedBy: '1',
       updatedDate: new Date(),
-      isActive: true,
+      isActive: true
     };
-    if (this.id == 0) {
-      this._departmentService.insertDepartment(obj).subscribe( {      
 
-         next: () => {
-                   Swal.fire({
-                     icon: 'success',
-                     title: 'Created!',
-                     text: 'Department created successfully',
-                     confirmButtonText: 'OK',
-                     confirmButtonColor: '#0e3a4c'
-                   });
-                   this.getAllDepartment();
-                   this.isDisplay = false;
-                   this.isEditMode = false;
-                 },
-                 error: () => {
-                   Swal.fire({
-                     icon: 'error',
-                     title: 'Error',
-                     text: 'Failed to created Department',
-                     confirmButtonText: 'OK',
-                     confirmButtonColor: '#d33'
-                   });
-                 }
-
-        
+    if (this.id === 0) {
+      this._departmentService.insertDepartment(obj).subscribe({
+        next: (res: any) => {
+          const newId = res?.data?.id ?? 0;
+          Swal.fire({
+            icon: 'success',
+            title: 'Created!',
+            text: 'Department created successfully',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0e3a4c'
+          }).then(() => this.goToPrCreate(newId));
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to create Department',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33'
+          });
+        }
       });
-    }
-    else {
-      this._departmentService.updateDepartment(obj).subscribe( {
-          next: () => {
-                   Swal.fire({
-                     icon: 'success',
-                     title: 'Updated!',
-                     text: 'Department updated successfully',
-                     confirmButtonText: 'OK',
-                     confirmButtonColor: '#0e3a4c'
-                   });
-                   this.getAllDepartment();
-                   this.isDisplay = false;
-                   this.isEditMode = false;
-                 },
-                 error: () => {
-                   Swal.fire({
-                     icon: 'error',
-                     title: 'Error',
-                     text: 'Failed to update Department',
-                     confirmButtonText: 'OK',
-                     confirmButtonColor: '#d33'
-                   });
-                 }
+    } else {
+      this._departmentService.updateDepartment(obj).subscribe({
+        next: () => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Updated!',
+            text: 'Department updated successfully',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0e3a4c'
+          }).then(() => this.goToPrCreate(this.id));
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update Department',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33'
+          });
+        }
       });
     }
   }
 
-
-
   getDepartmentDetails(id: any) {
-    debugger
     this._departmentService.getDepartmentById(id).subscribe((arg: any) => {
       this.departmentValue = arg.data;
       this.id = this.departmentValue.id;
@@ -139,42 +150,42 @@ export class DepartmentComponent implements OnInit {
       this.departmentCode = this.departmentValue.departmentCode;
       this.isDisplay = true;
       this.resetButton = false;
-      this.modeHeader = "Edit Department";
+      this.modeHeader = 'Edit Department';
       this.isEditMode = true;
     });
   }
 
-  deleteDepartment(id) {
+  deleteDepartment(id: any) {
     const _self = this;
     Swal.fire({
-      title: "Are you sure?",
+      title: 'Are you sure?',
       text: "You won't be able to revert this!",
-      icon: "success",
+      icon: 'success',
       showCancelButton: true,
-      confirmButtonColor: "#7367F0",
-      cancelButtonColor: "#E42728",
-      confirmButtonText: "Yes, Delete it!",
+      confirmButtonColor: '#7367F0',
+      cancelButtonColor: '#E42728',
+      confirmButtonText: 'Yes, Delete it!',
       customClass: {
-        confirmButton: "btn btn-primary",
-        cancelButton: "btn btn-danger ml-1",
+        confirmButton: 'btn btn-primary',
+        cancelButton: 'btn btn-danger ml-1'
       },
-      allowOutsideClick: false,
+      allowOutsideClick: false
     }).then(function (result) {
       if (result.value) {
         _self._departmentService.deleteDepartment(id).subscribe((response: any) => {
           if (response.isSuccess) {
             Swal.fire({
-              icon: "success",
-              title: "Deleted!",
+              icon: 'success',
+              title: 'Deleted!',
               text: response.message,
-              allowOutsideClick: false,
+              allowOutsideClick: false
             });
           } else {
             Swal.fire({
-              icon: "error",
-              title: "Error!",
+              icon: 'error',
+              title: 'Error!',
               text: response.message,
-              allowOutsideClick: false,
+              allowOutsideClick: false
             });
           }
           _self.getAllDepartment();
@@ -182,17 +193,4 @@ export class DepartmentComponent implements OnInit {
       }
     });
   }
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
