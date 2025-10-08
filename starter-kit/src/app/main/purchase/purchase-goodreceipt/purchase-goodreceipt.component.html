@@ -232,6 +232,7 @@
           <th class="px-4 py-2 text-left font-medium border border-gray-300">Time</th>
           <th class="px-4 py-2 text-left font-medium border border-gray-300">Initial</th>
           <th class="px-4 py-2 text-left font-medium border border-gray-300">Remarks</th>
+          <th class="px-4 py-2 text-left font-medium border border-gray-300">Status</th>
           <th class="px-4 py-2 text-left font-medium border border-gray-300">Actions</th>
         </tr>
       </thead>
@@ -256,6 +257,30 @@
                  (click)="openImage(row.initial)" />
           </td>
           <td class="px-4 py-2 border border-gray-200">{{ row.remarks }}</td>
+<td class="px-4 py-2 border border-gray-200">
+  <span
+    class="px-2 py-1 rounded text-xs font-semibold"
+    [ngClass]="{
+      'bg-red-100 text-red-800': row.isFlagIssue,
+      'bg-green-100 text-green-800': !row.isFlagIssue
+    }">
+ <span
+  class="px-2 py-1 rounded text-xs font-semibold"
+  [ngClass]="{
+    'bg-red-100 text-red-800': row.isFlagIssue,
+    'bg-green-100 text-green-800': !row.isFlagIssue && row.isPostInventory
+  }">
+  {{
+    row.isFlagIssue
+      ? 'Flagged'
+      : row.isPostInventory
+        ? 'Posted'
+        : ''
+  }}
+</span>
+
+  </span>
+</td>
 
           <td class="px-4 py-2 text-right">
             <div class="flex flex-col sm:flex-row items-center justify-end gap-2">

@@ -15,7 +15,7 @@ interface GrnRow {
   itemName: string;
 
   supplierId: number | null;
-  name: string; // supplier name
+  name: string;
 
   storageType: string;
   surfaceTemp: string;
@@ -29,8 +29,12 @@ interface GrnRow {
   damagedPackage: string;
 
   time: string | Date | null;
-  initial: string; // base64 data URL
+  initial: string;
+
+  // add this:
+  isFlagIssue: boolean;
 }
+
 
 type ViewerState = { open: boolean; src: string | null };
 
@@ -63,49 +67,96 @@ export class PurchaseGoodreceiptlistComponent implements OnInit {
   }
 
   /** Load and normalize API payload -> table rows */
-  private loadGrns(): void {
-    this.grnService.getAllDetails().subscribe({
-      next: (res: any) => {
-        const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-        this.allRows = (list || []).map<GrnRow>((g: any) => ({
-          id: g.id ?? g.ID ?? null,
-          receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
-          poid: g.poid ?? g.POID ?? g.poId ?? null,
-          grnNo: g.grnNo ?? g.GrnNo ?? '',
-          pono: g.pono ?? g.Pono ?? '',
+private loadGrns(): void {
+  this.grnService.getAllDetails().subscribe({
+    next: (res: any) => {
+      const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      const normalized = (list || []).map<GrnRow>((g: any) => ({
+        id: g.id ?? g.ID ?? null,
+        receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
+        poid: g.poid ?? g.POID ?? g.poId ?? null,
+        grnNo: g.grnNo ?? g.GrnNo ?? '',
+        pono: g.pono ?? g.Pono ?? '',
 
-          itemCode: g.itemCode ?? g.ItemCode ?? '',
-          itemName: g.itemName ?? g.ItemName ?? '',
+        itemCode: g.itemCode ?? g.ItemCode ?? '',
+        itemName: g.itemName ?? g.ItemName ?? '',
 
-          supplierId: g.supplierId ?? g.SupplierId ?? null,
-          name: g.name ?? g.Name ?? '',
+        supplierId: g.supplierId ?? g.SupplierId ?? null,
+        name: g.name ?? g.Name ?? '',
 
-          storageType: g.storageType ?? g.StorageType ?? '',
-          surfaceTemp: (g.surfaceTemp ?? g.SurfaceTemp ?? '').toString(),
-          expiry: g.expiry ?? g.Expiry ?? null,
+        storageType: g.storageType ?? g.StorageType ?? '',
+        surfaceTemp: (g.surfaceTemp ?? g.SurfaceTemp ?? '').toString(),
+        expiry: g.expiry ?? g.Expiry ?? null,
 
-          pestSign: g.pestSign ?? g.PestSign ?? '',
-          drySpillage: g.drySpillage ?? g.DrySpillage ?? '',
-          odor: g.odor ?? g.Odor ?? '',
-          plateNumber: g.plateNumber ?? g.PlateNumber ?? '',
-          defectLabels: g.defectLabels ?? g.DefectLabels ?? '',
-          damagedPackage: g.damagedPackage ?? g.DamagedPackage ?? '',
+        pestSign: g.pestSign ?? g.PestSign ?? '',
+        drySpillage: g.drySpillage ?? g.DrySpillage ?? '',
+        odor: g.odor ?? g.Odor ?? '',
+        plateNumber: g.plateNumber ?? g.PlateNumber ?? '',
+        defectLabels: g.defectLabels ?? g.DefectLabels ?? '',
+        damagedPackage: g.damagedPackage ?? g.DamagedPackage ?? '',
 
-          time: g.time ?? g.Time ?? null,
-          initial: g.initial ?? g.Initial ?? '',
-              isFlagIssue: g.isFlagIssue ?? g.isFlagIssue ?? ''
-        }));
+        time: g.time ?? g.Time ?? null,
+        initial: g.initial ?? g.Initial ?? '',
 
-        this.rows = [...this.allRows];
-        if (this.table) this.table.offset = 0;
-      },
-      error: (err) => {
-        console.error('Error loading GRN list', err);
-        this.allRows = [];
-        this.rows = [];
-      }
+        // fix the odd line: ensure boolean
+        isFlagIssue: Boolean(g.isFlagIssue ?? g.IsFlagIssue ?? false),
+      }));
+
+      this.allRows = normalized;
+
+      // >>> collapse by (grnNo, isFlagIssue)
+      this.rows = this.collapseByGrn(normalized);
+
+      if (this.table) this.table.offset = 0;
+    },
+    error: (err) => {
+      console.error('Error loading GRN list', err);
+      this.allRows = [];
+      this.rows = [];
+    }
+  });
+}
+
+/** Collapse lines that share the same (grnNo, isFlagIssue).
+ *  Item names are combined into a single summary like: "Laptop, Printer (2)".
+ */
+private collapseByGrn(rows: GrnRow[]): GrnRow[] {
+  const map = new Map<string, { base: GrnRow; items: Set<string> }>();
+
+  for (const r of rows) {
+    const key = `${r.grnNo}__${r.isFlagIssue ? 1 : 0}`;
+    if (!map.has(key)) {
+      // clone to avoid mutating original references
+      map.set(key, { base: { ...r }, items: new Set<string>([r.itemName?.trim() || '']) });
+    } else {
+      const bucket = map.get(key)!;
+      // keep earliest non-empty for selected fields (optional)
+      if (!bucket.base.storageType && r.storageType) bucket.base.storageType = r.storageType;
+      if (!bucket.base.surfaceTemp && r.surfaceTemp) bucket.base.surfaceTemp = r.surfaceTemp;
+      if (!bucket.base.name && r.name) bucket.base.name = r.name;
+
+      // merge item names
+      if (r.itemName) bucket.items.add(r.itemName.trim());
+    }
+  }
+
+  // finalize summaries
+  const collapsed: GrnRow[] = [];
+  for (const { base, items } of map.values()) {
+    const itemList = [...items].filter(Boolean);
+    const count = itemList.length;
+    const summary = itemList.join(', ');
+    collapsed.push({
+      ...base,
+      // Overwrite itemName to a compact summary for display
+      itemName: count > 1 ? `${summary} (${count})` : (summary || base.itemName),
+      // Optional: clear itemCode because multiple codes exist; or keep the first one
+      itemCode: count > 1 ? '' : base.itemCode,
     });
   }
+  return collapsed;
+}
+
 
   /** Global client-side search across common fields */
   filterUpdate(event: Event): void {
