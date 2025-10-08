@@ -151,6 +151,9 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     });
   }
 
+  goToDebitNoteList(){
+    this.router.navigate(['/purchase/list-Purchasegoodreceipt']);
+  }
   /* ===================== SAVE ===================== */
   saveGRN() {
     if (!this.selectedPO) {
