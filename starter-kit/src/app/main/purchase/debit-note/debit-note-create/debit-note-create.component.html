@@ -1,0 +1,51 @@
+ <button class="btn mb-1" style="background-color: #2E5F73; color: white;" (click)="goToDebitNoteList()">
+  Go to Debit Note list
+</button>
+ <div class="space-y-5 ui-compact pr-typography">
+      <div class="bg-white rounded-2xl shadow p-3 border border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">Debit Note / Returns</h2>
+        <div [ngClass]="gridColsClass(4)">
+          <div><label class="text-xs font-medium text-gray-600">Reference (GRN/PIN)</label><input class="w-full rounded-xl border px-3 py-2 text-sm" placeholder="GRN-00012"/></div>
+          <div><label class="text-xs font-medium text-gray-600">Supplier</label><input class="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Select supplier"/></div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Reason</label>
+            <select class="w-full rounded-xl border px-3 py-2 text-sm bg-white">
+              <option>Rejected goods</option><option>Price difference</option><option>Short supply</option><option>Other</option>
+            </select>
+          </div>
+          <div><label class="text-xs font-medium text-gray-600">Date</label><input type="date" class="w-full rounded-xl border px-3 py-2 text-sm"/></div>
+        </div>
+
+        <div class="overflow-auto border border-gray-200 rounded-xl mt-4">
+          <table class="min-w-full text-sm">
+            <thead class="text-white" style="background-color:#2E5F73">
+              <tr>
+                <th class="text-left px-3 py-2 font-medium">Item</th>
+                <th class="text-left px-3 py-2 font-medium">Qty</th>
+                <th class="text-left px-3 py-2 font-medium">Price</th>
+                <th class="text-left px-3 py-2 font-medium">Remarks</th>
+                <th class="px-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="retRows.length === 0">
+                <td [attr.colspan]="5" class="px-3 py-6 text-center text-gray-400">No lines yet.</td>
+              </tr>
+              <tr *ngFor="let r of retRows; let i = index; trackBy: trackByIndex" class="border-t">
+                <td class="px-3 py-2"><input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="retRows[i]['item']"/></td>
+                <td class="px-3 py-2"><input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="retRows[i]['qty']"/></td>
+                <td class="px-3 py-2"><input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="retRows[i]['price']"/></td>
+                <td class="px-3 py-2"><input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="retRows[i]['remarks']"/></td>
+                <td class="px-3 py-2 text-right">
+                  <button class="px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 border border-transparent" (click)="retRemoveRow(i)" type="button">Remove</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="p-2 border-t bg-gray-50">
+            <button class="px-3 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white" (click)="retAddRow()" type="button" [style.backgroundColor]="'#2E5F73'">+ Add line</button>
+          </div>
+        </div>
+      </div>
+ </div>
+
