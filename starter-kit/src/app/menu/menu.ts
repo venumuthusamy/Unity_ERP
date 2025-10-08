@@ -49,9 +49,14 @@ export const menu: CoreMenu[] = [
     icon: 'file',
     children: [
       { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' },
+        { id: 'rfq', title: 'RFQ', translate: 'MENU.PURCHASE.RFQ', type: 'item', icon: 'circle', url: '/purchase/rfq' },
       { id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' },
+       { id: 'mobilereceiving', title: 'Mobile Receiving', translate: 'MENU.PURCHASE.MobileReceiving', type: 'item', icon: 'circle', url: '/purchase/mobilereceiving' },
       { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },
       { id: 'Supplier Invoice', title: 'Supplier Invoice', translate: 'MENU.PURCHASE.SupplierInvoice', type: 'item', icon: 'circle', url: '/purchase/list-SupplierInvoice' },
+          { id: 'Debit Note', title: 'Debit Note', type: 'item', icon: 'circle', url: '/purchase/list-debitnote' },
+     
+     
     ]
   },
 

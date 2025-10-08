@@ -15,6 +15,10 @@ import { PurchaseOrdeListComponent } from './purchase-order/purchase-orde-list/p
 import { PurchaseOrderCreateComponent } from './purchase-order/purchase-order-create/purchase-order-create.component';
 import { SupplierInvoiceComponent } from './supplier-invoice/supplier-invoice.component';
 import { SupplierInvoiceListComponent } from './supplier-invoice/supplier-invoice-list/supplier-invoice-list.component';
+import { MobileReceivingComponent } from './mobile-receiving/mobile-receiving.component';
+import { RfqComponent } from './rfq/rfq.component';
+import { DebitNoteListComponent } from './debit-note/debit-note-list/debit-note-list.component';
+import { DebitNoteCreateComponent } from './debit-note/debit-note-create/debit-note-create.component';
 
 const routes = [
   {
@@ -77,10 +81,37 @@ const routes = [
     component: PurchaseGoodreceiptComponent,
     data: { animation: 'editpurchasegoodreceipt' }
   },
+
+ {
+    path: 'mobilereceiving',
+    component: MobileReceivingComponent,
+    data: { animation: 'mobilereceiving' }
+  },
+
+   {
+    path: 'rfq',
+    component: RfqComponent,
+    data: { animation: 'rfq' }
+  },
+    {
+    path: 'list-debitnote',
+    component: DebitNoteListComponent,
+    data: { animation: 'listdebitnote' }
+  },
+   {
+    path: 'create-debitnote',
+    component: DebitNoteCreateComponent,
+    data: { animation: 'createdebitnote' }
+  },
+  {
+    path: 'edit-debitnote/:id',
+    component: DebitNoteCreateComponent,
+    data: { animation: 'editdebitnote' }
+  },
 ];
 
 @NgModule({
-  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent,PurchaseGoodreceiptComponent, PurchaseGoodreceiptlistComponent,PurchaseOrdeListComponent, PurchaseOrderCreateComponent, SupplierInvoiceComponent, SupplierInvoiceListComponent],
+  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent,PurchaseGoodreceiptComponent, PurchaseGoodreceiptlistComponent,PurchaseOrdeListComponent, PurchaseOrderCreateComponent, SupplierInvoiceComponent, SupplierInvoiceListComponent, MobileReceivingComponent, RfqComponent,DebitNoteListComponent, DebitNoteCreateComponent],
   imports: [
     CommonModule,
     RouterModule.forChild(routes),

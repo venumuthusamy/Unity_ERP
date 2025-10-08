@@ -1,133 +1,131 @@
+/* =========================================================
+   Imports (keep these at the very top)
+   ========================================================= */
 @import '@core/scss/angular/libs/datatables.component.scss';
 @import '@core/scss/base/pages/app-user.scss';
 @import '@core/scss/angular/libs/select.component.scss';
 @import '@core/scss/angular/libs/sweet-alerts.component.scss';
 
+/* =========================================================
+   Small utilities you already use
+   ========================================================= */
+.highlight-link:hover { color: darkblue !important; }
 
-// .highlight-link {
-//     // color: blue !important;
-//     font-weight: bold;
-   
-// }
-
-.highlight-link:hover {
-    color: darkblue !important;
-}
-
+/* Avatar pills */
 .avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px; /* Adjust as needed */
-    height: 40px; /* Adjust as needed */
-    border-radius: 50%;
-    font-size: 20px;
-    font-weight: bold;
-  }
-  
-  .avatar-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    // height: 100%;
-    width: 100%;
-  }
-  
-
-.avatar-blue {
-    background-color: #007bff; /* Blue color */
-  }
-  
-  .avatar-red {
-    background-color: #dc3545; /* Red color */
-  }
-  
-  .avatar-green {
-    background-color: #28a745; /* Green color */
-  }
- 
-  
-
-  /* Thumbnail inside table cell */
-.img-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1055;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  &__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(2px);
-  }
-
-  &__dialog {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 680px; /* 👈 medium width */
-    background: #fff;
-    border-radius: 18px;
-    border: 1px solid #eef1f4;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
-    padding: 18px 22px;
-    max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__header,
-  &__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  &__header {
-    border-bottom: 1px solid #f1f3f6;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-  }
-
-  &__body {
-    text-align: center;
-    padding: 10px;
-  }
-
-  &__footer {
-    border-top: 1px solid #f1f3f6;
-    margin-top: 10px;
-    padding-top: 10px;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  img {
-    max-height: 70vh;
-    width: auto;
-    border-radius: 10px;
-    object-fit: contain;
-  }
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: bold;
 }
+.avatar-content { display: flex; align-items: center; justify-content: center; width: 100%; }
+.avatar-blue  { background-color: #007bff; }
+.avatar-red   { background-color: #dc3545; }
+.avatar-green { background-color: #28a745; }
 
+/* Table thumbnail */
 .initial-thumb {
   height: 36px;
   width: 36px;
   border-radius: 8px;
   object-fit: cover;
   border: 1px solid #e5e7eb;
-  cursor: pointer; /* 👈 makes the hand icon appear */
-  transition: transform 0.2s ease;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.initial-thumb:hover { transform: scale(1.05); border-color: #0e3a4c; }
+
+/* =========================================================
+   COMPACT CENTERED IMAGE PREVIEW MODAL
+   (use with .img-modal, .img-modal__dialog, etc. in your HTML)
+   ========================================================= */
+.img-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;                 /* above bootstrap/modals */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease;
 }
 
-.initial-thumb:hover {
-  transform: scale(1.05);
-  border-color: #0e3a4c; /* optional hover accent */
+/* Click-catcher (so backdrop click closes) */
+.img-modal__backdrop {
+  position: absolute;
+  inset: 0;
 }
 
-.avatar-blue {
-    background-color: #007bff; /* Blue color */
-  }
+/* The popup box */
+.img-modal__dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 92%;
+  max-width: 420px;              /* 👈 compact width */
+  max-height: 85vh;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 30px rgba(14, 58, 76, 0.25);
+  animation: scaleIn 0.25s ease;
+}
+
+/* Header */
+.img-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+/* Body */
+.img-modal__body {
+  padding: 0.75rem;
+  background: #fff;
+  text-align: center;
+}
+.img-modal__body img {
+  max-width: 100%;
+  max-height: 320px;             /* 👈 smaller image area */
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Footer */
+.img-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0.65rem 1rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   Animations
+   ========================================================= */
+@keyframes scaleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* =========================================================
+   Responsive tweaks (optional)
+   ========================================================= */
+@media (max-width: 576px) {
+  .img-modal__dialog { max-width: 360px; }
+  .img-modal__body img { max-height: 260px; }
+}

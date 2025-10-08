@@ -29,7 +29,7 @@ export interface LineRow {
   damagedPackage: string;
   time: string;
   initial: string;  // dataURL of image/signature
-  remarks: string;
+  remarks: '';
 
   // Meta
   createdAt: Date;
@@ -353,54 +353,84 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   }
 
   /** mutate one row, persist whole GRN JSON, rollback on error */
-  private updateRowAndPersist(
-    rowIndex: number,
-    changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null }
-  ) {
-    if (!this.generatedGRN?.id) return;
+ private updateRowAndPersist(
+  rowIndex: number,
+  changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
+  onSuccess?: () => void
+) {
+  if (!this.generatedGRN?.id) return;
 
-    // Keep copy for rollback
-    const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
+  const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
 
-    const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
-      i === rowIndex
-        ? {
-            ...r,
-            isFlagIssue: changes.hasOwnProperty('isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
-            isPostInventory: changes.hasOwnProperty('isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
-            flagIssueId:
-              changes.hasOwnProperty('flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
-          }
-        : r
-    );
+  const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
+    i === rowIndex
+      ? {
+          ...r,
+          isFlagIssue: changes.hasOwnProperty('isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
+          isPostInventory: changes.hasOwnProperty('isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
+          flagIssueId: changes.hasOwnProperty('flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
+        }
+      : r
+  );
 
-    // Optimistic UI
-    this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
+  this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
 
-    const body = {
-      id: this.generatedGRN.id,
-      GrnNo: this.generatedGRN.grnNo || '',
-      GRNJSON: JSON.stringify(rows)
-    };
+  const body = {
+    id: this.generatedGRN.id,
+    GrnNo: this.generatedGRN.grnNo || '',
+    GRNJSON: JSON.stringify(rows)
+  };
 
-    this.purchaseGoodReceiptService.UpdateFlagIssues(body).subscribe({
-      next: () => {},
-      error: (err) => {
-        // Rollback
-        this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
-        console.error('Update failed', err);
-        alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
-      }
-    });
-  }
+  this.purchaseGoodReceiptService.UpdateFlagIssues(body).subscribe({
+    next: () => {
+      if (onSuccess) onSuccess();
+    },
+    error: (err) => {
+      this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
+      console.error('Update failed', err);
+      alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
+    }
+  });
+}
 
+// Optional helper (nice readability)
+get isEditMode(): boolean {
+  return !!this.editingGrnId;
+}
+
+// Optional helper to compute total rows from whichever table you're acting on
+private totalActionRows(): number {
+  // actions are triggered from the summary table -> prefer generatedGRN.grnJson
+  return (this.generatedGRN?.grnJson?.length ?? this.grnRows.length) || 0;
+}
   /** User clicked "Post Inventory" — set post=true, flag=false, clear flagIssueId */
-  onPostInventoryRow(row: any, index: number) {
-    this.updateRowAndPersist(index, { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 });
-    Swal.fire('Posted', 'Row posted to inventory.', 'success');
-    this.resetForm();
-    this.goToList();
-  }
+onPostInventoryRow(row: any, index: number) {
+  const total = this.totalActionRows();
+  const isLastRow = index === total - 1;
+
+  this.updateRowAndPersist(
+    index,
+    { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
+    () => {
+      Swal.fire('Posted', 'Row posted to inventory.', 'success');
+
+      if (this.isEditMode) {
+        // EDIT: redirect always
+        this.resetForm();
+        this.goToList();
+      } else if (isLastRow) {
+        // CREATE: redirect only when last row succeeded
+        this.resetForm();
+        this.goToList();
+      }
+      // else (create + not last) -> stay on page
+    }
+  );
+}
+
+
+
+
 
   /** Open modal to select reason, then submit */
   onFlagIssuesRow(row: any, index: number) {
@@ -408,21 +438,37 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     this.openFlagIssuesModal();
   }
 
-  submitFlagIssue() {
-    if (this.selectedRowForFlagIndex == null || !this.selectedFlagIssueId) return;
+submitFlagIssue() {
+  if (this.selectedRowForFlagIndex == null || !this.selectedFlagIssueId) return;
 
-    // Flag=true, Post=false; attach reason on row
-    this.updateRowAndPersist(
-      this.selectedRowForFlagIndex,
-      { isFlagIssue: true, isPostInventory: false, flagIssueId: this.selectedFlagIssueId }
-    );
+  const index = this.selectedRowForFlagIndex;
+  const total = this.totalActionRows();
+  const isLastRow = index === total - 1;
 
-    this.closeFlagIssuesModal();
-    this.selectedRowForFlagIndex = null;
-    Swal.fire('Flagged', 'Row flagged successfully.', 'warning');
-    this.resetForm();
-    this.goToList();
-  }
+  this.updateRowAndPersist(
+    index,
+    { isFlagIssue: true, isPostInventory: false, flagIssueId: this.selectedFlagIssueId },
+    () => {
+      Swal.fire('Flagged', 'Row flagged successfully.', 'warning');
+      this.closeFlagIssuesModal();
+      this.selectedRowForFlagIndex = null;
+
+      if (this.isEditMode) {
+        // EDIT: redirect always
+        this.resetForm();
+        this.goToList();
+      } else if (isLastRow) {
+        // CREATE: redirect only when last row succeeded
+        this.resetForm();
+        this.goToList();
+      }
+      // else (create + not last) -> stay on page
+    }
+  );
+}
+
+
+
 
   /* ================= Purchase Orders ================= */
   loadPOs() {
