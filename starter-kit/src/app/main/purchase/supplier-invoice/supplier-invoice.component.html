@@ -1,15 +1,15 @@
 <button class="btn mb-2" style="background-color: #2E5F73; color: white;" (click)="goToSupplierInvoice()">
   Go to Supplier Invoice list
 </button>
+
 <form class="ui-compact" [formGroup]="form">
   <div class="max-w-[1120px] mx-auto">
     <div class="bg-white rounded-2xl shadow p-2 border border-gray-100">
 
       <!-- Title -->
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">Supplier Invoice (PIN)</h2>
-        <span
-          class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+        <h4 class="card-text pin-title">Supplier Invoice (PIN)</h4>
+        <span class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
           3-way match: PO · GRN · PIN
         </span>
       </div>
@@ -68,57 +68,6 @@
         </div>
       </div>
 
-      <!-- GRN Items preview (from GRNJson) -->
-      <!-- <div *ngIf="selectedGrnItems?.length" class="mt-2 rounded-xl border border-gray-200">
-        <div class="flex items-center justify-between px-2.5 py-2 bg-gray-50 rounded-t-xl">
-          <div class="text-[13px] text-gray-700">
-            <span class="font-medium">GRN Items:</span>
-            <span class="text-gray-500" *ngIf="selectedGrn?.grnNo">for {{ selectedGrn.grnNo }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="px-2.5 h-8 rounded-lg text-[13px] font-medium text-white"
-              [style.backgroundColor]="'#0e3a4c'"
-              (click)="importAllFromGrn()">
-              Import All to Lines
-            </button>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-[#0e3a4c] text-white">
-              <tr class="whitespace-nowrap">
-                <th class="px-2.5 py-2 text-left font-medium">Item Code</th>
-                <th class="px-2.5 py-2 text-left font-medium">Supplier</th>
-                <th class="px-2.5 py-2 text-left font-medium">Storage</th>
-                <th class="px-2.5 py-2 text-left font-medium">Surface Temp</th>
-                <th class="px-2.5 py-2 text-left font-medium">Expiry</th>
-                <th class="px-2.5 py-2 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let it of selectedGrnItems" class="border-t">
-                <td class="px-2.5 py-1.5">{{ it.itemCode || it.item }}</td>
-                <td class="px-2.5 py-1.5">{{ it.supplierId }}</td>
-                <td class="px-2.5 py-1.5">{{ it.storageType }}</td>
-                <td class="px-2.5 py-1.5">{{ it.surfaceTemp }}</td>
-                <td class="px-2.5 py-1.5">{{ it.expiry | date:'yyyy-MM-dd' }}</td>
-                <td class="px-2.5 py-1.5">
-                  <button
-                    type="button"
-                    class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium hover:bg-gray-100 border border-gray-200"
-                    (click)="addLineFromGrn(it)">
-                    Add
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div> -->
-
       <!-- Lines -->
       <div class="rounded-xl border border-gray-200 mt-2">
         <!-- Header row -->
@@ -151,7 +100,7 @@
             <div class="px-2.5 py-1.5">
               <input
                 type="number"
-                class="w-full rounded-lg border px-2.5 h-8 text-[13px] "
+                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
                 formControlName="qty"
                 (input)="onCellChange(i)" />
             </div>
@@ -187,48 +136,36 @@
             </div>
 
             <div class="px-2.5 py-1.5 text-right">
-  <button
-    type="button"
-    class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium border border-red-500 text-red-600 hover:bg-red-50 transition"
-    (click)="removeLine(i)">
-    Remove
-  </button>
-</div>
+              <button
+                type="button"
+                class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium border border-red-500 text-red-600 hover:bg-red-50 transition"
+                (click)="removeLine(i)">
+                Remove
+              </button>
+            </div>
 
           </div>
         </div>
-
-        <!-- Footer -->
-        <!-- <div class="p-2 border-t bg-gray-50 rounded-b-xl">
-          <button
-            class="px-2.5 h-8 rounded-lg text-[13px] font-medium text-white"
-            type="button"
-            [style.backgroundColor]="'#0e3a4c'"
-            (click)="addLine()">
-            + Add line
-          </button>
-        </div> -->
       </div>
 
       <!-- Actions -->
-    <div class="flex justify-end gap-2 mt-2">
-    <button
-      class="px-2.5 h-8 rounded-lg text-[13px] font-medium border border-amber-600 text-amber-700 hover:bg-amber-50"
-      type="button"
-      (click)="save('HOLD')">
-      Hold/Review
-    </button>
+      <div class="flex justify-end gap-2 mt-2">
+        <button
+          class="px-2.5 h-8 rounded-lg text-[13px] font-medium border border-amber-600 text-amber-700 hover:bg-amber-50"
+          type="button"
+          (click)="save('HOLD')">
+          Hold/Review
+        </button>
 
-    <!-- submit button -->
-    <button
-      class="px-3 h-8 rounded-lg text-[13px] font-medium text-white disabled:opacity-60"
-      type="submit"
-      [style.backgroundColor]="'#0e3a4c'"
-      [disabled]="form.invalid"
-      (click)="save('POST')">
-      Post to A/P
-    </button>
-  </div>
+        <button
+          class="px-3 h-8 rounded-lg text-[13px] font-medium text-white disabled:opacity-60"
+          type="submit"
+          [style.backgroundColor]="'#0e3a4c'"
+          [disabled]="form.invalid"
+          (click)="save('POST')">
+          Post to A/P
+        </button>
+      </div>
     </div>
   </div>
 </form>
@@ -238,6 +175,6 @@
   .ui-compact input[type="text"],
   .ui-compact input[type="number"],
   .ui-compact input[type="date"] { line-height: 1.25rem; }
-  .ui-compact th { white-space: nowrap; }         /* Keep table headers on a single line */
-  .ui-compact .grn-combobox ul { overscroll-behavior: contain; } /* prevent weird scroll chaining */
+  .ui-compact th { white-space: nowrap; }
+  .ui-compact .grn-combobox ul { overscroll-behavior: contain; }
 </style>

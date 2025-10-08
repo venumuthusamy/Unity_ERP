@@ -16,6 +16,7 @@ import { ItemsService } from 'app/main/master/items/items.service';
 import { LocationService } from 'app/main/master/location/location.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { PurchaseService } from '../../purchase.service';
+import { PrDraftService } from '../pr-draft.service';
 
 @Component({
   selector: 'app-create-purchase-request',
@@ -80,6 +81,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   isEditMode = false;
 
   private captureHandler!: (e: MouseEvent) => void;
+  private readonly RETURN_URL = '/purchase/Create-PurchaseRequest';
 
   constructor(
     private purchaseService: PurchaseService,
@@ -91,22 +93,47 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     private uomService: UomService,
     private locationService: LocationService,
     private eRef: ElementRef,
-    private zone: NgZone
+    private zone: NgZone,
+    private draft: PrDraftService
   ) {
     this.userId = localStorage.getItem('id') || 'System';
   }
 
   ngOnInit(): void {
     this.setMinDate();
+
+    // If route is new (no :id), restore draft first
+    const urlHasId = !!this.route.snapshot.paramMap.get('id');
+    if (!urlHasId) {
+      const d = this.draft.load();
+      if (d) {
+        this.prHeader = { ...this.prHeader, ...(d.prHeader || {}) };
+        this.prLines = d.prLines || [];
+        this.searchText = d.departmentName ?? '';
+        this.prStep = typeof d.step === 'number' ? d.step : 0;
+      }
+    }
+
+    // Apply department data passed from Department screen via navigation state (one-time, not in URL)
+    const st = window.history.state as any;
+    if (st?.deptId || st?.deptName) {
+      if (st.deptId) this.prHeader.departmentID = +st.deptId;
+      if (st.deptName) this.searchText = st.deptName;
+      // nothing to clear; state isn’t in the URL
+    }
+
+    // Load lists
     this.loadRequests();
     this.loadDepartments();
     this.loadCatalogs();
 
+    // Edit mode (/:id)
     this.route.paramMap.subscribe(params => {
       const idStr = params.get('id');
       this.prid = idStr ? +idStr : null;
       if (this.prid) {
         this.isEditMode = true;
+        this.draft.clear();
         this.purchaseService.GetPurchaseById(this.prid).subscribe((res: any) => {
           if (res?.data) {
             this.editRequest(res);
@@ -116,7 +143,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Capture-phase global click: close dropdowns when clicking anywhere outside dropdowns
+    // Capture-phase global click to close dropdowns
     this.captureHandler = (ev: MouseEvent) => this.onGlobalClickCapture(ev);
     document.addEventListener('click', this.captureHandler, { capture: true });
   }
@@ -127,16 +154,32 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ===== Navigation helpers =====
+  private saveDraft(): void {
+    this.draft.save({
+      prHeader: this.prHeader,
+      prLines: this.prLines,
+      departmentName: this.searchText,
+      step: this.prStep
+    });
+  }
+
+  /** (+) button beside Department input */
+  onAddDepartmentClick(): void {
+    this.saveDraft();
+    this.router.navigate(['/master/department'], {
+      state: { openCreate: true, returnUrl: this.RETURN_URL },
+      // optional: keep history clean
+      replaceUrl: false
+    });
+  }
+
   // ====== Outside click (capture-phase) ======
   private onGlobalClickCapture(ev: MouseEvent) {
     const t = ev.target as HTMLElement;
 
-    // If inside any dropdown wrapper or panel, do nothing
-    if (t.closest('.dropdown-wrapper') || t.closest('.prl-dropdown') || t.closest('.prl-menu')) {
-      return;
-    }
+    if (t.closest('.dropdown-wrapper') || t.closest('.prl-dropdown') || t.closest('.prl-menu')) return;
 
-    // Otherwise, close all dropdowns (header, table rows, modal)
     this.zone.run(() => {
       this.dropdownOpen = false;
 
@@ -154,25 +197,21 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ====== Clicks inside the modal (don’t close modal; do close dropdowns if click isn’t on dropdown) ======
   onModalRootClick(ev: MouseEvent) {
-    ev.stopPropagation(); // keep overlay from closing modal (overlay has no click handler now)
-
+    ev.stopPropagation();
     const t = ev.target as HTMLElement;
     const insideDropdown = t.closest('.prl-dropdown') || t.closest('.prl-menu');
     if (insideDropdown) return;
 
-    // Close only modal dropdowns
     this.modalLine.dropdownOpen = false;
     this.modalLine.uomDropdownOpen = false;
     this.modalLine.locationDropdownOpen = false;
   }
 
-  // Block ESC → modal stays open
   @HostListener('document:keydown.escape', ['$event'])
-  onEsc(_e: KeyboardEvent) { /* do nothing (keeps modal open) */ }
+  onEsc(_e: KeyboardEvent) { /* keep modal open */ }
 
-  // ===== Helpers / UI =====
+  // ===== UI helpers =====
   badgeClass(color: string) {
     return `px-2 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800`;
   }
@@ -421,12 +460,11 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       if (this.prLines[this.draftIndex]?.isDraft) {
         this.prLines.splice(this.draftIndex, 1);
       }
-      this.draftIndex = null;
     }
+    this.draftIndex = null;
     this.editingIndex = null;
     this.showModal = false;
 
-    // close modal dropdowns
     this.modalLine.dropdownOpen = false;
     this.modalLine.uomDropdownOpen = false;
     this.modalLine.locationDropdownOpen = false;
@@ -464,7 +502,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.modalLine.uomSearch = uom.name;
     this.modalLine.uom = uom.name;
     this.modalLine.uomDropdownOpen = false;
-    this.modalLine.filteredUoms = [];
+    this.modalLine.filteredUms = [];
   }
 
   onModalLocationFocus() {
@@ -558,6 +596,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       this.purchaseService.update(payload.id, payload).subscribe({
         next: (res: any) => {
           Swal.fire({ icon: 'success', title: 'Updated', text: res?.message || 'Updated successfully', confirmButtonColor: '#0e3a4c' });
+          this.draft.clear();
           this.loadRequests();
           this.resetForm();
           this.router.navigate(['/purchase/list-PurchaseRequest']);
@@ -568,6 +607,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       this.purchaseService.create(payload).subscribe({
         next: (res: any) => {
           Swal.fire({ icon: 'success', title: 'Created', text: res?.message || 'Created successfully', confirmButtonColor: '#0e3a4c' });
+          this.draft.clear();
           this.loadRequests();
           this.resetForm();
           this.router.navigate(['/purchase/list-PurchaseRequest']);

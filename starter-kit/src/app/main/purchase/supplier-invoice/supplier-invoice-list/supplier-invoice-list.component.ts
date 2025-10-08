@@ -70,6 +70,7 @@ export class SupplierInvoiceListComponent implements OnInit {
     const matches = (d: any) =>
       (d.invoiceNo || '').toLowerCase().includes(val) ||
       (d.currency || '').toLowerCase().includes(val) ||
+      (d.amount || '').toLowerCase().includes(val) ||
       this.statusText(d.status).toLowerCase().includes(val) ||
       (d.invoiceDate ? new Date(d.invoiceDate).toLocaleDateString() : '').toLowerCase().includes(val);
 
@@ -119,4 +120,5 @@ deleteInvoice(id: number) {
   }
 
   closeLinesModal() { this.showLinesModal = false; }
+ 
 }

@@ -46,44 +46,52 @@
             </div>
         </div>
     </div>
-    <div class="col-sm-12 col-xs-12 col-lg-6 col-md-6 " *ngIf="isDisplay">
-        <div class="card ">
-            <div class="card-header">
-                <h4 class="card-title">{{modeHeader}}</h4>
-            </div>
-            <div class="card-body">
-                <form class="form" (ngSubmit)="departmentForm.form.valid" #departmentForm="ngForm">
-                    <div class="form-group">
-                        <label for="first-name-column">Department Code</label>
-                        <input type="text" id="first-name-column" class="form-control" placeholder="Department Code"
-                            name="fdepartmentCode-column" [(ngModel)]="departmentCode" [maxlength]="50" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="first-name-column">Department Name</label>
-                        <input type="text" id="first-name-column" class="form-control" placeholder="Department Name"
-                            name="fdepartmentName-column" [(ngModel)]="departmentName" [maxlength]="50" required />
-                    </div>
-
-                    <div class="row justify-content-start p-1">
-                        <button type="submit" rippleEffect class="btn mr-1" [disabled]="!departmentForm.form.valid"
-                            (click)="saveDepartment()"
-                            style="background-color: #2E5F73;color: white;padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
-                            Submit
-                        </button>
-
-                        <button type="cancel" rippleEffect class="btn btn-danger mr-1" (click)="cancel()"
-                            style="padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
-                            Cancel
-                        </button>
-
-                        <button type="reset" rippleEffect class="btn btn-secondary" *ngIf="resetButton"
-                            (click)="reset()" style="padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
-                            Reset
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+   <div
+  id="departmentCreateCard"
+  class="col-sm-12 col-xs-12 col-lg-6 col-md-6"
+  *ngIf="isDisplay"
+>
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">{{ modeHeader }}</h4>
     </div>
+    <div class="card-body">
+      <form class="form" (ngSubmit)="departmentForm.form.valid" #departmentForm="ngForm">
+        <div class="form-group">
+          <label>Department Code</label>
+          <input type="text" class="form-control" placeholder="Department Code"
+                 name="departmentCode" [(ngModel)]="departmentCode" [maxlength]="50" required />
+        </div>
+        <div class="form-group">
+          <label>Department Name</label>
+          <input type="text" class="form-control" placeholder="Department Name"
+                 name="departmentName" [(ngModel)]="departmentName" [maxlength]="50" required />
+        </div>
+
+        <div class="row justify-content-start p-1">
+          <button type="submit" class="btn mr-1"
+                  [disabled]="!departmentForm.form.valid"
+                  (click)="saveDepartment()"
+                  style="background-color:#2E5F73;color:white;padding:6px 14px;font-size:0.9rem;border-radius:4px;">
+            Submit
+          </button>
+
+          <button type="button" class="btn btn-danger mr-1"
+                  (click)="cancel()"
+                  style="padding:6px 14px;font-size:0.9rem;border-radius:4px;">
+            Cancel
+          </button>
+
+          <button type="reset" class="btn btn-secondary" *ngIf="resetButton"
+                  (click)="reset()"
+                  style="padding:6px 14px;font-size:0.9rem;border-radius:4px;">
+            Reset
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 </div>
 
