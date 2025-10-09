@@ -5,7 +5,7 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 import { POService } from '../purchase-order.service';
 import { DatePipe } from '@angular/common';
-
+import * as feather from 'feather-icons';
 @Component({
   selector: 'app-purchase-orde-list',
   templateUrl: './purchase-orde-list.component.html',
@@ -154,7 +154,26 @@ export class PurchaseOrdeListComponent implements OnInit {
 closeLinesModal() {
   this.showLinesModal = false;
 }
-
+ isRowLocked(row: any): boolean {
+    const v = row?.approvalStatus ?? row?.ApprovalStatus ?? row?.status;
+    if (v == null) return false;
+ 
+    if (typeof v === 'string') {
+      const s = v.trim().toLowerCase();
+      return s === 'approved' || s === 'rejected';
+    }
+ 
+    // If you use numeric enums, map them here:
+    // e.g. 1=Pending, 2=Approved, 3=Rejected  (adjust to your app)
+    const code = Number(v);
+    return [2, 3].includes(code);
+  }
+   ngAfterViewChecked(): void {
+       feather.replace();  // remove the guard so icons refresh every cycle
+     }
+     ngAfterViewInit(): void {
+       feather.replace();
+     }
 }
 
 

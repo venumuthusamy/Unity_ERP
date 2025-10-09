@@ -4,7 +4,7 @@ import { SupplierInvoiceService } from './supplier-invoice.service';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt/purchase-goodreceipt.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
- 
+ import * as feather from 'feather-icons'; 
 interface GRNHeader {
   id: number;
   grnNo: string;
@@ -15,6 +15,7 @@ interface GRNHeader {
   poLinesJson?: string;       // optional fallback
   poLines?: any[] | string;   // optional fallback
   currencyId?: number;
+  tax:number
 }
  
 interface GRNItem {
@@ -50,7 +51,7 @@ export class SupplierInvoiceComponent {
   // Preview state
   selectedGrn: GRNHeader | null = null;
   selectedGrnItems: GRNItem[] = [];
- 
+  minDate = '';
   // PO mapping buckets (per-item FIFO), keyed by canonical item key
   private poLineBuckets = new Map<string, any[]>();
  
@@ -81,16 +82,20 @@ export class SupplierInvoiceComponent {
   }
  
   ngOnInit(): void {
+    this.setMinDate();
     this.loadGrns();
     this.route.paramMap.subscribe(pm => {
       const id = Number(pm.get('id') || 0);
       if (id > 0) this.loadInvoice(id);
     });
+    
   }
  
   // ---------- Load existing invoice ----------
   private loadInvoice(id: number) {
+    debugger
     this.api.GetSupplierInvoiceById(id).subscribe({
+      
       next: (res: any) => {
         const d = res?.data || res;
  
@@ -119,6 +124,7 @@ export class SupplierInvoiceComponent {
             item: [r.item ?? r.itemName ?? r.itemCode ?? ''],
             qty: [Number(r.qty) || 0],
             price: [r.price != null ? Number(r.price) : null],
+             tax: [Number(r.tax) || 0],
             matchStatus: [r.matchStatus || 'OK'],
             mismatchFields: [r.mismatchFields || ''],
             dcNoteNo: [r.dcNoteNo || '']
@@ -221,14 +227,17 @@ export class SupplierInvoiceComponent {
   }
  
   addLine(prefill?: Partial<GRNItem>) {
+    debugger
     const itemName = prefill?.item ?? prefill?.itemName ?? prefill?.itemCode ?? '';
     const qty = prefill?.qty != null ? Number(prefill?.qty) : null;
     const price = prefill?.price != null ? Number(prefill?.price as number) : null;
+    const tax = prefill?.tax != null ? Number(prefill?.tax as number) : null;
  
     this.lines.push(this.fb.group({
       item: [itemName],
       qty: [qty],
       price: [price],
+      tax:[tax],
       matchStatus: ['OK'],
       mismatchFields: [''],
       dcNoteNo: ['']
@@ -334,6 +343,7 @@ export class SupplierInvoiceComponent {
       linesJson: this.buildLinesJson(),
       createdBy: this.userId,
       updatedBy: this.userId
+     
     };
  
     const isUpdate = !!(v.id && v.id > 0);
@@ -393,6 +403,7 @@ export class SupplierInvoiceComponent {
  
   // ---------- GRN dropdown ----------
   loadGrns() {
+    debugger
     this.grnService.getAllGRN().subscribe({
       next: (res: any) => {
         const raw: any[] = res?.data ?? [];
@@ -401,6 +412,7 @@ export class SupplierInvoiceComponent {
           grnNo: x.grnNo,
           poid: x.poid,
           poNo: x.poNo ?? x.poid,
+          tax:x.tax,
           supplierName: x.supplierName ?? '',
           grnJson: x.grnJson ?? '[]',
           poLinesJson: x.poLinesJson,
@@ -459,7 +471,8 @@ export class SupplierInvoiceComponent {
     this.form.patchValue({
       grnId: g.id,
       grnNo: g.grnNo,
-      currencyId: g.currencyId ?? this.form.value.currencyId
+      currencyId: g.currencyId ?? this.form.value.currencyId,
+      tax: (g.tax !== null && g.tax !== undefined) ? Number(g.tax) : this.form.value.tax
     });
     this.grnSearch = g.grnNo;
     this.grnOpen = false;
@@ -601,6 +614,14 @@ export class SupplierInvoiceComponent {
   goToSupplierInvoice() {
     this.router.navigateByUrl('/purchase/list-SupplierInvoice');
   }
+   setMinDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    this.minDate = `${yyyy}-${mm}-${dd}`;
+  }
+ 
 }
  
  

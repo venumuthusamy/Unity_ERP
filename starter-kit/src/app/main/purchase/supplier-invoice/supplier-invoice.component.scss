@@ -270,3 +270,40 @@
 .prl-modal::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
 
 .pin-title {  font-size: 1.25rem; font-weight: 600; color: #2E5F73; }
+
+
+/* supplier-invoice.component.scss */
+:host ::ng-deep input[type="radio"] {
+  accent-color: #2E5F73; /* modern browsers */
+}
+
+:host ::ng-deep .dc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;   /* pill */
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+:host ::ng-deep .dc-chip.active {
+  border-color: #2E5F73;
+  color: #2E5F73;
+  background-color: rgba(46, 95, 115, 0.08);
+}
+.swal2-actions { gap: .5rem !important; }
+ .swal2-actions .swal2-styled { margin: 0 .5rem !important; };
+  :host ::ng-deep .swal2-popup.prlines-modal {
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+
+:host ::ng-deep .swal2-popup.prlines-modal .swal2-close {
+  color: #6b7280; /* gray-500 */
+}

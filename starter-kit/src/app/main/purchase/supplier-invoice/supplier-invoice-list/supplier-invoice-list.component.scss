@@ -66,5 +66,7 @@
   }
  .swal2-actions { gap: .5rem !important; }
 .swal2-actions .swal2-styled { margin: 0 !important; }
-
+:host ::ng-deep .swal2-actions {
+  padding: 14px 16px 20px;
+}
 }
