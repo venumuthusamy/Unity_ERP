@@ -73,7 +73,7 @@
 </ngx-datatable-column>
 
   <!-- Purchase Request Number -->
-  <ngx-datatable-column name="Po NO" prop="purchaseRequestNo" [width]="100"></ngx-datatable-column>
+  <ngx-datatable-column name="PR NO" prop="purchaseRequestNo" [width]="100"></ngx-datatable-column>
 
   <!-- Requester -->
   <ngx-datatable-column name="Requester" prop="requester" [width]="180"></ngx-datatable-column>
@@ -100,11 +100,11 @@
   <ng-template let-value="value" ngx-datatable-cell-template>
     <div class="badge badge-pill text-center"
          [ngClass]="{
-           'badge-light-secondary': value === 0,
-           'badge-light-warning': value === 1,
-           'badge-light-success': value === 2,
-           'badge-light-primary': value === 3,
-           'badge-light-danger': value === 4
+           'badge-secondary': value === 0,
+           'badge-warning': value === 1,
+           'badge-success': value === 2,
+           'badge-secondary': value === 3,
+           'badge-danger': value === 4
          }"
          style="cursor: default;">
 
@@ -113,13 +113,12 @@
         value === 0 ? 'Draft' :
         value === 1 ? 'Pending' :
         value === 2 ? 'Approved' :
-        value === 3 ? 'Converted' :
-        value === 4 ? 'Rejected' : 'Unknown'
+        value === 3 ? 'Rejected' :
+        value === 4 ? 'Converted' : 'Unknown'
       }}
     </div>
   </ng-template>
 </ngx-datatable-column>
-
 
   <!-- Edit/Delete Actions -->
   <ngx-datatable-column name="Action" [width]="150">

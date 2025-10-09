@@ -17,7 +17,7 @@ export class CitiesComponent implements OnInit, AfterViewChecked, AfterViewInit 
   public id = 0;
   public cityName = '';
   public isDisplay = false;
-  public modeHeader = 'Add City';
+  public cityHeader = 'Add City';
   public resetButton = true;
   public isEditMode = false;
 
@@ -46,13 +46,13 @@ export class CitiesComponent implements OnInit, AfterViewChecked, AfterViewInit 
 
   createcity() {
     this.isDisplay = true;
-    this.modeHeader = 'Add City';
+    this.cityHeader = 'Add City';
     this.reset();
     if (!this.rows?.length) this.getAllCountries();
   }
 
   reset() {
-    this.modeHeader = 'Create City';
+    this.cityHeader = 'Create City';
     this.cityName = '';
     this.id = 0;
     this.selectedCountry = null;
@@ -142,7 +142,7 @@ export class CitiesComponent implements OnInit, AfterViewChecked, AfterViewInit 
 
       this.isDisplay = true;
       this.resetButton = false;
-      this.modeHeader = 'Edit City';
+      this.cityHeader = 'Edit City';
       this.isEditMode = true;
 
       // 1. Set country

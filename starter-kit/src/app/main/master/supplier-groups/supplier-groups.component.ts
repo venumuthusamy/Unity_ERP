@@ -64,7 +64,7 @@ export class SupplierGroupsComponent implements OnInit, AfterViewInit, AfterView
 
 
     reset() {
-    this.modeHeader = "Create createSupplierGroups";
+    this.modeHeader = "Create Supplier Groups";
     this.Name = "";
     this.description = "";
     this.id = 0;

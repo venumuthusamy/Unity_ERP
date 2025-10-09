@@ -271,7 +271,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     };
   }
 
-  setApprovalStatus(status: string) {
+  setApprovalStatus(status) {
     debugger
     this.poHdr.approvalStatus = status;
     // this.notify(`PO ${status} at ${this.poHdr.approvalLevel} level`);
