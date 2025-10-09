@@ -36,5 +36,9 @@ update(id: number, data: any): Observable<any> {
   setRequest(request: any) {
     this.requestSource.next(request);
   }
+
+   GetAvailablePurchaseRequests(): Observable<any> {
+    return this.http.get(this.url + PurchaseAPIUrls.GetAvailablePurchaseRequests);
+  }
   
 }

@@ -16,6 +16,7 @@ import { RecurringService } from 'app/main/master/recurring/recurring.service';
 import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
 import { CountriesService } from 'app/main/master/countries/countries.service';
 type LineRow = { [k: string]: any };
+import * as feather from 'feather-icons';
 
 @Component({
   selector: 'app-purchase-order-create',
@@ -40,26 +41,26 @@ export class PurchaseOrderCreateComponent implements OnInit {
     shipping: 0.00,
     discount: 0.00,
     subTotal: 0,
-    netTotal: 0,  
+    netTotal: 0,
     approvalStatus: '',
   };
   purchaseOrderId: any;
   approvalLevel: any;
-  suppliers:any
+  suppliers: any
   paymentTerms: any;
   currencies: any;
   incoterms: any;
   allPrNos: any;
   allItems: any;
-  accounthead:any
+  accounthead: any
   allBudgets: any
   allRecurring: any
   allTaxCodes: any
   deliveries: any;
   submitted: boolean;
   iserrorDelivery: boolean;
-  countries:any
-
+  countries: any
+  minDate = '';
 
   formatDate(date: Date | string): string {
     if (!date) return '';
@@ -96,7 +97,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     incoterms: []
   };
 
-  requiredKeys = ['supplier','approval','paymentTerms']; // add more if needed
+  requiredKeys = ['supplier', 'approval', 'paymentTerms']; // add more if needed
 
   isEmpty(v: any): boolean {
     return (v ?? '').toString().trim() === '';
@@ -109,14 +110,14 @@ export class PurchaseOrderCreateComponent implements OnInit {
     private paymentTermsService: PaymentTermsService, private currencyService: CurrencyService,
     private locationService: LocationService, private incotermsService: IncotermsService,
     private itemsService: ItemsService, private chartOfAccountService: ChartofaccountService,
-    private purchaseService: PurchaseService,private _SupplierService : SupplierService,
-    private recurringService: RecurringService,private taxCodeService: TaxCodeService,
+    private purchaseService: PurchaseService, private _SupplierService: SupplierService,
+    private recurringService: RecurringService, private taxCodeService: TaxCodeService,
     private _countriesService: CountriesService
   ) { }
 
 
   ngOnInit() {
-    debugger
+    this.setMinDate();
     this.route.paramMap.subscribe((params: any) => {
       this.purchaseOrderId = parseInt(params.get('id'));
 
@@ -128,10 +129,11 @@ export class PurchaseOrderCreateComponent implements OnInit {
           paymentTerms: this.paymentTermsService.getAllPaymentTerms(),
           currency: this.currencyService.getAllCurrency(),
           incoterms: this.incotermsService.getAllIncoterms(),
-          prlist: this.purchaseService.getAll(),
+          // prlist: this.purchaseService.getAll(),
+          prlist: this.purchaseService.GetAvailablePurchaseRequests(),
           items: this.itemsService.getAllItem(),
-          accounthead:this.chartOfAccountService.getAllChartOfAccount(),
-          recurring:this.recurringService.getRecurring(),
+          accounthead: this.chartOfAccountService.getAllChartOfAccount(),
+          recurring: this.recurringService.getRecurring(),
           taxcode: this.taxCodeService.getTaxCode(),
           delivery: this.locationService.getLocation(),
           country: this._countriesService.getCountry(),
@@ -146,8 +148,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
           this.allItems = results.items.data;
           this.accounthead = results.accounthead.data
           this.allBudgets = this.accounthead.map((head: any) => ({
-          value: head.id,
-          label: this.buildFullPath(head)
+            value: head.id,
+            label: this.buildFullPath(head)
           }));
           this.allRecurring = results.recurring.data;
           this.allTaxCodes = results.taxcode.data;
@@ -173,7 +175,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
           if (selectedApproveLevel) {
             this.searchTexts['approval'] = selectedApproveLevel.name;
           }
-          const selectedSupplier = this.suppliers?.find((d:any) => d.id === this.poHdr.supplierId);
+          const selectedSupplier = this.suppliers?.find((d: any) => d.id === this.poHdr.supplierId);
           if (selectedSupplier) {
             this.searchTexts['supplier'] = selectedSupplier.name;
           }
@@ -189,7 +191,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
           if (selectedIncoterms) {
             this.searchTexts['incoterms'] = selectedIncoterms.incotermsName;
           }
-          
+
 
 
           this.poLines = JSON.parse(results.poHdr.data.poLines);
@@ -204,10 +206,11 @@ export class PurchaseOrderCreateComponent implements OnInit {
           paymentTerms: this.paymentTermsService.getAllPaymentTerms(),
           currency: this.currencyService.getAllCurrency(),
           incoterms: this.incotermsService.getAllIncoterms(),
-          prlist: this.purchaseService.getAll(),
+          // prlist: this.purchaseService.getAll(),
+          prlist: this.purchaseService.GetAvailablePurchaseRequests(),
           items: this.itemsService.getAllItem(),
-          accounthead:this.chartOfAccountService.getAllChartOfAccount(),
-          recurring:this.recurringService.getRecurring(),
+          accounthead: this.chartOfAccountService.getAllChartOfAccount(),
+          recurring: this.recurringService.getRecurring(),
           taxcode: this.taxCodeService.getTaxCode(),
           delivery: this.locationService.getLocation(),
           country: this._countriesService.getCountry(),
@@ -221,13 +224,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
           this.allItems = results.items.data;
           this.accounthead = results.accounthead.data
           this.allBudgets = this.accounthead.map((head: any) => ({
-          value: head.id,
-          label: this.buildFullPath(head)
+            value: head.id,
+            label: this.buildFullPath(head)
           }));
           this.allRecurring = results.recurring.data;
           this.allTaxCodes = results.taxcode.data;
-          this.deliveries = results.delivery.data;   
-          this.countries = results.country.data;      
+          this.deliveries = results.delivery.data;
+          this.countries = results.country.data;
 
           this.filteredLists = {
             approval: [...this.approvalLevel],
@@ -241,15 +244,29 @@ export class PurchaseOrderCreateComponent implements OnInit {
       }
     });
   }
+  ngAfterViewChecked(): void {
+    feather.replace();  // remove the guard so icons refresh every cycle
+  }
+  ngAfterViewInit(): void {
+    feather.replace();
+  }
+
+  setMinDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    this.minDate = `${yyyy}-${mm}-${dd}`;
+  }
 
   buildFullPath(item: any): string {
-      let path = item.headName;
-      let current = this.accounthead.find((x: any) => x.id === item.parentHead);
-      while (current) {
-        path = `${current.headName} >> ${path}`;
-        current = this.accounthead.find((x: any) => x.id === current.parentHead);
-      }
-      return path;
+    let path = item.headName;
+    let current = this.accounthead.find((x: any) => x.id === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = this.accounthead.find((x: any) => x.id === current.parentHead);
+    }
+    return path;
   }
 
   toISODate(date: Date): string {
@@ -330,13 +347,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
         break;
       case 'incoterms':
         this.filteredLists[field] = this.incoterms.filter((s: any) => s.incotermsName.toLowerCase().includes(search));
-        break; 
+        break;
     }
   }
 
   //  Select item
   select(field: string, item: any) {
-    
+
     this.searchTexts[field] = item.name || item.paymentTermsName || item.currencyName || item.incotermsName;
     switch (field) {
       case 'approval':
@@ -344,21 +361,21 @@ export class PurchaseOrderCreateComponent implements OnInit {
         break;
       case 'supplier':
         this.poHdr.supplierId = item.id;
-          // find matching currency in currency list
-          const found = this.currencies.find(x => x.id === item.currencyId);
+        // find matching currency in currency list
+        const found = this.currencies.find(x => x.id === item.currencyId);
 
-          // update header + input
-          this.poHdr.currencyId = item.currencyId;
-          this.poHdr.currencyName = found?.currencyName || found?.name || '';
-          if(this.poHdr.currencyName === 'SGD'){
-            this.poHdr.fxRate = 1
-          }else{
-            this.poHdr.fxRate = 0
-          }
-          this.searchTexts['currency'] = this.poHdr.currencyName;
+        // update header + input
+        this.poHdr.currencyId = item.currencyId;
+        this.poHdr.currencyName = found?.currencyName || found?.name || '';
+        if (this.poHdr.currencyName === 'SGD') {
+          this.poHdr.fxRate = 1
+        } else {
+          this.poHdr.fxRate = 0
+        }
+        this.searchTexts['currency'] = this.poHdr.currencyName;
 
-          const foundGst = this.countries.find(x => x.id === item.countryId);
-          this.poHdr.tax = foundGst?.gstPercentage || '';
+        const foundGst = this.countries.find(x => x.id === item.countryId);
+        this.poHdr.tax = foundGst?.gstPercentage || '';
         break;
       case 'paymentTerms':
         this.poHdr.paymentTermId = item.id;
@@ -374,8 +391,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     this.dropdownOpen[field] = false;
   }
   isSGDCurrency(): boolean {
-  const code = (this.poHdr.currencyName || '').toUpperCase();
-  return code === 'SGD';
+    const code = (this.poHdr.currencyName || '').toUpperCase();
+    return code === 'SGD';
   }
   // Clear search
   onClearSearch(field: string) {
@@ -447,150 +464,150 @@ export class PurchaseOrderCreateComponent implements OnInit {
     }
   }
 
-    selectOption(index: number, field: string, option: any) {
-      debugger
-      if (field === 'prNo') {
-        const chosenNo: string = option?.purchaseRequestNo ?? option;
-        const pr = this.allPrNos.find((p: any) => p.purchaseRequestNo === chosenNo);
-        if (!pr) return;
+  selectOption(index: number, field: string, option: any) {
+    debugger
+    if (field === 'prNo') {
+      const chosenNo: string = option?.purchaseRequestNo ?? option;
+      const pr = this.allPrNos.find((p: any) => p.purchaseRequestNo === chosenNo);
+      if (!pr) return;
 
-        // Close dropdown on the clicked row
-        this.poLines[index].dropdownOpen = '';
-        this.poLines[index].filteredOptions = [];
+      // Close dropdown on the clicked row
+      this.poLines[index].dropdownOpen = '';
+      this.poLines[index].filteredOptions = [];
 
-        // ✅ Append PR lines
-        this.appendPRToPOLines(pr);
+      // ✅ Append PR lines
+      this.appendPRToPOLines(pr);
 
-        // ✅ Remove the picker row if it's empty or only has PR No
-        if (this.isOnlyPrNo(this.poLines[index]) || this.isEmptyLine(this.poLines[index])) {
-          this.poLines.splice(index, 1);
-        }
-
-        return;
+      // ✅ Remove the picker row if it's empty or only has PR No
+      if (this.isOnlyPrNo(this.poLines[index]) || this.isEmptyLine(this.poLines[index])) {
+        this.poLines.splice(index, 1);
       }
 
-      // Other fields
-      if (field === 'item') {
-        this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
-      } else if (field === 'budget') {
-        this.poLines[index][field] = option.label;
-      } else if (field === 'location') {
-        this.poLines[index][field] = option.name;
-      }else if (field === 'recurring') {
-        this.poLines[index][field] = option.recurringName;
-      }else if (field === 'taxCode') {
-        this.poLines[index][field] = option.name;
+      return;
+    }
+
+    // Other fields
+    if (field === 'item') {
+      this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
+    } else if (field === 'budget') {
+      this.poLines[index][field] = option.label;
+    } else if (field === 'location') {
+      this.poLines[index][field] = option.name;
+    } else if (field === 'recurring') {
+      this.poLines[index][field] = option.recurringName;
+    } else if (field === 'taxCode') {
+      this.poLines[index][field] = option.name;
+    } else {
+      this.poLines[index][field] = option;
+    }
+
+    this.poLines[index].dropdownOpen = ''; // close dropdown
+  }
+
+  /** ========= APPEND PR → PO LINES (no replace) ========= */
+  private appendPRToPOLines(pr: any) {
+    const lines = this.safeParsePrLines(pr?.prLines);
+    if (!lines.length) return;
+
+    const newPOLines = lines.map((l: any) =>
+      this.mapPRLineToPOLine(pr.purchaseRequestNo, l)
+    );
+
+    // ✅ 1) Remove ALL empty/placeholder rows before appending
+    this.poLines = this.poLines.filter(line => !this.isEmptyLine(line) && !this.isOnlyPrNo(line));
+
+    // ✅ 2) Append new PR lines (avoid duplicates — or merge qty)
+    for (const nl of newPOLines) {
+      const dupIdx = this.poLines.findIndex(pl => this.isSameLine(pl, nl));
+      if (dupIdx === -1) {
+        this.poLines.push(nl);
       } else {
-        this.poLines[index][field] = option;
-      }
-
-      this.poLines[index].dropdownOpen = ''; // close dropdown
-    }
-
-    /** ========= APPEND PR → PO LINES (no replace) ========= */
-    private appendPRToPOLines(pr: any) {
-      const lines = this.safeParsePrLines(pr?.prLines);
-      if (!lines.length) return;
-
-      const newPOLines = lines.map((l: any) =>
-        this.mapPRLineToPOLine(pr.purchaseRequestNo, l)
-      );
-
-      // ✅ 1) Remove ALL empty/placeholder rows before appending
-      this.poLines = this.poLines.filter(line => !this.isEmptyLine(line) && !this.isOnlyPrNo(line));
-
-      // ✅ 2) Append new PR lines (avoid duplicates — or merge qty)
-      for (const nl of newPOLines) {
-        const dupIdx = this.poLines.findIndex(pl => this.isSameLine(pl, nl));
-        if (dupIdx === -1) {
-          this.poLines.push(nl);
-        } else {
-          // If you prefer merging quantities for identical lines, uncomment:
-          // this.poLines[dupIdx].qty = (Number(this.poLines[dupIdx].qty) || 0) + (Number(nl.qty) || 0);
-        }
+        // If you prefer merging quantities for identical lines, uncomment:
+        // this.poLines[dupIdx].qty = (Number(this.poLines[dupIdx].qty) || 0) + (Number(nl.qty) || 0);
       }
     }
+  }
 
-    private safeParsePrLines(raw: any): any[] {
-      if (Array.isArray(raw)) return raw;
-      if (!raw) return [];
-      try {
-        const parsed = JSON.parse(String(raw));
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+  private safeParsePrLines(raw: any): any[] {
+    if (Array.isArray(raw)) return raw;
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(String(raw));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
+  }
 
-    private mapPRLineToPOLine(prNo: string, line: any) {
-      const po = this.makeEmptyPOLine();
-      po.prNo = prNo;
+  private mapPRLineToPOLine(prNo: string, line: any) {
+    const po = this.makeEmptyPOLine();
+    po.prNo = prNo;
 
-      // Prefer "code - name" if both exist; fallback to whatever is present
-      const itemCode = line.itemCode ?? line.itemSearch ?? '';
-      const itemName = line.itemName ?? line.itemSearch ?? '';
-      po.item = itemName && itemCode ? `${itemCode} - ${itemName}` : (itemCode || itemName || '');
+    // Prefer "code - name" if both exist; fallback to whatever is present
+    const itemCode = line.itemCode ?? line.itemSearch ?? '';
+    const itemName = line.itemName ?? line.itemSearch ?? '';
+    po.item = itemName && itemCode ? `${itemCode} - ${itemName}` : (itemCode || itemName || '');
 
-      po.description = line.remarks ?? '';
-      po.budget = line.budget ?? '';
-      po.location = line.location ?? line.locationSearch ?? '';
-      po.qty = Number(line.qty) || 0;
+    po.description = line.remarks ?? '';
+    po.budget = line.budget ?? '';
+    po.location = line.location ?? line.locationSearch ?? '';
+    po.qty = Number(line.qty) || 0;
 
-      return po;
-    }
+    return po;
+  }
 
-    private makeEmptyPOLine() {
-      return {
-        prNo: '',
-        item: '',
-        description: '',
-        budget: '',
-        recurring: '',
-        taxCode: '',
-        location: '',
-        contactNumber: '',
-        qty: 0,
-        price: '',
-        discount: '',
-        total:'',
+  private makeEmptyPOLine() {
+    return {
+      prNo: '',
+      item: '',
+      description: '',
+      budget: '',
+      recurring: '',
+      taxCode: '',
+      location: '',
+      contactNumber: '',
+      qty: 0,
+      price: '',
+      discount: '',
+      total: '',
 
-        dropdownOpen: '',
-        filteredOptions: []
-      };
-    }
+      dropdownOpen: '',
+      filteredOptions: []
+    };
+  }
 
-    /** Treat a row with no meaningful data as empty */
-    private isEmptyLine(line: any): boolean {
-      return !line?.prNo &&
-            !line?.item &&
-            !line?.budget &&
-            !line?.location &&
-            !String(line?.description ?? '').trim() &&
-            (Number(line?.qty) || 0) === 0;
-    }
+  /** Treat a row with no meaningful data as empty */
+  private isEmptyLine(line: any): boolean {
+    return !line?.prNo &&
+      !line?.item &&
+      !line?.budget &&
+      !line?.location &&
+      !String(line?.description ?? '').trim() &&
+      (Number(line?.qty) || 0) === 0;
+  }
 
-    /** Row that has ONLY a PR number (typical "picker" row after selection) */
-    private isOnlyPrNo(line: any): boolean {
-      const empty = (v: any) => !String(v ?? '').trim();
-      return !!line?.prNo &&
-            empty(line?.item) &&
-            empty(line?.budget) &&
-            empty(line?.location) &&
-            empty(line?.description) &&
-            (Number(line?.qty) || 0) === 0;
-    }
+  /** Row that has ONLY a PR number (typical "picker" row after selection) */
+  private isOnlyPrNo(line: any): boolean {
+    const empty = (v: any) => !String(v ?? '').trim();
+    return !!line?.prNo &&
+      empty(line?.item) &&
+      empty(line?.budget) &&
+      empty(line?.location) &&
+      empty(line?.description) &&
+      (Number(line?.qty) || 0) === 0;
+  }
 
-    /** Equality used to prevent duplicate rows */
-    private isSameLine(a: any, b: any): boolean {
-      const norm = (v: any) => String(v ?? '').trim().toLowerCase();
-      return (
-        norm(a.prNo) === norm(b.prNo) &&
-        norm(a.item) === norm(b.item) &&
-        norm(a.location) === norm(b.location) &&
-        norm(a.budget) === norm(b.budget) &&
-        norm(a.description) === norm(b.description)
-      );
-    }
+  /** Equality used to prevent duplicate rows */
+  private isSameLine(a: any, b: any): boolean {
+    const norm = (v: any) => String(v ?? '').trim().toLowerCase();
+    return (
+      norm(a.prNo) === norm(b.prNo) &&
+      norm(a.item) === norm(b.item) &&
+      norm(a.location) === norm(b.location) &&
+      norm(a.budget) === norm(b.budget) &&
+      norm(a.description) === norm(b.description)
+    );
+  }
 
   poAddLine() {
     // this.poLines = [...this.poLines, { tax: 'STD' }]; 
@@ -606,7 +623,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       qty: 0,
       price: '',
       discount: '',
-      total:'',     
+      total: '',
 
       dropdownOpen: '',
       filteredOptions: []
@@ -621,7 +638,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   poChange(i: number, key: string, val: any) {
     const copy = [...this.poLines]; copy[i] = { ...copy[i], [key]: val }; this.poLines = copy;
   }
-    
+
   trackByIndex = (i: number, _: any) => i;
 
 
@@ -644,12 +661,12 @@ export class PurchaseOrderCreateComponent implements OnInit {
   recalculateTotals() {
     // Just force Angular change detection by re-assigning the header object
     this.poHdr = { ...this.poHdr };
-     this.calculateFxTotal();
+    this.calculateFxTotal();
   }
 
 
   /** Compute totals dynamically */
- get poTotals() {
+  get poTotals() {
     return this.calcTotals(this.poLines, this.poHdr.shipping, this.poHdr.discount, this.poHdr.tax);
   }
 
@@ -674,50 +691,65 @@ export class PurchaseOrderCreateComponent implements OnInit {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
-calculateFxTotal() {
-  const fx = Number(this.poHdr.fxRate) || 1;
-  const netTotal = this.poTotals?.netTotal || 0;
+  calculateFxTotal() {
+    const fx = Number(this.poHdr.fxRate) || 1;
+    const netTotal = this.poTotals?.netTotal || 0;
 
-  if (this.isSGDCurrency()) {
-    // Base currency = SGD → no conversion needed
-    this.poHdr.netTotalBase = netTotal;
-  } else {
-    // Convert to base SGD
-    this.poHdr.netTotalBase = Number((netTotal * fx).toFixed(2));
+    if (this.isSGDCurrency()) {
+      // Base currency = SGD → no conversion needed
+      this.poHdr.netTotalBase = netTotal;
+    } else {
+      // Convert to base SGD
+      this.poHdr.netTotalBase = Number((netTotal * fx).toFixed(2));
+    }
   }
-}
   notify(msg: string) {
     alert(msg);
   }
-  deliveryChange(){
+  deliveryChange() {
     this.iserrorDelivery = false
   }
+  validatePO(): boolean {
+
+    // Case 1: No lines
+    if (this.poLines.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line item.' });
+      return false;
+    }
+
+    // Case 2: Missing or invalid price
+    const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
+    if (invalidLine) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
+      return false;
+    }
+
+    return true; // ✅ everything is okay
+  }
   saveRequest() {
-    
+
     this.submitted = true;
+    if (!this.poHdr.deliveryDate) {
+      this.iserrorDelivery = true
+    } else {
+      this.iserrorDelivery = false;
+    }
 
     const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
-    if (missing.length || !this.poHdr.deliveryDate) {
-    this.iserrorDelivery = true
-          Swal.fire({
-            icon: 'warning',
-            title: 'Required',
-            text: 'Please fill required Fields',
-            confirmButtonColor: '#0e3a4c'
-          });
-          return;
-    }
-   
+    if (missing.length || this.iserrorDelivery) {
 
-     if ( this.poLines.length ==0) {
-          Swal.fire({
-            icon: 'warning',
-            title: 'Required',
-            text: 'Line Items are required',
-            confirmButtonColor: '#0e3a4c'
-          });
-          return;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Required',
+        text: 'Please fill required Fields',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return;
     }
+
+
+    if (!this.validatePO()) return;
+
     const payload = {
       id: this.poHdr.id ? this.poHdr.id : 0,
       purchaseOrderNo: this.poHdr.purchaseOrderNo ? this.poHdr.purchaseOrderNo : '',
@@ -729,12 +761,12 @@ calculateFxTotal() {
       incotermsId: this.poHdr.incotermsId,
       poDate: this.poHdr.poDate,
       deliveryDate: this.poHdr.deliveryDate,
-      remarks: this.poHdr.remarks,                
+      remarks: this.poHdr.remarks,
       tax: this.poHdr.tax,
       shipping: this.poHdr.shipping,
       discount: this.poHdr.discount,
       subTotal: Number(this.poTotals.subTotal.toFixed(2)),
-      netTotal: Number(this.poTotals.netTotal.toFixed(2)),   
+      netTotal: Number(this.poTotals.netTotal.toFixed(2)),
       approvalStatus: this.poHdr.approvalStatus,
       poLines: JSON.stringify(this.poLines)
     };
@@ -742,51 +774,51 @@ calculateFxTotal() {
     if (this.poHdr.id && this.poHdr.id > 0) {
       // 🔹 Update request
       this.poService.updatePO(payload).subscribe({
-       next: () => {
-                      Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: 'PO updated successfully',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#0e3a4c'
-                      });
-                      this.router.navigateByUrl(`/purchase/list-purchaseorder`)
-                      
-                    },
-                    error: () => {
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to updated PO',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#d33'
-                      });
-                    }
+        next: () => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Updated!',
+            text: 'PO updated successfully',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0e3a4c'
+          });
+          this.router.navigateByUrl(`/purchase/list-purchaseorder`)
+
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to updated PO',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33'
+          });
+        }
       });
     } else {
       // 🔹 Create request
-      this.poService.insertPO(payload).subscribe({     
+      this.poService.insertPO(payload).subscribe({
 
-          next: () => {
-                      Swal.fire({
-                        icon: 'success',
-                        title: 'Created!',
-                        text: 'PO created successfully',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#0e3a4c'
-                      });
-                      this.router.navigateByUrl(`/purchase/list-purchaseorder`)
-                      
-                    },
-                    error: () => {
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to created PO',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#d33'
-                      });
-                    }
+        next: () => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Created!',
+            text: 'PO created successfully',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0e3a4c'
+          });
+          this.router.navigateByUrl(`/purchase/list-purchaseorder`)
+
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to created PO',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33'
+          });
+        }
       });
     }
   }
@@ -796,6 +828,18 @@ calculateFxTotal() {
   }
   cancel() {
     this.router.navigate(['/purchase/list-purchaseorder']);
+  }
+
+  allowOnlyNumbers(event: KeyboardEvent) {
+    const invalidKeys = ['e', 'E', '+', '-', '.'];
+    if (invalidKeys.includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+  sanitizeNumberInput(field: string, index: number) {
+    this.poLines[index][field] = this.poLines[index][field]
+      ?.toString()
+      .replace(/\D/g, '') || '';
   }
 
 }
