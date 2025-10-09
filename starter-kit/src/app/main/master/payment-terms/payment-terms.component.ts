@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { PaymentTermsService } from './payment-terms.service';
@@ -9,7 +9,7 @@ import * as feather from 'feather-icons';
   templateUrl: './payment-terms.component.html',
   styleUrls: ['./payment-terms.component.scss']
 })
-export class PaymentTermsComponent implements OnInit {
+export class PaymentTermsComponent implements OnInit,AfterViewChecked {
  @ViewChild('addForm') addForm!: NgForm;
   PaymentTermsList: any[] = [];
   PaymentTermsName: string = '';
@@ -27,9 +27,11 @@ export class PaymentTermsComponent implements OnInit {
   ngOnInit(): void {
     this.loadPaymentTerms();
   }
-  ngAfterViewChecked(): void {
-    feather.replace();  // remove the guard so icons refresh every cycle
-  }
+ ngAfterViewChecked(): void {
+      setTimeout(() => {
+        feather.replace();
+      });
+    }
   ngAfterViewInit(): void {
     feather.replace();
   }

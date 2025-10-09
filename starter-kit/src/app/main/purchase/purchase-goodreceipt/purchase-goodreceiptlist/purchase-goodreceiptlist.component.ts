@@ -1,8 +1,9 @@
-import { Component, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
 import Swal from 'sweetalert2';
+import * as feather from 'feather-icons';
 
 interface GrnRow {
   id: number;
@@ -10,31 +11,24 @@ interface GrnRow {
   poid: number | null;
   grnNo: string;
   pono: string;
-
   itemCode: string;
   itemName: string;
-
   supplierId: number | null;
   name: string;
-
   storageType: string;
   surfaceTemp: string;
   expiry: string | Date | null;
-
   pestSign: string;
   drySpillage: string;
   odor: string;
   plateNumber: string;
   defectLabels: string;
   damagedPackage: string;
-
   time: string | Date | null;
   initial: string;
-
-  // add this:
   isFlagIssue: boolean;
+  isPostInventory: boolean;
 }
-
 
 type ViewerState = { open: boolean; src: string | null };
 
@@ -44,7 +38,7 @@ type ViewerState = { open: boolean; src: string | null };
   styleUrls: ['./purchase-goodreceiptlist.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class PurchaseGoodreceiptlistComponent implements OnInit {
+export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
   @ViewChild(DatatableComponent) table!: DatatableComponent;
 
   public ColumnMode = ColumnMode;
@@ -54,8 +48,13 @@ export class PurchaseGoodreceiptlistComponent implements OnInit {
   rows: GrnRow[] = [];
   allRows: GrnRow[] = [];
 
-  // Image modal state
+  // Image modal
   imageViewer: ViewerState = { open: false, src: null };
+
+  // Lines modal
+  showLinesModal = false;
+  modalLines: any[] = [];
+  modalHeader = { grnNo: '' };
 
   constructor(
     private grnService: PurchaseGoodreceiptService,
@@ -66,177 +65,229 @@ export class PurchaseGoodreceiptlistComponent implements OnInit {
     this.loadGrns();
   }
 
-  /** Load and normalize API payload -> table rows */
-private loadGrns(): void {
-  this.grnService.getAllDetails().subscribe({
-    next: (res: any) => {
-      const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-      const normalized = (list || []).map<GrnRow>((g: any) => ({
-        id: g.id ?? g.ID ?? null,
-        receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
-        poid: g.poid ?? g.POID ?? g.poId ?? null,
-        grnNo: g.grnNo ?? g.GrnNo ?? '',
-        pono: g.pono ?? g.Pono ?? '',
-
-        itemCode: g.itemCode ?? g.ItemCode ?? '',
-        itemName: g.itemName ?? g.ItemName ?? '',
-
-        supplierId: g.supplierId ?? g.SupplierId ?? null,
-        name: g.name ?? g.Name ?? '',
-
-        storageType: g.storageType ?? g.StorageType ?? '',
-        surfaceTemp: (g.surfaceTemp ?? g.SurfaceTemp ?? '').toString(),
-        expiry: g.expiry ?? g.Expiry ?? null,
-
-        pestSign: g.pestSign ?? g.PestSign ?? '',
-        drySpillage: g.drySpillage ?? g.DrySpillage ?? '',
-        odor: g.odor ?? g.Odor ?? '',
-        plateNumber: g.plateNumber ?? g.PlateNumber ?? '',
-        defectLabels: g.defectLabels ?? g.DefectLabels ?? '',
-        damagedPackage: g.damagedPackage ?? g.DamagedPackage ?? '',
-
-        time: g.time ?? g.Time ?? null,
-        initial: g.initial ?? g.Initial ?? '',
-
-        // fix the odd line: ensure boolean
-        isFlagIssue: Boolean(g.isFlagIssue ?? g.IsFlagIssue ?? false),
-      }));
-
-      this.allRows = normalized;
-
-      // >>> collapse by (grnNo, isFlagIssue)
-      this.rows = this.collapseByGrn(normalized);
-
-      if (this.table) this.table.offset = 0;
-    },
-    error: (err) => {
-      console.error('Error loading GRN list', err);
-      this.allRows = [];
-      this.rows = [];
-    }
-  });
-}
-
-/** Collapse lines that share the same (grnNo, isFlagIssue).
- *  Item names are combined into a single summary like: "Laptop, Printer (2)".
- */
-private collapseByGrn(rows: GrnRow[]): GrnRow[] {
-  const map = new Map<string, { base: GrnRow; items: Set<string> }>();
-
-  for (const r of rows) {
-    const key = `${r.grnNo}__${r.isFlagIssue ? 1 : 0}`;
-    if (!map.has(key)) {
-      // clone to avoid mutating original references
-      map.set(key, { base: { ...r }, items: new Set<string>([r.itemName?.trim() || '']) });
-    } else {
-      const bucket = map.get(key)!;
-      // keep earliest non-empty for selected fields (optional)
-      if (!bucket.base.storageType && r.storageType) bucket.base.storageType = r.storageType;
-      if (!bucket.base.surfaceTemp && r.surfaceTemp) bucket.base.surfaceTemp = r.surfaceTemp;
-      if (!bucket.base.name && r.name) bucket.base.name = r.name;
-
-      // merge item names
-      if (r.itemName) bucket.items.add(r.itemName.trim());
-    }
+  ngAfterViewInit(): void {
+    this.refreshFeatherIcons();
   }
 
-  // finalize summaries
-  const collapsed: GrnRow[] = [];
-  for (const { base, items } of map.values()) {
-    const itemList = [...items].filter(Boolean);
-    const count = itemList.length;
-    const summary = itemList.join(', ');
-    collapsed.push({
-      ...base,
-      // Overwrite itemName to a compact summary for display
-      itemName: count > 1 ? `${summary} (${count})` : (summary || base.itemName),
-      // Optional: clear itemCode because multiple codes exist; or keep the first one
-      itemCode: count > 1 ? '' : base.itemCode,
+  /** Refresh Feather icons (call after table or DOM updates) */
+  refreshFeatherIcons(): void {
+    setTimeout(() => feather.replace(), 0);
+  }
+
+  /** Load GRNs from API */
+  private loadGrns(): void {
+    this.grnService.getAllDetails().subscribe({
+      next: (res: any) => {
+        const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const normalized = (list || []).map<GrnRow>((g: any) => ({
+          id: g.id ?? g.ID ?? null,
+          receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
+          poid: g.poid ?? g.POID ?? g.poId ?? null,
+          grnNo: g.grnNo ?? g.GrnNo ?? '',
+          pono: g.pono ?? g.Pono ?? '',
+          itemCode: g.itemCode ?? g.ItemCode ?? '',
+          itemName: g.itemName ?? g.ItemName ?? '',
+          supplierId: g.supplierId ?? g.SupplierId ?? null,
+          name: g.name ?? g.Name ?? '',
+          storageType: g.storageType ?? g.StorageType ?? '',
+          surfaceTemp: (g.surfaceTemp ?? g.SurfaceTemp ?? '').toString(),
+          expiry: g.expiry ?? g.Expiry ?? null,
+          pestSign: g.pestSign ?? g.PestSign ?? '',
+          drySpillage: g.drySpillage ?? g.DrySpillage ?? '',
+          odor: g.odor ?? g.Odor ?? '',
+          plateNumber: g.plateNumber ?? g.PlateNumber ?? '',
+          defectLabels: g.defectLabels ?? g.DefectLabels ?? '',
+          damagedPackage: g.damagedPackage ?? g.DamagedPackage ?? '',
+          time: g.time ?? g.Time ?? null,
+          initial: g.initial ?? g.Initial ?? '',
+          isFlagIssue: this.truthy(g.isFlagIssue ?? g.IsFlagIssue ?? false),
+          isPostInventory: this.truthy(g.isPostInventory ?? g.IsPostInventory ?? false),
+        }));
+
+        this.allRows = normalized;
+        this.rows = this.collapseByGrn(normalized);
+        if (this.table) this.table.offset = 0;
+
+        this.refreshFeatherIcons(); // ✅ Ensure icons render after table load
+      },
+      error: (err) => {
+        console.error('Error loading GRN list', err);
+        this.allRows = [];
+        this.rows = [];
+      }
     });
   }
-  return collapsed;
-}
 
+  /** Collapse multiple items by GRN */
+  private collapseByGrn(rows: GrnRow[]): GrnRow[] {
+    const map = new Map<string, { base: GrnRow; items: Set<string> }>();
+    for (const r of rows) {
+      const key = `${r.grnNo}__${this.truthy(r.isFlagIssue)}__${this.truthy(r.isPostInventory)}`;
+      if (!map.has(key)) {
+        map.set(key, { base: { ...r }, items: new Set<string>([r.itemName?.trim() || '']) });
+      } else {
+        const bucket = map.get(key)!;
+        if (!bucket.base.name && r.name) bucket.base.name = r.name;
+        if (!bucket.base.pono && r.pono) bucket.base.pono = r.pono;
+        bucket.items.add(r.itemName?.trim() || '');
+      }
+    }
 
-  /** Global client-side search across common fields */
+    return Array.from(map.values()).map(({ base, items }) => {
+      const list = [...items].filter(Boolean);
+      const summary = list.join(', ');
+      return { ...base, itemName: list.length > 1 ? `${summary} (${list.length})` : (summary || base.itemName) };
+    });
+  }
+
+  /** Search filter */
   filterUpdate(event: Event): void {
     const val = (event.target as HTMLInputElement).value?.toLowerCase().trim() ?? '';
     this.searchValue = val;
-
     if (!val) {
-      this.rows = [...this.allRows];
+      this.rows = this.collapseByGrn(this.allRows);
       if (this.table) this.table.offset = 0;
+      this.refreshFeatherIcons();
       return;
     }
 
-    this.rows = this.allRows.filter(r => {
-      const dateStr = (r.receptionDate ? new Date(r.receptionDate).toISOString().slice(0, 10) : '');
-      const expiryStr = (r.expiry ? new Date(r.expiry).toISOString().slice(0, 10) : '');
-      return (
-        (r.grnNo ?? '').toLowerCase().includes(val) ||
-        (r.pono ?? '').toLowerCase().includes(val) ||
-        (r.itemCode ?? '').toLowerCase().includes(val) ||
-        (r.itemName ?? '').toLowerCase().includes(val) ||
-        (r.name ?? '').toLowerCase().includes(val) ||
-        (r.storageType ?? '').toLowerCase().includes(val) ||
-        (r.surfaceTemp ?? '').toLowerCase().includes(val) ||
-        (r.pestSign ?? '').toLowerCase().includes(val) ||
-        (r.drySpillage ?? '').toLowerCase().includes(val) ||
-        (r.odor ?? '').toLowerCase().includes(val) ||
-        (r.plateNumber ?? '').toLowerCase().includes(val) ||
-        (r.defectLabels ?? '').toLowerCase().includes(val) ||
-        (r.damagedPackage ?? '').toLowerCase().includes(val) ||
-        dateStr.includes(val) ||
-        expiryStr.includes(val)
-      );
-    });
+    const filtered = this.allRows.filter(r =>
+      (r.grnNo ?? '').toLowerCase().includes(val) ||
+      (r.pono ?? '').toLowerCase().includes(val) ||
+      (r.itemCode ?? '').toLowerCase().includes(val) ||
+      (r.itemName ?? '').toLowerCase().includes(val) ||
+      (r.name ?? '').toLowerCase().includes(val)
+    );
 
+    this.rows = this.collapseByGrn(filtered);
     if (this.table) this.table.offset = 0;
+    this.refreshFeatherIcons();
   }
 
-  isDateLike(v: any): boolean {
-    // Simple guard so HH:mm strings won't throw
-    return !!v && !/^\d{1,2}:\d{2}$/.test(String(v));
+  /** Lines modal */
+  openLinesModal(row: GrnRow): void {
+    this.refreshFeatherIcons(); // add this line
+    if (!row?.grnNo) return;
+
+    this.modalHeader = { grnNo: row.grnNo || '' };
+    this.modalLines = [];
+    this.showLinesModal = true;
+
+    const sameGrnRows = this.allRows.filter(r => (r.grnNo || '') === (row.grnNo || ''));
+    const sameStatusRows = sameGrnRows.filter(r =>
+      this.truthy(r.isPostInventory) === this.truthy(row.isPostInventory) &&
+      this.truthy(r.isFlagIssue) === this.truthy(row.isFlagIssue)
+    );
+
+    if (sameStatusRows.length) {
+      this.modalLines = sameStatusRows.map(r => this.toModalLine(r, r.name));
+      return;
+    }
+
+    this.grnService.getByIdGRN(row.id).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res ?? {};
+        let lines: any[] = [];
+        try {
+          const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
+          lines = Array.isArray(raw) ? raw : JSON.parse(raw);
+        } catch { lines = []; }
+
+        const picked = this.pickOneLine(lines, row);
+        if (!picked.supplierName) picked.supplierName = row.name ?? '';
+        this.modalLines = [ this.toModalLine(picked, row.name) ];
+      },
+      error: (err) => {
+        console.error('Failed to load GRN by id', err);
+        this.modalLines = [ this.toModalLine(row, row.name) ];
+      }
+    });
+  }
+
+  closeLinesModal(): void {
+    this.showLinesModal = false;
+    this.modalLines = [];
+  }
+
+  /** Convert GRN row to modal line */
+  private toModalLine(src: any, fallbackName?: string) {
+    const timeDate = this.parseTime(src.time);
+    return {
+      itemName: src.itemName ?? src.itemText ?? src.item ?? '',
+      item: src.item ?? '',
+      itemCode: src.itemCode ?? '',
+      supplierName: src.supplierName ?? fallbackName ?? '',
+      storageType: src.storageType ?? '',
+      surfaceTemp: src.surfaceTemp ?? '',
+      expiry: src.expiry ? this.toDate(src.expiry) : null,
+      pestSign: src.pestSign ?? '',
+      drySpillage: src.drySpillage ?? '',
+      odor: src.odor ?? '',
+      plateNumber: src.plateNumber ?? '',
+      defectLabels: src.defectLabels ?? '',
+      damagedPackage: src.damagedPackage ?? '',
+      time: timeDate,
+      timeText: this.coerceTimeText(src.time),
+      isFlagIssue: this.truthy(src.isFlagIssue),
+      isPostInventory: this.truthy(src.isPostInventory),
+    };
+  }
+
+  private parseTime(v: any): Date | null {
+    if (!v) return null;
+    const s = String(v).trim();
+    const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+    if (m) {
+      const d = new Date();
+      d.setHours(+m[1], +m[2], m[3] ? +m[3] : 0, 0);
+      return d;
+    }
+    const d = new Date(v);
+    return isNaN(+d) ? null : d;
+  }
+
+  private pickOneLine(lines: any[], row: GrnRow) {
+    return (
+      lines.find(l => (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '')) ||
+      lines.find(l =>
+        (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '') &&
+        (String(l.storageType ?? '') === String(row.storageType ?? '') ||
+         String(l.surfaceTemp ?? '') === String(row.surfaceTemp ?? ''))
+      ) ||
+      lines[0] || {}
+    );
   }
 
   isDataUrl(v: string | null | undefined): boolean {
     const s = String(v ?? '');
-    // Accept common image data URLs
     return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(s);
   }
 
-  /** Thumbnail click -> open modal */
   openImage(src: string): void {
     if (!this.isDataUrl(src)) return;
     this.imageViewer = { open: true, src };
-    document.body.style.overflow = 'hidden'; // lock scroll
+    document.body.style.overflow = 'hidden';
   }
 
   closeImage(): void {
     this.imageViewer = { open: false, src: null };
-    document.body.style.overflow = ''; // restore scroll
+    document.body.style.overflow = '';
   }
 
-  onImageLoaded(): void {
-    // hook for spinner if needed
-  }
-
-  @HostListener('document:keydown.escape')
-  handleEsc(): void {
+  @HostListener('document:keydown.escape') handleEsc(): void {
     if (this.imageViewer.open) this.closeImage();
+    if (this.showLinesModal) this.closeLinesModal();
   }
 
   goToCreateGRN(): void {
     this.router.navigate(['/purchase/createpurchasegoodreceipt']);
   }
 
-editGRN(id:any){
-  this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`)
-}
+  editGRN(id: any) {
+    this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`);
+  }
 
-
-
-    deleteGRN(id: number) {
+  deleteGRN(id: number) {
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
@@ -245,29 +296,65 @@ editGRN(id:any){
       confirmButtonColor: '#7367F0',
       cancelButtonColor: '#E42728',
       confirmButtonText: 'Yes, Delete it!',
-      customClass: {
-        confirmButton: 'btn btn-primary',
-        cancelButton: 'btn btn-danger ml-1'
-      },
+      customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-danger ml-1' },
       allowOutsideClick: false,
     }).then((result) => {
-      if (result.isConfirmed) {  // note: SweetAlert2 uses isConfirmed instead of value in recent versions
-        this.grnService.deleteGRN(id).subscribe((response: any) => {
-          Swal.fire({
-            icon: response.isSuccess ? 'success' : 'error',
-            title: response.isSuccess ? 'Deleted!' : 'Error!',
-            text: response.message,
-            allowOutsideClick: false,
-          });
-          this.loadGrns();  // Refresh the list after deletion
-        }, error => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: 'Something went wrong while deleting.',
-          });
+      if (result.isConfirmed) {
+        this.grnService.deleteGRN(id).subscribe({
+          next: (response: any) => {
+            Swal.fire({
+              icon: response.isSuccess ? 'success' : 'error',
+              title: response.isSuccess ? 'Deleted!' : 'Error!',
+              text: response.message,
+              allowOutsideClick: false,
+            });
+            this.loadGrns();
+          },
+          error: () => {
+            Swal.fire({ icon: 'error', title: 'Error!', text: 'Something went wrong while deleting.' });
+          }
         });
       }
     });
   }
+
+  private toDate(d: any): Date | null {
+    const dt = new Date(d);
+    if (isNaN(+dt)) return null;
+    if (dt.getFullYear() === 1900) return null;
+    return dt;
+  }
+
+  private truthy(v: any): boolean {
+    if (v === true || v === 1) return true;
+    if (v === false || v === 0 || v === null || v === undefined) return false;
+    const s = String(v).trim().toLowerCase();
+    return s === '1' || s === 'true' || s === 'yes';
+  }
+
+  statusText(row: any): 'Posted' | 'Flagged' | 'Pending' {
+    const isPost = this.truthy(row?.isPostInventory);
+    const isFlag = this.truthy(row?.isFlagIssue);
+    if (isPost) return 'Posted';
+    if (isFlag) return 'Flagged';
+    return 'Pending';
+  }
+
+  statusClass(row: any): string {
+    const t = this.statusText(row);
+    if (t === 'Posted') return 'badge-success';
+    if (t === 'Flagged') return 'badge-warning';
+    return 'badge-danger';
+  }
+
+  private coerceTimeText(v: any): string | null {
+    if (!v) return null;
+    const d = this.parseTime(v);
+    if (!d) return null;
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+
 }

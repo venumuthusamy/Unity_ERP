@@ -19,6 +19,11 @@ export class POService {
         return this.http.get<any[]>(this.url + POApiUrls.GetAllPO);
     }
 
+    
+     getPODetailswithGRN(): Observable<any[]> {
+        return this.http.get<any[]>(this.url + POApiUrls.GetAllPODetailsWithGRN);
+    }
+
     getPOById(id: any): Observable<any[]> {
         return this.http.get<any[]>(this.url + POApiUrls.GetPOById + id);
     }

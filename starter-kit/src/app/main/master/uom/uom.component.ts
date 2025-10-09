@@ -27,9 +27,12 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
   ngOnInit(): void {
     this.loadUom();
   }
-  ngAfterViewChecked(): void {
-    feather.replace();  // remove the guard so icons refresh every cycle
-  }
+ ngAfterViewChecked(): void {
+  setTimeout(() => {
+    feather.replace();
+  });
+}
+
   ngAfterViewInit(): void {
     feather.replace();
   }
