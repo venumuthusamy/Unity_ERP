@@ -33,6 +33,8 @@ private url = environment.apiUrl;
   deleteGRN(id: number): Observable<any> {
     return this.http.delete(`${this.url + GRNApiUrls.DeleteGRN}${id}`);
   }
-
+  GetAllGRNByPoId(): Observable<any> {
+    return this.http.get<any[]>(this.url + GRNApiUrls.GetAllGRNByPOId);
+  }
 
 }

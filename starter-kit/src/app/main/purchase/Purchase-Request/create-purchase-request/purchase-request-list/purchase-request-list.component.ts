@@ -4,7 +4,7 @@ import { PurchaseService } from 'app/main/purchase/purchase.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
-
+import * as feather from 'feather-icons';
 
 @Component({
   selector: 'app-purchase-request-list',
@@ -157,5 +157,10 @@ openLinesModal(row: any) {
 closeLinesModal() {
   this.showLinesModal = false;
 }
-
+ngAfterViewChecked(): void {
+     feather.replace();  // remove the guard so icons refresh every cycle
+   }
+   ngAfterViewInit(): void {
+     feather.replace();
+   }
 }

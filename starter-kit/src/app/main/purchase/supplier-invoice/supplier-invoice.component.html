@@ -1,5 +1,11 @@
-<button class="btn mb-2" style="background-color: #2E5F73; color: white;" (click)="goToSupplierInvoice()">
-  Go to Supplier Invoice list
+<button (click)="goToSupplierInvoice()"
+  class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
+  style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
+  <!-- left-side icon -->
+  <i class="fas fa-arrow-left position-absolute" style="left:0.75rem; top:50%; transform:translateY(-50%);"
+    aria-hidden="true"></i>
+
+  <span>Go to Supplier Invoice list</span>
 </button>
 
 <form class="ui-compact" [formGroup]="form">
@@ -9,7 +15,8 @@
       <!-- Title -->
       <div class="flex items-center justify-between">
         <h4 class="card-text pin-title">Supplier Invoice (PIN)</h4>
-        <span class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+        <span
+          class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
           3-way match: PO · GRN · PIN
         </span>
       </div>
@@ -20,32 +27,21 @@
         <div class="relative grn-combobox">
           <label class="text-[11px] font-medium text-gray-600 block">GRN #</label>
           <div class="relative">
-            <input
-              type="text"
-              [value]="grnSearch"
-              (input)="onGrnSearch($event)"
-              (focus)="onGrnFocus()"
-              placeholder="Search GRN…"
-              class="w-full rounded-lg border px-2.5 h-8 text-[13px] pr-7"
-              [attr.aria-autocomplete]="'list'"
-              [attr.aria-expanded]="grnOpen"
-            />
-            <button
-              type="button"
-              class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-[11px]"
-              (click)="grnOpen = !grnOpen"
-              aria-label="Toggle GRN list">▼</button>
+            <input type="text" [value]="grnSearch" (input)="onGrnSearch($event)" (focus)="onGrnFocus()"
+              placeholder="Search GRN…" class="w-full rounded-lg border px-2.5 h-8 text-[13px] pr-7"
+              [attr.aria-autocomplete]="'list'" [attr.aria-expanded]="grnOpen" />
+            <button type="button" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-[11px]"
+              (click)="grnOpen = !grnOpen" aria-label="Toggle GRN list">▼</button>
           </div>
 
           <!-- actual form value -->
-          <input type="hidden" formControlName="grnNo"/>
+          <input type="hidden" formControlName="grnNo" />
 
           <!-- dropdown -->
           <ul *ngIf="grnOpen"
-              class="absolute left-0 right-0 mt-1 max-h-48 overflow-auto bg-white border rounded-md shadow z-20">
-            <li *ngFor="let g of grnFiltered; trackBy: trackByGrn"
-                (click)="selectGrn(g)"
-                class="px-3 py-2 cursor-pointer hover:bg-blue-50 text-[13px]">
+            class="absolute left-0 right-0 mt-1 max-h-48 overflow-auto bg-white border rounded-md shadow z-20">
+            <li *ngFor="let g of grnFiltered; trackBy: trackByGrn" (click)="selectGrn(g)"
+              class="px-3 py-2 cursor-pointer hover:bg-blue-50 text-[13px]">
               <span class="font-medium">{{ g.grnNo }}</span>
               <small class="text-gray-500 ml-1" *ngIf="g.poNo">· PO: {{ g.poNo }}</small>
               <small class="text-gray-400 ml-1" *ngIf="g.supplierName">· {{ g.supplierName }}</small>
@@ -56,30 +52,30 @@
 
         <div>
           <label class="text-[11px] font-medium text-gray-600 block">Invoice Date</label>
-          <input type="date" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="invoiceDate"/>
+          <input type="date" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" [min]="minDate"
+            formControlName="invoiceDate" />
         </div>
         <div>
           <label class="text-[11px] font-medium text-gray-600 block">Amount</label>
-          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="amount"/>
+          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="amount" />
         </div>
         <div>
           <label class="text-[11px] font-medium text-gray-600 block">Tax</label>
-          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="tax"/>
+          <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="tax" />
         </div>
       </div>
 
       <!-- Lines -->
       <div class="rounded-xl border border-gray-200 mt-2">
         <!-- Header row -->
-        <div
-          class="grid grid-cols-[2fr_0.8fr_1fr_1fr_1.3fr_0.9fr] text-[12px] font-medium
+        <div class="grid grid-cols-[2fr_0.8fr_1fr_1fr_1.3fr_0.9fr] text-[12px] font-medium
                  bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
           <div class="px-2.5 py-2">Item</div>
           <div class="px-2.5 py-2">Qty</div>
           <div class="px-2.5 py-2">Price</div>
           <div class="px-2.5 py-2">Match</div>
           <div class="px-2.5 py-2">Debit/Credit Note</div>
-          <div class="px-2.5 py-2 text-right">Remove</div>
+          <!-- <div class="px-2.5 py-2 text-right">Remove</div> -->
         </div>
 
         <!-- Body -->
@@ -88,9 +84,7 @@
             No lines yet.
           </div>
 
-          <div
-            *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
-            [formGroupName]="i"
+          <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i"
             class="grid grid-cols-[2fr_0.8fr_1fr_1fr_1.3fr_0.9fr] items-center border-t">
 
             <div class="px-2.5 py-1.5">
@@ -98,25 +92,17 @@
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input
-                type="number"
-                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                formControlName="qty"
+              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="qty"
                 (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input
-                type="number"
-                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                formControlName="price"
+              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="price"
                 (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <span
-                class="text-[11px] px-2 py-0.5 rounded-full border align-middle"
-                [ngClass]="(row.value.matchStatus||'')==='OK'
+              <span class="text-[11px] px-2 py-0.5 rounded-full border align-middle" [ngClass]="(row.value.matchStatus||'')==='OK'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : ( (row.value.matchStatus||'')==='NOT FOUND'
                   ? 'bg-rose-50 text-rose-700 border-rose-200'
@@ -129,20 +115,28 @@
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input
-                class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                formControlName="dcNoteNo"
-                placeholder="DC Note #" />
+              <div class="inline-flex gap-4 items-center">
+                <label class="inline-flex items-center gap-1 text-[12px]">
+                  <input type="radio" [attr.name]="'dcNoteChoice' + i" formControlName="dcNoteNo" value="DEBIT" />
+                  <span>Debit</span>
+                </label>
+
+                <label class="inline-flex items-center gap-1 text-[12px]">
+                  <input type="radio" [attr.name]="'dcNoteChoice' + i" formControlName="dcNoteNo" value="CREDIT" />
+                  <span>Credit</span>
+                </label>
+              </div>
             </div>
 
-            <div class="px-2.5 py-1.5 text-right">
+
+            <!-- <div class="px-2.5 py-1.5 text-right">
               <button
                 type="button"
                 class="inline-flex items-center justify-center px-2.5 h-8 rounded-lg text-[12.5px] font-medium border border-red-500 text-red-600 hover:bg-red-50 transition"
                 (click)="removeLine(i)">
                 Remove
               </button>
-            </div>
+            </div> -->
 
           </div>
         </div>
@@ -152,17 +146,12 @@
       <div class="flex justify-end gap-2 mt-2">
         <button
           class="px-2.5 h-8 rounded-lg text-[13px] font-medium border border-amber-600 text-amber-700 hover:bg-amber-50"
-          type="button"
-          (click)="save('HOLD')">
+          type="button" (click)="save('HOLD')">
           Hold/Review
         </button>
 
-        <button
-          class="px-3 h-8 rounded-lg text-[13px] font-medium text-white disabled:opacity-60"
-          type="submit"
-          [style.backgroundColor]="'#0e3a4c'"
-          [disabled]="form.invalid"
-          (click)="save('POST')">
+        <button class="px-3 h-8 rounded-lg text-[13px] font-medium text-white disabled:opacity-60" type="submit"
+          [style.backgroundColor]="'#0e3a4c'" [disabled]="form.invalid" (click)="save('POST')">
           Post to A/P
         </button>
       </div>
@@ -171,10 +160,21 @@
 </form>
 
 <style>
-  .ui-compact label { margin-bottom: 2px !important; }
+  .ui-compact label {
+    margin-bottom: 2px !important;
+  }
+
   .ui-compact input[type="text"],
   .ui-compact input[type="number"],
-  .ui-compact input[type="date"] { line-height: 1.25rem; }
-  .ui-compact th { white-space: nowrap; }
-  .ui-compact .grn-combobox ul { overscroll-behavior: contain; }
+  .ui-compact input[type="date"] {
+    line-height: 1.25rem;
+  }
+
+  .ui-compact th {
+    white-space: nowrap;
+  }
+
+  .ui-compact .grn-combobox ul {
+    overscroll-behavior: contain;
+  }
 </style>

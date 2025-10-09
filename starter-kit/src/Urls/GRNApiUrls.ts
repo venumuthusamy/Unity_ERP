@@ -6,6 +6,7 @@ export class GRNApiUrls {
   public static readonly GetGRNById = "/PurchaseGoodReceipt/getGRNbyId/"; 
   public static readonly UpdateFlagIssues = "/PurchaseGoodReceipt/update";
   public static readonly DeleteGRN = "/PurchaseGoodReceipt/Delete/";
+  public static readonly GetAllGRNByPOId = "/PurchaseGoodReceipt/GetAllGRNByPoId";
 }
 
 

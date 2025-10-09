@@ -4,6 +4,7 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import Swal from 'sweetalert2';
 import { SupplierInvoiceService } from '../supplier-invoice.service';
 import { PurchaseGoodreceiptService } from '../../purchase-goodreceipt/purchase-goodreceipt.service';
+ import * as feather from 'feather-icons'; 
 
 @Component({
   selector: 'app-supplier-invoice-list',
@@ -93,7 +94,11 @@ deleteInvoice(id: number) {
     showCancelButton: true,
     confirmButtonColor: '#d33',
     cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!'
+    confirmButtonText: 'Yes, delete it!',
+    customClass: {
+   confirmButton: 'px-2 py-1 text-xs rounded-md text-white bg-red-600 hover:bg-red-700 mx-1',
+    cancelButton:  'px-2 py-1 text-xs rounded-md text-white bg-blue-600 hover:bg-blue-700 mx-1',
+  }
   }).then((result) => {
     if (result.isConfirmed) {
       this.api.delete(id).subscribe({
@@ -120,5 +125,10 @@ deleteInvoice(id: number) {
   }
 
   closeLinesModal() { this.showLinesModal = false; }
- 
+  ngAfterViewChecked(): void {
+       feather.replace();  // remove the guard so icons refresh every cycle
+     }
+     ngAfterViewInit(): void {
+       feather.replace();
+     }
 }
