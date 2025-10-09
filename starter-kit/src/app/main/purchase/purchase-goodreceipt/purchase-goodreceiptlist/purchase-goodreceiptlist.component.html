@@ -4,7 +4,9 @@
       <div class="card">
         <div class="row">
           <div class="col-md-6 col-12">
-            <h4 class="card-text ml-2 mt-2" style="margin-left: 0.85rem; margin-top: 0.75rem;font-size: 1.25rem; font-weight: 600; color: #2E5F73;" >GRN List</h4>
+            <h4 class="card-text ml-2 mt-2" style="font-size:1.25rem;font-weight:600;color:#2E5F73">
+              GRN List
+            </h4>
             <div class="d-flex justify-content-between align-items-center m-1">
               <label class="d-flex align-items-center">Show
                 <select class="form-control mx-2" [(ngModel)]="selectedOption">
@@ -18,24 +20,33 @@
             </div>
           </div>
 
-          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
-            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
-              <label class="d-flex align-items-center ml-1 ml-md-0">Search:
-                <input [(ngModel)]="searchValue" type="search" class="form-control ml-2"
-                       (keyup)="filterUpdate($event)" />
-              </label>
-                <button  id="Add" class="btn  m-1" style="background-color: #2E5F73; color: white;" rippleEffect (click)="goToCreateGRN()">
-                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
-                  class="d-none d-sm-inline-block">Add</span>
-              </button>
+    <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+  <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+    <label class="d-flex align-items-center ml-1 ml-md-0">Search:
+      <input [(ngModel)]="searchValue" type="search" class="form-control ml-2"
+             (keyup)="filterUpdate($event)" />
+    </label>
 
-            </div>
-          </div>
+    <!-- Add margin-left for gap -->
+    <!-- <button (click)="goToCreateGRN()"
+            style="background-color:#2E5F73; color:white; border:none; padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px; margin-left:12px;">
+      <i data-feather="plus-circle" class="w-4 h-4"></i>
+      Create GRN
+    </button> -->
+
+    <button (click)="goToCreateGRN()"
+        class="btn m-1 d-inline-flex align-items-center"
+        style="background-color:#2E5F73; color:white; gap:4px;">
+  <i data-feather="plus-circle" class="w-4 h-4"></i>
+  <span>Create GRN</span>
+</button>
+ 
+  </div>
+</div>
+
         </div>
 
-
-         
-        <!-- NGX DATATABLE -->
+        <!-- NGX DATATABLE (only the requested columns) -->
         <ngx-datatable
           class="bootstrap core-bootstrap grn-table"
           [rows]="rows"
@@ -44,102 +55,150 @@
           [footerHeight]="50"
           [limit]="selectedOption"
           [columnMode]="'force'"
-          [scrollbarH]="true"
+          [scrollbarH]="false"
           [reorderable]="true">
 
-          <!-- Core IDs -->
+          <!-- Eye column -->
+          <ngx-datatable-column
+            [width]="60" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <span (click)="openLinesModal(row)"
+                    title="View Lines"
+                    style="cursor:pointer;font-size:18px;color:#2E5F73">
+                <i class="fas fa-eye"></i>
+              </span>
+            </ng-template>
+          </ngx-datatable-column>
+
           <ngx-datatable-column name="GRN No" prop="grnNo" [width]="140"></ngx-datatable-column>
-          <ngx-datatable-column name="PO NO" prop="pono" [width]="160"></ngx-datatable-column>
-          <ngx-datatable-column name="Item Name" prop="itemName" [width]="180"></ngx-datatable-column>
-          <ngx-datatable-column name="Supplier Name" prop="name" [width]="160"></ngx-datatable-column>
+          <ngx-datatable-column name="PO NO"  prop="pono"  [width]="160"></ngx-datatable-column>
+          <ngx-datatable-column name="Items"  prop="itemName" [width]="180"></ngx-datatable-column>
+          <ngx-datatable-column name="Supplier Name" prop="name" [width]="180"></ngx-datatable-column>
 
-          <!-- Quality / Conditions -->
-          <ngx-datatable-column name="Storage Type" prop="storageType" [width]="140"></ngx-datatable-column>
-<ngx-datatable-column name="Surface Temp" prop="surfaceTemp" [width]="140">
-  <ng-template let-row="row" let-value="value" ngx-datatable-cell-template>
-    {{ value }}&deg;C
-  </ng-template>
-</ngx-datatable-column>
-
-          <ngx-datatable-column name="Pest Sign" prop="pestSign" [width]="110"></ngx-datatable-column>
-          <ngx-datatable-column name="Dry Spillage" prop="drySpillage" [width]="130"></ngx-datatable-column>
-          <ngx-datatable-column name="Odor" prop="odor" [width]="100"></ngx-datatable-column>
-          <ngx-datatable-column name="Plate No" prop="plateNumber" [width]="120"></ngx-datatable-column>
-          <ngx-datatable-column name="Defect Labels" prop="defectLabels" [width]="140"></ngx-datatable-column>
-          <ngx-datatable-column name="Damaged Pkg" prop="damagedPackage" [width]="140"></ngx-datatable-column>
-
-          <!-- Time -->
-          <ngx-datatable-column name="Time" prop="time" [width]="140">
-            <ng-template ngx-datatable-cell-template let-row="row">
-              <ng-container *ngIf="isDateLike(row.time); else rawTime">
-                {{ row.time | date:'HH:mm' }}
-              </ng-container>
-              <ng-template #rawTime>
-                {{ row.time }}
-              </ng-template>
-            </ng-template>
-          </ngx-datatable-column>
-
-          <!-- Initial (thumbnail -> modal) -->
-          <ngx-datatable-column name="Initial" prop="initial" [width]="120">
-            <ng-template ngx-datatable-cell-template let-row="row">
-              <img
-                *ngIf="isDataUrl(row.initial); else initialText"
-                [src]="row.initial"
-                class="initial-thumb"
-                alt="Initial"
-                (click)="openImage(row.initial)"
-              />
-              <ng-template #initialText>
-                <span class="text-truncate d-inline-block" style="max-width:110px">{{ row.initial }}</span>
-              </ng-template>
-            </ng-template>
-          </ngx-datatable-column>
-
-          <!-- STATUS (derived from DB flags, no TS changes needed) -->
-<ngx-datatable-column name="Status" [width]="160" [sortable]="false">
+         <ngx-datatable-column name="Status" [width]="140" [sortable]="false">
   <ng-template ngx-datatable-cell-template let-row="row">
-    <span class="badge" [ngClass]="row?.isFlagIssue ? 'badge-warning' : 'badge-success'">
-      {{ row?.isFlagIssue ? 'Pending' : 'Posted' }}
+    <span class="badge" [ngClass]="statusClass(row)">
+      {{ statusText(row) }}
     </span>
   </ng-template>
 </ngx-datatable-column>
 
-          <!-- ACTIONS -->
+
           <ngx-datatable-column name="Action" [width]="120" [sortable]="false" [canAutoResize]="false">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              <i class="fas fa-pen text-blue-600 mr-2 cursor-pointer" (click)="editGRN(row.id)"></i>
-              <i class="fas fa-trash text-danger" style="cursor: pointer;" (click)="deleteGRN(row.id)"></i>
+            <i class="fas fa-pen mr-2"
+   [class.icon-disabled]="row.isPostInventory"
+   [class.text-blue-600]="!row.isPostInventory"
+   (click)="!row.isPostInventory && editGRN(row.id)">
+</i>
+
+<i class="fas fa-trash"
+   [class.icon-disabled]="row.isPostInventory"
+   [class.text-danger]="!row.isPostInventory"
+   (click)="!row.isPostInventory && deleteGRN(row.id)">
+</i>
+
             </ng-template>
           </ngx-datatable-column>
         </ngx-datatable>
-
-        
       </div>
     </section>
   </div>
 </div>
 
-<!-- Image Viewer Modal -->
+<!-- LINES MODAL (Eye click) -->
+<div *ngIf="showLinesModal"
+     (click)="closeLinesModal()"
+     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:1000px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
+    <!-- Header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
+      <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">GRN Lines – {{ modalHeader.grnNo }}</h3>
+      <button (click)="closeLinesModal()" aria-label="Close"
+              style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
+    </div>
+
+    <!-- Body -->
+   <!-- Body -->
+<div style="padding:16px 20px;">
+  <div style="max-height:65vh; overflow:auto; border:1px solid #d1d5db; border-radius:10px;">
+    <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
+      <thead>
+        <tr style="background:#0e3a4c; color:#fff;">
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Item Code</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Supplier</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Storage</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Surface Temp</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Expiry</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Pest</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Dry/Spill</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Odor</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Plate</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Defect</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Damaged</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Time</th>
+          <th style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of modalLines; let i = index"
+            [style.background]="i % 2 === 0 ? '#ffffff' : '#f9fafb'">
+         <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.itemName }}</td>
+
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.supplierName }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.storageType }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.surfaceTemp }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.expiry | date:'yyyy-MM-dd' }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.pestSign }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.drySpillage }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.odor }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.plateNumber }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.defectLabels }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.damagedPackage }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">{{ l.timeText }}</td>
+          <td style="padding:10px 8px; border:1px solid #e5e7eb; text-align:center;">
+            <span class="badge" [ngClass]="l.isFlagIssue ? 'badge-warning' : (l.isPostInventory ? 'badge-success' : 'badge-secondary')">
+              {{ l.isFlagIssue ? 'Flagged' : (l.isPostInventory ? 'Posted' : '—') }}
+            </span>
+          </td>
+        </tr>
+        <tr *ngIf="!modalLines?.length">
+          <td colspan="13" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+    <!-- Footer -->
+    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+<button (click)="closeLinesModal()"
+        style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+  <i data-feather="x-circle" class="w-4 h-4"></i>
+  Close
+</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- (kept) Image Viewer Modal for signature/initials if you still use it elsewhere) -->
 <div *ngIf="imageViewer.open" class="img-modal" (click)="closeImage()">
   <div class="img-modal__backdrop"></div>
-
   <div class="img-modal__dialog" (click)="$event.stopPropagation()">
     <div class="img-modal__header">
       <h5 class="m-0">Preview</h5>
       <button type="button" class="btn btn-light btn-sm" (click)="closeImage()" aria-label="Close">✕</button>
     </div>
-
     <div class="img-modal__body">
       <img [src]="imageViewer.src" alt="Preview" class="img-fluid" (load)="onImageLoaded()" />
     </div>
-
     <div class="img-modal__footer">
-      <a *ngIf="imageViewer.src" [href]="imageViewer.src" download="image.png" class="btn btn-outline-secondary btn-sm">
-        Download
-      </a>
+      <a *ngIf="imageViewer.src" [href]="imageViewer.src" download="image.png" class="btn btn-outline-secondary btn-sm">Download</a>
       <button type="button" class="btn btn-primary btn-sm" (click)="closeImage()">Close</button>
     </div>
   </div>
 </div>
-

@@ -129,3 +129,33 @@
   .img-modal__dialog { max-width: 360px; }
   .img-modal__body img { max-height: 260px; }
 }
+
+
+
+
+.grn-list-table-container {
+  width: 100%;
+  overflow-y: visible !important; // disable vertical scroll
+  overflow-x: auto;               // allow horizontal scroll if needed
+}
+
+.ngx-datatable.bootstrap.core-bootstrap.grn-table {
+  height: auto !important;        // let table expand fully
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+.datatable-body {
+  overflow-y: visible !important; // key line
+}
+
+.datatable-scroll {
+  overflow-y: visible !important; // key line for forcing full display
+}
+
+.icon-disabled {
+  color: #9ca3af !important; /* Tailwind gray-400 */
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

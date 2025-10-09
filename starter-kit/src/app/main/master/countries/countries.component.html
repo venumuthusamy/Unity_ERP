@@ -2,10 +2,28 @@
   <div class="col-lg-6 col-md-6">
     <div class="card card-transaction">
       <div class="card-header">
-        <div>
-          <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">Country List</h4>
+ <div>
+       <h4 class="card-title title-pill">
+  <span class="pill">
+    <!-- inline GLOBE icon -->
+    <svg viewBox="0 0 24 24" class="lvl-icon" fill="none" stroke="currentColor" aria-hidden="true">
+      <g stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <path d="M12 2a15.3 15.3 0 0 1 0 20a15.3 15.3 0 0 1 0-20z"></path>
+      </g>
+    </svg>
+  </span>
+  Country List
+</h4>
+
         </div>
-        <button  (click)="createCountry()"   style="background-color: #2E5F73; color: white; border: none; padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">Create</button>
+
+                    <button (click)="createCountry()"
+          style="background-color:#2E5F73; color:white; border:none; padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+          <i data-feather="plus-circle" class="w-4 h-4"></i>
+          Create
+        </button>
       </div>
       <div class="card-body">
         <ul class="list-group">
@@ -65,10 +83,11 @@
           </div>
           
 
-              <div class="row justify-content-start p-1">
+              <!-- <div class="row justify-content-start p-1">
                         <button type="submit" rippleEffect class="btn mr-1" [disabled]="!countryForm.form.valid"
                             (click)="CreateCountry()"
                             style="background-color: #2E5F73;color: white;padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
+                            
                             Submit
                         </button>
 
@@ -81,7 +100,29 @@
                             style="padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
                             Reset
                         </button>
-                    </div>
+                    </div> -->
+
+
+                     <div class="row justify-content-start p-1">
+            <button type="submit" class="btn mr-1" [disabled]="!countryForm.form.valid"  (click)="CreateCountry()"
+              style="background-color:#2E5F73; color:white; padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="check-circle" class="w-4 h-4"></i>
+              Submit
+            </button>
+
+            <button type="button" class="btn btn-danger mr-1" (click)="cancel()"
+              style="padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="x-circle" class="w-4 h-4"></i>
+              Cancel
+            </button>
+
+            <button type="button" class="btn btn-secondary" *ngIf="resetButton" (click)="reset()"
+              style="padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="rotate-ccw" class="w-4 h-4"></i>
+              Clear
+            </button>
+          </div>
+          
         </form>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { AfterContentChecked, AfterViewChecked, Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { IncotermsService } from './incoterms.service';
@@ -8,7 +8,7 @@ import * as feather from 'feather-icons';
   templateUrl: './incoterms.component.html',
   styleUrls: ['./incoterms.component.scss']
 })
-export class IncotermsComponent implements OnInit {
+export class IncotermsComponent implements OnInit,AfterViewChecked {
  @ViewChild('addForm') addForm!: NgForm;
   incotermsList: any[] = [];
   incotermsName: string = '';
@@ -26,9 +26,7 @@ export class IncotermsComponent implements OnInit {
   ngOnInit(): void {
     this.loadIncoterms();
   }
-  ngAfterViewChecked(): void {
-    feather.replace();  // remove the guard so icons refresh every cycle
-  }
+
   ngAfterViewInit(): void {
     feather.replace();
   }
@@ -185,4 +183,10 @@ export class IncotermsComponent implements OnInit {
     });
   }
 
+  ngAfterViewChecked(): void {
+    setTimeout(() => {
+      feather.replace();
+    });
+  }
+  
 }

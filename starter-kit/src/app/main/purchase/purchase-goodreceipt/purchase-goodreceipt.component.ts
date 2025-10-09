@@ -1,23 +1,21 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, AfterViewInit, AfterViewChecked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import SignaturePad from 'signature_pad';
-import { forkJoin, of,  } from 'rxjs';
-import { tap, map, catchError } from 'rxjs/operators';
-
+import { forkJoin, of, Observable } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import feather from 'feather-icons';
 import { PurchaseGoodreceiptService } from './purchase-goodreceipt.service';
 import { FlagissueService } from 'app/main/master/flagissue/flagissue.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { POService } from '../purchase-order/purchase-order.service';
 
 export interface LineRow {
-  // Read-only from PO
   itemText: string;
   itemCode: string;
   supplierId: number | null;
   supplierName: string;
 
-  // Editable in GRN
   storageType: string;
   surfaceTemp: string;
   expiry: string;
@@ -28,14 +26,12 @@ export interface LineRow {
   defectLabels: string;
   damagedPackage: string;
   time: string;
-  initial: string;  // dataURL of image/signature
-  remarks: '';
+  initial: string;
+  remarks: string;
 
-  // Meta
   createdAt: Date;
   photos: string[];
 
-  // Flags
   isFlagIssue?: boolean;
   isPostInventory?: boolean;
   flagIssueId?: number | null;
@@ -54,16 +50,16 @@ interface GeneratedGRN {
   templateUrl: './purchase-goodreceipt.component.html',
   styleUrls: ['./purchase-goodreceipt.component.scss']
 })
-export class PurchaseGoodreceiptComponent implements OnInit {
+export class PurchaseGoodreceiptComponent implements OnInit,AfterViewInit,AfterViewChecked {
   hover = false;
+  minDate = '';
+  // create-mode summary toggle
+  showSummary = false;
 
-  // Image lightbox
   imageViewer = { open: false, src: null as string | null };
   openImage(src: string){ this.imageViewer = { open: true, src }; document.body.style.overflow = 'hidden'; }
   closeImage(){ this.imageViewer = { open: false, src: null }; document.body.style.overflow = ''; }
-  normalizeImg(s: string){ return s?.startsWith('data:image') ? s : `data:image/png;base64,${s}`; }
 
-  /* -------- Modal state -------- */
   showInitialModal = false;
   activeTab: 'image' | 'signature' = 'image';
   uploadedImage: string | ArrayBuffer | null = null;
@@ -78,54 +74,48 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   @ViewChild('signaturePad', { static: false }) signaturePadElement!: ElementRef<HTMLCanvasElement>;
   private signaturePad?: SignaturePad;
 
-  /* -------- Header form -------- */
   selectedPO: number | null = null;
   receiptDate = '';
   overReceiptTolerance = 0;
 
-  /* -------- Current PO supplier -------- */
   currentSupplierId: number | null = null;
   currentSupplierName = '';
 
-  /* -------- Table rows -------- */
   grnRows: LineRow[] = [
     {
-      itemText: '',
-      itemCode: '',
-      supplierId: null,
-      supplierName: '',
-      storageType: '',
-      surfaceTemp: '',
-      expiry: '',
-      pestSign: '',
-      drySpillage: '',
-      odor: '',
-      plateNumber: '',
-      defectLabels: '',
-      damagedPackage: '',
-      time: '',
-      initial: '',
-      remarks: '',
-      createdAt: new Date(),
-      photos: [],
-      isFlagIssue: false,
-      isPostInventory: false,
-      flagIssueId: null,
+      itemText: '', itemCode: '',
+      supplierId: null, supplierName: '',
+      storageType: '', surfaceTemp: '', expiry: '',
+      pestSign: '', drySpillage: '', odor: '',
+      plateNumber: '', defectLabels: '', damagedPackage: '',
+      time: '', initial: '', remarks: '',
+      createdAt: new Date(), photos: [],
+      isFlagIssue: false, isPostInventory: false, flagIssueId: null
     }
   ];
+ngAfterViewInit() {
+  feather.replace(); // activates all <i data-feather="...">
+}
+  ngAfterViewChecked() {
+    feather.replace();
+  }
 
-  /* -------- PO list for dropdown -------- */
+  allowOnlyNumbers(event: KeyboardEvent): void {
+  const charCode = event.key.charCodeAt(0);
+  // Allow only digits 0-9
+  if (charCode < 48 || charCode > 57) {
+    event.preventDefault();
+  }
+}
   purchaseOrder: Array<{ id: number; purchaseOrderNo: string; supplierId?: number; poLines?: string }> = [];
-
-  /* -------- Extras -------- */
   flagIssuesList: any[] = [];
   isPostInventoryDisabled = false;
 
-  /* -------- Generated GRN summary -------- */
   generatedGRN: GeneratedGRN | null = null;
 
-  /* -------- Edit mode -------- */
   editingGrnId: number | null = null;
+
+  private supplierNameMap = new Map<number, string>();
 
   constructor(
     private purchaseGoodReceiptService: PurchaseGoodreceiptService,
@@ -138,10 +128,11 @@ export class PurchaseGoodreceiptComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.setMinDate();
     this.loadPOs();
 
-    // If navigated via /purchase/edit-Purchasegoodreceipt/:id, prefill everything
-    this.route.paramMap.subscribe(async pm => {
+    // detect edit mode via route
+    this.route.paramMap.subscribe(pm => {
       const idParam = pm.get('id');
       const id = idParam ? Number(idParam) : NaN;
       if (!isNaN(id) && id > 0) {
@@ -151,10 +142,19 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     });
   }
 
-  goToDebitNoteList(){
-    this.router.navigate(['/purchase/list-Purchasegoodreceipt']);
+
+   setMinDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    this.minDate = `${yyyy}-${mm}-${dd}`;
   }
-  /* ===================== SAVE ===================== */
+  get isEditMode(): boolean { return !!this.editingGrnId; }
+
+  goToDebitNoteList(){ this.router.navigate(['/purchase/list-Purchasegoodreceipt']); }
+
+  /* ===================== CREATE MODE SAVE ===================== */
   saveGRN() {
     if (!this.selectedPO) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a PO.', confirmButtonColor: '#0e3a4c' });
@@ -189,33 +189,27 @@ export class PurchaseGoodreceiptComponent implements OnInit {
       overReceiptTolerance: this.overReceiptTolerance,
       grnJson: JSON.stringify(rowsForApi),
       grnNo: this.generatedGRN?.grnNo ?? '',
-       isActive: true
+      isActive: true
     };
 
-    // Decide endpoint depending on create vs update
-    const svc: any = this.purchaseGoodReceiptService as any;
-    const call$ =
-      this.editingGrnId && typeof svc.updateGRN === 'function'
-        ? svc.updateGRN(payload) // full update when available
-        : this.editingGrnId && typeof svc.UpdateFlagIssues === 'function'
-          ? svc.UpdateFlagIssues({ // fallback: update GRN JSON only (no header FlagIssuesID)
-              id: payload.id,
-              GrnNo: payload.grnNo || '',
-              GRNJSON: payload.grnJson
-            })
-          : this.purchaseGoodReceiptService.createGRN(payload);
+    // prefer create endpoint in create mode
+    const call$ = this.purchaseGoodReceiptService.createGRN(payload);
 
     call$.subscribe({
       next: (res: any) => {
         Swal.fire({
           icon: 'success',
-          title: this.editingGrnId ? 'Updated' : 'Created',
-          text: res?.message || (this.editingGrnId ? 'GRN updated.' : 'GRN created.'),
+          title: 'Created',
+          text: res?.message || 'GRN created.',
           confirmButtonColor: '#0e3a4c'
         });
 
-        const idToShow = this.editingGrnId || res?.data;
-        if (idToShow) this.loadForEdit(idToShow);
+        // switch to read-only Generated Summary in the SAME page
+        const idToShow = res?.data || res?.id || res;
+        if (idToShow) {
+          this.showSummary = true;
+          this.loadSummaryForCreate(idToShow);
+        }
       },
       error: (err: any) => {
         console.error('Save failed', err);
@@ -224,118 +218,202 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     });
   }
 
-  /** Fetch & hydrate editor + summary for an existing GRN */
-  private loadForEdit(id: number) {
+  /* ============= AFTER-CREATE: LOAD SUMMARY IN CREATE MODE (READ-ONLY) ============= */
+  private loadSummaryForCreate(id: number) {
     this.purchaseGoodReceiptService.getByIdGRN(id).subscribe({
-      next: async (res: any) => {
+      next: (res: any) => {
         const data = res?.data ?? res;
 
-        // Header
-        const poid = Number(data?.poid ?? data?.POId ?? 0);
-        this.selectedPO = poid || null;
+        // header
+        const poid = this.toNum(data?.poid ?? data?.POId);
+        this.selectedPO = poid;
 
         const rec = data?.receptionDate ?? data?.ReceptionDate ?? data?.Reception_Date;
         this.receiptDate = rec ? this.toDateInput(rec) : this.toDateInput(new Date());
         this.overReceiptTolerance = Number(data?.overReceiptTolerance ?? data?.OverReceiptTolerance ?? 0);
 
-        // Supplier (header)
-      if (this.currentSupplierId) {
-  this.loadSupplierById(this.currentSupplierId).subscribe(name => {
-    this.currentSupplierName = name;
-  });
-}
+        this.currentSupplierId = this.toNum(data?.supplierId ?? data?.SupplierId);
 
-
-        // Editable rows
+        // parse rows
         let rows: any[] = [];
         try {
           const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
           rows = Array.isArray(raw) ? raw : JSON.parse(raw);
         } catch { rows = []; }
 
-        this.grnRows = (rows.length ? rows : [{}]).map((r: any) => ({
-          itemText: r.itemText ?? `${r.itemCode ?? r.item ?? ''}`,
-          itemCode: r.itemCode ?? r.item ?? '',
-          supplierId: r.supplierId ?? this.currentSupplierId ?? null,
-          supplierName: r.supplierName ?? this.currentSupplierName ?? '',
-          storageType: r.storageType ?? '',
-          surfaceTemp: r.surfaceTemp ?? '',
-          expiry: r.expiry ? this.toDateInput(r.expiry) : '',
-          pestSign: r.pestSign ?? '',
-          drySpillage: r.drySpillage ?? '',
-          odor: r.odor ?? '',
-          plateNumber: r.plateNumber ?? '',
-          defectLabels: r.defectLabels ?? '',
-          damagedPackage: r.damagedPackage ?? '',
-          time: r.time ?? '',
-          initial: r.initial ?? '',
-          remarks: r.remarks ?? '',
-          createdAt: new Date(),
-          photos: [],
-          isFlagIssue: !!r.isFlagIssue,
-          isPostInventory: !!r.isPostInventory,
-          flagIssueId: r.flagIssueId ?? null
+        const rowsCoerced = rows.map((r: any) => ({
+          ...r,
+          expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
+          isFlagIssue: !!r?.isFlagIssue,
+          isPostInventory: !!r?.isPostInventory,
+          flagIssueId: r?.flagIssueId ?? null
         }));
 
-        // Summary
-        this.hydrateSummaryFromPayload(data);
+        this.generatedGRN = {
+          id: data?.id,
+          grnNo: data?.grnNo,
+          poid: data?.poid ?? data?.POId,
+          poNo: '',
+          grnJson: rowsCoerced
+        };
+
+        // load PO number
+        const poId = Number(this.generatedGRN.poid);
+        if (poId) {
+          this.purchaseorderService.getPOById(poId).subscribe({
+            next: (poRes: any) => {
+              const po = poRes?.data ?? poRes;
+              const poNo =
+                po?.purchaseOrderNo ?? po?.PurchaseOrderNo ??
+                po?.[0]?.purchaseOrderNo ?? po?.[0]?.PurchaseOrderNo ?? '';
+              this.generatedGRN = { ...this.generatedGRN!, poNo };
+            },
+            error: (err) => console.error('Failed to load PO by id', err)
+          });
+        }
+
+        // supplier names (display only)
+        const ids = new Set<number>();
+        rowsCoerced.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
+        if (this.currentSupplierId) ids.add(this.currentSupplierId);
+
+        const lookups: Observable<[number, string]>[] = Array.from(ids).map(idNum =>
+          this._SupplierService.getSupplierById(idNum).pipe(
+            map((api: any) => {
+              const name =
+                api?.data?.name ??
+                api?.data?.supplierName ??
+                api?.name ??
+                api?.supplierName ??
+                '';
+              return [idNum, name] as [number, string];
+            }),
+            catchError(() => of([idNum, ''] as [number, string]))
+          )
+        );
+
+        forkJoin(lookups.length ? lookups : [of([0, ''] as [number, string])]).subscribe(pairs => {
+          this.supplierNameMap = new Map<number, string>(pairs.filter(p => !!p[0]));
+          // enrich supplierName if missing
+          this.generatedGRN = {
+            ...this.generatedGRN!,
+            grnJson: this.generatedGRN!.grnJson.map(r => ({
+              ...r,
+              supplierName: r.supplierName || (r.supplierId ? (this.supplierNameMap.get(r.supplierId) || '') : '')
+            }))
+          };
+          this.cdRef.markForCheck();
+        });
+      },
+      error: (err) => console.error('Create Summary load failed', err)
+    });
+  }
+
+  /* ===================== EDIT MODE: LOAD + SUMMARY ===================== */
+  private loadForEdit(id: number) {
+    this.purchaseGoodReceiptService.getByIdGRN(id).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res;
+
+        // Header
+        const poid = this.toNum(data?.poid ?? data?.POId);
+        this.selectedPO = poid;
+
+        const rec = data?.receptionDate ?? data?.ReceptionDate ?? data?.Reception_Date;
+        this.receiptDate = rec ? this.toDateInput(rec) : this.toDateInput(new Date());
+        this.overReceiptTolerance = Number(data?.overReceiptTolerance ?? data?.OverReceiptTolerance ?? 0);
+
+        this.currentSupplierId = this.toNum(data?.supplierId ?? data?.SupplierId);
+
+        // Parse rows
+        let rows: any[] = [];
+        try {
+          const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
+          rows = Array.isArray(raw) ? raw : JSON.parse(raw);
+        } catch { rows = []; }
+        if (!rows.length) rows = [{}];
+
+        // Collect supplier ids
+        const ids = new Set<number>();
+        rows.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
+        if (this.currentSupplierId) ids.add(this.currentSupplierId);
+
+        const lookups: Observable<[number, string]>[] = Array.from(ids).map(idNum =>
+          this._SupplierService.getSupplierById(idNum).pipe(
+            map((api: any) => {
+              const name =
+                api?.data?.name ??
+                api?.data?.supplierName ??
+                api?.name ??
+                api?.supplierName ??
+                '';
+              return [idNum, name] as [number, string];
+            }),
+            catchError(() => of([idNum, ''] as [number, string]))
+          )
+        );
+
+        forkJoin(lookups.length ? lookups : [of([0, ''] as [number, string])]).subscribe(pairs => {
+          this.supplierNameMap = new Map<number, string>(pairs.filter(p => !!p[0]));
+
+          // fallback to PO supplier if header missing
+          if (!this.currentSupplierId && this.selectedPO) {
+            const po = this.purchaseOrder.find(p => p.id === this.selectedPO);
+            if (po?.supplierId) this.currentSupplierId = po.supplierId;
+          }
+          this.currentSupplierName = this.currentSupplierId ? (this.supplierNameMap.get(this.currentSupplierId) || '') : '';
+
+          // Build editable summary rows
+          const rowsWithNames = rows.map((r: any) => {
+            const rid = this.toNum(r?.supplierId) ?? this.currentSupplierId ?? null;
+            const supplierName =
+              r?.supplierName ||
+              (rid ? (this.supplierNameMap.get(rid) || '') : '') ||
+              this.currentSupplierName ||
+              '';
+
+            return {
+              ...r,
+              supplierId: rid,
+              supplierName,
+              expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
+              isFlagIssue: !!r?.isFlagIssue,
+              isPostInventory: !!r?.isPostInventory,
+              flagIssueId: r?.flagIssueId ?? null
+            };
+          });
+
+          this.generatedGRN = {
+            id: data?.id,
+            grnNo: data?.grnNo,
+            poid: data?.poid ?? data?.POId,
+            poNo: '',
+            grnJson: rowsWithNames
+          };
+
+          // Load PO number for header display
+          const poId = Number(this.generatedGRN.poid);
+          if (poId) {
+            this.purchaseorderService.getPOById(poId).subscribe({
+              next: (poRes: any) => {
+                const po = poRes?.data ?? poRes;
+                const poNo =
+                  po?.purchaseOrderNo ?? po?.PurchaseOrderNo ??
+                  po?.[0]?.purchaseOrderNo ?? po?.[0]?.PurchaseOrderNo ?? '';
+                this.generatedGRN = { ...this.generatedGRN!, poNo };
+              },
+              error: (err) => console.error('Failed to load PO by id', err)
+            });
+          }
+
+          this.cdRef.markForCheck();
+        });
       },
       error: (err) => console.error('Edit load failed', err)
     });
   }
 
-  /** Build summary + enrich with supplier names & PO number */
-  private hydrateSummaryFromPayload(payload: any) {
-    let grnJsonArr: any[] = [];
-    try {
-      const raw = payload?.grnJson ?? payload?.GRNJSON ?? '[]';
-      grnJsonArr = Array.isArray(raw) ? raw : JSON.parse(raw);
-    } catch { grnJsonArr = []; }
-
-    const supplierFetches = grnJsonArr.map((row: any) => {
-      const supplierId = row?.supplierId;
-      if (!supplierId) return of({ ...row, supplierName: row?.supplierName ?? 'Unknown' });
-      return this._SupplierService.getSupplierById(supplierId).pipe(
-        map((res: any) => ({
-          ...row,
-          supplierName: res?.data?.name ?? res?.data?.supplierName ?? row?.supplierName ?? 'Unknown'
-        })),
-        catchError(() => of({ ...row, supplierName: row?.supplierName ?? 'Unknown' }))
-      );
-    });
-
-    forkJoin(supplierFetches).subscribe((rowsWithNames: any[]) => {
-      this.generatedGRN = {
-        id: payload?.id,
-        grnNo: payload?.grnNo,
-        poid: payload?.poid ?? payload?.POId,
-        poNo: '',
-        grnJson: rowsWithNames.map(r => ({
-          ...r,
-          isFlagIssue: !!r.isFlagIssue,
-          isPostInventory: !!r.isPostInventory,
-          flagIssueId: r.flagIssueId ?? null
-        }))
-      };
-
-      // Load PO number
-      const poId = Number(this.generatedGRN.poid);
-      if (poId) {
-        this.purchaseorderService.getPOById(poId).subscribe({
-          next: (poRes: any) => {
-            const po = poRes?.data ?? poRes;
-            const poNo =
-              po?.purchaseOrderNo ?? po?.PurchaseOrderNo ??
-              po?.[0]?.purchaseOrderNo ?? po?.[0]?.PurchaseOrderNo ?? '';
-            this.generatedGRN = { ...this.generatedGRN!, poNo };
-          },
-          error: (err) => console.error('Failed to load PO by id', err)
-        });
-      }
-    });
-  }
-
-  /* ================= Flag Issues ================= */
+  /* ====== Flag Issues flow ====== */
   loadFlagIssues() {
     this.flagIssuesService.getAllFlagIssue().subscribe({
       next: (res: any) => { this.flagIssuesList = res?.data || []; },
@@ -348,6 +426,7 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     this.selectedFlagIssueId = null;
     this.flagModal.open = true;
     document.body.style.overflow = 'hidden';
+     setTimeout(() => feather.replace(), 0); 
   }
 
   closeFlagIssuesModal() {
@@ -355,145 +434,118 @@ export class PurchaseGoodreceiptComponent implements OnInit {
     document.body.style.overflow = '';
   }
 
-  /** mutate one row, persist whole GRN JSON, rollback on error */
- private updateRowAndPersist(
-  rowIndex: number,
-  changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
-  onSuccess?: () => void
-) {
-  if (!this.generatedGRN?.id) return;
+  private updateRowAndPersist(
+    rowIndex: number,
+    changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
+    onSuccess?: () => void
+  ) {
+    if (!this.generatedGRN?.id) return;
 
-  const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
+    const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
+    const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
+      i === rowIndex
+        ? {
+            ...r,
+            isFlagIssue: changes.hasOwnProperty('isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
+            isPostInventory: changes.hasOwnProperty('isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
+            flagIssueId: changes.hasOwnProperty('flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
+          }
+        : r
+    );
 
-  const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
-    i === rowIndex
-      ? {
-          ...r,
-          isFlagIssue: changes.hasOwnProperty('isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
-          isPostInventory: changes.hasOwnProperty('isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
-          flagIssueId: changes.hasOwnProperty('flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
-        }
-      : r
-  );
+    this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
 
-  this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
+    const body = { id: this.generatedGRN.id, GrnNo: this.generatedGRN.grnNo || '', GRNJSON: JSON.stringify(rows) };
+    const anySvc: any = this.purchaseGoodReceiptService as any;
 
-  const body = {
-    id: this.generatedGRN.id,
-    GrnNo: this.generatedGRN.grnNo || '',
-    GRNJSON: JSON.stringify(rows)
-  };
+    const call$ =
+      typeof anySvc.UpdateFlagIssues === 'function'
+        ? anySvc.UpdateFlagIssues(body)
+        : typeof anySvc.updateGRN === 'function'
+          ? anySvc.updateGRN({ ...body, grnJson: body.GRNJSON })
+          : null;
 
-  this.purchaseGoodReceiptService.UpdateFlagIssues(body).subscribe({
-    next: () => {
-      if (onSuccess) onSuccess();
-    },
-    error: (err) => {
-      this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
-      console.error('Update failed', err);
-      alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
-    }
-  });
-}
+    if (!call$) return;
 
-// Optional helper (nice readability)
-get isEditMode(): boolean {
-  return !!this.editingGrnId;
-}
-
-// Optional helper to compute total rows from whichever table you're acting on
-private totalActionRows(): number {
-  // actions are triggered from the summary table -> prefer generatedGRN.grnJson
-  return (this.generatedGRN?.grnJson?.length ?? this.grnRows.length) || 0;
-}
-  /** User clicked "Post Inventory" — set post=true, flag=false, clear flagIssueId */
-onPostInventoryRow(row: any, index: number) {
-  const total = this.totalActionRows();
-  const isLastRow = index === total - 1;
-
-  this.updateRowAndPersist(
-    index,
-    { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
-    () => {
-      Swal.fire('Posted', 'Row posted to inventory.', 'success');
-
-      if (this.isEditMode) {
-        // EDIT: redirect always
-        this.resetForm();
-        this.goToList();
-      } else if (isLastRow) {
-        // CREATE: redirect only when last row succeeded
-        this.resetForm();
-        this.goToList();
+    call$.subscribe({
+      next: () => { if (onSuccess) onSuccess(); },
+      error: (err) => {
+        this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
+        console.error('Update failed', err);
+        alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
       }
-      // else (create + not last) -> stay on page
-    }
-  );
-}
+    });
+  }
 
+  onPostInventoryRow(row: any, index: number) {
+    const total = (this.generatedGRN?.grnJson?.length ?? this.grnRows.length) || 0;
+    const isLastRow = index === total - 1;
 
+    this.updateRowAndPersist(
+      index,
+      { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
+      () => {
+        Swal.fire('Posted', 'Row posted to inventory.', 'success');
 
+        // Edit Mode → always go to list
+        // Create Mode → go to list only when last row posted/flagged
+        if (this.isEditMode || isLastRow) {
+          this.goToDebitNoteList();
+        }
+      }
+    );
+  }
 
-
-  /** Open modal to select reason, then submit */
   onFlagIssuesRow(row: any, index: number) {
     this.selectedRowForFlagIndex = index;
     this.openFlagIssuesModal();
   }
 
-submitFlagIssue() {
-  if (this.selectedRowForFlagIndex == null || !this.selectedFlagIssueId) return;
+  submitFlagIssue() {
+    if (this.selectedRowForFlagIndex == null || !this.selectedFlagIssueId) return;
 
-  const index = this.selectedRowForFlagIndex;
-  const total = this.totalActionRows();
-  const isLastRow = index === total - 1;
+    const index = this.selectedRowForFlagIndex;
+    const total = (this.generatedGRN?.grnJson?.length ?? this.grnRows.length) || 0;
+    const isLastRow = index === total - 1;
 
-  this.updateRowAndPersist(
-    index,
-    { isFlagIssue: true, isPostInventory: false, flagIssueId: this.selectedFlagIssueId },
-    () => {
-      Swal.fire('Flagged', 'Row flagged successfully.', 'warning');
-      this.closeFlagIssuesModal();
-      this.selectedRowForFlagIndex = null;
+    this.updateRowAndPersist(
+      index,
+      { isFlagIssue: true, isPostInventory: false, flagIssueId: this.selectedFlagIssueId },
+      () => {
+        Swal.fire('Flagged', 'Row flagged successfully.', 'warning');
+        this.closeFlagIssuesModal();
+        this.selectedRowForFlagIndex = null;
 
-      if (this.isEditMode) {
-        // EDIT: redirect always
-        this.resetForm();
-        this.goToList();
-      } else if (isLastRow) {
-        // CREATE: redirect only when last row succeeded
-        this.resetForm();
-        this.goToList();
+        if (this.isEditMode || isLastRow) {
+          this.goToDebitNoteList();
+        }
       }
-      // else (create + not last) -> stay on page
-    }
-  );
-}
+    );
+  }
 
-
-
+  get editRows() {
+    return (this.generatedGRN?.grnJson ?? []).filter((r: any) => !r?.isPostInventory);
+  }
 
   /* ================= Purchase Orders ================= */
   loadPOs() {
     const anySvc: any = this.purchaseorderService as any;
     const obs$ =
-      typeof this.purchaseorderService.getPO === 'function'
-        ? this.purchaseorderService.getPO()
+      typeof this.purchaseorderService.getPODetailswithGRN === 'function'
+        ? this.purchaseorderService.getPODetailswithGRN()
         : typeof anySvc.getAllPurchaseOrder === 'function'
           ? anySvc.getAllPurchaseOrder()
           : null;
 
     if (!obs$) {
-      console.error('PurchaseOrderService missing getPO()/getAllPurchaseOrder()');
+      console.error('PurchaseOrderService missing getPODetailswithGRN()/getAllPurchaseOrder()');
       return;
     }
 
     obs$.subscribe({
       next: (res: any) => {
         const list = Array.isArray(res?.data) ? res.data : res;
-        this.purchaseOrder = (list || []).map((p: any) => ([
-          'id','Id'
-        ].some(k => k in p) ? {
+        this.purchaseOrder = (list || []).map((p: any) => ([ 'id','Id' ].some(k => k in p) ? {
           id: p.id ?? p.Id,
           purchaseOrderNo: p.purchaseOrderNo ?? p.PurchaseOrderNo,
           supplierId: p.supplierId ?? p.SupplierId,
@@ -515,7 +567,7 @@ submitFlagIssue() {
     const po = this.purchaseOrder.find(p => p.id === selectedId);
     if (!po) { this.resetForm(); return; }
 
-    this.currentSupplierId = po.supplierId ?? null;
+    this.currentSupplierId = this.toNum(po.supplierId);
 
     this.loadSupplierById(this.currentSupplierId ?? 0).subscribe((name: string) => {
       this.currentSupplierName = name || '';
@@ -533,50 +585,49 @@ submitFlagIssue() {
   }
 
   /* ================= Build rows from PO ================= */
-  private buildRowsFromPo(
-    po: { poLines?: string },
-    supplierId: number | null,
-    supplierName: string
-  ) {
-    let lines: any[] = [];
-    try { lines = po.poLines ? JSON.parse(po.poLines) : []; } catch { lines = []; }
+private buildRowsFromPo(
+  po: { poLines?: string },
+  supplierId: number | null,
+  supplierName: string
+) {
+  let lines: any[] = [];
+  try { lines = po.poLines ? JSON.parse(po.poLines) : []; } catch { lines = []; }
+  if (!lines.length) { lines = [{}]; }
 
-    if (!lines.length) { lines = [ {} ]; }
+  this.grnRows = lines.map(line => {
+    const itemText = String(line?.item || '').trim();
+    const itemCode = this.extractItemCode(itemText);
 
-    this.grnRows = lines.map(line => {
-      const itemText = String(line?.item || '').trim();
-      const itemCode = this.extractItemCode(itemText);
-
-      return {
-        itemText,
-        itemCode,
-        supplierId,
-        supplierName,
-        storageType: '',
-        surfaceTemp: '',
-        expiry: '',
-        pestSign: '',
-        drySpillage: '',
-        odor: '',
-        plateNumber: '',
-        defectLabels: '',
-        damagedPackage: '',
-        time: '',
-        initial: '',
-        remarks: line?.description ?? '',
-        createdAt: new Date(),
-        photos: [],
-        isFlagIssue: false,
-        isPostInventory: false,
-        flagIssueId: null,
-      } as LineRow;
-    });
-  }
+    return {
+      itemText,
+      itemCode,
+      supplierId,
+      supplierName,
+     storageType: 'Chilled',
+      surfaceTemp: '',
+      expiry: '',
+      pestSign: 'No',           // Default value
+      drySpillage: 'No',        // Default value
+      odor: 'No',               // Default value
+      plateNumber: '',
+      defectLabels: 'No',       // Default value
+      damagedPackage: 'No',     // Default value
+      time: '',
+      initial: '',
+      remarks: '',
+      createdAt: new Date(),
+      photos: [],
+      isFlagIssue: false,
+      isPostInventory: false,
+      flagIssueId: null
+    } as LineRow;
+  });
+}
 
   private extractItemCode(itemText: string): string {
     const m = String(itemText).match(/^\s*([A-Za-z0-9_-]+)/);
     return m ? m[1] : '';
-    }
+  }
 
   /* ================= Modal: Image/Signature ================= */
   openInitialModal(row: LineRow, index: number) {
@@ -596,9 +647,7 @@ submitFlagIssue() {
 
   switchTab(tab: 'image' | 'signature') {
     this.activeTab = tab;
-    if (tab === 'signature') {
-      setTimeout(() => this.initSignaturePad(), 0);
-    }
+    if (tab === 'signature') setTimeout(() => this.initSignaturePad(), 0);
   }
 
   onImageSelected(event: Event) {
@@ -609,8 +658,6 @@ submitFlagIssue() {
 
   onDragOver(event: DragEvent) { event.preventDefault(); event.stopPropagation(); this.isDragOver = true; }
   onDragLeave(event: DragEvent) { event.preventDefault(); event.stopPropagation(); this.isDragOver = false; }
-
-  // NOTE: HTML calls (drop)="onDrop($event)"
   onDrop(event: DragEvent) {
     event.preventDefault(); event.stopPropagation(); this.isDragOver = false;
     const file = event.dataTransfer?.files?.[0];
@@ -628,14 +675,20 @@ submitFlagIssue() {
   saveImage() {
     if (this.selectedRowIndex == null) return;
     if (typeof this.uploadedImage !== 'string') { alert('Please select an image first.'); return; }
-    this.grnRows[this.selectedRowIndex].initial = this.uploadedImage;
+    if (this.isEditMode && this.generatedGRN) {
+      this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
+    } else if (this.showSummary && this.generatedGRN) {
+      // create-summary context (read-only display, but we're storing image in memory)
+      this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
+    } else {
+      this.grnRows[this.selectedRowIndex].initial = this.uploadedImage;
+    }
     this.closeInitialModal();
   }
 
   private initSignaturePad() {
     const canvas = this.signaturePadElement?.nativeElement;
     if (!canvas) return;
-
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const width = canvas.clientWidth || 700;
     const height = 180;
@@ -643,7 +696,6 @@ submitFlagIssue() {
     canvas.height = height * ratio;
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.scale(ratio, ratio);
-
     this.signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,1)', penColor: '#0e3a4c' });
   }
 
@@ -653,7 +705,13 @@ submitFlagIssue() {
     if (this.selectedRowIndex == null) return;
     if (!this.signaturePad || this.signaturePad.isEmpty()) { alert('Please sign before saving.'); return; }
     const dataURL = this.signaturePad.toDataURL('image/png');
-    this.grnRows[this.selectedRowIndex].initial = dataURL;
+    if (this.isEditMode && this.generatedGRN) {
+      this.generatedGRN.grnJson[this.selectedRowIndex].initial = dataURL;
+    } else if (this.showSummary && this.generatedGRN) {
+      this.generatedGRN.grnJson[this.selectedRowIndex].initial = dataURL;
+    } else {
+      this.grnRows[this.selectedRowIndex].initial = dataURL;
+    }
     this.closeInitialModal();
   }
 
@@ -664,45 +722,40 @@ submitFlagIssue() {
     this.overReceiptTolerance = 0;
     this.currentSupplierId = null;
     this.currentSupplierName = '';
+    this.showSummary = false;
+    this.generatedGRN = null;
 
     this.grnRows = [
       {
-        itemText: '',
-        itemCode: '',
-        supplierId: null,
-        supplierName: '',
-        storageType: '',
-        surfaceTemp: '',
-        expiry: '',
-        pestSign: '',
-        drySpillage: '',
-        odor: '',
-        plateNumber: '',
-        defectLabels: '',
-        damagedPackage: '',
-        time: '',
-        initial: '',
-        remarks: '',
-        createdAt: new Date(),
-        photos: [],
-        isFlagIssue: false,
-        isPostInventory: false,
-        flagIssueId: null,
+        itemText: '', itemCode: '',
+        supplierId: null, supplierName: '',
+        storageType: '', surfaceTemp: '', expiry: '',
+        pestSign: '', drySpillage: '', odor: '',
+        plateNumber: '', defectLabels: '', damagedPackage: '',
+        time: '', initial: '', remarks: '',
+        createdAt: new Date(), photos: [],
+        isFlagIssue: false, isPostInventory: false, flagIssueId: null
       }
     ];
   }
 
   trackByIndex = (i: number) => i;
 
-  goToList(): void {
-    this.router.navigate(['/purchase/list-Purchasegoodreceipt']);
-  }
+  goToList(): void { this.router.navigate(['/purchase/list-Purchasegoodreceipt']); }
 
   private toDateInput(d: any): string {
     const dt = new Date(d);
+    if (isNaN(+dt)) return '';
     const yyyy = dt.getFullYear();
     const mm = String(dt.getMonth() + 1).padStart(2, '0');
     const dd = String(dt.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   }
+
+  private toNum(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  
 }

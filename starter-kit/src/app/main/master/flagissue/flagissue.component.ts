@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild } from '@angular/core';
 import Swal from 'sweetalert2';
 import * as feather from 'feather-icons';
 import { FormBuilder, NgForm } from '@angular/forms';
@@ -9,7 +9,7 @@ import { FlagissueService } from './flagissue.service';
   templateUrl: './flagissue.component.html',
   styleUrls: ['./flagissue.component.scss']
 })
-export class FlagissueComponent implements OnInit {
+export class FlagissueComponent implements OnInit,AfterViewChecked{
 @ViewChild('addForm') addForm!: NgForm;
   flagIssueList: any[] = [];
   flagIssueName: string = '';
@@ -27,9 +27,7 @@ export class FlagissueComponent implements OnInit {
   ngOnInit(): void {
     this.loadFlagIssue();
   }
-  ngAfterViewChecked(): void {
-    feather.replace();  // remove the guard so icons refresh every cycle
-  }
+
   ngAfterViewInit(): void {
     feather.replace();
   }
@@ -185,4 +183,11 @@ export class FlagissueComponent implements OnInit {
       }
     });
   }
+
+    ngAfterViewChecked(): void {
+      setTimeout(() => {
+        feather.replace();
+      });
+    }
+    
 }
