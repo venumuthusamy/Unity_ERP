@@ -1,5 +1,5 @@
 <button class="btn mb-1" style="background-color: #2E5F73; color: white;" (click)="goToPurchaseorder()">
-  Go to PO list
+    Go to PO list
 </button>
 <div class="space-y-5 ui-compact pr-typography">
     <!-- Purchase Order Header -->
@@ -7,7 +7,7 @@
         <!-- Header with Approval Workflow -->
         <div class="flex items-center justify-between mb-2">
             <h2 class="text-lg font-semibold text-gray-800">Purchase Order</h2>
-            
+
         </div>
 
         <!-- Main Info -->
@@ -29,7 +29,8 @@
                         class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">
                         ▼
                     </button>
-                    <p *ngIf="submitted && isEmpty(searchTexts['supplier'])" class="text-xs text-red-600 mt-1">Supplier is required.</p>
+                    <p *ngIf="submitted && isEmpty(searchTexts['supplier'])" class="text-xs text-red-600 mt-1">Supplier
+                        is required.</p>
                 </div>
 
                 <!-- Dropdown Options -->
@@ -59,7 +60,8 @@
                         class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">
                         ▼
                     </button>
-                     <p *ngIf="submitted && isEmpty(searchTexts['paymentTerms'])" class="text-xs text-red-600 mt-1">Payment Terms is required.</p>
+                    <p *ngIf="submitted && isEmpty(searchTexts['paymentTerms'])" class="text-xs text-red-600 mt-1">
+                        Payment Terms is required.</p>
                 </div>
 
                 <!-- Dropdown Options -->
@@ -79,9 +81,9 @@
                     <label class="text-xs font-medium text-gray-600">Currency</label>
                     <div class="relative">
                         <input type="text" [(ngModel)]="searchTexts['currency']" (input)="filter('currency')"
-                            (focus)="toggleDropdown('currency', true)" placeholder="Search Cur..."
+                            (focus)="toggleDropdown('currency', true)" placeholder="Srch Cur"
                             class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-                            style="border-color: #0e3a4c" disabled/>
+                            style="border-color: #0e3a4c" disabled />
                         <!-- Clear Button -->
                         <button *ngIf="searchTexts['currency']" type="button" (click)="onClearSearch('currency')"
                             class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear"
@@ -90,8 +92,7 @@
                         </button>
                         <!-- Dropdown Icon -->
                         <button type="button" (click)="toggleDropdown('currency')"
-                            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret"
-                            disabled>
+                            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret" disabled>
                             ▼
                         </button>
                     </div>
@@ -111,7 +112,7 @@
                     <label class="text-xs font-medium text-gray-600">FX Rate</label>
                     <input type="number" [(ngModel)]="poHdr.fxRate" placeholder="Enter FX Rate"
                         class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-                        style="border-color: #0e3a4c" (input) = "calculateFxTotal()"  [disabled]="isSGDCurrency()"/>
+                        style="border-color: #0e3a4c" (input)="calculateFxTotal()" [disabled]="isSGDCurrency()" />
                 </div>
             </div>
 
@@ -154,15 +155,15 @@
                     <input type="text" [(ngModel)]="searchTexts['incoterms']" (input)="filter('incoterms')"
                         (focus)="toggleDropdown('incoterms', true)" placeholder="Search Incoterms..."
                         class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-                        style="border-color: #0e3a4c"  [disabled]="isSGDCurrency()" />
+                        style="border-color: #0e3a4c" [disabled]="isSGDCurrency()" />
                     <button *ngIf="searchTexts['incoterms']" type="button" (click)="onClearSearch('incoterms')"
                         class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear"
-                         [disabled]="isSGDCurrency()">
+                        [disabled]="isSGDCurrency()">
                         ✕
                     </button>
                     <!-- Dropdown Icon -->
                     <button type="button" (click)="toggleDropdown('incoterms')"
-                        class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret"  
+                        class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret"
                         [disabled]="isSGDCurrency()">
                         ▼
                     </button>
@@ -186,7 +187,7 @@
                 <input class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
                     style="border-color: #0e3a4c" placeholder="Contact Number" [(ngModel)]="poHdr.contactNumber" />
             </div> -->
-            
+
 
             <!-- PO Date (system-generated, disabled) -->
             <div>
@@ -199,10 +200,11 @@
             <div>
                 <label class="text-xs font-medium text-gray-600">Delivery Date</label>
                 <input type="date" class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
-                    style="border-color: #0e3a4c" [(ngModel)]="poHdr.deliveryDate" (change)="deliveryChange()"/>
+                    style="border-color: #0e3a4c" [(ngModel)]="poHdr.deliveryDate" (change)="deliveryChange()"
+                    [min]="minDate" />
                 <p *ngIf="iserrorDelivery" class="text-xs text-red-600 mt-1">
-                Delivery Date is required.
-                </p>    
+                    Delivery Date is required.
+                </p>
             </div>
 
 
@@ -241,8 +243,8 @@
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Contact Number</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Qty</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Unit Price</th>
-                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Discount %</th>  
-                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Total</th>                     
+                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Discount %</th>
+                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Total</th>
                         <th class="px-3">Action</th>
                     </tr>
                 </thead>
@@ -314,7 +316,7 @@
                                 </div>
                             </div>
                         </td>
-                         <td class="px-3 py-2 relative dropdown-cell">
+                        <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].taxCode" (focus)="openDropdown(i, 'taxCode')"
                                 (input)="filterOptions(i, 'taxCode')" placeholder="Search Tax Code..."
                                 class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
@@ -342,25 +344,27 @@
                                 </div>
                             </div>
                         </td>
-                         <td class="px-3 py-2">
+                        <td class="px-3 py-2">
                             <input class="w-[150px] rounded-xl border px-3 py-2 text-sm"
                                 [(ngModel)]="poLines[i]['contactNumber']" placeholder="contactNumber" />
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['qty']"  (input)="calculateLineTotal(poLines[i])"/>
+                                [(ngModel)]="poLines[i]['qty']" (input)="calculateLineTotal(poLines[i])" disabled />
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['price']"  (input)="calculateLineTotal(poLines[i])"/>
+                                [(ngModel)]="poLines[i]['price']" (keydown)="allowOnlyNumbers($event)"
+                                (input)="sanitizeNumberInput('price', i)" (input)="calculateLineTotal(poLines[i])" />
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['discount']"  (input)="calculateLineTotal(poLines[i])"/>
+                                [(ngModel)]="poLines[i]['discount']" (keydown)="allowOnlyNumbers($event)"
+                                (input)="sanitizeNumberInput('price', i)" (input)="calculateLineTotal(poLines[i])" />
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['total']" />
+                                [(ngModel)]="poLines[i]['total']" disabled />
                         </td>
                         <td class="px-3 py-2 text-right">
                             <button
@@ -385,7 +389,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <div class="md:col-span-2"></div>
             <div class="space-y-2 text-sm">
-                 <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center justify-between gap-2">
                     <span>Sub Total</span>
                     <span class="inline-block w-28 text-right px-1">
                         {{ poTotals.subTotal.toFixed(2) }}
@@ -394,63 +398,66 @@
                 <div class="flex justify-between items-center gap-2">
                     <span>Shipping Cost</span>
                     <input type="number" class="w-24 rounded-xl border px-2 py-1 text-sm text-right"
-                        [(ngModel)]="poHdr.shipping"  (input)="recalculateTotals()"/>
+                        [(ngModel)]="poHdr.shipping" (keydown)="allowOnlyNumbers($event)"
+                        (input)="recalculateTotals()" />
                 </div>
                 <div class="flex justify-between items-center gap-2">
                     <span>Discount (absolute)</span>
                     <input type="number" class="w-24 rounded-xl border px-2 py-1 text-sm text-right"
-                        [(ngModel)]="poHdr.discount"  (input)="recalculateTotals()"/>
+                        [(ngModel)]="poHdr.discount" (keydown)="allowOnlyNumbers($event)"
+                        (input)="recalculateTotals()" />
                 </div>
-                  <div class="flex justify-between items-center gap-2">
+                <div class="flex justify-between items-center gap-2">
                     <span>GST (%)</span>
                     <input type="number" class="w-24 rounded-xl border px-2 py-1 text-sm text-right"
-                        [(ngModel)]="poHdr.tax"  (input)="recalculateTotals()" disabled/>
+                        [(ngModel)]="poHdr.tax" (input)="recalculateTotals()" disabled />
                 </div>
                 <div class="border-t pt-2 flex justify-between font-semibold">
                     <span>Net Total</span>
                     <span> {{ poTotals.netTotal.toFixed(2) }} {{ poHdr.currencyName }}</span>
                 </div>
                 <div *ngIf="poHdr.currencyName !== 'SGD'" class="border-t pt-2 flex justify-between font-semibold">
-                <span >Net Total (Base SGD):</span>
-                <span>{{ poHdr.netTotalBase | number : '1.2-2' }}{{ ' SGD' }}</span>
+                    <span>Net Total (Base SGD):</span>
+                    <span>{{ poHdr.netTotalBase | number : '1.2-2' }}{{ ' SGD' }}</span>
                 </div>
             </div>
         </div>
-          <div class="flex gap-3 items-center mt-4 justify-end">
+        <div class="flex gap-3 items-center mt-4 justify-end">
 
-                <!-- Approval Level Dropdown -->
-                <div class="relative dropdown-input mb-2">
-                    <label class="text-xs font-medium text-gray-600">Approval Level</label>
-                    <div class="relative">
-                        <input type="text" [(ngModel)]="searchTexts['approval']" (input)="filter('approval')"
-                            (focus)="toggleDropdown('approval', true)" placeholder="Search Approval..."
-                            class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-                            style="border-color: #0e3a4c" />
-                        <button *ngIf="searchTexts['approval']" type="button" (click)="onClearSearch('approval')"
-                            class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">
-                            ✕
-                        </button>
-                        <!-- Dropdown Icon -->
-                        <button type="button" (click)="toggleDropdown('approval')"
-                            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">
-                            ▼
-                        </button>
-                    </div>
-
-                    <!-- Dropdown Options -->
-                    <ul *ngIf="dropdownOpen['approval']"
-                        class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
-                        <li *ngFor="let item of filteredLists['approval']" (click)="select('approval', item)"
-                            class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm">
-                            {{ item.name }}
-                        </li>
-                    </ul>
-                    <p *ngIf="submitted && isEmpty(searchTexts['approval'])" class="text-xs text-red-600 mt-1">Approval Level is required.</p>
+            <!-- Approval Level Dropdown -->
+            <div class="relative dropdown-input mb-2">
+                <label class="text-xs font-medium text-gray-600">Approval Level</label>
+                <div class="relative">
+                    <input type="text" [(ngModel)]="searchTexts['approval']" (input)="filter('approval')"
+                        (focus)="toggleDropdown('approval', true)" placeholder="Search Approval..."
+                        class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
+                        style="border-color: #0e3a4c" />
+                    <button *ngIf="searchTexts['approval']" type="button" (click)="onClearSearch('approval')"
+                        class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">
+                        ✕
+                    </button>
+                    <!-- Dropdown Icon -->
+                    <button type="button" (click)="toggleDropdown('approval')"
+                        class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">
+                        ▼
+                    </button>
                 </div>
 
-                <!-- Approval Status Badge -->
+                <!-- Dropdown Options -->
+                <ul *ngIf="dropdownOpen['approval']"
+                    class="absolute bottom-full left-0 right-0 bg-white border rounded-xl mb-1 shadow z-10 max-h-40 overflow-y-auto">
+                    <li *ngFor="let item of filteredLists['approval']" (click)="select('approval', item)"
+                        class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm">
+                        {{ item.name }}
+                    </li>
+                </ul>
+                <p *ngIf="submitted && isEmpty(searchTexts['approval'])" class="text-xs text-red-600 mt-1">Approval
+                    Level is required.</p>
+            </div>
 
-                <!-- <span class="px-3 py-1 rounded-full text-xs font-medium" [ngClass]="{
+            <!-- Approval Status Badge -->
+
+            <!-- <span class="px-3 py-1 rounded-full text-xs font-medium" [ngClass]="{
             'bg-yellow-100 text-yellow-700': poHdr.approvalStatus === 'Pending',
             'bg-green-100 text-green-700': poHdr.approvalStatus === 'Approved',
             'bg-red-100 text-red-700': poHdr.approvalStatus === 'Rejected'
@@ -458,39 +465,41 @@
                     {{ poHdr.approvalStatus || 'Pending' }}
                 </span> -->
 
-                  <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50" 
-                    (mouseenter)="hover = true" (mouseleave)="hover = false"
-                     type="button"
-                    (click)="setApprovalStatus(1)">
-                    Pending
-                </button>
+            <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50"
+                (mouseenter)="hover = true" (mouseleave)="hover = false" type="button" (click)="setApprovalStatus(1)">
+                Pending
+            </button>
 
-                <!-- Approve Button -->
-                <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" style="background-color: #2E5F73"
-                    (mouseenter)="hover = true" (mouseleave)="hover = false"
-                    [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" type="button"
-                    (click)="setApprovalStatus(2)">
-                    Approve
-                </button>
+            <!-- Approve Button -->
+            <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" style="background-color: #2E5F73"
+                (mouseenter)="hover = true" (mouseleave)="hover = false"
+                [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" type="button" (click)="setApprovalStatus(2)">
+                Approve
+            </button>
 
-                <!-- Reject Button -->
-                <button
-                    class="px-3 py-2 rounded-xl text-sm font-medium border border-red-600 text-red-700 hover:bg-red-50"
-                    type="button" (click)="setApprovalStatus(3)">
-                    Reject
-                </button>
+            <!-- Reject Button -->
+            <button class="px-3 py-2 rounded-xl text-sm font-medium border border-red-600 text-red-700 hover:bg-red-50"
+                type="button" (click)="setApprovalStatus(3)">
+                Reject
+            </button>
 
-                <!-- Send Button -->
-                <button
-                    class="px-3 py-2 rounded-xl text-sm font-medium border border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-                    (click)="notify('PO PDF generated & sent')" type="button">
-                    Send (PDF/Email/WA)
-                </button>
-                <button type="cancel"  class="btn btn-danger mr-1" (click)="cancel()"
-                    style="padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">
-                    Cancel
-                </button> 
-          </div>
+            <!-- Send Button -->
+            <button
+                class="px-3 py-2 rounded-xl text-sm font-medium border border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                (click)="notify('PO PDF generated & sent')" type="button">
+                Send (PDF/Email/WA)
+            </button>
+            <!-- <button type="cancel" class="btn btn-danger mr-1" (click)="cancel()"
+                style="padding: 6px 18px; font-size: 0.9rem; border-radius: 4px;">
+                <i data-feather="check-circle" class="w-4 h-4"></i>
+                Cancel
+            </button> -->
+            <button (click)="cancel()" class="btn btn-danger m-1 d-inline-flex align-items-center"
+                 style="padding: 6px 18px; font-size: 0.9rem; border-radius: 4px;">
+                 <i data-feather="x-circle" class="w-4 h-4 mr-0.5"></i>
+                <span>Cancel</span>
+            </button>
+        </div>
 
     </div>
 </div>
