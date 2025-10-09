@@ -4,7 +4,7 @@ import { SupplierInvoiceService } from './supplier-invoice.service';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt/purchase-goodreceipt.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
-
+ 
 interface GRNHeader {
   id: number;
   grnNo: string;
@@ -16,7 +16,7 @@ interface GRNHeader {
   poLines?: any[] | string;   // optional fallback
   currencyId?: number;
 }
-
+ 
 interface GRNItem {
   item?: string;
   itemCode?: string;
@@ -27,11 +27,11 @@ interface GRNItem {
   storageType?: string;
   surfaceTemp?: string | number;
   expiry?: string | Date;
-  isPostInventory?: boolean | string | number; // <-- flag (any truthy shape)
-  IsPostInventory?: boolean | string | number; // sometimes server uses this
+  isPostInventory?: boolean | string | number; // various shapes from server
+  IsPostInventory?: boolean | string | number;
   [k: string]: any;
 }
-
+ 
 @Component({
   selector: 'app-supplier-invoice',
   templateUrl: './supplier-invoice.component.html',
@@ -40,22 +40,22 @@ interface GRNItem {
 })
 export class SupplierInvoiceComponent {
   form: FormGroup;
-
+ 
   // GRN combobox state
   grnOpen = false;
   grnSearch = '';
   grnList: GRNHeader[] = [];
   grnFiltered: GRNHeader[] = [];
-
+ 
   // Preview state
   selectedGrn: GRNHeader | null = null;
   selectedGrnItems: GRNItem[] = [];
-
-  // PO mapping buckets (per-item FIFO)
+ 
+  // PO mapping buckets (per-item FIFO), keyed by canonical item key
   private poLineBuckets = new Map<string, any[]>();
-
+ 
   userId: string;
-
+ 
   constructor(
     private fb: FormBuilder,
     private api: SupplierInvoiceService,
@@ -64,7 +64,7 @@ export class SupplierInvoiceComponent {
     private route: ActivatedRoute
   ) {
     this.userId = localStorage.getItem('id') ?? 'System';
-
+ 
     // form model
     this.form = this.fb.group({
       id: [0],
@@ -79,7 +79,7 @@ export class SupplierInvoiceComponent {
       lines: this.fb.array([])   // FormArray of line rows
     });
   }
-
+ 
   ngOnInit(): void {
     this.loadGrns();
     this.route.paramMap.subscribe(pm => {
@@ -87,15 +87,17 @@ export class SupplierInvoiceComponent {
       if (id > 0) this.loadInvoice(id);
     });
   }
-
+ 
   // ---------- Load existing invoice ----------
   private loadInvoice(id: number) {
     this.api.GetSupplierInvoiceById(id).subscribe({
       next: (res: any) => {
         const d = res?.data || res;
-
-        const dateOnly = d.invoiceDate?.includes('T') ? d.invoiceDate.split('T')[0] : d.invoiceDate;
-
+ 
+        const dateOnly = d.invoiceDate?.includes('T')
+          ? d.invoiceDate.split('T')[0]
+          : d.invoiceDate;
+ 
         this.form.patchValue({
           id: d.id ?? 0,
           invoiceNo: d.invoiceNo ?? '',
@@ -107,9 +109,9 @@ export class SupplierInvoiceComponent {
           currencyId: d.currencyId,
           status: Number(d.status ?? 0)
         }, { emitEvent: false });
-
+ 
         this.grnSearch = d.grnNo || this.grnList.find(g => g.id === d.grnId)?.grnNo || '';
-
+ 
         const rows = this.safeParseLines(d.linesJson, d.lines);
         this.clearLines();
         rows.forEach((r: any) => {
@@ -122,7 +124,7 @@ export class SupplierInvoiceComponent {
             dcNoteNo: [r.dcNoteNo || '']
           }));
         });
-
+ 
         this.recalcHeaderFromLines();
       },
       error: (err) => {
@@ -135,7 +137,7 @@ export class SupplierInvoiceComponent {
       }
     });
   }
-
+ 
   private safeParseLines(linesJson?: string, fallback?: any): any[] {
     if (Array.isArray(fallback)) return fallback;
     try {
@@ -143,16 +145,39 @@ export class SupplierInvoiceComponent {
       return Array.isArray(arr) ? arr : [];
     } catch { return []; }
   }
-
+ 
   // ---------- Lines helpers ----------
   get lines(): FormArray {
     return this.form.get('lines') as FormArray;
   }
-
-  private normalizeKey(v: any): string {
-    return String(v ?? '').trim().toUpperCase();
+ 
+  // === Canonical matching helpers (fixes "LP" vs "LP - Laptop") ===
+  private extractItemCode(text: any): string {
+    const s = String(text ?? '').trim();
+    const m = s.match(/^([A-Za-z0-9_-]+)/); // code before first separator/space
+    return m ? m[1].toUpperCase() : '';
   }
-
+ 
+  /** For PO rows: prefer explicit itemCode; else extract code from item label; else fallback name */
+  private canonicalKeyFromPoRow(r: any): string {
+    const code =
+      String(r?.itemCode ?? '').trim().toUpperCase() ||
+      this.extractItemCode(r?.item ?? r?.itemName);
+    if (code) return code;
+    const name = String(r?.itemName ?? r?.item ?? '').trim().toUpperCase();
+    return name;
+  }
+ 
+  /** For GRN items: prefer explicit itemCode; else extract from item/itemName; else fallback name */
+  private canonicalKeyFromGrnItem(it: GRNItem): string {
+    const code =
+      String(it?.itemCode ?? '').trim().toUpperCase() ||
+      this.extractItemCode((it as any)?.item ?? (it as any)?.itemName);
+    if (code) return code;
+    const name = String((it as any)?.itemName ?? (it as any)?.item ?? '').trim().toUpperCase();
+    return name;
+  }
+ 
   private extractPoRowsFromAny(src: any): any[] {
     if (!src) return [];
     if (Array.isArray(src)) return src;
@@ -163,42 +188,43 @@ export class SupplierInvoiceComponent {
       return [];
     }
   }
-
+ 
+  /** Build FIFO buckets keyed by canonical PO key */
   private buildPoBuckets(rows: any[]): Map<string, any[]> {
     const map = new Map<string, any[]>();
     (rows || []).forEach((r: any) => {
-      const key = this.normalizeKey(r.item ?? r.itemCode ?? r.itemName);
+      const key = this.canonicalKeyFromPoRow(r);
       if (!key) return;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     });
     return map;
   }
-
+ 
   private setPoBucketsFromHeader(g: GRNHeader): void {
     const src = g.poLinesJson ?? g.poLines;
     const rows = this.extractPoRowsFromAny(src);
     this.poLineBuckets = this.buildPoBuckets(rows);
   }
-
+ 
   private setPoBucketsFromAny(src: any): void {
     const rows = this.extractPoRowsFromAny(src);
     this.poLineBuckets = this.buildPoBuckets(rows);
   }
-
-  private shiftPoLineFor(codeOrName: string): any | null {
-    const key = this.normalizeKey(codeOrName);
-    if (!key) return null;
+ 
+  /** Take one PO line (FIFO) that matches the GRN item's canonical key */
+  private shiftPoLineForGrn(it: GRNItem): any | null {
+    const key = this.canonicalKeyFromGrnItem(it);
     const bucket = this.poLineBuckets.get(key);
     if (bucket?.length) return bucket.shift()!;
     return null;
   }
-
+ 
   addLine(prefill?: Partial<GRNItem>) {
     const itemName = prefill?.item ?? prefill?.itemName ?? prefill?.itemCode ?? '';
     const qty = prefill?.qty != null ? Number(prefill?.qty) : null;
     const price = prefill?.price != null ? Number(prefill?.price as number) : null;
-
+ 
     this.lines.push(this.fb.group({
       item: [itemName],
       qty: [qty],
@@ -207,21 +233,20 @@ export class SupplierInvoiceComponent {
       mismatchFields: [''],
       dcNoteNo: ['']
     }));
-
+ 
     this.recalcHeaderFromLines();
   }
-
+ 
   // Respect PO mapping even when adding single GRN item
   addLineFromGrn(it: GRNItem) {
-    const keySource = it.itemCode ?? it.item ?? it.itemName ?? '';
-    const po = this.shiftPoLineFor(keySource);
+    const po = this.shiftPoLineForGrn(it);
     this.addLine({
       item: it.item ?? it.itemName ?? it.itemCode,
-      qty: po?.qty != null ? Number(po.qty) : (it.qty ?? 1),
-      price: po?.price != null ? Number(po.price) : (it.price ?? null)
+      qty: po?.qty != null ? Number(po.qty) : (it.qty != null ? Number(it.qty) : 1),
+      price: po?.price != null ? Number(po.price) : (it.price != null ? Number(it.price) : null)
     });
   }
-
+ 
   importAllFromGrn() {
     if (!this.selectedGrnItems?.length) return;
     const flagged = this.selectedGrnItems.filter(it => this.shouldIncludeItem(it));
@@ -229,31 +254,31 @@ export class SupplierInvoiceComponent {
     flagged.forEach(it => this.addLineFromGrn(it));
     this.recalcHeaderFromLines();
   }
-
+ 
   removeLine(i: number) {
     this.lines.removeAt(i);
     this.recalcHeaderFromLines();
   }
-
+ 
   clearLines() {
     while (this.lines.length) this.lines.removeAt(0);
   }
-
+ 
   // lightweight local match badge + header amount recalc
   onCellChange(i: number) {
     const r = this.lines.at(i).value;
     const mm: string[] = [];
     if ((+r.qty || 0) <= 0) mm.push('Qty');
     if ((+r.price || 0) < 0) mm.push('Price');
-
+ 
     this.lines.at(i).patchValue({
       matchStatus: mm.length ? 'Mismatch' : 'OK',
       mismatchFields: mm.join(',')
     }, { emitEvent: false });
-
+ 
     this.recalcHeaderFromLines();
   }
-
+ 
   // ---------- Save ----------
   private toSqlDate(d: any): string | null {
     if (!d) return null;
@@ -265,13 +290,13 @@ export class SupplierInvoiceComponent {
       return `${dt.getFullYear()}-${m}-${day}`;
     } catch { return null; }
   }
-
+ 
   private buildLinesJson(): string {
     const toNum = (x: any) => {
       const n = Number(x);
       return Number.isFinite(n) ? n : 0;
     };
-
+ 
     const arr = (this.lines.value as any[]).map(l => ({
       item: (l.item ?? '') || null,
       qty: toNum(l.qty),
@@ -280,23 +305,23 @@ export class SupplierInvoiceComponent {
       matchStatus: (l.matchStatus ?? '') || null,
       mismatchFields: String(l.mismatchFields ?? '')
     }));
-
+ 
     return JSON.stringify(arr);
   }
-
+ 
   // Amount = Σ(qty * price)
   private recalcHeaderFromLines() {
     const lines = this.lines.value as Array<{ qty: any; price: any }>;
     const subtotal = lines.reduce((s, l) => s + ((Number(l.qty) || 0) * (Number(l.price) || 0)), 0);
     this.form.patchValue({ amount: Number(subtotal.toFixed(2)) }, { emitEvent: false });
   }
-
+ 
   save(action: 'POST' | 'HOLD' = 'POST') {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-
+ 
     const v = this.form.value;
     const payload = {
       grnId: v.grnId ?? null,
@@ -310,10 +335,10 @@ export class SupplierInvoiceComponent {
       createdBy: this.userId,
       updatedBy: this.userId
     };
-
+ 
     const isUpdate = !!(v.id && v.id > 0);
     const obs = isUpdate ? this.api.update(v.id, payload) : this.api.create(payload);
-
+ 
     obs.subscribe({
       next: (res: any) => {
         const d = res?.data || {};
@@ -321,7 +346,7 @@ export class SupplierInvoiceComponent {
           id: d.id ?? this.form.value.id,
           invoiceNo: d.invoiceNo ?? this.form.value.invoiceNo
         }, { emitEvent: false });
-
+ 
         Swal.fire({
           icon: 'success',
           title: isUpdate ? 'Updated' : (action === 'HOLD' ? 'Saved to Hold' : 'Created'),
@@ -344,10 +369,10 @@ export class SupplierInvoiceComponent {
       }
     });
   }
-
+ 
   private resetForm() {
     while (this.lines.length) this.lines.removeAt(0);
-
+ 
     this.form.reset({
       id: 0,
       invoiceNo: '',
@@ -359,13 +384,13 @@ export class SupplierInvoiceComponent {
       currencyId: null,
       status: 0
     });
-
+ 
     this.selectedGrn = null;
     this.selectedGrnItems = [];
     this.grnSearch = '';
     this.poLineBuckets.clear();
   }
-
+ 
   // ---------- GRN dropdown ----------
   loadGrns() {
     this.grnService.getAllGRN().subscribe({
@@ -387,12 +412,12 @@ export class SupplierInvoiceComponent {
       error: (err: any) => console.error('Error loading GRN list', err)
     });
   }
-
+ 
   onGrnFocus() {
     this.grnFiltered = [...this.grnList];
     this.grnOpen = true;
   }
-
+ 
   onGrnSearch(e: Event) {
     const q = (e.target as HTMLInputElement).value || '';
     this.grnSearch = q;
@@ -404,17 +429,17 @@ export class SupplierInvoiceComponent {
     );
     this.grnOpen = true;
   }
-
+ 
   // --- NEW: truthy helpers for IsPostInventory ---
   private isTruthyTrue(val: any): boolean {
     return val === true || val === 'true' || val === 1 || val === '1';
   }
-
+ 
   private shouldIncludeItem(it: GRNItem): boolean {
     const v = (it as any)?.isPostInventory ?? (it as any)?.IsPostInventory;
     return this.isTruthyTrue(v);
   }
-
+ 
   // Safer JSON parse for GRN items (handles double-encoding & { items: [] })
   private safeParseGrnItems(jsonish: any): GRNItem[] {
     try {
@@ -428,7 +453,7 @@ export class SupplierInvoiceComponent {
       return [];
     }
   }
-
+ 
   selectGrn(g: GRNHeader) {
     // Patch header and keep UI in sync
     this.form.patchValue({
@@ -439,26 +464,26 @@ export class SupplierInvoiceComponent {
     this.grnSearch = g.grnNo;
     this.grnOpen = false;
     this.selectedGrn = g;
-
+ 
     // Prepare PO buckets from embedded lines (for qty/price lookup only)
     this.setPoBucketsFromHeader(g);
-
+ 
     // Preferred: fill from embedded GRN JSON
     if (g.grnJson) {
       const raw = this.safeParseGrnItems(g.grnJson);
       const items = raw.filter(it => this.shouldIncludeItem(it));
       this.selectedGrnItems = items;
-
+ 
       if (items.length) {
         this.fillLinesFromGRN(items); // only flagged items
         return;
       }
-
-      // GRN JSON exists but no item is flagged → clear lines and stop
+ 
+      // GRN JSON exists but no item is flagged → clear lines
       this.clearLines();
       return;
     }
-
+ 
     // Optionally refetch GRN by Id for fresh JSON if not present in header
     if (typeof (this.grnService as any).getById === 'function') {
       (this.grnService as any).getById(g.id).subscribe({
@@ -467,17 +492,17 @@ export class SupplierInvoiceComponent {
           const raw = this.safeParseGrnItems(data.grnJson || '[]');
           const items = raw.filter((it: GRNItem) => this.shouldIncludeItem(it));
           this.selectedGrnItems = items;
-
+ 
           // If API returned PO lines here, rebuild PO buckets
           if (data.poLinesJson || data.poLines) {
             this.setPoBucketsFromAny(data.poLinesJson ?? data.poLines);
           }
-
+ 
           if (items.length) {
             this.fillLinesFromGRN(items);
             return;
           }
-
+ 
           // GRN present but none flagged → show nothing
           this.clearLines();
         },
@@ -485,29 +510,28 @@ export class SupplierInvoiceComponent {
       });
       return;
     }
-
+ 
     // If there is no GRN JSON at all (neither on header nor fetch), you may fallback to PO:
     this.tryFillFromPO(g);
   }
-
+ 
   /** Map GRN items → FormArray rows, using PO qty/price when available */
   private fillLinesFromGRN(items: GRNItem[]) {
     this.clearLines();
     if (!items?.length) { this.recalcHeaderFromLines(); return; }
-
+ 
     items.forEach((it: GRNItem) => {
       if (!this.shouldIncludeItem(it)) return; // hard gate
-
+ 
       const itemLabel = it.item ?? it.itemName ?? it.itemCode ?? '';
-      const keySource = it.itemCode ?? it.item ?? it.itemName ?? '';
-      const po = this.shiftPoLineFor(keySource);
-
+      const po = this.shiftPoLineForGrn(it);
+ 
       const qty = po?.qty != null ? Number(po.qty)
                 : (it.qty != null ? Number(it.qty) : 1);
-
+ 
       const price = po?.price != null ? Number(po.price)
                   : (it.price != null ? Number(it.price) : null);
-
+ 
       this.lines.push(this.fb.group({
         item: [itemLabel],
         qty: [qty],
@@ -517,10 +541,10 @@ export class SupplierInvoiceComponent {
         dcNoteNo: ['']
       }));
     });
-
+ 
     this.recalcHeaderFromLines();
   }
-
+ 
   /** Optional PO fallback chain (used only when there is no GRN JSON at all) */
   private tryFillFromPO(g: GRNHeader) {
     const embedded = (g.poLinesJson ?? g.poLines);
@@ -542,14 +566,14 @@ export class SupplierInvoiceComponent {
       });
     }
   }
-
+ 
   /** If you use PO fallback at all */
   private fillLinesFromPOLines(rows: any[]) {
     if (!rows?.length) return;
-
+ 
     // Seed buckets for any subsequent GRN adds
     this.poLineBuckets = this.buildPoBuckets(rows);
-
+ 
     this.clearLines();
     rows.forEach(l => {
       this.lines.push(this.fb.group({
@@ -563,18 +587,20 @@ export class SupplierInvoiceComponent {
     });
     this.recalcHeaderFromLines();
   }
-
+ 
   trackByIndex(i: number) { return i; }
   trackByGrn = (_: number, g: GRNHeader) => g.id || g.grnNo;
-
+ 
   // close dropdown on outside click
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent) {
     const t = ev.target as HTMLElement;
     if (!t.closest('.grn-combobox')) this.grnOpen = false;
   }
-
+ 
   goToSupplierInvoice() {
     this.router.navigateByUrl('/purchase/list-SupplierInvoice');
   }
 }
+ 
+ 

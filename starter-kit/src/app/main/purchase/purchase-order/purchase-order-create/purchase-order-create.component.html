@@ -461,7 +461,7 @@
                   <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50" 
                     (mouseenter)="hover = true" (mouseleave)="hover = false"
                      type="button"
-                    (click)="setApprovalStatus('Pending')">
+                    (click)="setApprovalStatus(1)">
                     Pending
                 </button>
 
@@ -469,14 +469,14 @@
                 <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" style="background-color: #2E5F73"
                     (mouseenter)="hover = true" (mouseleave)="hover = false"
                     [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" type="button"
-                    (click)="setApprovalStatus('Approved')">
+                    (click)="setApprovalStatus(2)">
                     Approve
                 </button>
 
                 <!-- Reject Button -->
                 <button
                     class="px-3 py-2 rounded-xl text-sm font-medium border border-red-600 text-red-700 hover:bg-red-50"
-                    type="button" (click)="setApprovalStatus('Rejected')">
+                    type="button" (click)="setApprovalStatus(3)">
                     Reject
                 </button>
 

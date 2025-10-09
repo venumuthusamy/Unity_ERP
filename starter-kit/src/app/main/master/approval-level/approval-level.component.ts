@@ -22,6 +22,7 @@ export class ApprovalLevelComponent implements OnInit {
    public isDisplay = false;
    private iconsReplaced = false;
   userId: string;
+   approvalLevelHeader: string = 'Add Approval Level';
    constructor(private fb: FormBuilder,
      private approvallevelService: ApprovallevelService,) {
        this.userId = localStorage.getItem('id');
@@ -52,6 +53,7 @@ export class ApprovalLevelComponent implements OnInit {
      this.isEditMode = false;
      this.selectedApprovalLevel = null;
      this.reset();
+      this.approvalLevelHeader = 'Create Approval Level';
    }
  
    // Show form for editing
@@ -63,6 +65,7 @@ export class ApprovalLevelComponent implements OnInit {
      // patch the form fields
      this.approvalLevelName = data.name;       // bind to input
      this.description = data.description; // bind to textarea
+      this.approvalLevelHeader = "Edit Approval Level";
    }
    cancel() {
  
@@ -73,6 +76,7 @@ export class ApprovalLevelComponent implements OnInit {
    reset() {
      this.approvalLevelName = '';
      this.description = '';
+      this.approvalLevelHeader = "Create Approval Level";
    }
  
    // Save or update

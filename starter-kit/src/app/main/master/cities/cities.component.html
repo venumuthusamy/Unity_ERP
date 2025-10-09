@@ -4,12 +4,24 @@
     <div class="card card-transaction">
       <div class="card-header">
         <div>
-          <h4 class="card-title" style="margin:0;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+          <h4 class="card-title title-pill">
+            <span class="pill">
+              <!-- inline MAP-PIN icon -->
+              <svg viewBox="0 0 24 24" class="lvl-icon" fill="none" stroke="currentColor" aria-hidden="true">
+                <g stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </g>
+              </svg>
+            </span>
             City List
           </h4>
+
         </div>
-        <button (click)="createcity()" 
-                style="background-color:#2E5F73;color:white;border:none;padding:6px 14px;font-size:.9rem;border-radius:4px;">
+
+        <button (click)="createcity()"
+          style="background-color:#2E5F73; color:white; border:none; padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+          <i data-feather="plus-circle" class="w-4 h-4"></i>
           Create
         </button>
       </div>
@@ -17,8 +29,9 @@
         <ul class="list-group">
           <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let item of CityList">
             <div class="avatar bg-light-primary mr-2 align-items-center avatar-lg">
-              <div class="avatar-content">
-                <span data-feather="globe" style="width:2rem;height:2rem;font-size:1.5rem;"></span>
+              <div class="avatar"
+                style="background-color: #2E5F73; color: white; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-box"></i>
               </div>
             </div>
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center w-100">
@@ -28,18 +41,15 @@
               <div class="mt-md-0 mt-1 d-flex justify-content-md-end">
                 <!-- Edit Button -->
                 <button type="button"
-                        class="btn btn-outline-primary p-0 d-flex align-items-center justify-content-center"
-                        style="width:28px;height:28px;"
-                        (click)="getCityDetails(item.id)">
+                  class="btn btn-outline-primary p-0 d-flex align-items-center justify-content-center"
+                  style="width:28px;height:28px;" (click)="getCityDetails(item.id)">
                   <i data-feather="edit" style="width:14px;height:14px;"></i>
                 </button>
 
                 <!-- Delete Button -->
                 <button type="button"
-                        class="btn btn-outline-danger p-0 d-flex align-items-center justify-content-center ml-1"
-                        style="width:28px;height:28px;"
-                        (click)="deleteCity(item.id)"
-                        [disabled]="isEditMode">
+                  class="btn btn-outline-danger p-0 d-flex align-items-center justify-content-center ml-1"
+                  style="width:28px;height:28px;" (click)="deleteCity(item.id)" [disabled]="isEditMode">
                   <i data-feather="trash" style="width:14px;height:14px;"></i>
                 </button>
               </div>
@@ -54,23 +64,24 @@
   <div class="col-sm-12 col-xs-12 col-lg-6 col-md-6" *ngIf="isDisplay">
     <div class="card">
       <div class="card-header">
-        <h4 class="card-title">{{modeHeader}}</h4>
+        <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">
+          {{cityHeader}}</h4>
       </div>
       <div class="card-body">
         <form class="form" (ngSubmit)="cityForm.form.valid && CreateCity()" #cityForm="ngForm">
-          
+
           <!-- City Name -->
           <div class="form-group">
             <label for="city-name">City Name</label>
-            <input id="city-name" class="form-control" placeholder="City Name"
-                   name="cityName" [(ngModel)]="cityName" [maxlength]="50" required />
+            <input id="city-name" class="form-control" placeholder="City Name" name="cityName" [(ngModel)]="cityName"
+              [maxlength]="50" required />
           </div>
 
           <!-- Country Dropdown -->
           <div class="form-group">
             <label for="country-select">Select Country</label>
-            <select id="country-select" class="form-control" name="country"
-                    [(ngModel)]="selectedCountry" (ngModelChange)="onCountryChange($event)" required>
+            <select id="country-select" class="form-control" name="country" [(ngModel)]="selectedCountry"
+              (ngModelChange)="onCountryChange($event)" required>
               <option [ngValue]="null" disabled>Select a country</option>
               <option *ngFor="let country of rows" [ngValue]="country.id">
                 {{ country.countryName }}
@@ -91,20 +102,22 @@
 
           <!-- Buttons -->
           <div class="row justify-content-start p-1">
-            <button type="submit" class="btn mr-1"
-                    [disabled]="!cityForm.form.valid"
-                    style="background-color:#2E5F73;color:white;padding:6px 14px;font-size:.9rem;border-radius:4px;">
+            <button type="submit" class="btn mr-1" [disabled]="!cityForm.form.valid"
+              style="background-color:#2E5F73; color:white; padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="check-circle" class="w-4 h-4"></i>
               Submit
             </button>
 
             <button type="button" class="btn btn-danger mr-1" (click)="cancel()"
-                    style="padding:6px 14px;font-size:.9rem;border-radius:4px;">
+              style="padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="x-circle" class="w-4 h-4"></i>
               Cancel
             </button>
 
             <button type="button" class="btn btn-secondary" *ngIf="resetButton" (click)="reset()"
-                    style="padding:6px 14px;font-size:.9rem;border-radius:4px;">
-              Reset
+              style="padding:6px 14px; font-size:0.9rem; border-radius:4px; display:flex; align-items:center; gap:6px;">
+              <i data-feather="rotate-ccw" class="w-4 h-4"></i>
+              Clear
             </button>
           </div>
 

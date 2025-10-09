@@ -27,9 +27,24 @@
 
     <!-- Toggle skin -->
     <li class="nav-item d-none d-lg-block">
-      <a type="button" class="nav-link nav-link-style btn" (click)="toggleDarkSkin()">
-        <span [ngClass]="currentSkin === 'dark' ? 'icon-sun' : 'icon-moon'" class="ficon font-medium-5 feather"></span>
-      </a>
+    <a type="button"
+   class="nav-link nav-link-style btn flex flex-col items-center justify-center"
+   (click)="toggleDarkSkin()"
+   style="color:#2E5F73; font-weight:500; padding:6px 10px;">
+  
+  <!-- Icon -->
+  <span
+    [ngClass]="currentSkin === 'dark' ? 'icon-sun' : 'icon-moon'"
+    class="ficon font-medium-5 feather mb-1">
+  </span>
+
+  <!-- Text below -->
+  <small>
+    {{ currentSkin === 'dark' ? 'Dark Mode' : 'Light Mode' }}
+  </small>
+</a>
+
+
     </li>
     <!--/ Toggle skin -->
   </div>
