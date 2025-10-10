@@ -37,7 +37,10 @@
 
         <form class="auth-login-form mt-2" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
           <div class="form-group">
+            <div class="d-flex justify-content-between">
             <label class="form-label" for="login-username">Username</label>
+            <a routerLink="/pages/authentication/forgot-password" [queryParams]="{ mode: 'username' }"><small>Forgot Username?</small></a>
+            </div>
             <input
               type="text"
               formControlName="username"
@@ -55,7 +58,7 @@
           <div class="form-group">
             <div class="d-flex justify-content-between">
               <label for="login-password">Password</label
-              ><a routerLink="/pages/authentication/forgot-password"><small>Forgot Password?</small></a>
+              ><a routerLink="/pages/authentication/forgot-password" [queryParams]="{ mode: 'password' }"><small>Forgot Password?</small></a>
             </div>
             <div class="input-group input-group-merge form-password-toggle">
               <input

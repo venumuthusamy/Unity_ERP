@@ -25,6 +25,7 @@ export class ForgotPasswordComponent implements OnInit {
 
   // Private
   private _unsubscribeAll: Subject<any>;
+  mode: any;
 
   /**
    * Constructor
@@ -126,8 +127,10 @@ export class ForgotPasswordComponent implements OnInit {
    * On init
    */
   ngOnInit(): void {
+    this.mode = (this._route.snapshot.queryParamMap.get('mode')).toLowerCase()
     this.forgotPasswordForm = this._formBuilder.group({
-      email: ['', [Validators.required, Validators.email]]
+      email: ['', [Validators.required, Validators.email]],
+      mode: [this.mode]
     });
 
     // Subscribe to config changes

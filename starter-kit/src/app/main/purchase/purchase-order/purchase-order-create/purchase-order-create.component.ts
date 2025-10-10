@@ -551,6 +551,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     po.description = line.remarks ?? '';
     po.budget = line.budget ?? '';
     po.location = line.location ?? line.locationSearch ?? '';
+    const contactNumber = this.deliveries.find(x=>x.name == line.location).contactNumber
+    po.contactNumber = contactNumber ?? '';
     po.qty = Number(line.qty) || 0;
 
     return po;
