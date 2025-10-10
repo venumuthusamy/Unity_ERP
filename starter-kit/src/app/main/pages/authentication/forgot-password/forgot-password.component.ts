@@ -64,6 +64,12 @@ export class ForgotPasswordComponent implements OnInit {
     return this.forgotPasswordForm.controls;
   }
 
+  get promptText(): string {
+  return this.mode === 'username'
+    ? "Username sent to your email, please check and proceed further."
+    : "Reset link sent to your email, please check and proceed further.";
+  }
+
   /**
    * On Submit
    */
@@ -80,8 +86,8 @@ export class ForgotPasswordComponent implements OnInit {
                 next: () => {
                   Swal.fire({
                     icon: 'success',
-                    title: 'Created!',
-                    text: 'Reset link sent to your email, please check and proceed further',
+                    title: 'Send!',
+                    text: this.promptText,
                     // confirmButtonText: 'OK',
                     confirmButtonColor: '#0e3a4c',
                     showConfirmButton: false, 
