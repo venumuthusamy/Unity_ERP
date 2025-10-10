@@ -16,7 +16,10 @@ export const locale = {
         MobileReceiving: 'Mobile Receiving',
         RFQ: 'Rfq'
       },
-
+ INVENTORY: {
+        TITLE: 'Inventory',
+        INVENOTYR: 'Inventory'
+      },
       FINANCIAL: {
         TITLE: 'Financial',
         CHARTOFACCOUNT: 'Chart of Account'
