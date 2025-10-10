@@ -1,11 +1,20 @@
 <div class="row">
     <div class="col-lg-6 col-md-6">
         <div class="card card-transaction">
-            <div class="card-header">
-                <div>
-                    <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">
-                        TaxCode List</h4>
-                </div>
+            <div class="card-header"><h4 class="card-title" style="display:flex;align-items:center;gap:10px;margin:0;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+  <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background-color:#e5f0f3;border-radius:50%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#2E5F73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"></path>
+      <circle cx="10" cy="9" r="1.6"></circle>
+      <circle cx="14" cy="13" r="1.6"></circle>
+      <path d="M9 15l6-6"></path>
+    </svg>
+  </span>
+  TaxCode List
+</h4>
+
+
+
                 <button (click)="createTaxCode()"
                     style="background-color: #2E5F73; color: white; border: none; padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">Create</button>
             </div>

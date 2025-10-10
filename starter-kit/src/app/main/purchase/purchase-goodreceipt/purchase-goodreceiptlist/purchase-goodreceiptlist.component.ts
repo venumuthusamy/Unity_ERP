@@ -28,6 +28,11 @@ interface GrnRow {
   initial: string;
   isFlagIssue: boolean;
   isPostInventory: boolean;
+
+  /** NEW fields you asked to preview */
+  qtyReceived?: number | null;
+  qualityCheck?: string | null;
+  batchSerial?: string | null;
 }
 
 type ViewerState = { open: boolean; src: string | null };
@@ -54,7 +59,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
   // Lines modal
   showLinesModal = false;
   modalLines: any[] = [];
-  modalHeader = { grnNo: '' };
+  modalHeader: { grnNo?: string; pono?: string; name?: string; receptionDate?: any } = { grnNo: '' };
 
   constructor(
     private grnService: PurchaseGoodreceiptService,
@@ -102,13 +107,18 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
           initial: g.initial ?? g.Initial ?? '',
           isFlagIssue: this.truthy(g.isFlagIssue ?? g.IsFlagIssue ?? false),
           isPostInventory: this.truthy(g.isPostInventory ?? g.IsPostInventory ?? false),
+
+          /** NEW mappings */
+          qtyReceived: g.qtyReceived ?? g.QtyReceived ?? null,
+          qualityCheck: g.qualityCheck ?? g.QualityCheck ?? null,
+          batchSerial: g.batchSerial ?? g.BatchSerial ?? null,
         }));
 
         this.allRows = normalized;
         this.rows = this.collapseByGrn(normalized);
         if (this.table) this.table.offset = 0;
 
-        this.refreshFeatherIcons(); // ✅ Ensure icons render after table load
+        this.refreshFeatherIcons(); // ensure icons render after table load
       },
       error: (err) => {
         console.error('Error loading GRN list', err);
@@ -166,13 +176,21 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
   /** Lines modal */
   openLinesModal(row: GrnRow): void {
-    this.refreshFeatherIcons(); // add this line
+    this.refreshFeatherIcons();
     if (!row?.grnNo) return;
 
-    this.modalHeader = { grnNo: row.grnNo || '' };
+    // Show these in the modal header strip if you added it in HTML
+    this.modalHeader = {
+      grnNo: row.grnNo || '',
+      pono: row.pono || '',
+      name: row.name || '',
+      receptionDate: row.receptionDate || null
+    };
+
     this.modalLines = [];
     this.showLinesModal = true;
 
+    // Try to build from cached rows for same GRN + same status (for consistent display)
     const sameGrnRows = this.allRows.filter(r => (r.grnNo || '') === (row.grnNo || ''));
     const sameStatusRows = sameGrnRows.filter(r =>
       this.truthy(r.isPostInventory) === this.truthy(row.isPostInventory) &&
@@ -184,6 +202,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Fallback: fetch by id and try to derive a single matching line
     this.grnService.getByIdGRN(row.id).subscribe({
       next: (res: any) => {
         const data = res?.data ?? res ?? {};
@@ -209,7 +228,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.modalLines = [];
   }
 
-  /** Convert GRN row to modal line */
+  /** Convert any source (row or json line) to modal line object */
   private toModalLine(src: any, fallbackName?: string) {
     const timeDate = this.parseTime(src.time);
     return {
@@ -230,7 +249,18 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
       timeText: this.coerceTimeText(src.time),
       isFlagIssue: this.truthy(src.isFlagIssue),
       isPostInventory: this.truthy(src.isPostInventory),
+
+      /** NEW fields surfaced into the modal table */
+      qtyReceived: this.toNumberOrNull(src.qtyReceived ?? src.QtyReceived),
+      qualityCheck: src.qualityCheck ?? src.QualityCheck ?? null,
+      batchSerial: src.batchSerial ?? src.BatchSerial ?? null,
     };
+  }
+
+  private toNumberOrNull(v: any): number | null {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return isNaN(n) ? null : n;
   }
 
   private parseTime(v: any): Date | null {
@@ -287,36 +317,36 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`);
   }
 
-  deleteGRN(id: number) {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#7367F0',
-      cancelButtonColor: '#E42728',
-      confirmButtonText: 'Yes, Delete it!',
-      customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-danger ml-1' },
-      allowOutsideClick: false,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.grnService.deleteGRN(id).subscribe({
-          next: (response: any) => {
-            Swal.fire({
-              icon: response.isSuccess ? 'success' : 'error',
-              title: response.isSuccess ? 'Deleted!' : 'Error!',
-              text: response.message,
-              allowOutsideClick: false,
-            });
-            this.loadGrns();
-          },
-          error: () => {
-            Swal.fire({ icon: 'error', title: 'Error!', text: 'Something went wrong while deleting.' });
-          }
-        });
-      }
-    });
-  }
+  // deleteGRN(id: number) {
+  //   Swal.fire({
+  //     title: 'Are you sure?',
+  //     text: "You won't be able to revert this!",
+  //     icon: 'warning',
+  //     showCancelButton: true,
+  //     confirmButtonColor: '#7367F0',
+  //     cancelButtonColor: '#E42728',
+  //     confirmButtonText: 'Yes, Delete it!',
+  //     customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-danger ml-1' },
+  //     allowOutsideClick: false,
+  //   }).then((result) => {
+  //     if (result.isConfirmed) {
+  //       this.grnService.deleteGRN(id).subscribe({
+  //         next: (response: any) => {
+  //           Swal.fire({
+  //             icon: response.isSuccess ? 'success' : 'error',
+  //             title: response.isSuccess ? 'Deleted!' : 'Error!',
+  //             text: response.message,
+  //             allowOutsideClick: false,
+  //           });
+  //           this.loadGrns();
+  //         },
+  //         error: () => {
+  //           Swal.fire({ icon: 'error', title: 'Error!', text: 'Something went wrong while deleting.' });
+  //         }
+  //       });
+  //     }
+  //   });
+  // }
 
   private toDate(d: any): Date | null {
     const dt = new Date(d);
@@ -355,6 +385,4 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     const minutes = d.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   }
-
-
 }

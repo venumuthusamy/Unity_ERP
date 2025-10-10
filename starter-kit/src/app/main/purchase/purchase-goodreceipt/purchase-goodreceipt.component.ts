@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, AfterViewInit, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, AfterViewInit, AfterViewChecked, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import SignaturePad from 'signature_pad';
@@ -15,6 +15,11 @@ export interface LineRow {
   itemCode: string;
   supplierId: number | null;
   supplierName: string;
+
+  // kept fields
+  qtyReceived: number | null;                       // Quantity received
+  qualityCheck: 'pass' | 'fail' | 'notverify' | ''; // QC status
+  batchSerial: string;                              // Batch / Serial
 
   storageType: string;
   surfaceTemp: string;
@@ -50,15 +55,35 @@ interface GeneratedGRN {
   templateUrl: './purchase-goodreceipt.component.html',
   styleUrls: ['./purchase-goodreceipt.component.scss']
 })
-export class PurchaseGoodreceiptComponent implements OnInit,AfterViewInit,AfterViewChecked {
+export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, AfterViewChecked {
   hover = false;
   minDate = '';
-  // create-mode summary toggle
   showSummary = false;
 
+  // Generic image viewer (kept)
   imageViewer = { open: false, src: null as string | null };
   openImage(src: string){ this.imageViewer = { open: true, src }; document.body.style.overflow = 'hidden'; }
   closeImage(){ this.imageViewer = { open: false, src: null }; document.body.style.overflow = ''; }
+
+  // Initial thumbnail Preview (tiny modal)
+  showPreview = false;
+  previewSrc: string | null = null;
+  openPreview(src: string) {
+    this.previewSrc = src || null;
+    if (this.previewSrc) {
+      this.showPreview = true;
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  closePreview() {
+    this.showPreview = false;
+    this.previewSrc = null;
+    document.body.style.overflow = '';
+  }
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscForPreview(_: KeyboardEvent) {
+    if (this.showPreview) this.closePreview();
+  }
 
   showInitialModal = false;
   activeTab: 'image' | 'signature' = 'image';
@@ -68,6 +93,9 @@ export class PurchaseGoodreceiptComponent implements OnInit,AfterViewInit,AfterV
   flagModal = { open: false };
   selectedFlagIssueId: number | null = null;
   selectedRowForFlagIndex: number | null = null;
+
+  // auto-lock receipt date after PO selection
+  isPoDateDisabled = false;
 
   isDragOver = false;
 
@@ -85,6 +113,11 @@ export class PurchaseGoodreceiptComponent implements OnInit,AfterViewInit,AfterV
     {
       itemText: '', itemCode: '',
       supplierId: null, supplierName: '',
+
+      qtyReceived: null,
+      qualityCheck: '',
+      batchSerial: '',
+
       storageType: '', surfaceTemp: '', expiry: '',
       pestSign: '', drySpillage: '', odor: '',
       plateNumber: '', defectLabels: '', damagedPackage: '',
@@ -93,26 +126,21 @@ export class PurchaseGoodreceiptComponent implements OnInit,AfterViewInit,AfterV
       isFlagIssue: false, isPostInventory: false, flagIssueId: null
     }
   ];
-ngAfterViewInit() {
-  feather.replace(); // activates all <i data-feather="...">
-}
-  ngAfterViewChecked() {
-    feather.replace();
-  }
 
-  allowOnlyNumbers(event: KeyboardEvent): void {
-  const charCode = event.key.charCodeAt(0);
-  // Allow only digits 0-9
-  if (charCode < 48 || charCode > 57) {
-    event.preventDefault();
-  }
-}
-  purchaseOrder: Array<{ id: number; purchaseOrderNo: string; supplierId?: number; poLines?: string }> = [];
+  purchaseOrder: Array<{
+    id: number;
+    purchaseOrderNo: string;
+    supplierId?: number;
+    supplierName?: string;
+    poLines?: string;
+    poDate?: string;
+    deliveryDate?: string;
+  }> = [];
+
   flagIssuesList: any[] = [];
   isPostInventoryDisabled = false;
 
   generatedGRN: GeneratedGRN | null = null;
-
   editingGrnId: number | null = null;
 
   private supplierNameMap = new Map<number, string>();
@@ -126,6 +154,9 @@ ngAfterViewInit() {
     private router: Router,
     private route: ActivatedRoute
   ) {}
+
+  ngAfterViewInit() { feather.replace(); }
+  ngAfterViewChecked() { feather.replace(); }
 
   ngOnInit() {
     this.setMinDate();
@@ -142,8 +173,7 @@ ngAfterViewInit() {
     });
   }
 
-
-   setMinDate() {
+  setMinDate() {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -153,6 +183,13 @@ ngAfterViewInit() {
   get isEditMode(): boolean { return !!this.editingGrnId; }
 
   goToDebitNoteList(){ this.router.navigate(['/purchase/list-Purchasegoodreceipt']); }
+
+  // numeric guard (digits only; allows nav keys)
+  allowOnlyNumbers(event: KeyboardEvent): void {
+    const allowedControl = ['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab', 'Delete', 'Home', 'End'];
+    if (allowedControl.includes(event.key)) return;
+    if (!/^\d$/.test(event.key)) event.preventDefault();
+  }
 
   /* ===================== CREATE MODE SAVE ===================== */
   saveGRN() {
@@ -164,6 +201,12 @@ ngAfterViewInit() {
     const rowsForApi = this.grnRows.map(r => ({
       itemCode: r.itemCode,
       supplierId: r.supplierId,
+
+      // fields we keep
+      qtyReceived: r.qtyReceived ?? null,
+      qualityCheck: r.qualityCheck ?? '',
+      batchSerial: r.batchSerial ?? '',
+
       storageType: r.storageType,
       surfaceTemp: r.surfaceTemp,
       expiry: r.expiry,
@@ -192,9 +235,7 @@ ngAfterViewInit() {
       isActive: true
     };
 
-    // prefer create endpoint in create mode
     const call$ = this.purchaseGoodReceiptService.createGRN(payload);
-
     call$.subscribe({
       next: (res: any) => {
         Swal.fire({
@@ -204,7 +245,6 @@ ngAfterViewInit() {
           confirmButtonColor: '#0e3a4c'
         });
 
-        // switch to read-only Generated Summary in the SAME page
         const idToShow = res?.data || res?.id || res;
         if (idToShow) {
           this.showSummary = true;
@@ -243,6 +283,9 @@ ngAfterViewInit() {
 
         const rowsCoerced = rows.map((r: any) => ({
           ...r,
+          qtyReceived: this.coerceNumberOrNull(r?.qtyReceived),
+          qualityCheck: this.coerceQuality(r?.qualityCheck),
+          batchSerial: r?.batchSerial ?? '',
           expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
           isFlagIssue: !!r?.isFlagIssue,
           isPostInventory: !!r?.isPostInventory,
@@ -294,7 +337,6 @@ ngAfterViewInit() {
 
         forkJoin(lookups.length ? lookups : [of([0, ''] as [number, string])]).subscribe(pairs => {
           this.supplierNameMap = new Map<number, string>(pairs.filter(p => !!p[0]));
-          // enrich supplierName if missing
           this.generatedGRN = {
             ...this.generatedGRN!,
             grnJson: this.generatedGRN!.grnJson.map(r => ({
@@ -374,6 +416,10 @@ ngAfterViewInit() {
 
             return {
               ...r,
+              qtyReceived: this.coerceNumberOrNull(r?.qtyReceived),
+              qualityCheck: this.coerceQuality(r?.qualityCheck),
+              batchSerial: r?.batchSerial ?? '',
+
               supplierId: rid,
               supplierName,
               expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
@@ -426,7 +472,7 @@ ngAfterViewInit() {
     this.selectedFlagIssueId = null;
     this.flagModal.open = true;
     document.body.style.overflow = 'hidden';
-     setTimeout(() => feather.replace(), 0); 
+    setTimeout(() => feather.replace(), 0);
   }
 
   closeFlagIssuesModal() {
@@ -446,9 +492,9 @@ ngAfterViewInit() {
       i === rowIndex
         ? {
             ...r,
-            isFlagIssue: changes.hasOwnProperty('isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
-            isPostInventory: changes.hasOwnProperty('isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
-            flagIssueId: changes.hasOwnProperty('flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
+            isFlagIssue: Object.prototype.hasOwnProperty.call(changes, 'isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
+            isPostInventory: Object.prototype.hasOwnProperty.call(changes, 'isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
+            flagIssueId: Object.prototype.hasOwnProperty.call(changes, 'flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
           }
         : r
     );
@@ -486,9 +532,6 @@ ngAfterViewInit() {
       { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
       () => {
         Swal.fire('Posted', 'Row posted to inventory.', 'success');
-
-        // Edit Mode → always go to list
-        // Create Mode → go to list only when last row posted/flagged
         if (this.isEditMode || isLastRow) {
           this.goToDebitNoteList();
         }
@@ -523,8 +566,16 @@ ngAfterViewInit() {
     );
   }
 
+  /* ========= EDIT TABLE SOURCE =========
+     Use this in your HTML: *ngFor="let row of editRows; let i = index; trackBy: trackByIndex"
+     This hides rows where isPostInventory === true. */
   get editRows() {
     return (this.generatedGRN?.grnJson ?? []).filter((r: any) => !r?.isPostInventory);
+  }
+
+  // Optional: to show a badge like "3 posted rows hidden"
+  get hiddenPostedCount(): number {
+    return (this.generatedGRN?.grnJson ?? []).reduce((n, r: any) => n + (r?.isPostInventory ? 1 : 0), 0);
   }
 
   /* ================= Purchase Orders ================= */
@@ -545,16 +596,14 @@ ngAfterViewInit() {
     obs$.subscribe({
       next: (res: any) => {
         const list = Array.isArray(res?.data) ? res.data : res;
-        this.purchaseOrder = (list || []).map((p: any) => ([ 'id','Id' ].some(k => k in p) ? {
+        this.purchaseOrder = (list || []).map((p: any) => ({
           id: p.id ?? p.Id,
           purchaseOrderNo: p.purchaseOrderNo ?? p.PurchaseOrderNo,
           supplierId: p.supplierId ?? p.SupplierId,
-          poLines: p.poLines ?? p.PoLines
-        } : {
-          id: p?.id ?? 0,
-          purchaseOrderNo: p?.purchaseOrderNo ?? '',
-          supplierId: p?.supplierId ?? null,
-          poLines: p?.poLines ?? '[]'
+          supplierName: p.supplierName ?? p.SupplierName,
+          poLines: p.poLines ?? p.PoLines,
+          poDate: p.poDate ?? p.PoDate,
+          deliveryDate: p.deliveryDate ?? p.DeliveryDate
         }));
       },
       error: (err) => console.error('Error loading POs', err)
@@ -562,15 +611,36 @@ ngAfterViewInit() {
   }
 
   onPOChange(selectedId: number | null) {
-    if (!selectedId) { this.resetForm(); return; }
+    if (!selectedId) {
+      this.resetForm();
+      this.isPoDateDisabled = false;           // re-enable when PO cleared
+      return;
+    }
 
     const po = this.purchaseOrder.find(p => p.id === selectedId);
-    if (!po) { this.resetForm(); return; }
+    if (!po) {
+      this.resetForm();
+      this.isPoDateDisabled = false;
+      return;
+    }
+
+    // auto-set PO Date
+    if (po.poDate) {
+      const dt = new Date(po.poDate);
+      if (!isNaN(+dt)) {
+        this.receiptDate = this.toDateInput(dt);
+        this.isPoDateDisabled = true;          // lock after setting
+      } else {
+        this.isPoDateDisabled = false;         // bad date -> keep editable
+      }
+    } else {
+      this.isPoDateDisabled = false;           // no date from PO -> keep editable
+    }
 
     this.currentSupplierId = this.toNum(po.supplierId);
 
     this.loadSupplierById(this.currentSupplierId ?? 0).subscribe((name: string) => {
-      this.currentSupplierName = name || '';
+      this.currentSupplierName = name || po.supplierName || '';
       this.buildRowsFromPo(po, this.currentSupplierId, this.currentSupplierName);
     });
   }
@@ -585,44 +655,50 @@ ngAfterViewInit() {
   }
 
   /* ================= Build rows from PO ================= */
-private buildRowsFromPo(
-  po: { poLines?: string },
-  supplierId: number | null,
-  supplierName: string
-) {
-  let lines: any[] = [];
-  try { lines = po.poLines ? JSON.parse(po.poLines) : []; } catch { lines = []; }
-  if (!lines.length) { lines = [{}]; }
+  private buildRowsFromPo(
+    po: { poLines?: string },
+    supplierId: number | null,
+    supplierName: string
+  ) {
+    let lines: any[] = [];
+    try { lines = po.poLines ? JSON.parse(po.poLines) : []; } catch { lines = []; }
+    if (!lines.length) { lines = [{}]; }
 
-  this.grnRows = lines.map(line => {
-    const itemText = String(line?.item || '').trim();
-    const itemCode = this.extractItemCode(itemText);
+    this.grnRows = lines.map(line => {
+      const itemText = String(line?.item || '').trim();
+      const itemCode = this.extractItemCode(itemText);
 
-    return {
-      itemText,
-      itemCode,
-      supplierId,
-      supplierName,
-     storageType: 'Chilled',
-      surfaceTemp: '',
-      expiry: '',
-      pestSign: 'No',           // Default value
-      drySpillage: 'No',        // Default value
-      odor: 'No',               // Default value
-      plateNumber: '',
-      defectLabels: 'No',       // Default value
-      damagedPackage: 'No',     // Default value
-      time: '',
-      initial: '',
-      remarks: '',
-      createdAt: new Date(),
-      photos: [],
-      isFlagIssue: false,
-      isPostInventory: false,
-      flagIssueId: null
-    } as LineRow;
-  });
-}
+      return {
+        itemText,
+        itemCode,
+        supplierId,
+        supplierName,
+
+        // defaults for create
+        qtyReceived: null,
+        qualityCheck: 'notverify',
+        batchSerial: '',
+
+        storageType: 'Chilled',
+        surfaceTemp: '',
+        expiry: '',
+        pestSign: 'No',
+        drySpillage: 'No',
+        odor: 'No',
+        plateNumber: '',
+        defectLabels: 'No',
+        damagedPackage: 'No',
+        time: '',
+        initial: '',
+        remarks: '',
+        createdAt: new Date(),
+        photos: [],
+        isFlagIssue: false,
+        isPostInventory: false,
+        flagIssueId: null
+      } as LineRow;
+    });
+  }
 
   private extractItemCode(itemText: string): string {
     const m = String(itemText).match(/^\s*([A-Za-z0-9_-]+)/);
@@ -678,7 +754,6 @@ private buildRowsFromPo(
     if (this.isEditMode && this.generatedGRN) {
       this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
     } else if (this.showSummary && this.generatedGRN) {
-      // create-summary context (read-only display, but we're storing image in memory)
       this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
     } else {
       this.grnRows[this.selectedRowIndex].initial = this.uploadedImage;
@@ -719,6 +794,7 @@ private buildRowsFromPo(
   resetForm() {
     this.selectedPO = null;
     this.receiptDate = '';
+    this.isPoDateDisabled = false;
     this.overReceiptTolerance = 0;
     this.currentSupplierId = null;
     this.currentSupplierName = '';
@@ -729,6 +805,11 @@ private buildRowsFromPo(
       {
         itemText: '', itemCode: '',
         supplierId: null, supplierName: '',
+
+        qtyReceived: null,
+        qualityCheck: '',
+        batchSerial: '',
+
         storageType: '', surfaceTemp: '', expiry: '',
         pestSign: '', drySpillage: '', odor: '',
         plateNumber: '', defectLabels: '', damagedPackage: '',
@@ -757,5 +838,15 @@ private buildRowsFromPo(
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
-  
+  // helpers
+  private coerceNumberOrNull(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  private coerceQuality(v: any): 'pass' | 'fail' | 'notverify' | '' {
+    const t = String(v ?? '').toLowerCase().trim();
+    if (t === 'pass' || t === 'fail' || t === 'notverify') return t;
+    if (t === 'not verify' || t === 'not_verified' || t === 'not-verify') return 'notverify';
+    return '';
+  }
 }
