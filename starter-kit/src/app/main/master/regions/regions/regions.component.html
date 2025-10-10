@@ -2,10 +2,19 @@
     <div class="col-lg-6 col-md-6">
         <div class="card card-transaction">
             <div class="card-header">
-                <div>
-                    <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">
-                    Region List</h4>
-                </div>
+<h4 class="card-title" style="display:flex;align-items:center;gap:10px;margin:0;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+  <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background-color:#e5f0f3;border-radius:50%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#2E5F73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M2 12h20"></path>
+      <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"></path>
+      <path d="M6 12a6 6 0 0 0 12 0"></path>
+    </svg>
+  </span>
+  Region List
+</h4>
+
+
                 <button (click)="createRegion()"
                     style="background-color: #2E5F73; color: white; border: none; padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">Create</button>
             </div>

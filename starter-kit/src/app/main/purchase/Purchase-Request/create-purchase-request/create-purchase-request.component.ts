@@ -55,6 +55,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   searchText = '';            // visible department name
   minDate = '';
   showModal = false;
+  isItemSelected = false;
 
   modalLine: any = {
     itemSearch: '',
@@ -706,6 +707,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   onModalItemFocus() {
     this.modalLine.filteredItems = [...this.itemsList];
     this.modalLine.dropdownOpen = true;
+     this.isItemSelected = false;
+
   }
   filterModalItems() {
     const q = (this.modalLine.itemSearch || '').toLowerCase();
@@ -721,6 +724,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.modalLine.budget = item.label || '';
     this.modalLine.dropdownOpen = false;
     this.modalLine.filteredItems = [];
+    this.isItemSelected = true;
+
   }
 
   onModalUomFocus() {

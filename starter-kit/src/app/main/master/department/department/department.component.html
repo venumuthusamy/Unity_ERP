@@ -2,10 +2,17 @@
     <div class="col-lg-6 col-md-6">
         <div class="card card-transaction">
             <div class="card-header">
-                <div>
-                    <h4 class="card-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #2E5F73;">
-                    Department List</h4>
-                </div>
+<h4 class="card-title" style="display:flex;align-items:center;gap:10px;margin:0;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+  <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background-color:#e5f0f3;border-radius:50%;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#2E5F73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+      <rect x="4" y="3" width="10" height="18" rx="1"></rect>
+      <rect x="16" y="9" width="4" height="12" rx="1"></rect>
+      <path d="M7 6h4M7 10h4M7 14h4"></path>
+    </svg>
+  </span>
+  Department List
+</h4>
+
                 <button (click)="createDepartment()"
                     style="background-color: #2E5F73; color: white; border: none; padding: 6px 14px; font-size: 0.9rem; border-radius: 4px;">Create</button>
             </div>

@@ -1,27 +1,62 @@
-/* Softer horizontal scrollbar like your sample */
-.ui-compact ::-webkit-scrollbar {
-  height: 10px;
+/* ---- COMPACT SKIN (no functionality change) ---- */
+
+/* overall card spacing */
+.ui-compact-slim .card {
+  border-radius: 18px;
+  padding: 14px;            /* was p-5/6 */
 }
-.ui-compact ::-webkit-scrollbar-track {
-  background: #eef2f7;
+
+/* headings & label spacing */
+.ui-compact-slim .title-row { margin-bottom: 10px; }   /* was ~20px */
+.ui-compact-slim label { font-size: 11px; margin-bottom: 4px; }
+
+/* form controls (inputs/selects/date/time) */
+.ui-compact-slim .ctl {
+  height: 36px;             /* tighter height */
+  padding: 0 10px;          /* remove big vertical padding */
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* remove default inner padding some browsers put on date/time */
+.ui-compact-slim input[type="date"].ctl,
+.ui-compact-slim input[type="time"].ctl,
+.ui-compact-slim input[type="number"].ctl { padding-top: 0; padding-bottom: 0; }
+
+/* grid spacing */
+.ui-compact-slim .hdr-grid { gap: 10px; } /* was gap-4 */
+
+/* table compaction */
+.table-compact { border-collapse: collapse; }
+.table-compact thead th { padding: 10px 12px; }
+.table-compact tbody td { padding: 10px 12px; }
+.table-compact th, .table-compact td { border: 1px solid #d1d5db; } /* gray-300 */
+
+/* make header shorter */
+.table-compact thead { line-height: 1.1; }
+
+/* smaller buttons */
+.ui-compact-slim .btn-compact {
+  height: 36px;
+  padding: 0 12px;
   border-radius: 10px;
-}
-.ui-compact ::-webkit-scrollbar-thumb {
-  background: #c8d2de;
-  border-radius: 10px;
-}
-.ui-compact ::-webkit-scrollbar-thumb:hover {
-  background: #aab8c6;
+  font-size: 13px;
+  font-weight: 600;
 }
 
+/* pills */
+.ui-compact-slim .pill { padding: 2px 8px; border-radius: 9999px; font-size: 11px; }
 
-  .pill{
-    display:inline-flex;align-items:center;
-    padding:.5rem .75rem;border-radius:1rem;
-    border:1px solid #e5e7eb;background:#fff;
-    box-shadow:0 1px 0 rgba(0,0,0,.03);
-  }
+/* reduce gaps inside action rows */
+.ui-compact-slim .row-actions { gap: 6px; }
 
+/* tighter modal */
+.ui-compact-slim .modal-box { max-width: 520px; border-radius: 14px; }
+.ui-compact-slim .modal-tabs { gap: 16px; }
+.ui-compact-slim .modal-actions { gap: 8px; }
 
+/* compact signature pad */
+.ui-compact-slim canvas { height: 140px !important; }
 
-  
+/* keep your brand color handy */
+:root { --brand:#2E5F73; }

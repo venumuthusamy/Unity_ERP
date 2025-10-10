@@ -1,18 +1,21 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, AfterViewChecked } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import * as feather from 'feather-icons';
 import Swal from 'sweetalert2';
 import { DepartmentService } from '../department.service';
 import { ActivatedRoute, Router } from '@angular/router';
 
+type OriginContext = 'standalone' | 'fromPR';
+
 @Component({
   selector: 'app-department',
   templateUrl: './department.component.html',
   styleUrls: ['./department.component.scss']
 })
-export class DepartmentComponent implements OnInit {
+export class DepartmentComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild('addForm') departmentForm!: NgForm;
 
+  // --- form fields / state
   public id = 0;
   departmentCode: string = '';
   departmentName: string = '';
@@ -24,8 +27,10 @@ export class DepartmentComponent implements OnInit {
   departmentValue: any;
   isEditMode: boolean = false;
 
-  private readonly DEFAULT_PR_CREATE_ROUTE = '/purchase/Create-PurchaseRequest';
+  // --- origin & return handling
+  private origin: OriginContext = 'standalone';
   private returnUrl: string | null = null;
+  get isFromPR() { return this.origin === 'fromPR'; }
 
   constructor(
     private _departmentService: DepartmentService,
@@ -33,24 +38,29 @@ export class DepartmentComponent implements OnInit {
     private router: Router
   ) {}
 
+  // -------------------- Lifecycle --------------------
   ngOnInit(): void {
     this.getAllDepartment();
 
-    // Open create form / capture return url via navigation STATE (not query)
-    const st = window.history.state as any;
-    if (st?.openCreate) this.createDepartment();
-    this.returnUrl = st?.returnUrl || this.DEFAULT_PR_CREATE_ROUTE;
+    const st = (window.history.state || {}) as any;
+    const qpFrom = this.route.snapshot.queryParamMap.get('from');
+
+    // Mark origin
+    this.origin = (st?.from === 'pr' || st?.openCreate === true || qpFrom === 'pr')
+      ? 'fromPR'
+      : 'standalone';
+
+    // If PR asked to open create directly
+    if (st?.openCreate === true) this.createDepartment();
+
+    // Only use what PR passes; no default fallback to PR route
+    this.returnUrl = st?.returnUrl || null;
   }
 
   ngAfterViewInit(): void { feather.replace(); }
   ngAfterViewChecked(): void { feather.replace(); }
 
-  cancel() {
-    this.isDisplay = false;
-    this.isEditMode = false;
-    this.resetButton = true;
-  }
-
+  // -------------------- UI actions --------------------
   createDepartment() {
     this.isDisplay = true;
     this.modeHeader = 'Add Department';
@@ -66,29 +76,111 @@ export class DepartmentComponent implements OnInit {
     this.isEditMode = false;
   }
 
-  getAllDepartment() {
-    this._departmentService.getDepartment().subscribe((response: any) => {
-      this.rows = response.data;
-    });
+  // Cancel with PR awareness + unsaved changes guard
+  cancel() {
+    const hasChanges =
+      !!this.id ||
+      !!(this.departmentName && this.departmentName.trim()) ||
+      !!(this.departmentCode && this.departmentCode.trim()) ||
+      !!this.departmentForm?.dirty;
+
+    const doCancel = () => {
+      if (this.isFromPR) {
+        this.cancelAndReturnToPR();
+      } else {
+        // Standalone: just close the panel and refresh list
+        this.getAllDepartment();
+        this.isDisplay = false;
+        this.isEditMode = false;
+        this.resetButton = true;
+      }
+    };
+
+    if (hasChanges) {
+      Swal.fire({
+        title: 'Discard changes?',
+        text: 'Your unsaved changes will be lost.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Stay',
+        confirmButtonColor: '#E42728',
+        cancelButtonColor: '#0e3a4c',
+        customClass: {
+          confirmButton: 'btn btn-danger',
+          cancelButton: 'btn btn-secondary ml-1'
+        },
+        allowOutsideClick: false
+      }).then(res => {
+        if (res.isConfirmed) doCancel();
+      });
+    } else {
+      doCancel();
+    }
   }
 
-  /** After successful save, navigate back to PR using STATE (no query), and replace URL */
-  private goToPrCreate(newDeptId?: number) {
-    const target = this.returnUrl || this.DEFAULT_PR_CREATE_ROUTE;
-    this.router.navigate([target], {
-      state: {
-        deptId: newDeptId || this.id || null,
-        deptName: this.departmentName || null
-      },
+  // -------------------- Helpers --------------------
+  private cancelAndReturnToPR() {
+    if (!this.returnUrl) {
+      // If PR didn't pass returnUrl, fail-safe: stay on list
+      this.getAllDepartment();
+      this.isDisplay = false;
+      this.isEditMode = false;
+      this.resetButton = true;
+      return;
+    }
+    this.router.navigate([this.returnUrl], {
+      state: { from: 'department', cancelled: true },
       replaceUrl: true
     });
   }
 
+  private afterSave(newDeptId?: number) {
+    if (this.isFromPR && this.returnUrl) {
+      // Return to PR, pass selection via navigation state
+      this.router.navigate([this.returnUrl], {
+        state: {
+          deptId: newDeptId ?? this.id ?? null,
+          deptName: this.departmentName ?? null,
+          from: 'department'
+        },
+        replaceUrl: true
+      });
+    } else {
+      // Standalone OR PR forgot returnUrl → stay here and show list
+      this.getAllDepartment();
+      this.isDisplay = false;
+      this.isEditMode = false;
+      this.resetButton = true;
+    }
+  }
+
+  // -------------------- Data --------------------
+  getAllDepartment() {
+    this._departmentService.getDepartment().subscribe((response: any) => {
+      this.rows = response?.data || [];
+    });
+  }
+
+  getDepartmentDetails(id: any) {
+    this._departmentService.getDepartmentById(id).subscribe((arg: any) => {
+      this.departmentValue = arg?.data;
+      this.id = this.departmentValue?.id ?? 0;
+      this.departmentName = this.departmentValue?.departmentName ?? '';
+      this.departmentCode = this.departmentValue?.departmentCode ?? '';
+      this.isDisplay = true;
+      this.resetButton = false;
+      this.modeHeader = 'Edit Department';
+      this.isEditMode = true;
+    });
+  }
+
+  // -------------------- Create / Update --------------------
   saveDepartment() {
-    const obj = {
+    const payload = {
       id: this.id,
-      departmentName: this.departmentName,
-      departmentCode: this.departmentCode,
+      departmentName: (this.departmentName || '').trim(),
+      departmentCode: (this.departmentCode || '').trim(),
       createdBy: '1',
       createdDate: new Date(),
       updatedBy: '1',
@@ -96,8 +188,19 @@ export class DepartmentComponent implements OnInit {
       isActive: true
     };
 
+    if (!payload.departmentName || !payload.departmentCode) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Required',
+        text: 'Department Name and Code are required.',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return;
+    }
+
     if (this.id === 0) {
-      this._departmentService.insertDepartment(obj).subscribe({
+      // Create
+      this._departmentService.insertDepartment(payload).subscribe({
         next: (res: any) => {
           const newId = res?.data?.id ?? 0;
           Swal.fire({
@@ -106,7 +209,7 @@ export class DepartmentComponent implements OnInit {
             text: 'Department created successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
-          }).then(() => this.goToPrCreate(newId));
+          }).then(() => this.afterSave(newId));
         },
         error: () => {
           Swal.fire({
@@ -119,7 +222,8 @@ export class DepartmentComponent implements OnInit {
         }
       });
     } else {
-      this._departmentService.updateDepartment(obj).subscribe({
+      // Update
+      this._departmentService.updateDepartment(payload).subscribe({
         next: () => {
           Swal.fire({
             icon: 'success',
@@ -127,7 +231,7 @@ export class DepartmentComponent implements OnInit {
             text: 'Department updated successfully',
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
-          }).then(() => this.goToPrCreate(this.id));
+          }).then(() => this.afterSave(this.id));
         },
         error: () => {
           Swal.fire({
@@ -142,25 +246,13 @@ export class DepartmentComponent implements OnInit {
     }
   }
 
-  getDepartmentDetails(id: any) {
-    this._departmentService.getDepartmentById(id).subscribe((arg: any) => {
-      this.departmentValue = arg.data;
-      this.id = this.departmentValue.id;
-      this.departmentName = this.departmentValue.departmentName;
-      this.departmentCode = this.departmentValue.departmentCode;
-      this.isDisplay = true;
-      this.resetButton = false;
-      this.modeHeader = 'Edit Department';
-      this.isEditMode = true;
-    });
-  }
-
+  // -------------------- Delete --------------------
   deleteDepartment(id: any) {
     const _self = this;
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
-      icon: 'success',
+      icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#7367F0',
       cancelButtonColor: '#E42728',
@@ -173,18 +265,18 @@ export class DepartmentComponent implements OnInit {
     }).then(function (result) {
       if (result.value) {
         _self._departmentService.deleteDepartment(id).subscribe((response: any) => {
-          if (response.isSuccess) {
+          if (response?.isSuccess) {
             Swal.fire({
               icon: 'success',
               title: 'Deleted!',
-              text: response.message,
+              text: response?.message,
               allowOutsideClick: false
             });
           } else {
             Swal.fire({
               icon: 'error',
               title: 'Error!',
-              text: response.message,
+              text: response?.message,
               allowOutsideClick: false
             });
           }

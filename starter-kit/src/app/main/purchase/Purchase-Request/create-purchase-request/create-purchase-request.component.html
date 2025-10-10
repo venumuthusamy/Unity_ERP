@@ -331,21 +331,59 @@
       <button type="button" class="prl-close" (click)="closeModal()" aria-label="Close">✕</button>
     </div>
 
-    <form #modalForm="ngForm" (ngSubmit)="onSubmitModal()">
+       <form #modalForm="ngForm" (ngSubmit)="onSubmitModal()">
       <div class="prl-grid">
         <!-- Item -->
-        <div class="prl-col-12 prl-md-6 prl-dropdown">
-          <label class="prl-label">Item</label>
-          <input type="text" name="itemSearch" [(ngModel)]="modalLine.itemSearch"
-                 (focus)="onModalItemFocus()" (input)="filterModalItems()"
-                 placeholder="Search Item..." class="prl-input" autocomplete="off" />
-          <div *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length" class="prl-menu">
-            <div *ngFor="let item of modalLine.filteredItems" (click)="selectModalItem(item)" class="prl-mi prl-mi-split">
-              <span>{{ item.itemName }}</span>
-              <small class="prl-muted">{{ item.itemCode }}</small>
-            </div>
-          </div>
+       <!-- Item -->
+<div class="prl-col-12 prl-md-6">
+  <label class="prl-label">Item</label>
+
+  <div class="flex items-center gap-2">
+    <!-- input + dropdown -->
+    <div class="relative flex-1 prl-dropdown">
+      <input
+        type="text"
+        name="itemSearch"
+        [(ngModel)]="modalLine.itemSearch"
+        (focus)="onModalItemFocus()"
+        (input)="filterModalItems()"
+        placeholder="Search Item..."
+        class="prl-input pr-10"
+        autocomplete="off"
+      />
+
+      <!-- optional chevron inside input -->
+      <button
+        type="button"
+        (click)="onModalItemFocus()"
+        class="absolute inset-y-0 right-2 my-auto w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100"
+        aria-label="Toggle item dropdown"
+      >
+        <i class="fas fa-chevron-down"></i>
+      </button>
+
+      <!-- dropdown list -->
+      <div *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length" class="prl-menu">
+        <div *ngFor="let item of modalLine.filteredItems" (click)="selectModalItem(item)" class="prl-mi prl-mi-split">
+          <span>{{ item.itemName }}</span>
+          <small class="prl-muted">{{ item.itemCode }}</small>
         </div>
+      </div>
+    </div>
+
+    <!-- the round + button -->
+    <button
+      type="button"
+      (click)="onAddItemClick()"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+      title="Add item"
+      aria-label="Add item"
+    >
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+</div>
+
 
         <!-- Qty -->
         <div class="prl-col-12 prl-md-3">
@@ -356,9 +394,17 @@
         <!-- UOM -->
         <div class="prl-col-12 prl-md-3 prl-dropdown">
           <label class="prl-label">UOM</label>
-          <input type="text" name="uomSearch" [(ngModel)]="modalLine.uomSearch"
-                 (focus)="onModalUomFocus()" (input)="filterModalUoms()"
-                 placeholder="Search UOM..." class="prl-input" autocomplete="off" />
+          <input
+            type="text"
+            name="uomSearch"
+            [(ngModel)]="modalLine.uomSearch"
+            (focus)="onModalUomFocus()"
+            (input)="filterModalUoms()"
+            [disabled]="isItemSelected"
+            placeholder="Search UOM..."
+            class="prl-input"
+            autocomplete="off"
+          />
           <div *ngIf="modalLine.uomDropdownOpen && modalLine.filteredUoms?.length" class="prl-menu">
             <div *ngFor="let uom of modalLine.filteredUoms" (click)="selectModalUom(uom)" class="prl-mi">
               {{ uom.name }}
@@ -369,9 +415,16 @@
         <!-- Location -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">Location</label>
-          <input type="text" name="locationSearch" [(ngModel)]="modalLine.locationSearch"
-                 (focus)="onModalLocationFocus()" (input)="filterModalLocations()"
-                 placeholder="Search Location..." class="prl-input" autocomplete="off" />
+          <input
+            type="text"
+            name="locationSearch"
+            [(ngModel)]="modalLine.locationSearch"
+            (focus)="onModalLocationFocus()"
+            (input)="filterModalLocations()"
+            placeholder="Search Location..."
+            class="prl-input"
+            autocomplete="off"
+          />
           <div *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length" class="prl-menu">
             <div *ngFor="let location of modalLine.filteredLocations" (click)="selectModalLocation(location)" class="prl-mi">
               {{ location.name }}
@@ -382,7 +435,7 @@
         <!-- Budget -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Budget Line</label>
-          <input type="text" name="budget" [(ngModel)]="modalLine.budget" class="prl-input" />
+          <input type="text" name="budget" [(ngModel)]="modalLine.budget" [disabled]="isItemSelected" class="prl-input" />
         </div>
 
         <!-- Remarks -->
@@ -395,7 +448,7 @@
       <!-- Footer -->
       <div *ngIf="editingIndex === null; else editFooter" class="prl-foot">
         <button type="button" class="prl-btn prl-btn-outline-brand" (click)="addAnotherPR()">Add Another PR</button>
-        <button type="submit" class="prl-btn prl-btn-primary">Save</button>
+        <button type="submit" class="prl-btn prl-btn-primary">Add &amp; Close</button>
         <button type="button" class="prl-btn" (click)="closeModal()">Close</button>
       </div>
 
