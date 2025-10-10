@@ -59,7 +59,19 @@ export const menu: CoreMenu[] = [
      
     ]
   },
-
+ {
+    id: 'inventory',
+    title: 'Inventory',
+    translate: 'MENU.INVENTORY.TITLE',
+    type: 'collapsible',
+    icon: 'file',
+    children: [
+      { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
+      
+     
+     
+    ]
+  },
   {
     id: 'financial',
     title: 'Financial',
@@ -80,5 +92,6 @@ export const menu: CoreMenu[] = [
     children: [
       { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' }
     ]
-  }
+  },
+
 ];
