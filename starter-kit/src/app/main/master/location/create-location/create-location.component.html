@@ -96,6 +96,19 @@
                             </small>
                         </span>
                     </div>
+                       <div class="form-group mb-2">
+                        <label class="form-label" for="">Contact Number<span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="deptName"
+                            [class.error]="locationForm.get('contactNumber').errors && (locationForm.get('contactNumber').dirty || formGroupRef.submitted)"
+                            placeholder="Enter contactNumber " formControlName="contactNumber" required />
+                        <span
+                            *ngIf="locationForm.get('contactNumber').errors && (locationForm.get('contactNumber').dirty  || formGroupRef.submitted)"
+                            class="invalid-form">
+                            <small class="form-text text-danger" *ngIf="locationForm.get('contactNumber').errors.required">
+                                ContactNumber field is required!</small>
+                        </span>
+                    </div>
                     <div class="form-group mb-2">
                         <label class="form-label" for="">Address <span class="text-danger">*</span>
                         </label>

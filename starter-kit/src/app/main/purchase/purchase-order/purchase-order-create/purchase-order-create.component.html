@@ -199,9 +199,10 @@
             <!-- Expected Delivery -->
             <div>
                 <label class="text-xs font-medium text-gray-600">Delivery Date</label>
-                <input type="date" class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
+                <input #deliveryInput type="date" class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
                     style="border-color: #0e3a4c" [(ngModel)]="poHdr.deliveryDate" (change)="deliveryChange()"
-                    [min]="minDate" />
+                    [min]="minDate"  (focus)="deliveryInput.showPicker()"
+    (click)="deliveryInput.showPicker()"/>
                 <p *ngIf="iserrorDelivery" class="text-xs text-red-600 mt-1">
                     Delivery Date is required.
                 </p>
@@ -272,7 +273,7 @@
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].item" (focus)="openDropdown(i, 'item')"
                                 (input)="filterOptions(i, 'item')" placeholder="Search Item..."
-                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
+                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" disabled/>
 
                             <div *ngIf="poLines[i].dropdownOpen === 'item'"
                                 class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
@@ -291,7 +292,7 @@
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].budget" (focus)="openDropdown(i, 'budget')"
                                 (input)="filterOptions(i, 'budget')" placeholder="Search Budget..."
-                                class="w-[300px] rounded-xl border px-3 py-2 text-sm" />
+                                class="w-[300px] rounded-xl border px-3 py-2 text-sm" disabled/>
 
                             <div *ngIf="poLines[i].dropdownOpen === 'budget'"
                                 class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
@@ -333,7 +334,7 @@
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].location" (focus)="openDropdown(i, 'location')"
                                 (input)="filterOptions(i, 'location')" placeholder="Search Tax Code..."
-                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
+                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" disabled/>
 
                             <div *ngIf="poLines[i].dropdownOpen === 'location'"
                                 class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
@@ -346,7 +347,7 @@
                         </td>
                         <td class="px-3 py-2">
                             <input class="w-[150px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['contactNumber']" placeholder="contactNumber" />
+                                [(ngModel)]="poLines[i]['contactNumber']" placeholder="contactNumber" disabled/>
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
