@@ -372,15 +372,17 @@
     </div>
 
     <!-- the round + button -->
-    <button
-      type="button"
-      (click)="onAddItemClick()"
-      class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
-      title="Add item"
-      aria-label="Add item"
-    >
-      <i class="fas fa-plus"></i>
-    </button>
+<!-- Round + button to open item creation modal -->
+<button
+  type="button"
+  class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+  title="Add item"
+  aria-label="Add item"
+  (click)="openNewItemModal()"
+>
+  <i class="fas fa-plus"></i>
+</button>
+
   </div>
 </div>
 
@@ -413,24 +415,39 @@
         </div>
 
         <!-- Location -->
-        <div class="prl-col-12 prl-md-6 prl-dropdown">
-          <label class="prl-label">Location</label>
-          <input
-            type="text"
-            name="locationSearch"
-            [(ngModel)]="modalLine.locationSearch"
-            (focus)="onModalLocationFocus()"
-            (input)="filterModalLocations()"
-            placeholder="Search Location..."
-            class="prl-input"
-            autocomplete="off"
-          />
-          <div *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length" class="prl-menu">
-            <div *ngFor="let location of modalLine.filteredLocations" (click)="selectModalLocation(location)" class="prl-mi">
-              {{ location.name }}
-            </div>
-          </div>
-        </div>
+<div class="prl-col-12 prl-md-6 prl-dropdown">
+  <label class="prl-label">Location</label>
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      name="locationSearch"
+      [(ngModel)]="modalLine.locationSearch"
+      (focus)="onModalLocationFocus()"
+      (input)="filterModalLocations()"
+      placeholder="Search Location..."
+      class="prl-input"
+      autocomplete="off"
+    />
+    <div *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length" class="prl-menu">
+      <div *ngFor="let location of modalLine.filteredLocations"
+           (click)="selectModalLocation(location)"
+           class="prl-mi">
+        {{ location.name }}
+      </div>
+    </div>
+
+    <!-- + button to open “Add Location” modal -->
+    <button
+      type="button"
+      class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+      title="Add Location"
+      aria-label="Add Location"
+      (click)="openAddLocationModal()"
+    >
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+</div>
 
         <!-- Budget -->
         <div class="prl-col-12 prl-md-6">
@@ -461,3 +478,194 @@
     </form>
   </div>
 </div>
+
+<!-- New Item Modal -->
+<div *ngIf="showNewItemModal" class="prl-overlay" aria-modal="true" role="dialog">
+  <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="new-item-title">
+    <div class="prl-head">
+      <h2 id="new-item-title" class="prl-title">Add New Item</h2>
+      <button type="button" class="prl-close" (click)="closeNewItemModal()" aria-label="Close">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitNewItem()">
+      <div class="prl-grid">
+        <!-- Item Name (left) -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Item Name</label>
+          <input
+            type="text"
+            [(ngModel)]="newItem.itemName"
+            name="newItemName"
+            class="prl-input"
+            required
+          />
+        </div>
+
+        <!-- Item Code (right) -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Item Code</label>
+          <input
+            type="text"
+            [(ngModel)]="newItem.itemCode"
+            name="newItemCode"
+            class="prl-input"
+            required
+          />
+        </div>
+
+        <!-- UOM (left) -->
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">UOM</label>
+          <select
+            class="prl-input"
+            name="newItemUom"
+            [(ngModel)]="newItem.uomId"
+            required
+          >
+            <option value="" disabled selected>Select UOM</option>
+            <option *ngFor="let uom of uomList" [value]="uom.id">{{ uom.name }}</option>
+          </select>
+        </div>
+
+        <!-- Budget Line (right) -->
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">Budget Line</label>
+          <select
+            class="prl-input"
+            name="newItemBudget"
+            [(ngModel)]="newItem.budgetLineId"
+            required
+          >
+            <option value="" disabled selected>Select Budget Line</option>
+            <option *ngFor="let head of parentHeadList" [value]="head.value">{{ head.label }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="prl-foot">
+        <button type="button" class="prl-btn" (click)="closeNewItemModal()">Cancel</button>
+        <button type="submit" class="prl-btn prl-btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Add Location Modal Popup -->
+<div *ngIf="showAddLocationModal" class="prl-overlay" aria-modal="true" role="dialog">
+  <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="add-loc-title">
+    <div class="prl-head">
+      <h2 id="add-loc-title" class="prl-title">Add Location</h2>
+      <button type="button" class="prl-close" (click)="closeAddLocationModal()" aria-label="Close">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitNewLocation()">
+      <div class="prl-grid">
+        <!-- Location Name -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Location Name</label>
+          <input
+            type="text"
+            [(ngModel)]="newLocation.name"
+            name="locationName"
+            class="prl-input"
+            required
+          />
+        </div>
+
+                <!-- Country -->
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">Country</label>
+          <select
+            class="prl-input"
+            name="countryId"
+            [(ngModel)]="newLocation.countryId"
+            (change)="onCountryChange(newLocation.countryId)"
+            required
+          >
+            <option [ngValue]="null" disabled>Select Country</option>
+            <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName }}</option>
+          </select>
+        </div>
+
+        <!-- State -->
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">State</label>
+          <select
+            class="prl-input"
+            name="stateId"
+            [(ngModel)]="newLocation.stateId"
+            (change)="onStateChange(newLocation.stateId)"
+            required
+          >
+            <option [ngValue]="null" disabled>Select State</option>
+            <option *ngFor="let s of StateList" [ngValue]="s.id">{{ s.stateName }}</option>
+          </select>
+        </div>
+
+        <!-- City -->
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">City</label>
+          <select
+            class="prl-input"
+            name="cityId"
+            [(ngModel)]="newLocation.cityId"
+            required
+          >
+            <option [ngValue]="null" disabled>Select City</option>
+            <option *ngFor="let ct of CityList" [ngValue]="ct.id">{{ ct.cityName }}</option>
+          </select>
+        </div>
+        
+        <!-- Contact Number -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Contact Number</label>
+          <input
+            type="text"
+            [(ngModel)]="newLocation.contactNumber"
+            name="contactNumber"
+            class="prl-input"
+            required
+          />
+        </div>
+
+      
+
+        <!-- Latitude -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Latitude</label>
+          <input
+            type="text"
+            [(ngModel)]="newLocation.latitude"
+            name="latitude"
+            class="prl-input"
+          />
+        </div>
+
+        <!-- Longitude -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Longitude</label>
+          <input
+            type="text"
+            [(ngModel)]="newLocation.longitude"
+            name="longitude"
+            class="prl-input"
+          />
+        </div>
+
+
+      </div>
+
+      <div class="prl-foot">
+        <button type="button" class="prl-btn" (click)="closeAddLocationModal()">Cancel</button>
+        <button type="submit" class="prl-btn prl-btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+
+

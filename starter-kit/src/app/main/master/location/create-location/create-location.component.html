@@ -109,19 +109,7 @@
                                 ContactNumber field is required!</small>
                         </span>
                     </div>
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="">Address <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="deptCode"
-                            [class.error]="locationForm.get('Address').errors && (locationForm.get('Address').dirty || formGroupRef.submitted)"
-                            placeholder="Enter Address" formControlName="Address" required />
-                        <span
-                            *ngIf="locationForm.get('Address').errors && (locationForm.get('Address').dirty || formGroupRef.submitted)"
-                            class="invalid-form">
-                            <small class="form-text text-danger" *ngIf="locationForm.get('Address').errors.required">
-                                Address field is required!</small>
-                        </span>
-                    </div>
+
 
                     <div class="form-group mb-2">
                         <label class="form-label" for="">Latitude <span class="text-danger">*</span>
