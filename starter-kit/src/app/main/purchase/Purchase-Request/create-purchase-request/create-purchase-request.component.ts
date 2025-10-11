@@ -18,6 +18,8 @@ import { LocationService } from 'app/main/master/location/location.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { PurchaseService } from '../../purchase.service';
 import { PrDraftService } from '../pr-draft.service';
+import { CitiesService } from 'app/main/master/cities/cities.service';
+import { CountriesService } from 'app/main/master/countries/countries.service';
 
 @Component({
   selector: 'app-create-purchase-request',
@@ -30,6 +32,10 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   prSteps = ['Header', 'Lines', 'Review'];
   hover = false;
 
+  // NEW: modal to create a new Item, and refocus anchor for item input
+  showNewItemModal = false;
+  @ViewChild('itemSearchInput') itemSearchInput!: ElementRef<HTMLInputElement>;
+
   prHeader: any = {
     id: 0,
     requester: '',
@@ -39,6 +45,28 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     multiLoc: false,
     oversea: false
   };
+
+  // New Item form model
+  newItem = {
+    itemName: '',
+    itemCode: '',
+    uomId: null as number | null,
+    budgetLineId: null as number | null
+  };
+
+  newLocation: {
+  name?: string;
+  contactNumber?: string;
+  latitude?: string;
+  longitude?: string;
+  countryId?: number | null;
+  stateId?: number | null;
+  cityId?: number | null;
+} = {};
+
+countries: any[] = [];
+StateList: any[] = [];
+CityList: any[] = [];
 
   prLines: any[] = [];
   purchaseRequests: any[] = [];
@@ -52,7 +80,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   locationList: any[] = [];
 
   dropdownOpen = false;
-  searchText = '';            // visible department name
+  searchText = '';
   minDate = '';
   showModal = false;
   isItemSelected = false;
@@ -75,6 +103,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     locationDropdownOpen: false,
     isDraft: true
   };
+
   draftIndex: number | null = null;
   editingIndex: number | null = null;
 
@@ -85,7 +114,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   // Draft handling
   private tempDraftId: number | null = null;
   private suppressAutosave = false;
-
+// Modal visibility
+showAddLocationModal = false;
   // Department name resolution
   private departmentsLoaded = false;
   private headerLoaded = false;
@@ -95,22 +125,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   private captureHandler!: (e: MouseEvent) => void;
   private readonly RETURN_URL = '/purchase/Create-PurchaseRequest';
 
-  constructor(
-    private purchaseService: PurchaseService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private deptService: DepartmentService,
-    private itemService: ItemsService,
-    private chartOfAccountService: ChartofaccountService,
-    private uomService: UomService,
-    private locationService: LocationService,
-    private eRef: ElementRef,
-    private zone: NgZone,
-    private draft: PrDraftService
-  ) {
-    this.userId = localStorage.getItem('id') || 'System';
-  }
-
   // === NEW: anchors to scroll ===
   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
   @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
@@ -118,12 +132,32 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   // === NEW: baseline snapshot for “unsaved” detection ===
   private initialSignature = '';
 
+  constructor(
+    private purchaseService: PurchaseService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private deptService: DepartmentService,
+    private itemService: ItemsService,    // used for getAllItem()
+    private chartOfAccountService: ChartofaccountService,
+    private uomService: UomService,
+    private locationService: LocationService,
+    private eRef: ElementRef,
+    private zone: NgZone,
+    private draft: PrDraftService,
+    private itemsService: ItemsService,
+      private _cityService: CitiesService,
+      private _countriesService: CountriesService  // used for createItem()
+  ) {
+    this.userId = localStorage.getItem('id') || 'System';
+  }
+
   // ---------------- Lifecycle ----------------
 
   ngOnInit(): void {
+    this.clearDraft();
     this.setMinDate();
-
-    this.loadDepartments();   // important: sets departmentsLoaded true later
+ this.getAllCountries();
+    this.loadDepartments();
     this.loadCatalogs();
     this.loadRequests();
 
@@ -138,7 +172,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
           if (res?.data) {
             this.editRequest(res);
             this.prStep = 0;
-            // NEW: after loading an existing PR, set baseline
             this.updateBaseline();
           }
         });
@@ -160,12 +193,9 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
           this.searchText = d.departmentName ?? '';
           this.prStep = typeof d.step === 'number' ? d.step : 0;
           this.headerLoaded = true;
-          this.resolveDepartmentName(); // try if departments already loaded
-
-          // NEW: baseline after restoring local draft
+          this.resolveDepartmentName();
           this.updateBaseline();
         } else {
-          // NEW: baseline for a clean, empty form
           this.updateBaseline();
         }
       }
@@ -180,6 +210,26 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     if (this.captureHandler) {
       document.removeEventListener('click', this.captureHandler, { capture: true } as any);
     }
+  }
+
+  // ---------------- New Item modal open/close ----------------
+
+  openNewItemModal() {
+    this.showNewItemModal = true;
+  }
+
+  closeNewItemModal() {
+    this.showNewItemModal = false;
+    this.resetNewItemForm();
+  }
+
+  resetNewItemForm() {
+    this.newItem = {
+      itemName: '',
+      itemCode: '',
+      uomId: null,
+      budgetLineId: null
+    };
   }
 
   // ---------------- Draft load ----------------
@@ -202,7 +252,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
         oversea: !!d.oversea
       };
 
-      // Use name if API sent it; otherwise resolve later
       if (d.departmentName) {
         this.searchText = d.departmentName;
         this.pendingDeptName = d.departmentName;
@@ -219,32 +268,25 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
 
       this.prStep = 0;
       this.headerLoaded = true;
-      this.resolveDepartmentName(); // try resolving now if departments already loaded
-
-      // NEW: set baseline after draft is fully loaded
+      this.resolveDepartmentName();
       this.updateBaseline();
     });
   }
 
-  // ---------------- Name resolution ----------------
+  // ---------------- Name/ID helpers ----------------
 
-  /** Convert possible string/undefined to number (0 if NaN) */
   private toNum(v: any): number {
     const n = Number(v);
     return isNaN(n) ? 0 : n;
   }
 
-  /** Try to resolve the visible department name after both sides are ready */
   private resolveDepartmentName(): void {
     if (!this.departmentsLoaded || !this.headerLoaded) return;
-
-    // If we already have a name from API/local draft, keep it
     if (this.searchText && this.searchText.trim().length) return;
 
     const depId = this.toNum(this.prHeader?.departmentID);
     if (!depId || !Array.isArray(this.departments) || this.departments.length === 0) return;
 
-    // Tolerate various shapes/cases for id and name
     const match = this.departments.find((d: any) => {
       const idCandidates = [d.id, d.Id, d.departmentID, d.DepartmentID].map(this.toNum);
       return idCandidates.includes(depId);
@@ -258,9 +300,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ---------------- Leave guard (UPDATED to use baseline) ----------------
+  // ---------------- Unsaved detection baseline ----------------
 
-  /** Create a normalized signature of the current state (header + lines) */
   private computeSignature(): string {
     const header = {
       requester: this.prHeader?.requester ?? '',
@@ -270,8 +311,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       multiLoc: !!this.prHeader?.multiLoc,
       oversea: !!this.prHeader?.oversea
     };
-
-    // strip UI-only fields from lines
     const lines = (this.prLines || []).map(l => {
       const {
         filteredItems, filteredUoms, filteredLocations,
@@ -280,27 +319,18 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       } = l || {};
       return rest;
     });
-
-    // IMPORTANT: exclude searchText from signature (it may resolve later)
     return JSON.stringify({ header, lines });
   }
 
-  /** Set the current state as "clean" */
   private updateBaseline(): void {
     this.initialSignature = this.computeSignature();
   }
 
-  /** Should we warn before leaving? TRUE only if something actually changed */
   private hasUnsavedChanges(): boolean {
     const currentSig = this.computeSignature();
-    const changed = currentSig !== this.initialSignature;
-
-    // If you still want to warn purely because it's a server draft, add:
-    // return changed || !!this.tempDraftId;
-    return changed;
+    return currentSig !== this.initialSignature;
   }
 
-  /** Navigate back to PR list with Save / Discard / Stay options */
   onGoToPRList(): void {
     if (!this.hasUnsavedChanges()) {
       this.router.navigate(['/purchase/list-PurchaseRequest']);
@@ -311,8 +341,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       title: 'Unsaved Changes',
       text: 'Do you want to save changes before leaving?',
       icon: 'warning',
-      showCancelButton: true,     // "Discard"
-      showCloseButton: true,      // X = "Stay"
+      showCancelButton: true,
+      showCloseButton: true,
       allowEscapeKey: true,
       allowOutsideClick: false,
       confirmButtonText: 'Save Changes',
@@ -362,7 +392,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
         next: _ => Swal.fire({
           icon: 'success', title: 'Saved', text: 'Draft updated.', confirmButtonColor: '#2E5F73'
         }).then(() => {
-          // NEW: reset baseline after successful save
           this.updateBaseline();
           goList();
         }),
@@ -377,7 +406,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
           Swal.fire({
             icon: 'success', title: 'Saved', text: 'Draft saved.', confirmButtonColor: '#2E5F73'
           }).then(() => {
-            // NEW: baseline after creating draft
             this.updateBaseline();
             goList();
           });
@@ -400,6 +428,12 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     });
   }
 
+  private clearDraft(): void {
+  this.prHeader = null;
+  this.prLines = [];
+  this.searchText = ''; // 👈 This clears departmentName
+  this.prStep = null;
+} 
   onAddDepartmentClick(): void {
     this.saveDraft();
     this.router.navigate(['/master/department'], {
@@ -458,9 +492,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
 
   trackByIndex(index: number) { return index; }
 
-  // === NEW: centralized scroll helper ===
   private scrollTo(position: 'top' | 'bottom') {
-    // Prefer anchors if present
     const anchor = position === 'bottom'
       ? this.bottomOfWizard?.nativeElement
       : this.topOfWizard?.nativeElement;
@@ -469,7 +501,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       anchor.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
     }
 
-    // Try parent container (for overflow layouts)
     anchor?.parentElement?.scrollTo?.({
       top: position === 'bottom'
         ? anchor.parentElement.scrollHeight
@@ -478,7 +509,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       behavior: 'auto'
     });
 
-    // Document/window fallbacks
     const scrollingElement = document.scrollingElement || document.documentElement;
     if (position === 'bottom') {
       scrollingElement.scrollTop = scrollingElement.scrollHeight;
@@ -489,7 +519,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     }
   }
 
-  // === UPDATED: go to step and scroll (down for Review, up otherwise) ===
   prGo(step: number) {
     (document.activeElement as HTMLElement | null)?.blur?.();
 
@@ -499,9 +528,9 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       requestAnimationFrame(() => {
         if (this.prStep === 2) {
-          this.scrollTo('bottom');   // <- scroll down on Review
+          this.scrollTo('bottom');
         } else {
-          this.scrollTo('top');      // <- scroll up on other steps
+          this.scrollTo('top');
         }
       });
     }, 0);
@@ -527,7 +556,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
 
   loadDepartments() {
     this.deptService.getDepartment().subscribe((res: any) => {
-      // normalize ids to numbers, keep original fields
       this.departments = (res?.data ?? []).map((x: any) => ({
         ...x,
         id: this.toNum(x.id ?? x.Id ?? x.departmentID ?? x.DepartmentID)
@@ -621,7 +649,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.dropdownOpen = false;
   }
 
-  // ---------------- Modal / lines ----------------
+  // ---------------- PR line modal (draft/edit) ----------------
 
   private makeEmptyDraft() {
     return {
@@ -707,16 +735,20 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   onModalItemFocus() {
     this.modalLine.filteredItems = [...this.itemsList];
     this.modalLine.dropdownOpen = true;
-     this.isItemSelected = false;
-
+    this.isItemSelected = false;
   }
+
   filterModalItems() {
     const q = (this.modalLine.itemSearch || '').toLowerCase();
     this.modalLine.filteredItems = this.itemsList.filter(
-      (it: any) => (it.itemName || '').toLowerCase().includes(q) || (it.itemCode || '').toLowerCase().includes(q)
+      (it: any) =>
+        (it.itemName || '').toLowerCase().includes(q) ||
+        (it.itemCode || '').toLowerCase().includes(q)
     );
   }
+
   selectModalItem(item: any) {
+    debugger
     this.modalLine.itemSearch = item.itemName;
     this.modalLine.itemCode = item.itemCode;
     this.modalLine.uomSearch = item.uomName;
@@ -725,17 +757,20 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.modalLine.dropdownOpen = false;
     this.modalLine.filteredItems = [];
     this.isItemSelected = true;
-
   }
 
   onModalUomFocus() {
     this.modalLine.filteredUoms = [...this.uomList];
     this.modalLine.uomDropdownOpen = true;
   }
+
   filterModalUoms() {
     const q = (this.modalLine.uomSearch || '').toLowerCase();
-    this.modalLine.filteredUoms = this.uomList.filter((u: any) => (u.name || '').toLowerCase().includes(q));
+    this.modalLine.filteredUoms = this.uomList.filter((u: any) =>
+      (u.name || '').toLowerCase().includes(q)
+    );
   }
+
   selectModalUom(uom: any) {
     this.modalLine.uomSearch = uom.name;
     this.modalLine.uom = uom.name;
@@ -747,10 +782,33 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.modalLine.filteredLocations = [...this.locationList];
     this.modalLine.locationDropdownOpen = true;
   }
+
   filterModalLocations() {
     const q = (this.modalLine.locationSearch || '').toLowerCase();
-    this.modalLine.filteredLocations = this.locationList.filter((loc: any) => (loc.name || '').toLowerCase().includes(q));
+    this.modalLine.filteredLocations = this.locationList.filter((loc: any) =>
+      (loc.name || '').toLowerCase().includes(q)
+    );
   }
+
+  private reloadLocationList(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    this.locationService.getLocation().subscribe(
+      (res: any) => {
+        this.locationList = res?.data ?? [];
+        resolve();
+      },
+      _ => resolve()
+    );
+  });
+}
+
+  private applyLocationToActiveLine(loc: any) {
+  this.selectModalLocation(loc); // sets modalLine.locationSearch & modalLine.location
+  // keep dropdown tidy if open
+  this.modalLine.locationDropdownOpen = false;
+  this.modalLine.filteredLocations = [];
+}
+
   selectModalLocation(location: any) {
     this.modalLine.locationSearch = location.name;
     this.modalLine.location = location.name;
@@ -808,6 +866,136 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.showModal = false;
   }
 
+  // ---------------- NEW: Item creation -> auto select into modal ----------------
+
+  /** Normalize server item -> ensure we have uomName + budget label */
+  private hydrateItem(raw: any) {
+    const uomId = Number(raw.uomId ?? raw.UomId ?? raw.uomid);
+    const budgetLineId = Number(raw.budgetLineId ?? raw.BudgetLineId ?? raw.budgetlineid);
+
+    const uomName =
+      this.uomList.find((u: any) => Number(u.id ?? u.Id) === uomId)?.name
+      ?? raw.uomName
+      ?? '';
+
+    const budgetLabel =
+      this.parentHeadList.find((h: any) => Number(h.value) === budgetLineId)?.label
+      ?? raw.label
+      ?? '';
+
+    return {
+      ...raw,
+      uomId,
+      budgetLineId,
+      uomName,
+      label: budgetLabel
+    };
+  }
+
+  /** Apply a chosen item into the current PR-line modal */
+  private applyItemToActiveLine(item: any) {
+    this.selectModalItem(item);
+    this.isItemSelected = true;
+    this.modalLine.dropdownOpen = false;
+  }
+
+ /** Reload items only (no COA/UOM/Location) and rebuild itemsList with labels */
+private reloadItemsList(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    this.itemService.getAllItem().subscribe((ires: any) => {
+      const raw = ires?.data ?? [];
+      this.itemsList = raw.map((item: any) => {
+        const matched = this.parentHeadList.find(h => +h.value === +item.budgetLineId);
+        return { ...item, label: matched ? matched.label : null };
+      });
+      resolve();
+    }, _ => resolve());
+  });
+}
+
+/** Safe id getter */
+private getId(x: any): number {
+  return this.toNum(x?.id ?? x?.Id);
+}
+
+/** Create item, then refresh list and apply the canonical item by ID */
+submitNewItem(): void {
+  debugger
+  const { itemName, itemCode, uomId, budgetLineId } = this.newItem || {};
+
+  if (!itemName?.trim() || !itemCode?.trim() || !uomId || !budgetLineId) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Fields',
+      text: 'Please enter Item Name, Item Code, UOM, and Budget Line.',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return;
+  }
+
+  const payload = {
+    itemName: itemName.trim(),
+    itemCode: itemCode.trim(),
+    uomId: Number(uomId),
+    budgetLineId: Number(budgetLineId),
+    createdBy: this.userId,
+    createdDate: new Date()
+  };
+
+  this.itemsService.createItem(payload).subscribe({
+    next: async (res: any) => {
+      // new DB id from server
+      const newId = this.toNum(res?.data?.id ?? res?.id);
+
+      // Always refresh items from server so we have the canonical object (and id)
+      await this.reloadItemsList();
+
+      // Find newly created item in the refreshed list
+      const canonical = this.itemsList.find(it => this.getId(it) === newId);
+
+      // Fallback if not found (shouldn’t happen, but safe)
+      const toApply = canonical ?? { ...payload, id: newId };
+
+      // Hydrate to guarantee uomName/label exist for UI bindings
+      const hydrated = this.hydrateItem(toApply);
+
+      // Apply into the PR line modal (updates itemSearch, itemCode, uom, budget…)
+      this.applyItemToActiveLine(hydrated);
+
+      // (Optional) keep modal’s filtered list fresh
+      if (this.modalLine) {
+        this.modalLine.filteredItems = [hydrated, ...this.itemsList];
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Created!',
+        text: 'Item created successfully.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#0e3a4c'
+      });
+
+      // Reset + close the New Item popup
+      this.resetNewItemForm();
+      this.closeNewItemModal();
+
+      // (Optional) focus back to item input for quick flow
+      setTimeout(() => this.itemSearchInput?.nativeElement?.focus?.(), 0);
+    },
+    error: _ => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to create item.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#d33'
+      });
+    }
+  });
+}
+
+
   // ---------------- Final save (Convert) ----------------
 
   saveRequest() {
@@ -832,7 +1020,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Normal PR create/update (not from a server draft)
     const strippedLines = this.prLines.map(l => {
       const { filteredItems, filteredUoms, filteredLocations, dropdownOpen, uomDropdownOpen, locationDropdownOpen, isDraft, ...rest } = l;
       return rest;
@@ -861,7 +1048,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
           this.draft.clear();
           this.loadRequests();
           this.resetForm();
-          // NEW: baseline after successful update (if you choose to stay)
           this.updateBaseline();
           this.router.navigate(['/purchase/list-PurchaseRequest']);
         },
@@ -874,7 +1060,6 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
           this.draft.clear();
           this.loadRequests();
           this.resetForm();
-          // NEW: baseline after successful create (if you choose to stay)
           this.updateBaseline();
           this.router.navigate(['/purchase/list-PurchaseRequest']);
         },
@@ -893,12 +1078,10 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.draftIndex = null;
     this.editingIndex = null;
 
-    // Reset resolution flags
     this.headerLoaded = false;
     this.pendingDeptId = null;
     this.pendingDeptName = null;
 
-    // NEW: reset baseline for a clean form
     this.updateBaseline();
   }
 
@@ -915,14 +1098,11 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       purchaseRequestNo: data.purchaseRequestNo
     };
 
-    // for edit mode resolve name once depts loaded
     this.headerLoaded = true;
     this.resolveDepartmentName();
 
     try { this.prLines = data.prLines ? JSON.parse(data.prLines) : []; }
     catch { this.prLines = []; }
-
-    // NEW: baseline is set in ngOnInit after editRequest call completes
   }
 
   goToPurchaseRequest() {
@@ -935,4 +1115,130 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       return sum + q;
     }, 0);
   }
+
+
+  openAddLocationModal() {
+  this.showAddLocationModal = true;
+}
+closeAddLocationModal() {
+  this.showAddLocationModal = false;
+  this.newLocation = {};  // reset on close
+  this.StateList = [];
+  this.CityList = [];
+}
+
+onCountryChange(selectedCountryId: any) {
+  const countryId = Number(selectedCountryId);
+  if (countryId) {
+    this.getAllState(countryId);
+    this.newLocation.stateId = null;
+  } else {
+    this.StateList = [];
+  }
+}
+onStateChange(selectedStateId: any) {
+  const stateId = Number(selectedStateId);
+  if (stateId) {
+    this.getAllCities(stateId);
+    this.newLocation.cityId = null;
+  } else {
+    this.CityList = [];
+  }
+}
+
+getAllCities(stateId: number) {
+  this._cityService.GetCityWithStateId(stateId).subscribe((res: any) => {
+    this.CityList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
+  });
+}
+getAllCountries() {
+  this._countriesService.getCountry().subscribe((response: any) => {
+    this.countries = response?.data ?? [];
+  });
+}
+getAllState(countryId: number) {
+  this._cityService.GetStateWithCountryId(countryId).subscribe((res: any) => {
+    this.StateList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
+  });
+}
+
+private validateNewLocation(): string | null {
+  const n = (this.newLocation?.name ?? '').trim();
+  if (!n) return 'Location Name is required.';
+  if (!this.newLocation?.countryId) return 'Country is required.';
+  if (!this.newLocation?.stateId) return 'State is required.';
+  if (!this.newLocation?.cityId) return 'City is required.';
+  return null;
+}
+ 
+// Submit new location
+submitNewLocation(): void {
+  const err = this.validateNewLocation();
+  if (err) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Fields',
+      text: err,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return;
+  }
+
+  const payload = {
+    name: (this.newLocation.name ?? '').trim(),
+    contactNumber: (this.newLocation.contactNumber ?? '').trim() || null,
+    latitude: (this.newLocation.latitude ?? '').trim() || null,
+    longitude: (this.newLocation.longitude ?? '').trim() || null,
+    countryId: this.toNum(this.newLocation.countryId),
+    stateId: this.toNum(this.newLocation.stateId),
+    cityId: this.toNum(this.newLocation.cityId),
+    createdBy: this.userId,
+    createdDate: new Date(),
+    isActive: true
+  };
+
+  // call your service
+  this.locationService.insertLocation(payload).subscribe({
+    next: async (res: any) => {
+      // 1) grab new DB id from response (supports both {data:{id}} and {id})
+      const newId = this.toNum(res?.data?.id ?? res?.id);
+
+      // 2) reload canonical list from server
+      await this.reloadLocationList();
+
+      // 3) find newly created row in refreshed list
+      const canonical = this.locationList.find(l => this.getId(l) === newId)
+                      ?? { ...payload, id: newId };
+
+      // 4) set it into the PR line modal Location field
+      this.applyLocationToActiveLine(canonical);
+
+      // (optional) keep the modal’s filtered list fresh for UX
+      this.modalLine.filteredLocations = [canonical, ...this.locationList];
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Created!',
+        text: 'Location created successfully.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#0e3a4c'
+      });
+
+      // 5) reset your create-location form object (if you have a modal, close it here)
+      this.newLocation = {};
+      this.closeAddLocationModal();
+      // this.closeNewLocationModal?.(); // uncomment if you have such a method
+    },
+    error: _ => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to create location.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#d33'
+      });
+    }
+  });
+}
 }

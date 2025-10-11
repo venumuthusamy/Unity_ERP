@@ -63,7 +63,6 @@ getLocationById(id: number) {
         this.locationForm.patchValue({
           locationName: location.name,
           contactNumber: location.contactNumber,
-          Address: location.address,
           latitude: location.latitude,
           longitude: location.longitude,
           countryId: location.countryId
@@ -138,7 +137,6 @@ this.locationForm.reset({
     countryId: null,
     stateId: null,
     cityId: null,
-    Address: '',
     contactNumber:'',
     latitude: '',
     longitude: ''
@@ -157,7 +155,6 @@ this.locationForm.reset({
       countryId: [null, Validators.required],
       stateId: [null, Validators.required],
       cityId: [null, Validators.required],
-      Address: ['', Validators.required],
       contactNumber: ['', Validators.required],
       latitude: ['', Validators.required],
       longitude: ['', Validators.required]
@@ -170,7 +167,6 @@ this.locationForm.reset({
     countryId: null,
     stateId: null,
     cityId: null,
-    Address: '',
     latitude: '',
     contactNumber: '',
     longitude: ''
@@ -179,13 +175,13 @@ this.locationForm.reset({
 
 
  submit(formGroupRef: any) {
+  debugger
   if (this.locationForm.valid) {
     const isEdit = this.locationId && this.locationId > 0;
 
     const obj: any = {
       id: isEdit ? this.locationId : 0,
       name: this.locationForm.controls['locationName'].value,
-      address: this.locationForm.controls['Address'].value,
       contactNumber: this.locationForm.controls['contactNumber'].value,
       latitude: this.locationForm.controls['latitude'].value,
       longitude: this.locationForm.controls['longitude'].value,
