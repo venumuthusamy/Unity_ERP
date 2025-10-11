@@ -104,51 +104,83 @@ export class ApprovalLevelComponent implements OnInit {
  
      if (this.isEditMode) {
        const updatedApprovallevel = { ...this.selectedApprovalLevel, ...payload };
-       this.approvallevelService.updateApprovalLevel(this.selectedApprovalLevel.id, updatedApprovallevel).subscribe({
-         next: () => {
-           Swal.fire({
-             icon: 'success',
-             title: 'Updated!',
-             text: 'ApprovalLevel updated successfully',
-             confirmButtonText: 'OK',
-             confirmButtonColor: '#0e3a4c'
-           });
-           this.loadApprovalLevel();
-           this.cancel();
-         },
-         error: () => {
-           Swal.fire({
-             icon: 'error',
-             title: 'Error',
-             text: 'Failed to update Incoterms',
-             confirmButtonText: 'OK',
-             confirmButtonColor: '#d33'
-           });
-         }
-       });
+      this.approvallevelService
+  .updateApprovalLevel(this.selectedApprovalLevel.id, updatedApprovallevel)
+  .subscribe({
+    next: (res: any) => {
+      if (res?.isSuccess) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Updated!',
+          text: res.message || 'Approval level updated successfully',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#0e3a4c'
+        });
+        this.loadApprovalLevel();
+        this.cancel();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: res?.message || 'Failed to update Approval level.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#d33'
+        });
+      }
+    },
+    error: (err) => {
+      const msg =
+        err?.error?.message ||
+        err?.message ||
+        'Unable to update Approval level.';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: msg,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#d33'
+      });
+    }
+  });
      } else {
-       this.approvallevelService.createApprovalLevel(payload).subscribe({
-         next: () => {
-           Swal.fire({
-             icon: 'success',
-             title: 'Created!',
-             text: 'ApprovalLevel created successfully',
-             confirmButtonText: 'OK',
-             confirmButtonColor: '#0e3a4c'
-           });
-           this.loadApprovalLevel();
-           this.cancel();
-         },
-         error: () => {
-           Swal.fire({
-             icon: 'error',
-             title: 'Error',
-             text: 'Failed to create ApprovalLevel',
-             confirmButtonText: 'OK',
-             confirmButtonColor: '#d33'
-           });
-         }
-       });
+      this.approvallevelService.createApprovalLevel(payload).subscribe({
+  next: (res) => {
+    if (res?.isSuccess) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Created!',
+        text: res.message || 'Approval level created successfully',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#0e3a4c'
+      });
+      this.loadApprovalLevel();
+      this.cancel();
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: res?.message || 'Something went wrong.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#d33'
+      });
+    }
+  },
+  error: (err) => {
+    // Handles non-200 responses, network errors, etc.
+    const msg =
+      err?.error?.message ||
+      err?.message ||
+      'Unable to create approval level.';
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: msg,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#d33'
+    });
+  }
+});
+
      }
    }
    // Delete
