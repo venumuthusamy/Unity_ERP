@@ -90,6 +90,14 @@ export class TaxcodeComponent implements OnInit {
           this.isDisplay = false;
           this.isEditMode = false;
         }
+        else{
+              Swal.fire({
+            title: "Hi",
+            text: res.message,
+            icon: "error",
+            allowOutsideClick: false,
+          });
+        }
       });
     }
     else {
@@ -105,6 +113,14 @@ export class TaxcodeComponent implements OnInit {
           this.getAllTaxCode();
           this.isDisplay = false;
           this.isEditMode = false;
+        }
+         else{
+              Swal.fire({
+            title: "Hi",
+            text: res.message,
+            icon: "error",
+            allowOutsideClick: false,
+          });
         }
       });
     }
