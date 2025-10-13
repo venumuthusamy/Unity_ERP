@@ -1,1 +1,88 @@
-<p>stack-overview works!</p>
+<!-- Stock Overview Card (no Tailwind) -->
+<div class="card card-elevated rounded-16">
+  <!-- Header -->
+  <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
+    <h4 class="card-title mb-0">Stock Overview</h4>
+
+ <div class="d-flex align-items-center flex-wrap gap-2">
+  <button type="button" class="btn btn-primary">Transfer</button>
+  <button type="button" class="btn btn-outline-primary">Adjust</button>
+  <button type="button" class="btn btn-outline-secondary">Count</button>
+</div>
+
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+    <!-- Filters -->
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label">Warehouse</label>
+        <select class="form-select form-control rounded-12">
+          <option>All</option>
+          <option>Central</option>
+          <option>East</option>
+        </select>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label d-block">Below Min</label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="minOnly">
+          <label class="form-check-label" for="minOnly">Show only</label>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label d-block">Expiring (30d)</label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="expOnly">
+          <label class="form-check-label" for="expOnly">Show only</label>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label">Search</label>
+        <input type="text" class="form-control rounded-12" placeholder="Item / SKU / Bin">
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive mt-4">
+      <table class="table table-bordered mb-0 table-soft">
+<thead>
+  <tr>
+    <th style="background-color:#2E5F73; color:white;">Item</th>
+    <th style="background-color:#2E5F73; color:white;">Warehouse</th>
+    <th style="background-color:#2E5F73; color:white;">Bin</th>
+    <th style="background-color:#2E5F73; color:white;">On Hand</th>
+    <th style="background-color:#2E5F73; color:white;">Min</th>
+    <th style="background-color:#2E5F73; color:white;">Available</th>
+    <th style="background-color:#2E5F73; color:white;">Expiry</th>
+  </tr>
+</thead>
+
+        <tbody>
+          <tr>
+            <td>Rice 5kg</td>
+            <td>Central</td>
+            <td>A1</td>
+            <td>120</td>
+            <td>50</td>
+            <td>120</td>
+            <td>2025-11-12</td>
+          </tr>
+          <tr>
+            <td>Oil 2L</td>
+            <td>Central</td>
+            <td>B3</td>
+            <td>60</td>
+            <td>20</td>
+            <td>60</td>
+            <td>2025-08-01</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
