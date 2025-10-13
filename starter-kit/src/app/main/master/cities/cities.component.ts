@@ -128,6 +128,9 @@ export class CitiesComponent implements OnInit, AfterViewChecked, AfterViewInit 
         this.isDisplay = false;
         this.isEditMode = false;
       }
+      else{
+        Swal.fire({ title: 'Error', text: res.message, icon: 'error', allowOutsideClick: false });
+      }
     });
   }
 

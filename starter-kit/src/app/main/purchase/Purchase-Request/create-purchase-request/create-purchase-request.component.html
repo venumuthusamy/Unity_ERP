@@ -166,7 +166,7 @@
             </tr>
           </thead>
 
-          <tbody>
+            <tbody>
             <tr *ngIf="prLines.length === 0">
               <td class="px-3 py-6 text-center text-gray-400" [attr.colspan]="7">No lines yet.</td>
             </tr>
@@ -314,14 +314,14 @@
         </div>
       </div>
 
-      <!-- === NEW: bottom anchor to scroll to === -->
+      <!-- === bottom anchor === -->
       <div #bottomOfWizard style="height:1px;"></div>
     </div>
 
   </div>
 </div>
 
-<!-- Modal overlay -->
+<!-- PR Line Modal -->
 <div *ngIf="showModal" class="prl-overlay" aria-modal="true" role="dialog">
   <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="prl-title">
     <div class="prl-head">
@@ -331,61 +331,56 @@
       <button type="button" class="prl-close" (click)="closeModal()" aria-label="Close">✕</button>
     </div>
 
-       <form #modalForm="ngForm" (ngSubmit)="onSubmitModal()">
+    <form #modalForm="ngForm" (ngSubmit)="onSubmitModal()">
       <div class="prl-grid">
         <!-- Item -->
-       <!-- Item -->
-<div class="prl-col-12 prl-md-6">
-  <label class="prl-label">Item</label>
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Item</label>
 
-  <div class="flex items-center gap-2">
-    <!-- input + dropdown -->
-    <div class="relative flex-1 prl-dropdown">
-      <input
-        type="text"
-        name="itemSearch"
-        [(ngModel)]="modalLine.itemSearch"
-        (focus)="onModalItemFocus()"
-        (input)="filterModalItems()"
-        placeholder="Search Item..."
-        class="prl-input pr-10"
-        autocomplete="off"
-      />
+          <div class="flex items-center gap-2">
+            <!-- input + dropdown -->
+            <div class="relative flex-1 prl-dropdown">
+              <input
+                #itemSearchInput
+                type="text"
+                name="itemSearch"
+                [(ngModel)]="modalLine.itemSearch"
+                (focus)="onModalItemFocus()"
+                (input)="filterModalItems()"
+                placeholder="Search Item..."
+                class="prl-input pr-10"
+                autocomplete="off"
+              />
 
-      <!-- optional chevron inside input -->
-      <button
-        type="button"
-        (click)="onModalItemFocus()"
-        class="absolute inset-y-0 right-2 my-auto w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100"
-        aria-label="Toggle item dropdown"
-      >
-        <i class="fas fa-chevron-down"></i>
-      </button>
+              <button
+                type="button"
+                (click)="onModalItemFocus()"
+                class="absolute inset-y-0 right-2 my-auto w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100"
+                aria-label="Toggle item dropdown"
+              >
+                <i class="fas fa-chevron-down"></i>
+              </button>
 
-      <!-- dropdown list -->
-      <div *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length" class="prl-menu">
-        <div *ngFor="let item of modalLine.filteredItems" (click)="selectModalItem(item)" class="prl-mi prl-mi-split">
-          <span>{{ item.itemName }}</span>
-          <small class="prl-muted">{{ item.itemCode }}</small>
+              <div *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length" class="prl-menu">
+                <div *ngFor="let item of modalLine.filteredItems" (click)="selectModalItem(item)" class="prl-mi prl-mi-split">
+                  <span>{{ item.itemName }}</span>
+                  <small class="prl-muted">{{ item.itemCode }}</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- round + button -->
+            <button
+              type="button"
+              class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+              title="Add item"
+              aria-label="Add item"
+              (click)="openNewItemModal()"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <!-- the round + button -->
-<!-- Round + button to open item creation modal -->
-<button
-  type="button"
-  class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
-  title="Add item"
-  aria-label="Add item"
-  (click)="openNewItemModal()"
->
-  <i class="fas fa-plus"></i>
-</button>
-
-  </div>
-</div>
-
 
         <!-- Qty -->
         <div class="prl-col-12 prl-md-3">
@@ -415,39 +410,38 @@
         </div>
 
         <!-- Location -->
-<div class="prl-col-12 prl-md-6 prl-dropdown">
-  <label class="prl-label">Location</label>
-  <div class="flex items-center gap-2">
-    <input
-      type="text"
-      name="locationSearch"
-      [(ngModel)]="modalLine.locationSearch"
-      (focus)="onModalLocationFocus()"
-      (input)="filterModalLocations()"
-      placeholder="Search Location..."
-      class="prl-input"
-      autocomplete="off"
-    />
-    <div *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length" class="prl-menu">
-      <div *ngFor="let location of modalLine.filteredLocations"
-           (click)="selectModalLocation(location)"
-           class="prl-mi">
-        {{ location.name }}
-      </div>
-    </div>
+        <div class="prl-col-12 prl-md-6 prl-dropdown">
+          <label class="prl-label">Location</label>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              name="locationSearch"
+              [(ngModel)]="modalLine.locationSearch"
+              (focus)="onModalLocationFocus()"
+              (input)="filterModalLocations()"
+              placeholder="Search Location..."
+              class="prl-input"
+              autocomplete="off"
+            />
+            <div *ngIf="modalLine.locationDropdownOpen && modalLine.filteredLocations?.length" class="prl-menu">
+              <div *ngFor="let location of modalLine.filteredLocations"
+                   (click)="selectModalLocation(location)"
+                   class="prl-mi">
+                {{ location.name }}
+              </div>
+            </div>
 
-    <!-- + button to open “Add Location” modal -->
-    <button
-      type="button"
-      class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
-      title="Add Location"
-      aria-label="Add Location"
-      (click)="openAddLocationModal()"
-    >
-      <i class="fas fa-plus"></i>
-    </button>
-  </div>
-</div>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
+              title="Add Location"
+              aria-label="Add Location"
+              (click)="openAddLocationModal()"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
 
         <!-- Budget -->
         <div class="prl-col-12 prl-md-6">
@@ -489,7 +483,6 @@
 
     <form (ngSubmit)="submitNewItem()">
       <div class="prl-grid">
-        <!-- Item Name (left) -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Item Name</label>
           <input
@@ -501,7 +494,6 @@
           />
         </div>
 
-        <!-- Item Code (right) -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Item Code</label>
           <input
@@ -513,7 +505,6 @@
           />
         </div>
 
-        <!-- UOM (left) -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">UOM</label>
           <select
@@ -527,7 +518,6 @@
           </select>
         </div>
 
-        <!-- Budget Line (right) -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">Budget Line</label>
           <select
@@ -542,7 +532,6 @@
         </div>
       </div>
 
-      <!-- Modal Footer -->
       <div class="prl-foot">
         <button type="button" class="prl-btn" (click)="closeNewItemModal()">Cancel</button>
         <button type="submit" class="prl-btn prl-btn-primary">Submit</button>
@@ -551,8 +540,7 @@
   </div>
 </div>
 
-
-<!-- Add Location Modal Popup -->
+<!-- Add Location Modal -->
 <div *ngIf="showAddLocationModal" class="prl-overlay" aria-modal="true" role="dialog">
   <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="add-loc-title">
     <div class="prl-head">
@@ -562,7 +550,6 @@
 
     <form (ngSubmit)="submitNewLocation()">
       <div class="prl-grid">
-        <!-- Location Name -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Location Name</label>
           <input
@@ -574,7 +561,6 @@
           />
         </div>
 
-                <!-- Country -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">Country</label>
           <select
@@ -589,7 +575,6 @@
           </select>
         </div>
 
-        <!-- State -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">State</label>
           <select
@@ -604,7 +589,6 @@
           </select>
         </div>
 
-        <!-- City -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">City</label>
           <select
@@ -617,8 +601,7 @@
             <option *ngFor="let ct of CityList" [ngValue]="ct.id">{{ ct.cityName }}</option>
           </select>
         </div>
-        
-        <!-- Contact Number -->
+
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Contact Number</label>
           <input
@@ -626,13 +609,9 @@
             [(ngModel)]="newLocation.contactNumber"
             name="contactNumber"
             class="prl-input"
-            required
           />
         </div>
 
-      
-
-        <!-- Latitude -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Latitude</label>
           <input
@@ -643,7 +622,6 @@
           />
         </div>
 
-        <!-- Longitude -->
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Longitude</label>
           <input
@@ -653,8 +631,6 @@
             class="prl-input"
           />
         </div>
-
-
       </div>
 
       <div class="prl-foot">
@@ -664,8 +640,3 @@
     </form>
   </div>
 </div>
-
-
-
-
-
