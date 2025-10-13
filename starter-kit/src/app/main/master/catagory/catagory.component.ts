@@ -60,7 +60,7 @@ export class CatagoryComponent implements OnInit {
       this.description = data.description; // bind to textarea
     }
     cancel() {
-  
+   
       this.isEditMode = false;
       this.isDisplay = false;
     }
