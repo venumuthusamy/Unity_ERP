@@ -17,6 +17,8 @@ import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
 import { CountriesService } from 'app/main/master/countries/countries.service';
 type LineRow = { [k: string]: any };
 import * as feather from 'feather-icons';
+import { POTempService } from '../purchase-order-temp.service';
+import { switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-purchase-order-create',
@@ -61,6 +63,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
   iserrorDelivery: boolean;
   countries: any
   minDate = '';
+  private draftId: number | null = null;
+  userId: string;
 
   formatDate(date: Date | string): string {
     if (!date) return '';
@@ -102,7 +106,28 @@ export class PurchaseOrderCreateComponent implements OnInit {
   isEmpty(v: any): boolean {
     return (v ?? '').toString().trim() === '';
   }
+  ///// for temp data------////
+  private cleanHash = '';
 
+  private computeHash(): string {
+    // keep only the data that matters
+    const data = {
+      poHdr: this.poHdr,
+      poLines: this.poLines
+    };
+    return JSON.stringify(data);
+  }
+
+  private markClean(): void {
+    this.cleanHash = this.computeHash();
+  }
+
+  get isDirty(): boolean {
+    debugger
+    return this.computeHash() !== this.cleanHash;
+  }
+
+  ///// for temp data------////
 
 
   constructor(private poService: POService, private router: Router,
@@ -112,12 +137,17 @@ export class PurchaseOrderCreateComponent implements OnInit {
     private itemsService: ItemsService, private chartOfAccountService: ChartofaccountService,
     private purchaseService: PurchaseService, private _SupplierService: SupplierService,
     private recurringService: RecurringService, private taxCodeService: TaxCodeService,
-    private _countriesService: CountriesService
-  ) { }
+    private _countriesService: CountriesService, private poTempService: POTempService,
+  ) { this.userId = localStorage.getItem('id') || 'System'; }
 
 
   ngOnInit() {
+    debugger
     this.setMinDate();
+    this.route.queryParamMap.subscribe(q => {
+      const dId = Number(q.get('draftId'));
+      this.draftId = Number.isFinite(dId) && dId > 0 ? dId : null;
+    });
     this.route.paramMap.subscribe((params: any) => {
       this.purchaseOrderId = parseInt(params.get('id'));
 
@@ -240,15 +270,98 @@ export class PurchaseOrderCreateComponent implements OnInit {
             incoterms: [...this.incoterms],
           };
 
+          if (this.draftId) {
+            this.loadDraftIntoCreate(this.draftId);
+          }
         });
       }
     });
+    setTimeout(() => this.markClean());
   }
   ngAfterViewChecked(): void {
     feather.replace();  // remove the guard so icons refresh every cycle
   }
   ngAfterViewInit(): void {
     feather.replace();
+  }
+  private loadDraftIntoCreate(id: number) {
+    this.poTempService.getPODraftById(id).subscribe({
+      next: (res: any) => {
+        const raw = res?.data;
+        if (!raw) return;
+
+        // 1) normalize keys/casing and coerce numbers/dates
+        const d = {
+          id: Number(raw.id ?? raw.Id ?? 0),
+          purchaseOrderNo: raw.purchaseOrderNo ?? raw.PurchaseOrderNo ?? '',
+          supplierId: Number(raw.supplierId ?? raw.SupplierId ?? 0),
+          approveLevelId: Number(raw.approveLevelId ?? raw.ApproveLevelId ?? 0),
+          paymentTermId: Number(raw.paymentTermId ?? raw.PaymentTermId ?? 0),
+          currencyId: Number(raw.currencyId ?? raw.CurrencyId ?? 0),
+          incotermsId: Number(raw.incotermsId ?? raw.IncotermsId ?? 0),
+          poDate: raw.poDate ?? raw.PoDate,
+          deliveryDate: raw.deliveryDate ?? raw.DeliveryDate,
+          remarks: raw.remarks ?? raw.Remarks ?? '',
+          fxRate: Number(raw.fxRate ?? raw.FxRate ?? 0),
+          tax: Number(raw.tax ?? raw.Tax ?? 0),
+          shipping: Number(raw.shipping ?? raw.Shipping ?? 0),
+          discount: Number(raw.discount ?? raw.Discount ?? 0),
+          subTotal: Number(raw.subTotal ?? raw.SubTotal ?? 0),
+          netTotal: Number(raw.netTotal ?? raw.NetTotal ?? 0),
+          approvalStatus: Number(
+            raw.approvalStatus ?? raw.ApprovalStatus ?? 0
+          ),
+          poLines: raw.poLines ?? raw.PoLines ?? '[]',
+        };
+
+        // 2) set header (stay in CREATE mode → id = 0)
+        this.poHdr = {
+          ...this.poHdr,
+          id: 0,
+          purchaseOrderNo: d.purchaseOrderNo,
+          supplierId: d.supplierId,
+          approveLevelId: d.approveLevelId,
+          paymentTermId: d.paymentTermId,
+          currencyId: d.currencyId,
+          incotermsId: d.incotermsId,
+          poDate: d.poDate ? new Date(d.poDate) : new Date(),
+          deliveryDate: d.deliveryDate ? this.toISODate(new Date(d.deliveryDate)) : '',
+          remarks: d.remarks,
+          fxRate: d.fxRate,
+          tax: d.tax,
+          shipping: d.shipping,
+          discount: d.discount,
+          approvalStatus: d.approvalStatus
+        };
+
+        // 3) bind visible dropdown texts from master lists (by Id)
+        const approve = this.approvalLevel?.find((x: any) => x.id === d.approveLevelId);
+        const supplier = this.suppliers?.find((x: any) => x.id === d.supplierId);
+        const payTerm = this.paymentTerms?.find((x: any) => x.id === d.paymentTermId);
+        const currency = this.currencies?.find((x: any) => x.id === d.currencyId);
+        const inco = this.incoterms?.find((x: any) => x.id === d.incotermsId);
+
+        this.searchTexts['approval'] = approve?.name ?? '';
+        this.searchTexts['supplier'] = supplier?.name ?? '';
+        this.searchTexts['paymentTerms'] = payTerm?.paymentTermsName ?? '';
+        this.searchTexts['currency'] = currency?.currencyName ?? '';
+        this.searchTexts['incoterms'] = inco?.incotermsName ?? '';
+
+        // keep currencyName/fxRate consistent with your existing logic
+        this.poHdr.currencyName = currency?.currencyName ?? '';
+        this.poHdr.fxRate = (this.poHdr.currencyName || '').toUpperCase() === 'SGD' ? (this.poHdr.fxRate || 1) : (this.poHdr.fxRate || 0);
+
+        // 4) lines
+        try {
+          this.poLines = Array.isArray(d.poLines) ? d.poLines : JSON.parse(d.poLines || '[]');
+        } catch { this.poLines = []; }
+
+        // 5) totals and clean state
+        this.calculateFxTotal();
+        this.markClean();
+      },
+      error: (err) => console.error('Failed to load PO draft', err)
+    });
   }
 
   setMinDate() {
@@ -481,6 +594,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       // ✅ Remove the picker row if it's empty or only has PR No
       if (this.isOnlyPrNo(this.poLines[index]) || this.isEmptyLine(this.poLines[index])) {
         this.poLines.splice(index, 1);
+        this.recalculateTotals();
       }
 
       return;
@@ -551,7 +665,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     po.description = line.remarks ?? '';
     po.budget = line.budget ?? '';
     po.location = line.location ?? line.locationSearch ?? '';
-    const contactNumber = this.deliveries.find(x=>x.name == line.location).contactNumber
+    const contactNumber = this.deliveries.find(x => x.name == line.location).contactNumber
     po.contactNumber = contactNumber ?? '';
     po.qty = Number(line.qty) || 0;
 
@@ -635,6 +749,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   poRemoveLine(i: number) {
     // this.poLines = this.poLines.filter((_, idx) => idx !== i); 
     this.poLines.splice(i, 1);
+     this.recalculateTotals();
   }
 
   poChange(i: number, key: string, val: any) {
@@ -730,6 +845,45 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
   saveRequest() {
 
+    if (this.draftId) {
+
+    this.submitted = true;
+    if (!this.poHdr.deliveryDate) {
+      this.iserrorDelivery = true
+    } else {
+      this.iserrorDelivery = false;
+    }
+
+    const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
+    if (missing.length || this.iserrorDelivery) {
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Required',
+        text: 'Please fill required Fields',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return;
+    }
+
+
+    if (!this.validatePO()) return;
+     const draftPayload = this.buildPayloadForSaveDraft();
+
+       this.poTempService.updatePODraft(this.draftId, draftPayload).pipe(
+      // 2) Only after save succeeds, promote
+      switchMap(() => this.poTempService.promotePODraft(this.draftId, this.userId))
+    ).subscribe({
+      next: (res) => {
+        const newPoId = res?.data?.id;
+        Swal.fire({ icon: 'success', title: 'Converted', text: 'Draft converted to PO' });
+        this.router.navigate(['/purchase/list-purchaseorder']);
+      },
+      error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to convert draft' })
+    });
+      return;
+    }
+
     this.submitted = true;
     if (!this.poHdr.deliveryDate) {
       this.iserrorDelivery = true
@@ -784,6 +938,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
+          this.markClean();
           this.router.navigateByUrl(`/purchase/list-purchaseorder`)
 
         },
@@ -809,6 +964,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
             confirmButtonText: 'OK',
             confirmButtonColor: '#0e3a4c'
           });
+          this.markClean();
           this.router.navigateByUrl(`/purchase/list-purchaseorder`)
 
         },
@@ -825,9 +981,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
     }
   }
 
-  goToPurchaseorder() {
-    this.router.navigate(['/purchase/list-purchaseorder']);
-  }
   cancel() {
     this.router.navigate(['/purchase/list-purchaseorder']);
   }
@@ -843,6 +996,109 @@ export class PurchaseOrderCreateComponent implements OnInit {
       ?.toString()
       .replace(/\D/g, '') || '';
   }
+
+  ///// for temp data------////
+
+  async goToPurchaseorder() {
+    if (this.purchaseOrderId) {
+      this.router.navigate(['/purchase/list-purchaseorder']);
+      return;
+    }
+    if (this.draftId) {
+      if (this.isDirty) {
+        const ok = await this.saveDraft(); // this calls updatePODraft(draftId, payload)
+        if (!ok) return;                   // stop if save failed
+      }
+      this.router.navigate(['/purchase/list-purchaseorder']);
+      return;
+    }
+    const ok = await this.confirmLeave();
+    if (ok) this.router.navigate(['/purchase/list-purchaseorder']);
+
+  }
+  async confirmLeave(): Promise<boolean> {
+    debugger
+    // Never prompt in EDIT mode
+    if (this.purchaseOrderId) return true;
+
+    // Only prompt if user actually changed something
+    if (!this.isDirty) return true;
+
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Leave this page?',
+      text: 'You have unsaved changes. Save as draft before leaving?',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Save as Draft',
+      denyButtonText: 'Discard',
+      cancelButtonText: 'Stay',
+      confirmButtonColor: '#0e3a4c'
+    });
+
+    if (result.isConfirmed) return await this.saveDraft(); // save then leave
+    if (result.isDenied) return true;                       // discard and leave
+    return false;                                           // stay
+  }
+
+
+  private buildPayloadForSaveDraft() {
+    debugger
+    return {
+      id: this.draftId ?? 0,
+      purchaseOrderNo: this.poHdr.purchaseOrderNo || '',
+      supplierId: this.poHdr.supplierId || 0,
+      approveLevelId: this.poHdr.approveLevelId || 0,
+      paymentTermId: this.poHdr.paymentTermId || 0,
+      currencyId: this.poHdr.currencyId || 0,
+      fxRate: this.poHdr.fxRate || 0,
+      incotermsId: this.poHdr.incotermsId || 0,
+      poDate: this.poHdr.poDate,
+      deliveryDate: this.poHdr.deliveryDate || null,
+      remarks: this.poHdr.remarks || '',
+      tax: this.poHdr.tax || 0,
+      shipping: this.poHdr.shipping || 0,
+      discount: this.poHdr.discount || 0,
+      subTotal: Number(this.poTotals.subTotal.toFixed(2)),
+      netTotal: Number(this.poTotals.netTotal.toFixed(2)),
+      approvalStatus:this.poHdr.approvalStatus === '' || this.poHdr.approvalStatus == null ? 0: this.poHdr.approvalStatus,
+      poLines: JSON.stringify(this.poLines || [])
+    };
+  }
+
+  private saveDraft(): Promise<boolean> {
+    const payload = this.buildPayloadForSaveDraft();
+    return new Promise<boolean>((resolve) => {
+      const obs = this.draftId
+        ? this.poTempService.updatePODraft(this.draftId, payload)
+        : this.poTempService.createPODraft(payload);
+
+      obs.subscribe({
+        next: (res) => {
+          // if create, remember new draft id
+          if (!this.draftId) {
+            // API returns { success, message, data: { id } }
+            this.draftId = res?.data?.id ?? null;
+          }
+          this.markClean();
+          Swal.fire({
+            icon: 'success',
+            title: 'Saved as Draft',
+            text: 'Your PO was saved as draft.',
+            timer: 1200,
+            showConfirmButton: false
+          });
+          resolve(true);
+        },
+        error: () => {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Draft save failed', confirmButtonColor: '#d33' });
+          resolve(false);
+        }
+      });
+    });
+  }
+  ///// for temp data------////
+
 
 }
 
