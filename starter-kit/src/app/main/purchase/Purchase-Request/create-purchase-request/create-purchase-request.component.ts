@@ -32,10 +32,11 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   prSteps = ['Header', 'Lines', 'Review'];
   hover = false;
 
-  // NEW: modal to create a new Item, and refocus anchor for item input
+  // New Item modal
   showNewItemModal = false;
   @ViewChild('itemSearchInput') itemSearchInput!: ElementRef<HTMLInputElement>;
 
+  // Header model MUST be initialized (do NOT set to null)
   prHeader: any = {
     id: 0,
     requester: '',
@@ -54,19 +55,20 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     budgetLineId: null as number | null
   };
 
+  // Add Location form model
   newLocation: {
-  name?: string;
-  contactNumber?: string;
-  latitude?: string;
-  longitude?: string;
-  countryId?: number | null;
-  stateId?: number | null;
-  cityId?: number | null;
-} = {};
+    name?: string;
+    contactNumber?: string;
+    latitude?: string;
+    longitude?: string;
+    countryId?: number | null;
+    stateId?: number | null;
+    cityId?: number | null;
+  } = {};
 
-countries: any[] = [];
-StateList: any[] = [];
-CityList: any[] = [];
+  countries: any[] = [];
+  StateList: any[] = [];
+  CityList: any[] = [];
 
   prLines: any[] = [];
   purchaseRequests: any[] = [];
@@ -95,9 +97,9 @@ CityList: any[] = [];
     location: '',
     budget: '',
     remarks: '',
-    filteredItems: [],
-    filteredUoms: [],
-    filteredLocations: [],
+    filteredItems: [] as any[],
+    filteredUoms: [] as any[],
+    filteredLocations: [] as any[],
     dropdownOpen: false,
     uomDropdownOpen: false,
     locationDropdownOpen: false,
@@ -111,12 +113,14 @@ CityList: any[] = [];
   prid: number | null = null;
   isEditMode = false;
 
-  // Draft handling
+  // Draft handling (server)
   private tempDraftId: number | null = null;
   private suppressAutosave = false;
-// Modal visibility
-showAddLocationModal = false;
-  // Department name resolution
+
+  // Add Location modal visibility
+  showAddLocationModal = false;
+
+  // Department name resolution helpers
   private departmentsLoaded = false;
   private headerLoaded = false;
   private pendingDeptId: number | null = null;
@@ -125,11 +129,11 @@ showAddLocationModal = false;
   private captureHandler!: (e: MouseEvent) => void;
   private readonly RETURN_URL = '/purchase/Create-PurchaseRequest';
 
-  // === NEW: anchors to scroll ===
+  // Anchors for scrolling
   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
   @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
 
-  // === NEW: baseline snapshot for “unsaved” detection ===
+  // Baseline signature for unsaved detection
   private initialSignature = '';
 
   constructor(
@@ -137,16 +141,16 @@ showAddLocationModal = false;
     private router: Router,
     private route: ActivatedRoute,
     private deptService: DepartmentService,
-    private itemService: ItemsService,    // used for getAllItem()
+    private itemService: ItemsService, // used for getAllItem()
     private chartOfAccountService: ChartofaccountService,
     private uomService: UomService,
     private locationService: LocationService,
     private eRef: ElementRef,
     private zone: NgZone,
     private draft: PrDraftService,
-    private itemsService: ItemsService,
-      private _cityService: CitiesService,
-      private _countriesService: CountriesService  // used for createItem()
+    private itemsService: ItemsService, // used for createItem()
+    private _cityService: CitiesService,
+    private _countriesService: CountriesService
   ) {
     this.userId = localStorage.getItem('id') || 'System';
   }
@@ -154,9 +158,9 @@ showAddLocationModal = false;
   // ---------------- Lifecycle ----------------
 
   ngOnInit(): void {
-    this.clearDraft();
+    this.clearDraft();            // <- reset to defaults (not null)
     this.setMinDate();
- this.getAllCountries();
+    this.getAllCountries();
     this.loadDepartments();
     this.loadCatalogs();
     this.loadRequests();
@@ -364,7 +368,7 @@ showAddLocationModal = false;
     this.router.navigate(['/purchase/list-PurchaseRequest']);
   }
 
-  // ---------------- Draft save ----------------
+  // ---------------- Draft save (server) ----------------
 
   saveAsDraft(): void {
     const payload = {
@@ -429,11 +433,27 @@ showAddLocationModal = false;
   }
 
   private clearDraft(): void {
-  this.prHeader = null;
-  this.prLines = [];
-  this.searchText = ''; // 👈 This clears departmentName
-  this.prStep = null;
-} 
+    // IMPORTANT: reset to defaults; never set these to null
+    this.prHeader = {
+      id: 0,
+      requester: '',
+      departmentID: 0,
+      neededBy: null,
+      description: '',
+      multiLoc: false,
+      oversea: false
+    };
+    this.prLines = [];
+    this.searchText = '';
+    this.prStep = 0;
+    this.draftIndex = null;
+    this.editingIndex = null;
+
+    this.headerLoaded = false;
+    this.pendingDeptId = null;
+    this.pendingDeptName = null;
+  }
+
   onAddDepartmentClick(): void {
     this.saveDraft();
     this.router.navigate(['/master/department'], {
@@ -791,23 +811,22 @@ showAddLocationModal = false;
   }
 
   private reloadLocationList(): Promise<void> {
-  return new Promise<void>((resolve) => {
-    this.locationService.getLocation().subscribe(
-      (res: any) => {
-        this.locationList = res?.data ?? [];
-        resolve();
-      },
-      _ => resolve()
-    );
-  });
-}
+    return new Promise<void>((resolve) => {
+      this.locationService.getLocation().subscribe(
+        (res: any) => {
+          this.locationList = res?.data ?? [];
+          resolve();
+        },
+        _ => resolve()
+      );
+    });
+  }
 
   private applyLocationToActiveLine(loc: any) {
-  this.selectModalLocation(loc); // sets modalLine.locationSearch & modalLine.location
-  // keep dropdown tidy if open
-  this.modalLine.locationDropdownOpen = false;
-  this.modalLine.filteredLocations = [];
-}
+    this.selectModalLocation(loc); // sets modalLine.locationSearch & modalLine.location
+    this.modalLine.locationDropdownOpen = false;
+    this.modalLine.filteredLocations = [];
+  }
 
   selectModalLocation(location: any) {
     this.modalLine.locationSearch = location.name;
@@ -899,102 +918,101 @@ showAddLocationModal = false;
     this.modalLine.dropdownOpen = false;
   }
 
- /** Reload items only (no COA/UOM/Location) and rebuild itemsList with labels */
-private reloadItemsList(): Promise<void> {
-  return new Promise<void>((resolve) => {
-    this.itemService.getAllItem().subscribe((ires: any) => {
-      const raw = ires?.data ?? [];
-      this.itemsList = raw.map((item: any) => {
-        const matched = this.parentHeadList.find(h => +h.value === +item.budgetLineId);
-        return { ...item, label: matched ? matched.label : null };
-      });
-      resolve();
-    }, _ => resolve());
-  });
-}
-
-/** Safe id getter */
-private getId(x: any): number {
-  return this.toNum(x?.id ?? x?.Id);
-}
-
-/** Create item, then refresh list and apply the canonical item by ID */
-submitNewItem(): void {
-  debugger
-  const { itemName, itemCode, uomId, budgetLineId } = this.newItem || {};
-
-  if (!itemName?.trim() || !itemCode?.trim() || !uomId || !budgetLineId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Fields',
-      text: 'Please enter Item Name, Item Code, UOM, and Budget Line.',
-      confirmButtonText: 'OK',
-      confirmButtonColor: '#0e3a4c'
+  /** Reload items only and rebuild itemsList with labels */
+  private reloadItemsList(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.itemService.getAllItem().subscribe((ires: any) => {
+        const raw = ires?.data ?? [];
+        this.itemsList = raw.map((item: any) => {
+          const matched = this.parentHeadList.find(h => +h.value === +item.budgetLineId);
+          return { ...item, label: matched ? matched.label : null };
+        });
+        resolve();
+      }, _ => resolve());
     });
-    return;
   }
 
-  const payload = {
-    itemName: itemName.trim(),
-    itemCode: itemCode.trim(),
-    uomId: Number(uomId),
-    budgetLineId: Number(budgetLineId),
-    createdBy: this.userId,
-    createdDate: new Date()
-  };
+  /** Safe id getter */
+  private getId(x: any): number {
+    return this.toNum(x?.id ?? x?.Id);
+  }
 
-  this.itemsService.createItem(payload).subscribe({
-    next: async (res: any) => {
-      // new DB id from server
-      const newId = this.toNum(res?.data?.id ?? res?.id);
+  /** Create item, then refresh list and apply the canonical item by ID */
+  submitNewItem(): void {
+    debugger
+    const { itemName, itemCode, uomId, budgetLineId } = this.newItem || {};
 
-      // Always refresh items from server so we have the canonical object (and id)
-      await this.reloadItemsList();
-
-      // Find newly created item in the refreshed list
-      const canonical = this.itemsList.find(it => this.getId(it) === newId);
-
-      // Fallback if not found (shouldn’t happen, but safe)
-      const toApply = canonical ?? { ...payload, id: newId };
-
-      // Hydrate to guarantee uomName/label exist for UI bindings
-      const hydrated = this.hydrateItem(toApply);
-
-      // Apply into the PR line modal (updates itemSearch, itemCode, uom, budget…)
-      this.applyItemToActiveLine(hydrated);
-
-      // (Optional) keep modal’s filtered list fresh
-      if (this.modalLine) {
-        this.modalLine.filteredItems = [hydrated, ...this.itemsList];
-      }
-
+    if (!itemName?.trim() || !itemCode?.trim() || uomId == null || budgetLineId == null) {
       Swal.fire({
-        icon: 'success',
-        title: 'Created!',
-        text: 'Item created successfully.',
+        icon: 'warning',
+        title: 'Missing Fields',
+        text: 'Please enter Item Name, Item Code, UOM, and Budget Line.',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
-
-      // Reset + close the New Item popup
-      this.resetNewItemForm();
-      this.closeNewItemModal();
-
-      // (Optional) focus back to item input for quick flow
-      setTimeout(() => this.itemSearchInput?.nativeElement?.focus?.(), 0);
-    },
-    error: _ => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to create item.',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#d33'
-      });
+      return;
     }
-  });
-}
 
+    const payload = {
+      itemName: itemName.trim(),
+      itemCode: itemCode.trim(),
+      uomId: Number(uomId),
+      budgetLineId: Number(budgetLineId),
+      createdBy: this.userId,
+      createdDate: new Date()
+    };
+
+    this.itemsService.createItem(payload).subscribe({
+      next: async (res: any) => {
+        // new DB id from server
+        const newId = this.toNum(res?.data?.id ?? res?.id);
+
+        // Always refresh items from server so we have the canonical object (and id)
+        await this.reloadItemsList();
+
+        // Find newly created item in the refreshed list
+        const canonical = this.itemsList.find(it => this.getId(it) === newId);
+
+        // Fallback if not found
+        const toApply = canonical ?? { ...payload, id: newId };
+
+        // Hydrate to guarantee uomName/label exist for UI bindings
+        const hydrated = this.hydrateItem(toApply);
+
+        // Apply into the PR line modal
+        this.applyItemToActiveLine(hydrated);
+
+        // Keep modal’s filtered list fresh
+        if (this.modalLine) {
+          this.modalLine.filteredItems = [hydrated, ...this.itemsList];
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Created!',
+          text: 'Item created successfully.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#0e3a4c'
+        });
+
+        // Reset + close the New Item popup
+        this.resetNewItemForm();
+        this.closeNewItemModal();
+
+        // Focus back to item input for quick flow
+        setTimeout(() => this.itemSearchInput?.nativeElement?.focus?.(), 0);
+      },
+      error: _ => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to create item.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
+  }
 
   // ---------------- Final save (Convert) ----------------
 
@@ -1069,7 +1087,15 @@ submitNewItem(): void {
   }
 
   resetForm() {
-    this.prHeader = { id: 0, requester: '', departmentID: 0, neededBy: null, description: '', multiLoc: false, oversea: false };
+    this.prHeader = {
+      id: 0,
+      requester: '',
+      departmentID: 0,
+      neededBy: null,
+      description: '',
+      multiLoc: false,
+      oversea: false
+    };
     this.searchText = '';
     this.filteredDepartments = [...this.departments];
     this.dropdownOpen = false;
@@ -1116,129 +1142,132 @@ submitNewItem(): void {
     }, 0);
   }
 
+  // ---------------- Add Location modal helpers ----------------
 
   openAddLocationModal() {
-  this.showAddLocationModal = true;
-}
-closeAddLocationModal() {
-  this.showAddLocationModal = false;
-  this.newLocation = {};  // reset on close
-  this.StateList = [];
-  this.CityList = [];
-}
-
-onCountryChange(selectedCountryId: any) {
-  const countryId = Number(selectedCountryId);
-  if (countryId) {
-    this.getAllState(countryId);
-    this.newLocation.stateId = null;
-  } else {
-    this.StateList = [];
+    this.showAddLocationModal = true;
   }
-}
-onStateChange(selectedStateId: any) {
-  const stateId = Number(selectedStateId);
-  if (stateId) {
-    this.getAllCities(stateId);
-    this.newLocation.cityId = null;
-  } else {
+
+  closeAddLocationModal() {
+    this.showAddLocationModal = false;
+    this.newLocation = {};  // reset on close
+    this.StateList = [];
     this.CityList = [];
   }
-}
 
-getAllCities(stateId: number) {
-  this._cityService.GetCityWithStateId(stateId).subscribe((res: any) => {
-    this.CityList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
-  });
-}
-getAllCountries() {
-  this._countriesService.getCountry().subscribe((response: any) => {
-    this.countries = response?.data ?? [];
-  });
-}
-getAllState(countryId: number) {
-  this._cityService.GetStateWithCountryId(countryId).subscribe((res: any) => {
-    this.StateList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
-  });
-}
-
-private validateNewLocation(): string | null {
-  const n = (this.newLocation?.name ?? '').trim();
-  if (!n) return 'Location Name is required.';
-  if (!this.newLocation?.countryId) return 'Country is required.';
-  if (!this.newLocation?.stateId) return 'State is required.';
-  if (!this.newLocation?.cityId) return 'City is required.';
-  return null;
-}
- 
-// Submit new location
-submitNewLocation(): void {
-  const err = this.validateNewLocation();
-  if (err) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Fields',
-      text: err,
-      confirmButtonText: 'OK',
-      confirmButtonColor: '#0e3a4c'
-    });
-    return;
+  onCountryChange(selectedCountryId: any) {
+    const countryId = Number(selectedCountryId);
+    if (countryId) {
+      this.getAllState(countryId);
+      this.newLocation.stateId = null;
+    } else {
+      this.StateList = [];
+    }
   }
 
-  const payload = {
-    name: (this.newLocation.name ?? '').trim(),
-    contactNumber: (this.newLocation.contactNumber ?? '').trim() || null,
-    latitude: (this.newLocation.latitude ?? '').trim() || null,
-    longitude: (this.newLocation.longitude ?? '').trim() || null,
-    countryId: this.toNum(this.newLocation.countryId),
-    stateId: this.toNum(this.newLocation.stateId),
-    cityId: this.toNum(this.newLocation.cityId),
-    createdBy: this.userId,
-    createdDate: new Date(),
-    isActive: true
-  };
+  onStateChange(selectedStateId: any) {
+    const stateId = Number(selectedStateId);
+    if (stateId) {
+      this.getAllCities(stateId);
+      this.newLocation.cityId = null;
+    } else {
+      this.CityList = [];
+    }
+  }
 
-  // call your service
-  this.locationService.insertLocation(payload).subscribe({
-    next: async (res: any) => {
-      // 1) grab new DB id from response (supports both {data:{id}} and {id})
-      const newId = this.toNum(res?.data?.id ?? res?.id);
+  getAllCities(stateId: number) {
+    this._cityService.GetCityWithStateId(stateId).subscribe((res: any) => {
+      this.CityList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
+    });
+  }
 
-      // 2) reload canonical list from server
-      await this.reloadLocationList();
+  getAllCountries() {
+    this._countriesService.getCountry().subscribe((response: any) => {
+      this.countries = response?.data ?? [];
+    });
+  }
 
-      // 3) find newly created row in refreshed list
-      const canonical = this.locationList.find(l => this.getId(l) === newId)
-                      ?? { ...payload, id: newId };
+  getAllState(countryId: number) {
+    this._cityService.GetStateWithCountryId(countryId).subscribe((res: any) => {
+      this.StateList = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
+    });
+  }
 
-      // 4) set it into the PR line modal Location field
-      this.applyLocationToActiveLine(canonical);
+  private validateNewLocation(): string | null {
+    const n = (this.newLocation?.name ?? '').trim();
+    if (!n) return 'Location Name is required.';
+    if (!this.newLocation?.countryId) return 'Country is required.';
+    if (!this.newLocation?.stateId) return 'State is required.';
+    if (!this.newLocation?.cityId) return 'City is required.';
+    return null;
+  }
 
-      // (optional) keep the modal’s filtered list fresh for UX
-      this.modalLine.filteredLocations = [canonical, ...this.locationList];
-
+  // Submit new location
+  submitNewLocation(): void {
+    const err = this.validateNewLocation();
+    if (err) {
       Swal.fire({
-        icon: 'success',
-        title: 'Created!',
-        text: 'Location created successfully.',
+        icon: 'warning',
+        title: 'Missing Fields',
+        text: err,
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
-
-      // 5) reset your create-location form object (if you have a modal, close it here)
-      this.newLocation = {};
-      this.closeAddLocationModal();
-      // this.closeNewLocationModal?.(); // uncomment if you have such a method
-    },
-    error: _ => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to create location.',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#d33'
-      });
+      return;
     }
-  });
-}
+
+    const payload = {
+      name: (this.newLocation.name ?? '').trim(),
+      contactNumber: (this.newLocation.contactNumber ?? '').trim() || null,
+      latitude: (this.newLocation.latitude ?? '').trim() || null,
+      longitude: (this.newLocation.longitude ?? '').trim() || null,
+      countryId: this.toNum(this.newLocation.countryId),
+      stateId: this.toNum(this.newLocation.stateId),
+      cityId: this.toNum(this.newLocation.cityId),
+      createdBy: this.userId,
+      createdDate: new Date(),
+      isActive: true
+    };
+
+    this.locationService.insertLocation(payload).subscribe({
+      next: async (res: any) => {
+        // 1) new DB id from response
+        const newId = this.toNum(res?.data?.id ?? res?.id);
+
+        // 2) reload canonical list from server
+        await this.reloadLocationList();
+
+        // 3) find newly created row in refreshed list
+        const canonical = this.locationList.find(l => this.getId(l) === newId)
+                        ?? { ...payload, id: newId };
+
+        // 4) set it into the PR line modal Location field
+        this.applyLocationToActiveLine(canonical);
+
+        // keep the modal’s filtered list fresh
+        this.modalLine.filteredLocations = [canonical, ...this.locationList];
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Created!',
+          text: 'Location created successfully.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#0e3a4c'
+        });
+
+        // 5) reset + close
+        this.newLocation = {};
+        this.closeAddLocationModal();
+      },
+      error: _ => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to create location.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
+  }
 }
