@@ -31,12 +31,31 @@
                 <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
                   class="d-none d-sm-inline-block">Add</span>
               </button> -->
-              
+
               <button (click)="openCreate()" class="btn m-1 d-inline-flex align-items-center"
                 style="background-color:#2E5F73; color:white; gap:4px;">
                 <i data-feather="plus-circle" class="w-4 h-4"></i>
                 <span>Add</span>
               </button>
+              <!-- Drafts with corner badge -->
+              <div style="position:relative; display:inline-block;">
+                <button (click)="openDraftsModal()" class="btn m-1 d-inline-flex align-items-center"
+                  style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
+                  <i data-feather="file-text" class="w-4 h-4"></i>
+                  <span>Drafts</span>
+                </button>
+
+                <!-- corner badge -->
+                <span *ngIf="drafts?.length" style="
+          position:absolute; top:6px; right:12px;
+          min-width:20px; height:20px; padding:0 6px;
+          border-radius:999px; background:orange; color:#fff;
+          display:flex; align-items:center; justify-content:center;
+          font-size:12px; font-weight:700; line-height:1;">
+                  {{ drafts.length }}
+                </span>
+              </div>
+
             </div>
           </div>
         </div>
@@ -214,6 +233,64 @@
     <!-- Footer -->
     <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
       <button (click)="closeLinesModal()"
+        style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Drafts Modal -->
+<div *ngIf="showDraftsModal" (click)="closeDraftsModal()"
+  style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+    style="width:820px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <div
+      style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
+      <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">Draft Purchase Orders</h3>
+      <button (click)="closeDraftsModal()" aria-label="Close"
+        style="border:0; background:transparent; font-size:22px; cursor:pointer; color:#6b7280;">×</button>
+    </div>
+
+    <div style="padding:16px 20px;">
+      <div style="max-height:60vh; overflow:auto;">
+        <table class="table" style="width:100%; border-collapse:separate; border-spacing:0 6px;">
+          <thead>
+            <tr style="color:#6b7280; font-size:13px;">
+              <th style="padding:8px 10px;">Supplier</th>
+              <th style="padding:8px 10px;">Payment Terms</th>
+              <th style="padding:8px 10px;">Delivery</th>
+              <th style="padding:8px 10px;">Remarks</th>
+              <th style="padding:8px 10px; width:160px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of drafts" style="background:#f9fafb;">
+              <td style="padding:10px 12px;">{{ d.supplierName || '-' }}</td>
+              <td style="padding:10px 12px;">{{ d.paymentTermName || '-' }}</td>
+              <td style="padding:10px 12px;">{{ d.deliveryDate | date:'dd-MM-yyyy' }}</td>
+              <td style="padding:10px 12px;">{{ d.remarks || '-' }}</td>
+              <td style="padding:10px 12px; text-align:center;">
+                <button class="btn btn-sm" (click)="openDraft(d)"
+                  style="background:#7c3aed; color:#fff; border:none; border-radius:8px; padding:6px 10px; margin-right:8px;">
+                  Open
+                </button>
+                <button class="btn btn-sm" (click)="deleteDraft(d.id)"
+                  style="background:#fff; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:6px 10px;">
+                  Delete
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!drafts?.length">
+              <td colspan="5" style="padding:14px 12px; text-align:center; color:#6b7280;">No drafts</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+      <button (click)="closeDraftsModal()"
         style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
         Close
       </button>

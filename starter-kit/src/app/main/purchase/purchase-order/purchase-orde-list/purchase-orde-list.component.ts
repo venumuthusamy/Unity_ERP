@@ -6,6 +6,7 @@ import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.s
 import { POService } from '../purchase-order.service';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
+import { POTempService } from '../purchase-order-temp.service';
 @Component({
   selector: 'app-purchase-orde-list',
   templateUrl: './purchase-orde-list.component.html',
@@ -29,12 +30,16 @@ export class PurchaseOrdeListComponent implements OnInit {
   showLinesModal = false;
   modalLines: any[] = [];
   modalTotal: any;
+  showDraftsModal = false;
+  drafts: any[] = [];
 
   constructor(private poService: POService, private router: Router,
-    private _coreSidebarService: CoreSidebarService,private datePipe: DatePipe
+    private _coreSidebarService: CoreSidebarService, private datePipe: DatePipe,
+    private poTempService: POTempService,
   ) { }
   ngOnInit(): void {
     this.loadRequests();
+     this.loadDrafts();  
   }
   filterUpdate(event) {
 
@@ -56,8 +61,8 @@ export class PurchaseOrdeListComponent implements OnInit {
       if (d.approvalStatus.toLowerCase().indexOf(val) !== -1 || !val) {
         return d.approvalStatus.toLowerCase().indexOf(val) !== -1 || !val;
       }
-       if (poDate.includes(val) || !val) return true;
-       if (deliveryDate.includes(val) || !val) return true;
+      if (poDate.includes(val) || !val) return true;
+      if (deliveryDate.includes(val) || !val) return true;
 
     });
     this.rows = temp;
@@ -128,52 +133,98 @@ export class PurchaseOrdeListComponent implements OnInit {
     row.$$expanded = !row.$$expanded; // toggle expand
   }
   openCreate() {
-    this.passData = {};   
+    this.passData = {};
     this.router.navigate(['/purchase/create-purchaseorder']);
-    
-  } 
+
+  }
 
   openLinesModal(row: any) {
     debugger
-  // Normalize lines (supports array or JSON string)
-  let lines: any[] = [];
-  try {
-    lines = Array.isArray(row?.poLines) ? row.poLines : JSON.parse(row?.poLines || '[]');
-  } catch {
-    lines = [];
+    // Normalize lines (supports array or JSON string)
+    let lines: any[] = [];
+    try {
+      lines = Array.isArray(row?.poLines) ? row.poLines : JSON.parse(row?.poLines || '[]');
+    } catch {
+      lines = [];
+    }
+
+    // Compute total 
+    const total = lines.reduce((sum, l) => sum + (Number(l?.total) || 0), 0);
+
+    this.modalLines = lines;
+    this.modalTotal = total;
+    this.showLinesModal = true;
   }
 
-  // Compute total 
-  const total = lines.reduce((sum, l) => sum + (Number(l?.total) || 0), 0);
-
-  this.modalLines = lines;
-  this.modalTotal = total;
-  this.showLinesModal = true;
-}
-
-closeLinesModal() {
-  this.showLinesModal = false;
-}
- isRowLocked(row: any): boolean {
+  closeLinesModal() {
+    this.showLinesModal = false;
+  }
+  isRowLocked(row: any): boolean {
     const v = row?.approvalStatus ?? row?.ApprovalStatus ?? row?.status;
     if (v == null) return false;
- 
+
     if (typeof v === 'string') {
       const s = v.trim().toLowerCase();
       return s === 'approved' || s === 'rejected';
     }
- 
+
     // If you use numeric enums, map them here:
     // e.g. 1=Pending, 2=Approved, 3=Rejected  (adjust to your app)
     const code = Number(v);
     return [2, 3].includes(code);
   }
-   ngAfterViewChecked(): void {
-       feather.replace();  // remove the guard so icons refresh every cycle
-     }
-     ngAfterViewInit(): void {
-       feather.replace();
-     }
+  ngAfterViewChecked(): void {
+    feather.replace();  // remove the guard so icons refresh every cycle
+  }
+  ngAfterViewInit(): void {
+    feather.replace();
+  }
+
+   openDraftsModal() {
+    this.showDraftsModal = true;
+    this.loadDrafts();
+  }
+  closeDraftsModal() {
+    this.showDraftsModal = false;
+  }
+
+  loadDrafts() {
+    // optionally pass createdBy (current user) if you filter server-side
+    this.poTempService.getPODrafts().subscribe({
+      next: (res: any) => {
+        this.drafts = res?.data || [];
+      },
+      error: (err) => console.error('Error loading PO drafts', err)
+    });
+  }
+
+  openDraft(d: any) {
+    // Navigate to the create page with a query param draftId
+    this.router.navigate(['/purchase/create-purchaseorder'], { queryParams: { draftId: d.id } });
+    this.closeDraftsModal();
+  }
+
+  deleteDraft(id: number) {
+    Swal.fire({
+      title: 'Delete draft?',
+      text: 'This draft will be permanently removed.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626'
+    }).then(res => {
+      if (res.isConfirmed) {
+        this.poTempService.deletePODraft(id).subscribe({
+          next: () => {
+            this.loadDrafts();
+            Swal.fire('Deleted', 'Draft removed', 'success');
+          },
+          error: (err) => console.error('Error deleting draft', err)
+        });
+      }
+    });
+  }
+
 }
 
 
