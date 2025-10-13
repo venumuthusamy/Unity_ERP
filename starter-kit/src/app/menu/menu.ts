@@ -35,9 +35,10 @@ export const menu: CoreMenu[] = [
       { id: 'income',          title: 'Income',          type: 'item', icon: 'circle', url: '/master/income' },
       { id: 'department',      title: 'Department',      type: 'item', icon: 'circle', url: '/master/department' },
       { id: 'items', title: 'Item',   type: 'item',   icon: 'circle',   url: '/master/items'},
-       { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse'},
-        { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring'},
+      { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse'},
+      { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring'},
       { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode'},
+      { id: 'catagory', title: 'Catagory', type: 'item', icon: 'circle', url: '/master/catagory'},
     ]
   },
 
@@ -67,6 +68,7 @@ export const menu: CoreMenu[] = [
     icon: 'file',
     children: [
       { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
+       { id: 'StackOverview', title: 'Stack-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
       
      
      

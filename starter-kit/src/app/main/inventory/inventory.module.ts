@@ -6,18 +6,26 @@ import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
+import { StackOverviewComponent } from './stack-overview/stack-overview.component';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 const routes = [
   {
     path: 'Create-inventory',
     component: CreateInventoryComponent,
     data: { animation: 'CreateInventoryComponent' }
+  },
+    {
+    path: 'list-stackoverview',
+    component: StackOverviewComponent,
+    data: { animation: 'list-stackoverview' }
   }
 ]
 
 @NgModule({
   declarations: [
-    CreateInventoryComponent
+    CreateInventoryComponent,
+    StackOverviewComponent
   ],
   imports: [
     CommonModule,
@@ -26,7 +34,8 @@ const routes = [
         FormsModule,
         NgbModule,
         ReactiveFormsModule,
-        SweetAlert2Module.forRoot()
+        SweetAlert2Module.forRoot(),
+        NgSelectModule
   ]
 })
 export class InventoryModule { }

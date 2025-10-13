@@ -30,6 +30,7 @@ import { WarehouseListComponent } from './warehouse/warehouse-list/warehouse-lis
 import { WarehouseCreateComponent } from './warehouse/warehouse-create/warehouse-create.component';
 import { RecurringComponent } from './recurring/recurring.component';
 import { TaxcodeComponent } from './taxcode/taxcode.component';
+import { CatagoryComponent } from './catagory/catagory.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -54,12 +55,13 @@ const routes: Routes = [
    { path: 'warehouse-create', component: WarehouseCreateComponent },
    { path: 'recurring', component: RecurringComponent },
    { path: 'taxcode', component: TaxcodeComponent },
+   { path: 'catagory', component: CatagoryComponent },
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
-    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent
   ],
   imports: [
     CommonModule,
