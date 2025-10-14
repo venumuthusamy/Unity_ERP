@@ -10,6 +10,8 @@ import { StackOverviewComponent } from './stack-overview/stack-overview.componen
 import { NgSelectModule } from '@ng-select/ng-select';
 import { CreateItemMasterComponent } from './item-master/create-item-master/create-item-master.component';
 import { ItemMasterListComponent } from './item-master/item-master-list/item-master-list.component';
+import { StockTransferListComponent } from './stock-transfer/stock-transfer-list/stock-transfer-list.component';
+import { StockTransferCreateComponent } from './stock-transfer/stock-transfer-create/stock-transfer-create.component';
 
 const routes = [
   {
@@ -31,6 +33,16 @@ const routes = [
     path: 'List-itemmaster',
     component: ItemMasterListComponent,
     data: { animation: 'ItemMasterListComponent' }
+  },
+  {
+    path: 'list-stocktransfer',
+    component: StockTransferListComponent,
+    data: { animation: 'list-stacktransfer' }
+  },
+  {
+    path: 'create-stocktransfer',
+    component: StockTransferCreateComponent,
+    data: { animation: 'list-stacktransfer' }
   }
 ]
 
@@ -38,7 +50,9 @@ const routes = [
   declarations: [
     CreateInventoryComponent,
     StackOverviewComponent,
-    CreateItemMasterComponent
+    CreateItemMasterComponent,
+    StockTransferListComponent,
+    StockTransferCreateComponent,
 
   ],
   imports: [
