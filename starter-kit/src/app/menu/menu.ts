@@ -70,8 +70,8 @@ export const menu: CoreMenu[] = [
     children: [
       { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
       { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/Create-itemmaster' },
-      { id: 'StackOverview', title: 'Stack-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
-      { id: 'StackTransfer', title: 'Stack-Transfer',translate: 'MENU.INVENTORY.STACKTRANSFER',type: 'item', icon: 'circle', url: '/Inventory/create-stocktransfer' },
+      { id: 'StackOverview', title: 'Stock-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
+      { id: 'StackTransfer', title: 'Stock-Transfer',translate: 'MENU.INVENTORY.STACKTRANSFER',type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer' },
       
       
      

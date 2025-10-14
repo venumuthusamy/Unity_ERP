@@ -37,12 +37,17 @@ const routes = [
   {
     path: 'list-stocktransfer',
     component: StockTransferListComponent,
-    data: { animation: 'list-stacktransfer' }
+    data: { animation: 'list-stocktransfer' }
   },
   {
     path: 'create-stocktransfer',
     component: StockTransferCreateComponent,
-    data: { animation: 'list-stacktransfer' }
+    data: { animation: 'create-stocktransfer' }
+  },
+  {
+    path: 'edit-stocktransfer/:id',
+    component: StockTransferCreateComponent,
+    data: { animation: 'edit-stocktransfer' }
   }
 ]
 

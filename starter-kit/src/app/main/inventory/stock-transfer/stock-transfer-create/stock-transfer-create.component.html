@@ -1,11 +1,16 @@
+<button class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
+  style="background-color: #2E5F73; color: white;padding-left:2.25rem;" (click)="goToStockTransfer()">
+  <i class="fas fa-arrow-left position-absolute" style="left:0.75rem; top:50%; transform:translateY(-50%);"
+    aria-hidden="true"></i> Go to Stock Transfer list
+</button>
 <!-- Stock Overview Card (no Tailwind) -->
 <div class="card card-elevated rounded-16">
   <!-- Header -->
   <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
-    <h4 class="card-title mb-0">Stock Transfer</h4>
+    <h4 class="card-title mb-0" style="color:#2E5F73">Stock Transfer</h4>
 
-     <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
-                [ngClass]="badgeToneClasses('blue')">Flow: Draft → Approve → Post</span>
+    <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
+      [ngClass]="badgeToneClasses('blue')">Flow: Draft → Approve → Post</span>
 
   </div>
 
@@ -19,65 +24,105 @@
           [(ngModel)]="fromWarehouse" class="w-100">
         </ng-select>
       </div>
-       <div class="col-sm-6 col-md-3">
+      <div class="col-sm-6 col-md-3">
         <label class="form-label">To Warehouse / Bin</label>
         <ng-select [items]="warehouses" bindLabel="name" bindValue="id" placeholder="Search warehouse"
           [(ngModel)]="toWarehouse" class="w-100">
         </ng-select>
       </div>
-    
+
 
       <div class="col-sm-6 col-md-3">
-        <label class="form-label">Search</label>
+        <label class="form-label">Reason</label>
         <input type="text" [(ngModel)]="reason" class="form-control rounded-12" placeholder="Reason">
       </div>
     </div>
 
+    <!-- Actions -->
+    <div class="d-flex gap-2 my-2">
+      <button type="button" class="btn btn-sm text-white" style="background-color:#2E5F73" (click)="selectAll()">Select
+        all</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearAll()">Clear all</button>
+
+      <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn text-white" style="background-color:#2E5F73" [disabled]="selectedCount === 0"
+          >
+          Move selected ({{ selectedCount }})
+        </button>
+      </div>
+    </div>
+
     <!-- Table -->
-    <div class="table-responsive mt-4">
-      <table class="table table-bordered mb-0 table-soft">
+    <div class="table-responsive mt-3">
+      <table class="table table-bordered mb-0 table-soft align-middle">
         <thead>
           <tr>
+            <th style="background-color:#2E5F73; color:white; width:80px;">
+              <!-- Master checkbox -->
+              <input type="checkbox" class="form-check-input" [checked]="allSelected"
+                [indeterminate]="someSelected && !allSelected" (change)="toggleAll($event.target.checked)">
+            </th>
             <th style="background-color:#2E5F73; color:white;">Item</th>
-            <th style="background-color:#2E5F73; color:white;">Qty</th>
-            <th style="background-color:#2E5F73; color:white;">Batch/Serial</th>
+            <th style="background-color:#2E5F73; color:white; width:140px;">Qty</th>
+            <th style="background-color:#2E5F73; color:white; width:200px;">Batch/Serial</th>
             <th style="background-color:#2E5F73; color:white;">Remarks</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr> </tr>
-          <tr> </tr>
+          <tr *ngFor="let r of rows; let i = index" class="align-middle">
+            <td>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="sel{{i}}" [disabled]="!canSelect(r)"
+                  [(ngModel)]="r.selected">
+              </div>
+              <div *ngIf="!canSelect(r)" class="small text-danger mt-1">
+                Enter valid qty (1–{{ r.available }})
+              </div>
+            </td>
+
+            <td>
+              <div class="fw-semibold">{{ r.itemName }}</div>
+              <div class="text-muted small">Available: {{ r.available }}</div>
+            </td>
+
+            <td>
+              <input type="number" class="form-control" min="1" [max]="r.available" [(ngModel)]="r.qty"
+                (ngModelChange)="onQtyChange(r)" placeholder="0" />
+            </td>
+
+            <td><input type="text" class="form-control" [(ngModel)]="r.batchSerial" placeholder="Batch or Serial" />
+            </td>
+            <td><input type="text" class="form-control" [(ngModel)]="r.remarks" placeholder="Remarks" /></td>
+          </tr>
+
+          <tr *ngIf="!rows?.length">
+            <td colspan="5" class="text-center text-muted py-4">No items</td>
+          </tr>
         </tbody>
       </table>
     </div>
+
     <!-- Actions -->
-<div class="d-flex flex-column flex-md-row align-items-center justify-content-end gap-2 pt-3 mt-3 border-top ">
+    <div class="d-flex align-items-center pt-3 mt-3 border-top">
+      <!-- Push buttons to the end -->
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <button type="button" class="btn btn-brand rounded-12 btn-eq" (click)="onSaveDraft()">
+          <i class="fas fa-save me-1"></i>
+          Save draft
+        </button>
 
+        <button type="button" class="btn btn-brand rounded-12 btn-eq" (click)="onSubmitForApproval()">
+          Submit for approval
+        </button>
 
-  <div class="d-flex gap-2">
-    <button
-      type="button"
-      class="btn btn-outline-secondary rounded-12"
-      (click)="onSaveDraft()"
-      title="Save as draft"
-    >
-      <i class="fas fa-save me-1"></i>
-      Save draft
-    </button>
+        <button type="button" class="btn btn-danger rounded-12 btn-eq" (click)="cancel()">
+          <i class="fas fa-times-circle me-1"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
 
-    <button
-      type="button"
-      class="btn rounded-12"
-      [ngStyle]="{ backgroundColor: '#2E5F73', color: '#fff' }"
-      (click)="onSubmitForApproval()"
-      title="Submit for approval"
-    >
-      <i class="fas fa-paper-plane me-1"></i>
-      Submit for approval
-    </button>
-  </div>
-</div>
 
   </div>
 </div>
