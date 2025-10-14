@@ -52,11 +52,11 @@ export const menu: CoreMenu[] = [
     children: [
       { id: 'PR', title: 'PR', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest' },
         { id: 'rfq', title: 'RFQ', translate: 'MENU.PURCHASE.RFQ', type: 'item', icon: 'circle', url: '/purchase/rfq' },
-      { id: 'PO', title: 'PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder' },
+      { id: 'PO', title: 'PO', type: 'item',translate: 'MENU.PURCHASE.PO', icon: 'circle', url: '/purchase/list-purchaseorder' },
        { id: 'mobilereceiving', title: 'Mobile Receiving', translate: 'MENU.PURCHASE.MobileReceiving', type: 'item', icon: 'circle', url: '/purchase/mobilereceiving' },
       { id: 'GRN', title: 'GRN', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt' },
       { id: 'Supplier Invoice', title: 'Supplier Invoice', translate: 'MENU.PURCHASE.SupplierInvoice', type: 'item', icon: 'circle', url: '/purchase/list-SupplierInvoice' },
-          { id: 'Debit Note', title: 'Debit Note', type: 'item', icon: 'circle', url: '/purchase/list-debitnote' },
+      { id: 'Debit Note', title: 'Debit Note',translate: 'MENU.PURCHASE.DebitNote', type: 'item', icon: 'circle', url: '/purchase/list-debitnote' },
      
      
     ]
@@ -71,6 +71,7 @@ export const menu: CoreMenu[] = [
       { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
       { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/Create-itemmaster' },
       { id: 'StackOverview', title: 'Stack-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
+      { id: 'StackTransfer', title: 'Stack-Transfer',translate: 'MENU.INVENTORY.STACKTRANSFER',type: 'item', icon: 'circle', url: '/Inventory/create-stocktransfer' },
       
       
      
