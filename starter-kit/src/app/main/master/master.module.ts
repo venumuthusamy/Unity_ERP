@@ -31,6 +31,7 @@ import { WarehouseCreateComponent } from './warehouse/warehouse-create/warehouse
 import { RecurringComponent } from './recurring/recurring.component';
 import { TaxcodeComponent } from './taxcode/taxcode.component';
 import { CatagoryComponent } from './catagory/catagory.component';
+import { CoastingMethodComponent } from './coasting-method/coasting-method.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -56,12 +57,13 @@ const routes: Routes = [
    { path: 'recurring', component: RecurringComponent },
    { path: 'taxcode', component: TaxcodeComponent },
    { path: 'catagory', component: CatagoryComponent },
+  { path: 'coastingmethod', component: CoastingMethodComponent },
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
-    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent
   ],
   imports: [
     CommonModule,

@@ -5,8 +5,17 @@
     <h4 class="card-title mb-0">Stock Overview</h4>
 
  <div class="d-flex align-items-center flex-wrap gap-2">
-  <button type="button" class="btn btn-primary">Transfer</button>
-  <button type="button" class="btn btn-outline-primary">Adjust</button>
+<button type="button" class="btn" style="background-color: #2E5F73; color: white;">
+  Transfer
+</button>
+
+  <button 
+  type="button" 
+  class="btn btn-outline" 
+  style="border-color: #2E5F73; color: #2E5F73;">
+  Adjust
+</button>
+
   <button type="button" class="btn btn-outline-secondary">Count</button>
 </div>
 
@@ -17,12 +26,15 @@
     <!-- Filters -->
     <div class="row g-3 align-items-end">
       <div class="col-sm-6 col-md-3">
-        <label class="form-label">Warehouse</label>
-        <select class="form-select form-control rounded-12">
-          <option>All</option>
-          <option>Central</option>
-          <option>East</option>
-        </select>
+       <label class="form-label">Warehouse</label>
+<ng-select
+  [items]="warehouses"
+  bindLabel="name"
+  bindValue="id"
+  placeholder="Search warehouse"
+  [(ngModel)]="selectedWarehouse"
+  class="w-100">
+</ng-select>
       </div>
 
       <div class="col-sm-6 col-md-3">
