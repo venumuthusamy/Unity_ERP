@@ -11,8 +11,10 @@ export const locale = {
       PURCHASE: {
         TITLE: 'Purchase',
         PR: 'Purchase Request',
+        PO: 'Purchase Order',
         GRN: 'Purchase Good Receipt',
         SupplierInvoice: 'Supplier Invoice',
+        DebitNote: 'Debit Note',
         MobileReceiving: 'Mobile Receiving',
         RFQ: 'Rfq'
       },
@@ -20,7 +22,8 @@ export const locale = {
         TITLE: 'Inventory',
         INVENOTYR: 'Inventory',
         STACKOVERVIEW: 'StackOverview',
-        ITEMMASTER:'ItemMaster'
+        ITEMMASTER:'ItemMaster',
+        STACKTRANSFER: 'STACKTRANSFER'
       },
       FINANCIAL: {
         TITLE: 'Financial',

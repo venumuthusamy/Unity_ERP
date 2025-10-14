@@ -1,0 +1,83 @@
+<!-- Stock Overview Card (no Tailwind) -->
+<div class="card card-elevated rounded-16">
+  <!-- Header -->
+  <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
+    <h4 class="card-title mb-0">Stock Transfer</h4>
+
+     <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
+                [ngClass]="badgeToneClasses('blue')">Flow: Draft → Approve → Post</span>
+
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+    <!-- Filters -->
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label">From Warehouse / Bin</label>
+        <ng-select [items]="warehouses" bindLabel="name" bindValue="id" placeholder="Search warehouse"
+          [(ngModel)]="fromWarehouse" class="w-100">
+        </ng-select>
+      </div>
+       <div class="col-sm-6 col-md-3">
+        <label class="form-label">To Warehouse / Bin</label>
+        <ng-select [items]="warehouses" bindLabel="name" bindValue="id" placeholder="Search warehouse"
+          [(ngModel)]="toWarehouse" class="w-100">
+        </ng-select>
+      </div>
+    
+
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label">Search</label>
+        <input type="text" [(ngModel)]="reason" class="form-control rounded-12" placeholder="Reason">
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive mt-4">
+      <table class="table table-bordered mb-0 table-soft">
+        <thead>
+          <tr>
+            <th style="background-color:#2E5F73; color:white;">Item</th>
+            <th style="background-color:#2E5F73; color:white;">Qty</th>
+            <th style="background-color:#2E5F73; color:white;">Batch/Serial</th>
+            <th style="background-color:#2E5F73; color:white;">Remarks</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr> </tr>
+          <tr> </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Actions -->
+<div class="d-flex flex-column flex-md-row align-items-center justify-content-end gap-2 pt-3 mt-3 border-top ">
+
+
+  <div class="d-flex gap-2">
+    <button
+      type="button"
+      class="btn btn-outline-secondary rounded-12"
+      (click)="onSaveDraft()"
+      title="Save as draft"
+    >
+      <i class="fas fa-save me-1"></i>
+      Save draft
+    </button>
+
+    <button
+      type="button"
+      class="btn rounded-12"
+      [ngStyle]="{ backgroundColor: '#2E5F73', color: '#fff' }"
+      (click)="onSubmitForApproval()"
+      title="Submit for approval"
+    >
+      <i class="fas fa-paper-plane me-1"></i>
+      Submit for approval
+    </button>
+  </div>
+</div>
+
+  </div>
+</div>
