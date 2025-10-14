@@ -1,3 +1,21 @@
 @import '@core/scss/angular/libs/form-wizard.component.scss';
 @import '@core/scss/angular/libs/select.component.scss';
 
+/* Same height & padding for all three */
+.btn-eq {
+  padding: 10px 16px;           /* consistent */
+  line-height: 1;               /* avoids vertical wobble */
+}
+
+/* Brand filled button */
+.btn-brand {
+  background-color: #2E5F73;
+  color: #fff;
+  border-color: #2E5F73;
+}
+.btn-brand:hover {
+  filter: brightness(0.95);
+}
+
+/* Optional: match your rounded style everywhere */
+.rounded-12 { border-radius: 12px; }
