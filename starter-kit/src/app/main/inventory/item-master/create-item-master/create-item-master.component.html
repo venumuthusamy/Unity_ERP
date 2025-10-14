@@ -29,22 +29,32 @@
 
         <div class="col-12 col-md-3">
           <label class="form-label small">SKU</label>
-          <input class="form-control" [(ngModel)]="item.sku" name="sku" placeholder="SKU">
+          <input class="form-control" [(ngModel)]="item.sku" name="sku" placeholder="SKU" disabled>
         </div>
 
         <div class="col-12 col-md-3">
           <label class="form-label small">Category</label>
-          <input class="form-control" [(ngModel)]="item.category" name="category" placeholder="e.g. Food">
+          <input class="form-control" [(ngModel)]="item.category" name="category" placeholder="e.g. Food" disabled>
         </div>
 
         <div class="col-12 col-md-3">
           <label class="form-label small">UOM</label>
-          <input class="form-control" [(ngModel)]="item.uom" name="uom" placeholder="e.g. KG">
+          <input class="form-control" [(ngModel)]="item.uom" name="uom" placeholder="e.g. KG" disabled>
         </div>
       </div>
 
       <!-- Row 2 -->
       <div class="row g-3 mt-1">
+         <div class="col-12 col-md-3">
+          <label class="form-label">Warehouse</label>
+          <ng-select
+  [items]="wareHouseList"
+  bindLabel="name"
+  bindValue="name"
+  [(ngModel)]="item.wareHouse"
+  (ngModelChange)="onWareHouseSelectedId($event)">
+</ng-select>
+        </div>
         <div class="col-12 col-md-3">
           <label class="form-label small">Barcode(s)</label>
           <input class="form-control" [(ngModel)]="item.barcode" name="barcode" placeholder="Comma-separated if multiple">
@@ -52,15 +62,38 @@
 
         <div class="col-12 col-md-3">
           <label class="form-label small">Costing Method</label>
-          <select class="form-select form-control rounded-12" [(ngModel)]="item.costing" name="costing">
+          <!-- <select class="form-select form-control rounded-12" [(ngModel)]="item.costing" name="costing">
             <option>FIFO</option>
             <option>LIFO</option>
             <option>Weighted Avg</option>
             <option>Standard</option>
-          </select>
+          </select> -->
+           <ng-select
+  [items]="CoastingMethodList"
+  bindLabel="costingName"
+  bindValue="costingName"
+  [(ngModel)]="item.Costing"
+  (ngModelChange)="onCostingSelectedId($event)">
+</ng-select>
         </div>
 
-        <div class="col-12 col-md-3">
+      <div class="col-12 col-md-3">
+          <label class="form-label small">Tax Class</label>
+         <ng-select
+  [items]="taxCodeList"
+  bindLabel="name"
+  bindValue="name"
+  [(ngModel)]="item.taxClass"
+  (ngModelChange)="onTaxSelectedId($event)">
+</ng-select>
+        </div>
+
+       
+      </div>
+
+      <!-- Row 3 -->
+      <div class="row g-3 mt-1">
+           <div class="col-12 col-md-3">
           <label class="form-label small">Min / Max</label>
           <div class="row g-2">
             <div class="col-6">
@@ -71,8 +104,8 @@
             </div>
           </div>
         </div>
-
-        <div class="col-12 col-md-3">
+        
+         <div class="col-12 col-md-3">
           <label class="form-label small">Reorder Qty / Lead time (days)</label>
           <div class="row g-2">
             <div class="col-6">
@@ -83,10 +116,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Row 3 -->
-      <div class="row g-3 mt-1">
         <div class="col-12 col-md-3">
           <label class="form-label small">Batch / Serial</label>
           <div class="d-flex align-items-center gap-4">
@@ -101,14 +130,7 @@
           </div>
         </div>
 
-        <div class="col-12 col-md-3">
-          <label class="form-label small">Tax Class</label>
-          <select class="form-select form-control rounded-12" [(ngModel)]="item.tax" name="tax">
-            <option>NONE</option>
-            <option>GST</option>
-            <option>VAT</option>
-          </select>
-        </div>
+       
 
         <div class="col-12 col-md-6">
           <label class="form-label small">Specifications</label>
