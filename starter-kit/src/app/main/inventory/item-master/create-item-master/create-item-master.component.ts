@@ -4,6 +4,9 @@ import { ItemMasterService } from '../item-master.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { UomService } from 'app/main/master/uom/uom.service';
+import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
+import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
+import { CoastingMethodService } from 'app/main/master/coasting-method/coasting-method.service';
 
 type SimpleItem = {
   id: number;
@@ -11,7 +14,8 @@ type SimpleItem = {
   itemCode?: string;
   uomName?: string;
   budgetLineId?: number;
-  label?: string | null; // COA path
+  label?: string | null;
+  catagoryName: string;
 };
 
 @Component({
@@ -30,7 +34,9 @@ export class CreateItemMasterComponent implements OnInit {
 
   // ng-select model
   selectedItemId: number | null = null;
-
+selectedWareHouseId: number | null = null;
+selectedTaxId: number | null = null;
+selectedCostingId:number | null = null;
   // Pricing rows
   prices: Array<{ price: number | null; uom: string }> = [];
 
@@ -45,7 +51,8 @@ export class CreateItemMasterComponent implements OnInit {
   parentHeadList: Array<{ value: number; label: string }> = [];
   itemsList: SimpleItem[] = [];
   uomList: Array<{ id?: number; name: string }> = [];
-
+  taxCodeList:any;
+  CoastingMethodList: any[] = [];
   // Files
   pictureFile?: File;
   attachmentFiles: File[] = [];
@@ -57,7 +64,7 @@ export class CreateItemMasterComponent implements OnInit {
   showModal = false;
   modalLine: any = this.makeEmptyModalLine();
   locationList = [{ name: 'Main Warehouse' }, { name: 'Store A' }];
-
+  wareHouseList:any;
   // Refs
   @ViewChild('pictureInput') pictureInput!: ElementRef<HTMLInputElement>;
   @ViewChild('attachmentsInput') attachmentsInput!: ElementRef<HTMLInputElement>;
@@ -66,12 +73,18 @@ export class CreateItemMasterComponent implements OnInit {
     private itemsSvc: ItemMasterService,
     private chartOfAccountService: ChartofaccountService,
     private itemsService: ItemsService,
-    private uomService: UomService
+    private uomService: UomService,
+    private warehouseService: WarehouseService,
+    private taxCodeService: TaxCodeService,
+    private coastingmethodService: CoastingMethodService,
   ) {}
 
   ngOnInit(): void {
     this.loadItems();
     this.loadCatalogs();
+    this.loadRequests();
+    this.loadCoastingMethod();
+    this.getAllTaxCode();
   }
 
   // ---------- Helpers ----------
@@ -83,14 +96,14 @@ export class CreateItemMasterComponent implements OnInit {
       category: '',
       uom: '',
       barcode: '',
-      costing: 'FIFO',
+      costing: '',
       min: 0,
       max: 0,
       reorder: 0,
       leadTime: 0,
       batchFlag: false,
       serialFlag: false,
-      tax: 'NONE',
+      taxClass: '',
       specs: '',
       pictureUrl: '',
       lastCost: null,
@@ -98,6 +111,8 @@ export class CreateItemMasterComponent implements OnInit {
       onHand: 0,
       reserved: 0,
       available: 0,
+      WareHouse:'',
+      Costing:''
     };
   }
 
@@ -182,6 +197,7 @@ export class CreateItemMasterComponent implements OnInit {
 
   // ---------- Save / Clone / Archive ----------
   async onSave(): Promise<void> {
+    debugger
     if (!this.item.sku?.trim() || !this.item.name?.trim()) {
       await Swal.fire({
         icon: 'warning',
@@ -194,11 +210,11 @@ export class CreateItemMasterComponent implements OnInit {
 
     const payload = {
       ...this.item,
-      min: Number(this.item.min || 0),
-      max: Number(this.item.max || 0),
-      reorder: Number(this.item.reorder || 0),
-      leadTime: Number(this.item.leadTime || 0),
-      tax: this.item.tax || 'NONE',
+      minQty: Number(this.item.min || 0),
+      maxQty: Number(this.item.max || 0),
+      reorderQty: Number(this.item.reorder || 0),
+      leadTimeDays: Number(this.item.leadTime || 0),
+      taxClass: this.item.tax || 'NONE',
     };
 
     if (payload.id && payload.id > 0) {
@@ -339,8 +355,44 @@ export class CreateItemMasterComponent implements OnInit {
   this.item.name = picked.itemName;
   this.item.sku  = picked.itemCode ?? '';
   this.item.uom  = picked.uomName ?? '';
+  this.item.category  = picked.catagoryName ?? '';
 }
+ onWareHouseSelectedId(name:string | null) {
+ this.item.wareHouse =name;
+}
+ onTaxSelectedId(name:string | null) {
+  this.item.taxClass= name;
+}
+ onCostingSelectedId(name: string | null) {
+  this.item.costing = name;
+}
+loadCoastingMethod() {
+     debugger
+     this.coastingmethodService.getAllCoastingMethod().subscribe((res: any) => {
+      this.CoastingMethodList = res.data.filter((item: any) => item.isActive === true);
+      
+     });
+   }
+loadRequests() {
+    this.warehouseService.getWarehouse().subscribe({
+      next: (res: any) => {
+        this.wareHouseList = res.data.map((req: any) => {
+          return {
+            ...req,
+          };
+        });
+       
+      },
+      error: (err: any) => console.error('Error loading list', err)
+    });
+  }
 
+   getAllTaxCode() {
+    this.taxCodeService.getTaxCode().subscribe((response: any) => {
+      this.taxCodeList = response.data;
+      
+    })
+  }
 
   // ---------- Catalogs (COA, Items, UOMs) ----------
   loadCatalogs() {
@@ -363,6 +415,7 @@ export class CreateItemMasterComponent implements OnInit {
             uomName: item.uomName ?? item.uom ?? '',
             budgetLineId: item.budgetLineId,
             label: matched ? matched.label : null,
+            catagoryName: item.catagoryName
           } as SimpleItem;
         });
       });
