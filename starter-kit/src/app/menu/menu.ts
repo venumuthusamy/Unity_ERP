@@ -39,6 +39,7 @@ export const menu: CoreMenu[] = [
       { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring'},
       { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode'},
       { id: 'catagory', title: 'Catagory', type: 'item', icon: 'circle', url: '/master/catagory'},
+      { id: 'coastingmethod', title: 'Coasting Method ', type: 'item', icon: 'circle', url: '/master/coastingmethod'},
     ]
   },
 
@@ -68,7 +69,9 @@ export const menu: CoreMenu[] = [
     icon: 'file',
     children: [
       { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
-       { id: 'StackOverview', title: 'Stack-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
+      { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/Create-itemmaster' },
+      { id: 'StackOverview', title: 'Stack-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
+      
       
      
      

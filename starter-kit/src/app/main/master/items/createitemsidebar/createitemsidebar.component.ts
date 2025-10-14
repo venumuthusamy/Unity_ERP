@@ -14,6 +14,8 @@ import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.s
 import { UomService } from '../../uom/uom.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { ItemsService } from '../items.service';
+import { CatagoryService } from '../../catagory/catagory.service';
+import { numericIndexGetter } from '@swimlane/ngx-datatable';
 
 @Component({
   selector: 'app-createitemsidebar',
@@ -28,7 +30,8 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
   itemId: number | null = null;
   itemCode: string = '';
   itemName: string = '';
-  uom: number | null = null;          // <-- matches [(ngModel)]="uom"
+  uom: number | null = null;      
+  category: number | null = null;      // <-- matches [(ngModel)]="uom"
   budgetLine: number | null = null;   // <-- matches [(ngModel)]="budgetLine"
 
   // Dropdown data
@@ -40,19 +43,21 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
   saving = false;
   loading = false;
   userId: any;
-
+ CategoryList: any[] = [];
  
   constructor(
     private sidebarSvc: CoreSidebarService,
     private uomService: UomService,
     private coaService: ChartofaccountService,
-    private itemsService: ItemsService
+    private itemsService: ItemsService,
+    private CategoryService: CatagoryService
   ) { this.userId = localStorage.getItem('id');}
 
   // ---------------- lifecycle ----------------
   ngOnInit(): void {
     this.loadUom();
     this.loadAccountHeads();
+    this.loadCatagory();
     if (this.editId) this.startEdit(this.editId);
   }
 
@@ -117,6 +122,7 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
         this.itemId = d.id ?? id;
         this.itemCode = d.itemCode ?? '';
         this.itemName = d.itemName ?? '';
+        this.category = d.categoryId,
         this.uom = d.uomId ?? null;
         this.budgetLine = d.budgetLineId ?? null;
       },
@@ -162,6 +168,7 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
     const base: any = {
       itemCode: (this.itemCode || '').trim(),
       itemName: (this.itemName || '').trim(),
+      categoryId: Number(this.category),
       uomId: Number(this.uom),
       budgetLineId: Number(this.budgetLine),
       updatedBy: this.userId,
@@ -235,10 +242,18 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
     this.itemCode = '';
     this.itemName = '';
     this.uom = null;
+    this.category=null;
     this.budgetLine = null;
   }
 
   private errMsg(err: any): string {
     return err?.error?.message || err?.message || 'Please try again.';
   }
+    loadCatagory() {
+      this.CategoryService.getAllCatagory().subscribe((res: any) => {
+        // Filter only active ones
+        this.CategoryList = res.data.filter((item: any) => item.isActive === true);
+       
+      });
+    }
 }
