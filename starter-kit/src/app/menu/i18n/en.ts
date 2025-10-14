@@ -19,7 +19,8 @@ export const locale = {
  INVENTORY: {
         TITLE: 'Inventory',
         INVENOTYR: 'Inventory',
-        STACKOVERVIEW: 'StackOverview'
+        STACKOVERVIEW: 'StackOverview',
+        ITEMMASTER:'ItemMaster'
       },
       FINANCIAL: {
         TITLE: 'Financial',

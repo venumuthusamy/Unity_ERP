@@ -53,7 +53,24 @@
       <small class="text-danger" *ngIf="itemNameRef.errors?.required">This field is required!</small>
     </span>
   </div>
-
+  <div class="form-group">
+    <label class="form-label" for="category">Category</label>
+    <select
+      id="category"
+      class="form-control"
+      name="category"
+      [(ngModel)]="category"
+      [class.error]="newItemForm.submitted && categoryRef.invalid"
+      #categoryRef="ngModel"
+      required
+    >
+      <option value="" disabled selected>Select Category</option>
+      <option *ngFor="let category of CategoryList" [value]="category.id">{{ category.catagoryName }}</option>
+    </select>
+    <span *ngIf="newItemForm.submitted && categoryRef.invalid" class="invalid-form">
+      <small class="text-danger" *ngIf="categoryRef.errors?.required">This field is required!</small>
+    </span>
+  </div>
   <!-- Unit of Measure (UOM) -->
   <div class="form-group">
     <label class="form-label" for="uom">Unit of Measure (UOM)</label>

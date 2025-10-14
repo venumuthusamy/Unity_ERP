@@ -1,0 +1,363 @@
+<section class="container my-3">
+  <!-- ===== Card: Item Master ===== -->
+  <div class="card shadow rounded-3 border-0">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="text-[18px] font-semibold" style="color:#2E5F73">Item Master</h2>
+
+        <div class="d-flex gap-2">
+          <button (click)="onSave()" class="btn d-inline-flex align-items-center" style="background-color:#2E5F73;color:#fff;">
+            <i class="fa fa-save me-2"></i><span>Save</span>
+          </button>
+          <button class="btn btn-outline-secondary" (click)="onClone()">Clone</button>
+          <button class="btn btn-outline-secondary" (click)="onArchive()">Archive</button>
+        </div>
+      </div>
+
+      <!-- Row 1 -->
+      <div class="row g-3">
+        <div class="col-12 col-md-3">
+          <label class="form-label">Item Name</label>
+          <ng-select
+  [items]="itemsList"
+  bindLabel="itemName"
+  bindValue="id"
+  [(ngModel)]="selectedItemId"
+  (ngModelChange)="onItemSelectedId($event)">
+</ng-select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">SKU</label>
+          <input class="form-control" [(ngModel)]="item.sku" name="sku" placeholder="SKU">
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Category</label>
+          <input class="form-control" [(ngModel)]="item.category" name="category" placeholder="e.g. Food">
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">UOM</label>
+          <input class="form-control" [(ngModel)]="item.uom" name="uom" placeholder="e.g. KG">
+        </div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="row g-3 mt-1">
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Barcode(s)</label>
+          <input class="form-control" [(ngModel)]="item.barcode" name="barcode" placeholder="Comma-separated if multiple">
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Costing Method</label>
+          <select class="form-select form-control rounded-12" [(ngModel)]="item.costing" name="costing">
+            <option>FIFO</option>
+            <option>LIFO</option>
+            <option>Weighted Avg</option>
+            <option>Standard</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Min / Max</label>
+          <div class="row g-2">
+            <div class="col-6">
+              <input type="number" class="form-control" [(ngModel)]="item.min" name="min" placeholder="Min">
+            </div>
+            <div class="col-6">
+              <input type="number" class="form-control" [(ngModel)]="item.max" name="max" placeholder="Max">
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Reorder Qty / Lead time (days)</label>
+          <div class="row g-2">
+            <div class="col-6">
+              <input type="number" class="form-control" [(ngModel)]="item.reorder" name="reorder" placeholder="Qty">
+            </div>
+            <div class="col-6">
+              <input type="number" class="form-control" [(ngModel)]="item.leadTime" name="leadTime" placeholder="Days">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="row g-3 mt-1">
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Batch / Serial</label>
+          <div class="d-flex align-items-center gap-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="item.batchFlag" name="batchFlag" id="chkBatch">
+              <label class="form-check-label" for="chkBatch">Batch</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="item.serialFlag" name="serialFlag" id="chkSerial">
+              <label class="form-check-label" for="chkSerial">Serial</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Tax Class</label>
+          <select class="form-select form-control rounded-12" [(ngModel)]="item.tax" name="tax">
+            <option>NONE</option>
+            <option>GST</option>
+            <option>VAT</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label small">Specifications</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="item.specs" name="specs" placeholder="Add specs or notes..."></textarea>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="mt-3 mb-2">
+        <ul class="nav nav-pills gap-2">
+          <li class="nav-item" *ngFor="let t of itemTabs; trackBy: trackByIdx">
+            <button type="button"
+                    class="btn"
+                    [ngClass]="itemSubTab === t ? 'btn-outline-secondary' : 'btn-light border'"
+                    (click)="itemSubTab = t">
+              {{ t }}
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Summary -->
+      <div *ngIf="itemSubTab === 'Summary'" class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label small">Picture</label>
+          <input type="file" class="form-control" (change)="onPictureChange($event)">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label small">Attachments</label>
+          <input type="file" multiple class="form-control" (change)="onAttachmentsChange($event)">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label small">Last Cost / Std Cost</label>
+          <input placeholder="0.00" class="form-control" [(ngModel)]="item.lastCost" name="lastCost">
+        </div>
+      </div>
+
+      <!-- Pricing -->
+      <div *ngIf="itemSubTab === 'Pricing'" class="mt-2">
+        <label class="form-label small">Unit Prices</label>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle mb-2">
+            <thead class="table-light">
+              <tr>
+                <th>Price</th>
+                <th>UOM</th>
+                <th style="width:110px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx">
+                <td><input type="number" class="form-control form-control-sm" [(ngModel)]="p.price" name="price-{{i}}" placeholder="0.00"></td>
+                <td><input class="form-control form-control-sm" [(ngModel)]="p.uom" name="uom-{{i}}" placeholder="e.g. KG"></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-danger" (click)="removePriceLine(i)">
+                    <i class="fa fa-trash me-1"></i>Remove
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="!prices || prices.length === 0">
+                <td colspan="3" class="py-2">No price lines. Add one below.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn btn-outline-secondary btn-sm" (click)="addPriceLine()">
+          + Add line
+        </button>
+      </div>
+
+      <!-- Suppliers -->
+      <div *ngIf="itemSubTab === 'Suppliers'" class="mt-2">
+        <label class="form-label small mb-1">Preferred Suppliers</label>
+        <div class="d-flex flex-wrap align-items-center gap-2 p-2 border rounded bg-white">
+          <ng-container *ngFor="let s of suppliers; trackBy: trackByIdx">
+            <span class="badge text-bg-light border">{{ s }}</span>
+          </ng-container>
+          <input class="form-control form-control-sm flex-grow-1" style="min-width:160px;"
+                 placeholder="Type and press Enter"
+                 [(ngModel)]="supplierDraft" name="supplierDraft"
+                 (keyup.enter)="addSupplier()">
+          <button class="btn btn-outline-secondary btn-sm" (click)="addSupplier()">Add</button>
+        </div>
+      </div>
+
+      <!-- BOM -->
+      <div *ngIf="itemSubTab === 'BOM'" class="text-muted small mt-2">
+        Link to BOM management module (placeholder)
+      </div>
+
+      <!-- Substitutes -->
+      <div *ngIf="itemSubTab === 'Substitutes'" class="mt-2">
+        <label class="form-label small mb-1">Substitute Items</label>
+        <div class="d-flex flex-wrap align-items-center gap-2 p-2 border rounded bg-white">
+          <ng-container *ngFor="let s of substitutes; trackBy: trackByIdx">
+            <span class="badge text-bg-light border">{{ s }}</span>
+          </ng-container>
+          <input class="form-control form-control-sm flex-grow-1" style="min-width:160px;"
+                 placeholder="Type and press Enter"
+                 [(ngModel)]="substituteDraft" name="substituteDraft"
+                 (keyup.enter)="addSubstitute()">
+          <button class="btn btn-outline-secondary btn-sm" (click)="addSubstitute()">Add</button>
+        </div>
+      </div>
+
+      <!-- Attachments -->
+      <div *ngIf="itemSubTab === 'Attachments'" class="mt-2">
+        <label class="form-label small mb-1">Upload Attachments</label>
+        <input type="file" class="form-control" multiple (change)="onAttachmentsChange($event)">
+      </div>
+
+      <!-- Audit -->
+      <div *ngIf="itemSubTab === 'Audit'" class="text-muted small mt-2">
+        Audit trail: created/updated by X at Y (demo)
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Card: Items list (sample) ===== -->
+  <div class="card shadow rounded-3 border-0 mt-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h6 fw-semibold mb-0">Items List (sample)</h2>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>SKU</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>UOM</th>
+              <th>On Hand</th>
+              <th>Reserved</th>
+              <th>Available</th>
+              <th>Min</th>
+              <th>Reorder</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ITM001</td><td>Rice 5kg</td><td>Food</td>
+              <td>KG</td><td>120</td><td>10</td>
+              <td>110</td><td>50</td><td>60</td>
+            </tr>
+            <tr>
+              <td>ITM002</td><td>Cooking Oil 2L</td><td>Food</td>
+              <td>L</td><td>60</td><td>0</td>
+              <td>60</td><td>20</td><td>30</td>
+            </tr>
+            <tr *ngIf="!itemsList || itemsList.length === 0">
+              <td colspan="9" class="py-2">No items to display.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add Line trigger (example) -->
+      <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLineModal">
+        <i class="fa fa-plus me-1"></i> Add Line
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Bootstrap Modal: Add Line ===== -->
+  <div class="modal fade" id="addLineModal" tabindex="-1" aria-labelledby="addLineLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 id="addLineLabel" class="modal-title">Add Line</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label small text-muted mb-1">Item</label>
+              <input class="form-control"
+                     [(ngModel)]="modalLine.itemSearch"
+                     name="modalItemSearch"
+                     (focus)="onModalItemFocus()"
+                     (input)="filterModalItems()"
+                     placeholder="Search item...">
+              <div class="list-group mt-1" *ngIf="modalLine.dropdownOpen">
+                <button type="button"
+                        class="list-group-item list-group-item-action"
+                        *ngFor="let it of modalLine.filteredItems"
+                        (click)="selectModalItem(it)">
+                  {{ it.itemName }} <span class="text-muted">({{ it.itemCode }})</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label class="form-label small text-muted mb-1">Qty</label>
+              <input type="number" class="form-control" [(ngModel)]="modalLine.qty" name="modalQty" placeholder="0">
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label class="form-label small text-muted mb-1">UOM</label>
+              <input class="form-control"
+                     [(ngModel)]="modalLine.uomSearch"
+                     name="modalUomSearch"
+                     (focus)="onModalUomFocus()"
+                     (input)="filterModalUoms()"
+                     placeholder="Select UOM">
+              <div class="list-group mt-1" *ngIf="modalLine.uomDropdownOpen">
+                <button type="button"
+                        class="list-group-item list-group-item-action"
+                        *ngFor="let u of modalLine.filteredUoms"
+                        (click)="selectModalUom(u)">
+                  {{ u.name }}
+                </button>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label small text-muted mb-1">Location</label>
+              <input class="form-control"
+                     [(ngModel)]="modalLine.locationSearch"
+                     name="modalLocationSearch"
+                     (focus)="onModalLocationFocus()"
+                     (input)="filterModalLocations()"
+                     placeholder="Select location">
+              <div class="list-group mt-1" *ngIf="modalLine.locationDropdownOpen">
+                <button type="button"
+                        class="list-group-item list-group-item-action"
+                        *ngFor="let loc of modalLine.filteredLocations"
+                        (click)="selectModalLocation(loc)">
+                  {{ loc.name }}
+                </button>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small text-muted mb-1">Remarks</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="modalLine.remarks" name="modalRemarks" placeholder="Optional remarks"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn text-white" style="background-color:#2E5F73" (click)="onSubmitModal()">Save line</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
