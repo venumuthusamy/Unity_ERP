@@ -35,6 +35,47 @@
               <small class="form-text text-danger" *ngIf="nameRef.errors.required">This field is required!</small>
             </span>
           </div>
+
+          <div class="form-group mb-2">
+  <label class="form-label" for="bin">Bin</label>
+
+  <ng-select
+    id="bin"
+    name="binIds"
+    [items]="binList"
+    bindLabel="binName"        
+    bindValue="id"
+    [multiple]="true"
+    [closeOnSelect]="false"
+    [searchable]="true"
+    [clearable]="true"
+    [maxSelectedItems]="10"
+    placeholder="Select one or more bins"
+    [(ngModel)]="selectedBinIds"
+    [class.error]="newWarehouseForm.submitted && binRef?.invalid"
+    #binRef="ngModel">
+    <!-- Optional: show a checkbox-like marker -->
+    <ng-template ng-option-tmp let-item="item" let-item$="item$" let-index="index">
+      <div class="d-flex align-items-center">
+      
+        <div class="d-flex flex-column">
+          <span>{{ item.binName }}</span>
+          <small class="text-muted" *ngIf="item.code">Code: {{ item.code }}</small>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Optional: selected items appearance -->
+    <ng-template ng-multi-label-tmp let-items="items">
+      <div class="ng-value" *ngFor="let it of items">
+        <span class="ng-value-label">{{ it.binName }}</span>
+      </div>
+      <div *ngIf="items.length > 3" class="text-muted small ml-1">
+        +{{ items.length - 3 }} more
+      </div>
+    </ng-template>
+  </ng-select>
+</div>
           <div class="form-group mb-2">
           <label class="form-label" for="country">Country</label>
           <select

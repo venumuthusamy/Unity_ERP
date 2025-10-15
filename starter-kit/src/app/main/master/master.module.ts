@@ -39,6 +39,7 @@ import { CoastingMethodComponent } from './coasting-method/coasting-method.compo
 import { StrategyComponent } from './strategies/strategy/strategy.component';
 import { StockIssueComponent } from './stock-issue/stock-issue.component';
 import { BinComponent } from './bin/bin.component';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -82,6 +83,7 @@ const routes: Routes = [
     NgxDatatableModule,
     FormsModule,
     NgbModule,
+     NgSelectModule,
     CoreSidebarModule,
     ReactiveFormsModule,
   ]
