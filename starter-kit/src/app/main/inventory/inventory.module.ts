@@ -12,6 +12,8 @@ import { CreateItemMasterComponent } from './item-master/create-item-master/crea
 import { ItemMasterListComponent } from './item-master/item-master-list/item-master-list.component';
 import { StockTransferListComponent } from './stock-transfer/stock-transfer-list/stock-transfer-list.component';
 import { StockTransferCreateComponent } from './stock-transfer/stock-transfer-create/stock-transfer-create.component';
+import { StockTakeComponent } from './stock-take/stock-take/stock-take.component';
+import { StackOverviewListComponent } from './stack-overview/stack-overview-list/stack-overview-list.component';
 
 const routes = [
   {
@@ -19,10 +21,15 @@ const routes = [
     component: CreateInventoryComponent,
     data: { animation: 'CreateInventoryComponent' }
   },
-    {
+  {
     path: 'list-stackoverview',
-    component: StackOverviewComponent,
+    component: StackOverviewListComponent,
     data: { animation: 'list-stackoverview' }
+  },
+  {
+    path: 'create-stackoverview',
+    component: StackOverviewComponent,
+    data: { animation: 'create-stackoverview' }
   },
   {
     path: 'Create-itemmaster',
@@ -48,6 +55,11 @@ const routes = [
     path: 'edit-stocktransfer/:id',
     component: StockTransferCreateComponent,
     data: { animation: 'edit-stocktransfer' }
+  },
+  {
+    path: 'create-stocktake',
+    component: StockTakeComponent,
+    data: { animation: 'create-stocktake' }
   }
 ]
 
@@ -58,18 +70,19 @@ const routes = [
     CreateItemMasterComponent,
     StockTransferListComponent,
     StockTransferCreateComponent,
-
+    StockTakeComponent,
+    StackOverviewListComponent,
   ],
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-        NgxDatatableModule,
-        FormsModule,
-        NgbModule,
-        ReactiveFormsModule,
-        SweetAlert2Module.forRoot(),
-        NgSelectModule,
-        
+    NgxDatatableModule,
+    FormsModule,
+    NgbModule,
+    ReactiveFormsModule,
+    SweetAlert2Module.forRoot(),
+    NgSelectModule,
+
   ]
 })
 export class InventoryModule { }
