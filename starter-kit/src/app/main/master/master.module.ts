@@ -32,6 +32,8 @@ import { RecurringComponent } from './recurring/recurring.component';
 import { TaxcodeComponent } from './taxcode/taxcode.component';
 import { CatagoryComponent } from './catagory/catagory.component';
 import { CoastingMethodComponent } from './coasting-method/coasting-method.component';
+import { StockIssueComponent } from './stock-issue/stock-issue.component';
+import { BinComponent } from './bin/bin.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -58,12 +60,14 @@ const routes: Routes = [
    { path: 'taxcode', component: TaxcodeComponent },
    { path: 'catagory', component: CatagoryComponent },
   { path: 'coastingmethod', component: CoastingMethodComponent },
+   { path: 'stockIssue', component: StockIssueComponent },
+      { path: 'bin', component: BinComponent },
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
-    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent, StockIssueComponent, BinComponent
   ],
   imports: [
     CommonModule,

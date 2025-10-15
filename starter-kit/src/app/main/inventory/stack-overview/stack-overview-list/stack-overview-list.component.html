@@ -1,0 +1,88 @@
+<div class="content-body">
+  <section class="users-list-wrapper">
+    <div class="card">
+      <div class="row">
+        <!-- Title + page size -->
+        <div class="col-md-6 col-12">
+          <h4 class="card-text ml-2 mt-2" style="font-size:1.25rem;font-weight:600;color:#2E5F73">
+            Item Master List
+          </h4>
+
+          <div class="d-flex justify-content-between align-items-center m-1">
+            <label class="d-flex align-items-center">Show
+              <select class="form-control mx-2" [(ngModel)]="pageSize">
+                <option *ngFor="let s of pageSizes" [value]="s">{{ s }}</option>
+              </select>
+              entries
+            </label>
+          </div>
+        </div>
+
+        <!-- Search + Create -->
+        <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+          <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+            <label class="d-flex align-items-center ml-1 ml-md-0">Search:
+              <input
+                [(ngModel)]="searchValue"
+                type="search"
+                class="form-control ml-2"
+                (input)="applyFilter()"
+                placeholder="Item / SKU / Category / UOM / Warehouse" />
+            </label>
+
+            <button
+              (click)="goToCreateItem()"
+              class="btn m-1 d-inline-flex align-items-center"
+              style="background-color:#2E5F73; color:white; gap:6px;">
+              <i class="fas fa-plus-circle"></i>
+              <span>Create Item</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading / Error -->
+      <div *ngIf="loading" class="px-3 pb-2 small text-muted">Loading items…</div>
+      <div *ngIf="errorMsg" class="alert alert-danger mx-3 my-2">{{ errorMsg }}</div>
+
+      <!-- NGX DATATABLE -->
+      <ngx-datatable
+        class="bootstrap core-bootstrap item-table"
+        [rows]="filteredRows"
+        [rowHeight]="50"
+        [headerHeight]="50"
+        [footerHeight]="50"
+        [limit]="pageSize"
+        [columnMode]="'force'"
+        [scrollbarH]="false"
+        [reorderable]="true">
+
+
+        <!-- Main columns (map to your API response) -->
+        <!-- <ngx-datatable-column name="ID" prop="id" [width]="80"></ngx-datatable-column> -->
+        <ngx-datatable-column name="SKU" prop="sku" [width]="140"></ngx-datatable-column>
+        <ngx-datatable-column name="Item Name" prop="name" [width]="220"></ngx-datatable-column>
+        <ngx-datatable-column name="Category" prop="category" [width]="160"></ngx-datatable-column>
+        <ngx-datatable-column name="UOM" prop="uom" [width]="120"></ngx-datatable-column>
+        <ngx-datatable-column name="Warehouse" prop="wareHouse" [width]="160"></ngx-datatable-column>
+
+        <!-- Actions -->
+        <ngx-datatable-column
+          name="Action"
+          [width]="120"
+          [sortable]="false"
+          [canAutoResize]="false">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <i class="fas fa-pen"
+                 title="Edit"
+                 style="cursor:pointer; color:#2E5F73;"
+                 (click)="editItem(row.id)"></i>
+            </div>
+          </ng-template>
+        </ngx-datatable-column>
+
+      </ngx-datatable>
+    </div>
+  </section>
+</div>
