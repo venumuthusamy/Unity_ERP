@@ -1,3 +1,7 @@
+
+
+
+  
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
@@ -32,46 +36,49 @@ import { RecurringComponent } from './recurring/recurring.component';
 import { TaxcodeComponent } from './taxcode/taxcode.component';
 import { CatagoryComponent } from './catagory/catagory.component';
 import { CoastingMethodComponent } from './coasting-method/coasting-method.component';
+import { StrategyComponent } from './strategies/strategy/strategy.component';
 import { StockIssueComponent } from './stock-issue/stock-issue.component';
 import { BinComponent } from './bin/bin.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
-   { path: 'cities', component: CitiesComponent },
-   { path: 'uom', component: UomComponent },
-   { path: 'incoterms', component: IncotermsComponent },
-   { path: 'flagIssue', component: FlagissueComponent },
-   { path: 'countries', component: CountriesComponent },
-   { path: 'paymentTerms', component: PaymentTermsComponent },
-   { path: 'currency', component: CurrencyComponent },
-    { path: 'states', component: StatesComponent},
-     { path: 'service', component: ServiceComponent},
-     { path: 'customergroups', component: CustomerGroupsComponent},
-      { path: 'suppliergroups', component: SupplierGroupsComponent},
-       { path: 'location', component: LocationComponent},
-       { path: 'regions', component: RegionsComponent },
-   { path: 'deductions', component: DeductionsComponent },
-   { path: 'income', component: IncomeComponent },
-   { path: 'department', component: DepartmentComponent },
-   { path: 'items', component: ItemsComponent },
-    { path: 'warehouse', component: WarehouseListComponent },
-   { path: 'warehouse-create', component: WarehouseCreateComponent },
-   { path: 'recurring', component: RecurringComponent },
-   { path: 'taxcode', component: TaxcodeComponent },
-   { path: 'catagory', component: CatagoryComponent },
+  { path: 'cities', component: CitiesComponent },
+  { path: 'uom', component: UomComponent },
+  { path: 'incoterms', component: IncotermsComponent },
+  { path: 'flagIssue', component: FlagissueComponent },
+  { path: 'countries', component: CountriesComponent },
+  { path: 'paymentTerms', component: PaymentTermsComponent },
+  { path: 'currency', component: CurrencyComponent },
+  { path: 'states', component: StatesComponent },
+  { path: 'service', component: ServiceComponent },
+  { path: 'customergroups', component: CustomerGroupsComponent },
+  { path: 'suppliergroups', component: SupplierGroupsComponent },
+  { path: 'location', component: LocationComponent },
+  { path: 'regions', component: RegionsComponent },
+  { path: 'deductions', component: DeductionsComponent },
+  { path: 'income', component: IncomeComponent },
+  { path: 'department', component: DepartmentComponent },
+  { path: 'items', component: ItemsComponent },
+  { path: 'warehouse', component: WarehouseListComponent },
+  { path: 'warehouse-create', component: WarehouseCreateComponent },
+  { path: 'recurring', component: RecurringComponent },
+  { path: 'taxcode', component: TaxcodeComponent },
+  { path: 'catagory', component: CatagoryComponent },
   { path: 'coastingmethod', component: CoastingMethodComponent },
-   { path: 'stockIssue', component: StockIssueComponent },
-      { path: 'bin', component: BinComponent },
+  { path: 'strategy', component: StrategyComponent },
+  { path: 'stockIssue', component: StockIssueComponent },
+  { path: 'bin', component: BinComponent },
 ];
 
 @NgModule({
-  declarations: [ApprovalLevelComponent, CountriesComponent,CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
+  declarations: [ApprovalLevelComponent, CountriesComponent, CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
-    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent,ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent,WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent, StockIssueComponent, BinComponent
+    RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent, ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent, WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent, StrategyComponent,
+    StockIssueComponent, BinComponent
   ],
   imports: [
     CommonModule,
-    RouterModule.forChild(routes)  ,
+    RouterModule.forChild(routes),
     NgxDatatableModule,
     FormsModule,
     NgbModule,
@@ -79,4 +86,8 @@ const routes: Routes = [
     ReactiveFormsModule,
   ]
 })
-export class MasterModule {}
+export class MasterModule { }
+
+
+   
+
