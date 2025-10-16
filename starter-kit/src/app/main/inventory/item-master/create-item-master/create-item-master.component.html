@@ -459,7 +459,7 @@
             [disabled]="!whDraft.warehouseId"
             required>
             <option [ngValue]="null" disabled>Select bin</option>
-            <option *ngFor="let b of binList" [ngValue]="b.binId">
+            <option *ngFor="let b of binList" [ngValue]="b.binID">
               {{ b.binName }}
             </option>
           </select>
