@@ -38,6 +38,8 @@ interface ItemStockRow {
   leadTimeDays: number | null;
   batchFlag: boolean;
   serialFlag: boolean;
+  isApproved:boolean,
+  isTransfered:boolean
 }
 
 @Component({
@@ -190,6 +192,8 @@ minDate = '';
       leadTimeDays: null,
       batchFlag: false,
       serialFlag: false,
+      isApproved:false,
+      isTransfered:false
     };
   }
   trackByIdx = (_: any, i: number) => i;
@@ -240,8 +244,9 @@ debugger
     reorderQty: Number(r.reorderQty || 0),
     leadTimeDays: Number(r.leadTimeDays || 0),
     batchFlag: !!r.batchFlag,
-    serialFlag: !!r.serialFlag
-
+    serialFlag: !!r.serialFlag,
+    isApproved:false,
+    isTransfered:false
   }));
 
   const payload = {
