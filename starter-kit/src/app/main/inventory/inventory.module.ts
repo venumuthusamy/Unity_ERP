@@ -14,6 +14,7 @@ import { StockTransferListComponent } from './stock-transfer/stock-transfer-list
 import { StockTransferCreateComponent } from './stock-transfer/stock-transfer-create/stock-transfer-create.component';
 import { StockTakeComponent } from './stock-take/stock-take/stock-take.component';
 import { StackOverviewListComponent } from './stack-overview/stack-overview-list/stack-overview-list.component';
+import { StockTakeListComponent } from './stock-take/stock-take-list/stock-take-list.component';
 
 const routes = [
   {
@@ -57,10 +58,20 @@ const routes = [
     data: { animation: 'edit-stocktransfer' }
   },
   {
+    path: 'list-stocktake',
+    component: StockTakeListComponent,
+    data: { animation: 'list-stocktake' }
+  },
+  {
     path: 'create-stocktake',
     component: StockTakeComponent,
     data: { animation: 'create-stocktake' }
-  }
+  },
+   {
+    path: 'edit-stocktake/:id',
+    component: StockTransferCreateComponent,
+    data: { animation: 'edit-stocktake' }
+  },
 ]
 
 @NgModule({
@@ -72,6 +83,7 @@ const routes = [
     StockTransferCreateComponent,
     StockTakeComponent,
     StackOverviewListComponent,
+    StockTakeListComponent,
   ],
   imports: [
     CommonModule,
