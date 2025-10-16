@@ -1,14 +1,10 @@
-<!-- Stock Overview Card (no Tailwind) -->
+<!-- Stock Overview Card -->
 <div class="card card-elevated rounded-16">
   <!-- Header -->
   <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
     <h4 class="card-title mb-0">Stock Overview</h4>
-
     <div class="d-flex align-items-center flex-wrap gap-2">
-      <button type="button" class="btn" style="background-color:#2E5F73;color:white;">
-        Transfer
-      </button>
-      <button type="button" class="btn btn-outline-secondary">Count</button>
+      <button type="button" class="btn btn-outline-secondary" (click)="exportData()">Export</button>
     </div>
   </div>
 
@@ -16,40 +12,48 @@
   <div class="card-body">
     <!-- Filters -->
     <div class="row g-3 align-items-end">
+      <!-- Warehouse -->
       <div class="col-sm-6 col-md-3">
         <label class="form-label">Warehouse</label>
-<ng-select
-  [items]="warehouses"
-  bindLabel="name"
-  bindValue="id"
-  placeholder="Search warehouse"
-  [(ngModel)]="selectedWarehouse"
-  (ngModelChange)="applyFilters()"
-  class="w-100">
-</ng-select>
-
+        <ng-select
+          [items]="warehouses"
+          bindLabel="name"
+          bindValue="id"
+          placeholder="Search warehouse"
+          [(ngModel)]="selectedWarehouse"
+          (ngModelChange)="applyFilters()"
+          class="w-100">
+        </ng-select>
       </div>
 
+      <!-- Below Min -->
       <div class="col-sm-6 col-md-3">
         <label class="form-label d-block">Below Min</label>
         <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="minOnly" [(ngModel)]="minOnly" (ngModelChange)="applyFilters()">
+          <input class="form-check-input" type="checkbox" id="minOnly"
+                 [(ngModel)]="minOnly" (ngModelChange)="applyFilters()">
           <label class="form-check-label" for="minOnly">Show only</label>
         </div>
       </div>
 
+      <!-- Expiring (30d) -->
       <div class="col-sm-6 col-md-3">
         <label class="form-label d-block">Expiring (30d)</label>
         <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="expOnly" [(ngModel)]="expOnly" (ngModelChange)="applyFilters()">
+          <input class="form-check-input" type="checkbox" id="expOnly"
+                 [(ngModel)]="expOnly" (ngModelChange)="applyFilters()">
           <label class="form-check-label" for="expOnly">Show only</label>
         </div>
       </div>
 
+      <!-- Search -->
       <div class="col-sm-6 col-md-3">
         <label class="form-label">Search</label>
-        <input type="text" class="form-control rounded-12" placeholder="Item / SKU / Bin"
-               [(ngModel)]="searchText" (input)="applyFilters()">
+        <input type="text"
+               class="form-control rounded-12"
+               placeholder="Item / SKU / Bin"
+               [(ngModel)]="searchText"
+               (input)="applyFilters()">
       </div>
     </div>
 
@@ -61,49 +65,83 @@
     <div class="table-responsive mt-4" *ngIf="!loading && !errorMsg">
       <table class="table table-bordered mb-0 table-soft">
         <thead>
-        <tr>
-          <th style="background-color:#2E5F73;color:white;">Warehouse</th>
-          <th style="background-color:#2E5F73;color:white;">Item</th>
-          <th style="background-color:#2E5F73;color:white;">SKU</th>
-          <th style="background-color:#2E5F73;color:white;">Bin</th>
-          <th style="background-color:#2E5F73;color:white;">On Hand</th>
-          <th style="background-color:#2E5F73;color:white;">Min</th>
-          <th style="background-color:#2E5F73;color:white;">Available</th>
-          <th style="background-color:#2E5F73;color:white;">Expiry</th>
-          <th style="background-color:#2E5F73;color:white; width:120px;">Actions</th>
-        </tr>
+          <tr>
+            <th style="width:44px; text-align:center; background-color:#2E5F73; color:white;">
+              <input type="checkbox"
+                     [checked]="isAllSelected()"
+                     [indeterminate]="isIndeterminate()"
+                     (change)="toggleAll($event)">
+            </th>
+            <th style="background-color:#2E5F73;color:white;">Warehouse</th>
+            <th style="background-color:#2E5F73;color:white;">Item</th>
+            <th style="background-color:#2E5F73;color:white;">SKU</th>
+            <th style="background-color:#2E5F73;color:white;">Bin</th>
+            <th style="background-color:#2E5F73;color:white;">On Hand</th>
+            <th style="background-color:#2E5F73;color:white;">Reserved</th>
+            <th style="background-color:#2E5F73;color:white;">Min</th>
+            <th style="background-color:#2E5F73;color:white;">Available</th>
+            <th style="background-color:#2E5F73;color:white;">Expiry</th>
+            <th style="background-color:#2E5F73;color:white; width:120px;">Actions</th>
+          </tr>
         </thead>
-
         <tbody>
-        <tr *ngFor="let r of filteredRows">
-           <td>{{ r.warehouse }}</td>
-          <td>{{ r.item }}</td>
-          <td>{{ r.sku }}</td>
-          <td>{{ r.bin }}</td>
-          <td>{{ r.onHand }}</td>
-          <td>{{ r.min }}</td>
-          <td>{{ r.available }}</td>
-          <td>{{ r.expiry | date:'yyyy-MM-dd' }}</td>
-          <td class="text-center">
-            <button
-              type="button"
-              class="btn btn-sm"
-              (click)="openAdjustModal(modalDefault, r)"
-              style="border:1px solid #2E5F73; color:#2E5F73; background:white;">
-              Adjust
-            </button>
-          </td>
-        </tr>
-        <tr *ngIf="!filteredRows?.length">
-          <td colspan="8" class="text-center text-muted">No rows match the filters.</td>
-        </tr>
+          <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
+            <td class="text-center">
+              <input type="checkbox"
+                     [checked]="isSelected(r)"
+                     (change)="toggleRow(r, $event)">
+            </td>
+            <td>{{ r.warehouse }}</td>
+            <td>{{ r.item }}</td>
+            <td>{{ r.sku }}</td>
+            <td>{{ r.bin }}</td>
+            <td>{{ r.onHand }}</td>
+            <td>{{ r.reserved }}</td>
+            <td>{{ r.min }}</td>
+            <td>{{ r.available }}</td>
+            <td>{{ r.expiry | date:'yyyy-MM-dd' }}</td>
+            <td class="text-center">
+              <button type="button"
+                      class="btn btn-sm"
+                      (click)="openAdjustModal(modalDefault, r)"
+                      style="border:1px solid #2E5F73; color:#2E5F73; background:white;">
+                Adjust
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredRows?.length">
+            <td colspan="11" class="text-center text-muted">No rows match the filters.</td>
+          </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="stock-actions-bottom d-flex justify-content-between align-items-center mt-3 pt-2">
+      <div class="text-muted small">
+        <ng-container *ngIf="selectedKeys.size; else noneSel">
+          {{ selectedKeys.size }} item(s) selected
+        </ng-container>
+        <ng-template #noneSel>No items selected</ng-template>
+      </div>
+
+      <button type="button"
+              class="btn"
+              [disabled]="selectedKeys.size === 0 || !sameWarehouseSelected"
+              (click)="submitTransfer()"
+              style="background-color:#2E5F73;color:white;">
+        Transfer <span *ngIf="selectedKeys.size">({{ selectedKeys.size }})</span>
+      </button>
+
+      <div class="small text-danger mt-1"
+           *ngIf="selectedKeys.size > 0 && !sameWarehouseSelected">
+        Select items from a single warehouse to enable Transfer.
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ===== Adjust Stock Modal ===== -->
+<!-- Adjust Stock Modal -->
 <div class="modal-size-default d-inline-block">
   <ng-template #modalDefault let-modal>
     <div class="modal-header">
@@ -123,27 +161,37 @@
 
         <div class="row g-3">
           <div class="col-12 col-md-6">
-            <label class="form-label">Reason <span class="text-danger">*</span></label>
-            <ng-select name="reasonId"
-                       [items]="reasons"
-                       bindLabel="name"
-                       bindValue="id"
-                       placeholder="Select a reason"
-                       [(ngModel)]="adjust.reasonId"
-                       [clearable]="false">
+            <label class="form-label">Stock Issue <span class="text-danger">*</span></label>
+            <ng-select
+              name="stockIssueId"
+              [items]="stockIssueOptions"
+              bindLabel="name"
+              bindValue="id"
+              placeholder="Select a stock issue"
+              [(ngModel)]="adjust.stockIssueId"
+              (ngModelChange)="onStockIssueChange($event)"
+              [clearable]="false">
             </ng-select>
-            <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.reasonId">
-              Please select a reason.
+            <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.stockIssueId">
+              Please select a stock issue.
+            </div>
+            <div class="form-text" *ngIf="adjust.stockIssueName">
+              Selected: {{ adjust.stockIssueName }}
             </div>
           </div>
 
           <div class="col-12 col-md-3">
             <label class="form-label">In-hand <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" name="newInHand"
+            <input type="number"
+                   class="form-control"
+                   name="newInHand"
                    [(ngModel)]="adjust.newInHand"
                    (input)="validateNewInHand()"
-                   [min]="adjust.minAllowed" [max]="adjust.maxAllowed" required>
-            <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.newInHand">
+                   [min]="adjust.minAllowed"
+                   [max]="adjust.maxAllowed"
+                   required>
+            <div class="invalid-feedback d-block"
+                 *ngIf="adjustForm.submitted && (adjust.newInHand == null || adjust.newInHand === undefined)">
               Please enter a value.
             </div>
             <div class="text-danger small" *ngIf="adjust.qtyError">{{ adjust.qtyError }}</div>
@@ -160,7 +208,9 @@
 
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('cancel')">Cancel</button>
-      <button type="button" class="btn" [disabled]="!canSubmitAdjust()" (click)="submitAdjust(modal)"
+      <button type="button" class="btn"
+              [disabled]="!canSubmitAdjust()"
+              (click)="submitAdjust(modal)"
               style="background-color:#2E5F73; color:white;">
         Submit
       </button>
