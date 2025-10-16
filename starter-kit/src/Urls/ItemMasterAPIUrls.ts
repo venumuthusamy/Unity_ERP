@@ -1,8 +1,10 @@
-// Urls/ItemAPIUrls.ts
 export class ItemMasterAPIUrls {
-  public static readonly CreateItemMaster = "/ItemMaster/CreateItemMaster";
-  public static readonly GetAllItemsMaster = "/ItemMaster/GetItemMaster";
-  public static readonly GetItemMasterById = "/ItemMaster/GetItemMasterById/";            // + {id}
-  public static readonly UpdateItemMasterById = "/ItemMaster/UpdateItemMasterById/";       // + {id}
-  public static readonly DeleteItemMasterById = "/ItemMaster/DeleteItemMasterById/";       // + {id}
+  // Controller base: [Route("api/[controller]")] => api/ItemMaster
+  public static readonly GetItems             = "/ItemMaster/GetItems";
+  public static readonly GetItemById          = "/ItemMaster/GetItemById/";        // + {id}
+  public static readonly CreateItem           = "/ItemMaster/CreateItem";
+  public static readonly UpdateItemById       = "/ItemMaster/UpdateItemById/";     // + {id}
+  public static readonly DeleteItemById       = "/ItemMaster/DeleteItemById/";     // + {id}
+
 }
+

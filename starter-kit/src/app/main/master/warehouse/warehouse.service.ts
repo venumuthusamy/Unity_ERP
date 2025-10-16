@@ -34,5 +34,7 @@ export class WarehouseService {
     deleteWarehouse(id: any) {
         return this.http.delete<any>(this.url + WarehouseApiUrls.DeleteWarehouse + id);
     }
-
+    getBinNameByIdAsync(id: any) {
+        return this.http.get<any>(this.url + WarehouseApiUrls.getBinNameByIdAsync + id);
+    }
 }

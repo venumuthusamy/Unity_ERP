@@ -1,385 +1,573 @@
-<section class="container my-3">
-  <!-- ===== Card: Item Master ===== -->
-  <div class="card shadow rounded-3 border-0">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <h2 class="text-[18px] font-semibold" style="color:#2E5F73">Item Master</h2>
+<section class="mx-auto max-w-7xl p-1 ui-compact pr-typography">
+  <!-- SINGLE CARD -->
+  <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
 
-        <div class="d-flex gap-2">
-          <button (click)="onSave()" class="btn d-inline-flex align-items-center" style="background-color:#2E5F73;color:#fff;">
-            <i class="fa fa-save me-2"></i><span>Save</span>
-          </button>
-          <button class="btn btn-outline-secondary" (click)="onClone()">Clone</button>
-          <button class="btn btn-outline-secondary" (click)="onArchive()">Archive</button>
-        </div>
+    <!-- Card Header (sticky) -->
+    <div class="sticky top-0 z-10 bg-white border-b px-1 py-1 flex items-center justify-between">
+      <h2 class="text-xl font-semibold text-[#2E5F73]">Item Master</h2>
+
+      <div class="flex gap-2">
+        <button (click)="onSave()" class="px-3 py-2 rounded-lg bg-[#2E5F73] text-white font-medium hover:opacity-90">
+          <i class="fa fa-save"></i> Save
+        </button>
+        <!-- <button (click)="onClone()" class="px-3 py-2 rounded-lg border text-gray-700 hover:bg-gray-50">Clone</button>
+        <button (click)="onArchive()" class="px-3 py-2 rounded-lg border text-gray-700 hover:bg-gray-50">Archive</button> -->
       </div>
+    </div>
 
-      <!-- Row 1 -->
-      <div class="row g-3">
-        <div class="col-12 col-md-3">
-          <label class="form-label">Item Name</label>
-          <ng-select
-  [items]="itemsList"
-  bindLabel="itemName"
-  bindValue="id"
-  [(ngModel)]="selectedItemId"
-  (ngModelChange)="onItemSelectedId($event)">
-</ng-select>
-        </div>
+    <!-- Card Body -->
+    <div class="p-2 space-y-4">
 
-        <div class="col-12 col-md-3">
-          <label class="form-label small">SKU</label>
-          <input class="form-control" [(ngModel)]="item.sku" name="sku" placeholder="SKU" disabled>
-        </div>
-
-        <div class="col-12 col-md-3">
-          <label class="form-label small">Category</label>
-          <input class="form-control" [(ngModel)]="item.category" name="category" placeholder="e.g. Food" disabled>
-        </div>
-
-        <div class="col-12 col-md-3">
-          <label class="form-label small">UOM</label>
-          <input class="form-control" [(ngModel)]="item.uom" name="uom" placeholder="e.g. KG" disabled>
-        </div>
-      </div>
-
-      <!-- Row 2 -->
-      <div class="row g-3 mt-1">
-         <div class="col-12 col-md-3">
-          <label class="form-label">Warehouse</label>
-          <ng-select
-  [items]="wareHouseList"
-  bindLabel="name"
-  bindValue="name"
-  [(ngModel)]="item.wareHouse"
-  (ngModelChange)="onWareHouseSelectedId($event)">
-</ng-select>
-        </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label small">Barcode(s)</label>
-          <input class="form-control" [(ngModel)]="item.barcode" name="barcode" placeholder="Comma-separated if multiple">
-        </div>
-
-        <div class="col-12 col-md-3">
-          <label class="form-label small">Costing Method</label>
-          <!-- <select class="form-select form-control rounded-12" [(ngModel)]="item.costing" name="costing">
-            <option>FIFO</option>
-            <option>LIFO</option>
-            <option>Weighted Avg</option>
-            <option>Standard</option>
-          </select> -->
-           <ng-select
-  [items]="CoastingMethodList"
-  bindLabel="costingName"
-  bindValue="costingName"
-  [(ngModel)]="item.Costing"
-  (ngModelChange)="onCostingSelectedId($event)">
-</ng-select>
-        </div>
-
-      <div class="col-12 col-md-3">
-          <label class="form-label small">Tax Class</label>
-         <ng-select
-  [items]="taxCodeList"
-  bindLabel="name"
-  bindValue="name"
-  [(ngModel)]="item.taxClass"
-  (ngModelChange)="onTaxSelectedId($event)">
-</ng-select>
-        </div>
-
-       
-      </div>
-
-      <!-- Row 3 -->
-      <div class="row g-3 mt-1">
-           <div class="col-12 col-md-3">
-          <label class="form-label small">Min / Max</label>
-          <div class="row g-2">
-            <div class="col-6">
-              <input type="number" class="form-control" [(ngModel)]="item.min" name="min" placeholder="Min">
+      <!-- Steps progress -->
+      <div class="flex items-center gap-3">
+        <ng-container *ngFor="let s of steps; let i = index">
+          <div class="flex items-center gap-2">
+            <div
+              class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+              [ngClass]="i <= step ? 'text-white' : 'text-gray-600 bg-gray-200'"
+              [ngStyle]="{ 'background-color': i <= step ? '#0e3a4c' : '' }"
+            >
+              {{ i + 1 }}
             </div>
-            <div class="col-6">
-              <input type="number" class="form-control" [(ngModel)]="item.max" name="max" placeholder="Max">
+            <span class="text-sm" [ngClass]="i === step ? 'font-semibold text-[#0e3a4c]' : 'text-gray-500'">{{ s }}</span>
+          </div>
+          <div *ngIf="i < steps.length - 1" class="w-10 h-px bg-gray-300"></div>
+        </ng-container>
+      </div>
+
+      <!-- ===== STEP 0: SUMMARY ===== -->
+      <div *ngIf="step === 0" class="rounded-xl border p-1 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+          <!-- Item search dropdown (plain, chevron only) -->
+          <div class="relative flex-1 prl-dropdown md:col-span-1" #itemSearchBox>
+            <label class="text-xs font-semibold text-gray-600 block ">Item Name</label>
+
+            <input
+              #itemSearchInput
+              type="text"
+              name="itemSearch"
+              [(ngModel)]="modalLine.itemSearch"
+              (focus)="onModalItemFocus(true)"
+              (input)="filterModalItems()"
+              placeholder="Search Item..."
+              class="prl-input pr-10"
+              autocomplete="off"
+            />
+
+           
+            <div *ngIf="modalLine.dropdownOpen && modalLine.filteredItems?.length" class="prl-menu">
+              <div
+                *ngFor="let item of modalLine.filteredItems; trackBy: trackByItemId"
+                (click)="selectModalItem(item)"
+                class="prl-mi prl-mi-split"
+              >
+                <span class="truncate">{{ item.itemName }}</span>
+                <small class="prl-muted ml-3">{{ item.itemCode }}</small>
+              </div>
+            </div>
+
+            <div *ngIf="modalLine.dropdownOpen && !(modalLine.filteredItems?.length)" class="prl-menu">
+              <div class="prl-mi text-gray-400">No matches</div>
             </div>
           </div>
-        </div>
-        
-         <div class="col-12 col-md-3">
-          <label class="form-label small">Reorder Qty / Lead time (days)</label>
-          <div class="row g-2">
-            <div class="col-6">
-              <input type="number" class="form-control" [(ngModel)]="item.reorder" name="reorder" placeholder="Qty">
-            </div>
-            <div class="col-6">
-              <input type="number" class="form-control" [(ngModel)]="item.leadTime" name="leadTime" placeholder="Days">
-            </div>
+
+          <!-- SKU -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">SKU</label>
+            <input class="w-full rounded-xl border px-3 py-2 text-sm bg-gray-50" [(ngModel)]="item.sku" name="sku" disabled />
+          </div>
+
+          <!-- Category -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">Category</label>
+            <input class="w-full rounded-xl border px-3 py-2 text-sm bg-gray-50" [(ngModel)]="item.category" name="category" disabled />
+          </div>
+
+          <!-- UOM -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">UOM</label>
+            <input class="w-full rounded-xl border px-3 py-2 text-sm bg-gray-50" [(ngModel)]="item.uom" name="uom" disabled />
+          </div>
+
+          <!-- Barcode -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">Barcode(s)</label>
+            <input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="item.barcode" name="barcode" placeholder="Comma-separated if multiple"/>
+          </div>
+
+          <!-- Costing -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">Costing Method</label>
+            <select class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]"
+                    [(ngModel)]="item.costingMethodId" (change)="onCostingSelectedId(item.costingMethodId)">
+              <option [ngValue]="null" disabled>Select costing</option>
+              <option *ngFor="let c of costingMethodList" [ngValue]="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+
+          <!-- Tax -->
+          <div>
+            <label class="text-xs font-semibold text-gray-600">Tax Class</label>
+            <select class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]"
+                    [(ngModel)]="item.taxCodeId" (change)="onTaxSelectedId(item.taxCodeId)">
+              <option [ngValue]="null" disabled>Select tax class</option>
+              <option *ngFor="let t of taxCodeList" [ngValue]="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+
+          <!-- Specs -->
+          <div class="md:col-span-2">
+            <label class="text-xs font-semibold text-gray-600">Specifications</label>
+            <textarea class="w-full rounded-xl border px-3 py-2 text-sm" rows="2" [(ngModel)]="item.specs" name="specs" placeholder="Add specs or notes..."></textarea>
           </div>
         </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label small">Batch / Serial</label>
-          <div class="d-flex align-items-center gap-4">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" [(ngModel)]="item.batchFlag" name="batchFlag" id="chkBatch">
-              <label class="form-check-label" for="chkBatch">Batch</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" [(ngModel)]="item.serialFlag" name="serialFlag" id="chkSerial">
-              <label class="form-check-label" for="chkSerial">Serial</label>
-            </div>
-          </div>
-        </div>
-
-       
-
-        <div class="col-12 col-md-6">
-          <label class="form-label small">Specifications</label>
-          <textarea class="form-control" rows="2" [(ngModel)]="item.specs" name="specs" placeholder="Add specs or notes..."></textarea>
-        </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="mt-3 mb-2">
-        <ul class="nav nav-pills gap-2">
-          <li class="nav-item" *ngFor="let t of itemTabs; trackBy: trackByIdx">
-            <button type="button"
-                    class="btn"
-                    [ngClass]="itemSubTab === t ? 'btn-outline-secondary' : 'btn-light border'"
-                    (click)="itemSubTab = t">
-              {{ t }}
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Summary -->
-      <div *ngIf="itemSubTab === 'Summary'" class="row g-3">
-        <div class="col-12 col-md-4">
-          <label class="form-label small">Picture</label>
-          <input type="file" class="form-control" (change)="onPictureChange($event)">
+      <!-- ===== STEP 1: WAREHOUSES ===== -->
+      <div *ngIf="step === 1" class="rounded-xl border p-2">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-800">Per-warehouse Stock</h3>
+          <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white text-sm font-medium hover:bg-[#0b2e3d]" (click)="openWhModal()">+ Add Line</button>
         </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label small">Attachments</label>
-          <input type="file" multiple class="form-control" (change)="onAttachmentsChange($event)">
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label small">Last Cost / Std Cost</label>
-          <input placeholder="0.00" class="form-control" [(ngModel)]="item.lastCost" name="lastCost">
-        </div>
-      </div>
 
-      <!-- Pricing -->
-      <div *ngIf="itemSubTab === 'Pricing'" class="mt-2">
-        <label class="form-label small">Unit Prices</label>
-
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle mb-2">
-            <thead class="table-light">
+        <div class="overflow-auto rounded-xl border">
+          <table class="w-full min-w-[860px] text-sm">
+            <thead class="bg-[#0e3a4c] text-white">
               <tr>
-                <th>Price</th>
-                <th>UOM</th>
-                <th style="width:110px;">Actions</th>
+                <th class="px-3 py-2 text-left">Warehouse</th>
+                <th class="px-3 py-2 text-left">Bin / Location</th>
+                <th class="px-3 py-2 text-right">On Hand</th>
+                <th class="px-3 py-2 text-right">Reserved</th>
+                <th class="px-3 py-2 text-right">Available</th>
+                <th class="px-3 py-2 text-right">Min</th>
+                <th class="px-3 py-2 text-right">Max</th>
+                <th class="px-3 py-2 text-right">Reorder / Lead</th>
+                <th class="px-3 py-2">Tracking</th>
+                <th class="px-3 py-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx">
-                <td><input type="number" class="form-control form-control-sm" [(ngModel)]="p.price" name="price-{{i}}" placeholder="0.00"></td>
-                <td><input class="form-control form-control-sm" [(ngModel)]="p.uom" name="uom-{{i}}" placeholder="e.g. KG"></td>
-                <td>
-                  <button class="btn btn-sm btn-outline-danger" (click)="removePriceLine(i)">
-                    <i class="fa fa-trash me-1"></i>Remove
+              <tr *ngFor="let r of itemStocks; let i=index; trackBy: trackByIdx" class="border-b">
+                <td class="px-3 py-2">{{ getWarehouseName(r.warehouseId) }}</td>
+                <td class="px-3 py-2">{{ getBinName(r.binId) }}</td>
+                <td class="px-3 py-2 text-right">{{ r.onHand }}</td>
+                <td class="px-3 py-2 text-right">{{ r.reserved }}</td>
+                <td class="px-3 py-2 text-right">{{ r.available }}</td>
+                <td class="px-3 py-2 text-right">{{ r.min ?? 0 }}</td>
+                <td class="px-3 py-2 text-right">{{ r.max ?? 0 }}</td>
+                <td class="px-3 py-2 text-right">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
+                <td class="px-3 py-2">
+                  <span *ngIf="r.batchFlag" class="mr-1">Batch</span>
+                  <span *ngIf="r.serialFlag">Serial</span>
+                  <span *ngIf="!r.batchFlag && !r.serialFlag" class="text-gray-400">—</span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <button class="px-2 py-1 rounded-lg border text-red-600 hover:bg-red-50" (click)="removeWarehouseRow(i)">
+                    <i class="fa fa-trash"></i>
                   </button>
                 </td>
               </tr>
-              <tr *ngIf="!prices || prices.length === 0">
-                <td colspan="3" class="py-2">No price lines. Add one below.</td>
+
+              <tr *ngIf="!itemStocks?.length">
+                <td colspan="10" class="px-3 py-6 text-center text-gray-400">No lines yet. Click “Add Line”.</td>
+              </tr>
+            </tbody>
+
+            <tfoot *ngIf="itemStocks?.length">
+              <tr class="bg-gray-50 font-semibold">
+                <td class="px-3 py-2 text-right" colspan="2">Totals</td>
+                <td class="px-3 py-2 text-right">{{ totals.onHand }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.reserved }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.available }}</td>
+                <td class="px-3 py-2 text-right">—</td>
+                <td class="px-3 py-2 text-right">—</td>
+                <td class="px-3 py-2 text-right">—</td>
+                <td class="px-3 py-2">—</td>
+                <td class="px-3 py-2">—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p class="mt-2 text-xs text-gray-500"><b>Available = On Hand − Reserved</b> (never negative).</p>
+      </div>
+
+      <!-- ===== STEP 2: Suppliers ===== -->
+      <div *ngIf="step === 2" class="rounded-xl border p-2">
+        <h3 class="text-sm font-semibold text-gray-800 mb-1">Unit Prices</h3>
+
+        <div class=" rounded-xl border">
+          <table class="w-full  text-sm">
+            <thead class="bg-[#0e3a4c] text-white">
+              <tr>
+                <th class="px-3 py-2 text-left">Supplier</th>
+                <th class="px-3 py-2 text-left">Price</th>
+                
+                <th class="px-3 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
+                <!-- <td class="px-3 py-2">
+  <ng-select
+    [items]="supplierList"
+    bindLabel="name"
+    bindValue="id"
+    placeholder="Select supplier"
+    [(ngModel)]="p.supplier"         
+    name="supplier-{{ i }}"
+    [clearable]="false"
+    class="w-full">
+  </ng-select>
+</td> -->
+<!-- Supplier -->
+ <td>
+<div class="relative flex-1 prl-dropdown md:col-span-1" #supplierSearchBox>
+  <input
+    type="text"
+    name="supplierSearch"
+    [(ngModel)]="modalLine1.supplierSearch"
+    (focus)="supplierDropdownOpen = true"
+    (input)="filterSuppliers()"
+    autocomplete="off"
+    class="prl-input pr-10"
+  />
+
+  <!-- results -->
+  <div *ngIf="supplierDropdownOpen && filteredSuppliers?.length" class="prl-menu">
+    <div
+      *ngFor="let s of filteredSuppliers; trackBy: trackBySupplierId"
+      (click)="selectSupplier(s, $event)"
+      class="prl-mi prl-mi-split"
+    >
+      <span class="truncate">{{ s.name }}</span>
+      <small class="prl-muted ml-3">#{{ s.code || s.id }}</small>
+    </div>
+  </div>
+
+  <!-- no matches -->
+  <div
+    *ngIf="supplierDropdownOpen
+           && (!filteredSuppliers || !filteredSuppliers.length)
+           && (modalLine1.supplierSearch && modalLine1.supplierSearch.trim().length)"
+    class="prl-menu"
+  >
+    <div class="prl-mi text-gray-400">No matches</div>
+  </div>
+</div>
+</td>
+                <td class="px-3 py-2">
+                  <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.price" name="price-{{i}}" placeholder="0.00">
+                </td>
+               
+                <td class="px-3 py-2">
+                  <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
+                    <i class="fa fa-trash mr-1"></i> Remove
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="!prices?.length">
+                <td colspan="3" class="px-3 py-6 text-center text-gray-400">No price lines. Add one below.</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <button class="btn btn-outline-secondary btn-sm" (click)="addPriceLine()">
-          + Add line
-        </button>
+        <button class="mt-3 px-3 py-2 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="addPriceLine()">+ Add line</button>
       </div>
 
-      <!-- Suppliers -->
-      <div *ngIf="itemSubTab === 'Suppliers'" class="mt-2">
-        <label class="form-label small mb-1">Preferred Suppliers</label>
-        <div class="d-flex flex-wrap align-items-center gap-2 p-2 border rounded bg-white">
-          <ng-container *ngFor="let s of suppliers; trackBy: trackByIdx">
-            <span class="badge text-bg-light border">{{ s }}</span>
-          </ng-container>
-          <input class="form-control form-control-sm flex-grow-1" style="min-width:160px;"
-                 placeholder="Type and press Enter"
-                 [(ngModel)]="supplierDraft" name="supplierDraft"
-                 (keyup.enter)="addSupplier()">
-          <button class="btn btn-outline-secondary btn-sm" (click)="addSupplier()">Add</button>
-        </div>
-      </div>
+      <!-- ===== STEP 3: SUPPLIERS ===== -->
+      <!-- (omitted in your current screen) -->
 
-      <!-- BOM -->
-      <div *ngIf="itemSubTab === 'BOM'" class="text-muted small mt-2">
-        Link to BOM management module (placeholder)
-      </div>
-
-      <!-- Substitutes -->
-      <div *ngIf="itemSubTab === 'Substitutes'" class="mt-2">
-        <label class="form-label small mb-1">Substitute Items</label>
-        <div class="d-flex flex-wrap align-items-center gap-2 p-2 border rounded bg-white">
-          <ng-container *ngFor="let s of substitutes; trackBy: trackByIdx">
-            <span class="badge text-bg-light border">{{ s }}</span>
-          </ng-container>
-          <input class="form-control form-control-sm flex-grow-1" style="min-width:160px;"
-                 placeholder="Type and press Enter"
-                 [(ngModel)]="substituteDraft" name="substituteDraft"
-                 (keyup.enter)="addSubstitute()">
-          <button class="btn btn-outline-secondary btn-sm" (click)="addSubstitute()">Add</button>
-        </div>
-      </div>
-
-      <!-- Attachments -->
-      <div *ngIf="itemSubTab === 'Attachments'" class="mt-2">
-        <label class="form-label small mb-1">Upload Attachments</label>
-        <input type="file" class="form-control" multiple (change)="onAttachmentsChange($event)">
-      </div>
-
-      <!-- Audit -->
-      <div *ngIf="itemSubTab === 'Audit'" class="text-muted small mt-2">
+      <!-- ===== STEP 6: AUDIT ===== -->
+      <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
         Audit trail: created/updated by X at Y (demo)
       </div>
-    </div>
-  </div>
 
-  <!-- ===== Card: Items list (sample) ===== -->
-  <div class="card shadow rounded-3 border-0 mt-3">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="h6 fw-semibold mb-0">Items List (sample)</h2>
-      </div>
-
-      <div class="table-responsive">
-        <table class="table table-sm table-bordered align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>SKU</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>UOM</th>
-              <th>On Hand</th>
-              <th>Reserved</th>
-              <th>Available</th>
-              <th>Min</th>
-              <th>Reorder</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>ITM001</td><td>Rice 5kg</td><td>Food</td>
-              <td>KG</td><td>120</td><td>10</td>
-              <td>110</td><td>50</td><td>60</td>
-            </tr>
-            <tr>
-              <td>ITM002</td><td>Cooking Oil 2L</td><td>Food</td>
-              <td>L</td><td>60</td><td>0</td>
-              <td>60</td><td>20</td><td>30</td>
-            </tr>
-            <tr *ngIf="!itemsList || itemsList.length === 0">
-              <td colspan="9" class="py-2">No items to display.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Add Line trigger (example) -->
-      <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLineModal">
-        <i class="fa fa-plus me-1"></i> Add Line
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== Bootstrap Modal: Add Line ===== -->
-  <div class="modal fade" id="addLineModal" tabindex="-1" aria-labelledby="addLineLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 id="addLineLabel" class="modal-title">Add Line</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <!-- ===== STEP 7: REVIEW ===== -->
+      <div *ngIf="step === 4" class="space-y-2">
+        <!-- Summary -->
+        <div class="rounded-xl border overflow-hidden">
+          <div class="px-4 py-2 bg-[#0e3a4c] text-white font-semibold">Summary</div>
+          <div class="p-2 text-sm grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div><b>Item:</b> {{ item.name || '-' }}</div>
+            <div><b>SKU:</b> {{ item.sku || '-' }}</div>
+            <div><b>Category:</b> {{ item.category || '-' }}</div>
+            <div><b>UOM:</b> {{ item.uom || '-' }}</div>
+            <div><b>Costing:</b> {{ getById(costingMethodList,item.costingMethodId)?.name || '-' }}</div>
+            <div><b>Tax:</b> {{ getById(taxCodeList,item.taxCodeId)?.name || '-' }}</div>
+            <div class="md:col-span-2"><b>Specs:</b> {{ item.specs || '-' }}</div>
+          </div>
         </div>
 
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <label class="form-label small text-muted mb-1">Item</label>
-              <input class="form-control"
-                     [(ngModel)]="modalLine.itemSearch"
-                     name="modalItemSearch"
-                     (focus)="onModalItemFocus()"
-                     (input)="filterModalItems()"
-                     placeholder="Search item...">
-              <div class="list-group mt-1" *ngIf="modalLine.dropdownOpen">
-                <button type="button"
-                        class="list-group-item list-group-item-action"
-                        *ngFor="let it of modalLine.filteredItems"
-                        (click)="selectModalItem(it)">
-                  {{ it.itemName }} <span class="text-muted">({{ it.itemCode }})</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-3">
-              <label class="form-label small text-muted mb-1">Qty</label>
-              <input type="number" class="form-control" [(ngModel)]="modalLine.qty" name="modalQty" placeholder="0">
-            </div>
-
-            <div class="col-12 col-md-3">
-              <label class="form-label small text-muted mb-1">UOM</label>
-              <input class="form-control"
-                     [(ngModel)]="modalLine.uomSearch"
-                     name="modalUomSearch"
-                     (focus)="onModalUomFocus()"
-                     (input)="filterModalUoms()"
-                     placeholder="Select UOM">
-              <div class="list-group mt-1" *ngIf="modalLine.uomDropdownOpen">
-                <button type="button"
-                        class="list-group-item list-group-item-action"
-                        *ngFor="let u of modalLine.filteredUoms"
-                        (click)="selectModalUom(u)">
-                  {{ u.name }}
-                </button>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6">
-              <label class="form-label small text-muted mb-1">Location</label>
-              <input class="form-control"
-                     [(ngModel)]="modalLine.locationSearch"
-                     name="modalLocationSearch"
-                     (focus)="onModalLocationFocus()"
-                     (input)="filterModalLocations()"
-                     placeholder="Select location">
-              <div class="list-group mt-1" *ngIf="modalLine.locationDropdownOpen">
-                <button type="button"
-                        class="list-group-item list-group-item-action"
-                        *ngFor="let loc of modalLine.filteredLocations"
-                        (click)="selectModalLocation(loc)">
-                  {{ loc.name }}
-                </button>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label small text-muted mb-1">Remarks</label>
-              <textarea class="form-control" rows="2" [(ngModel)]="modalLine.remarks" name="modalRemarks" placeholder="Optional remarks"></textarea>
+        <!-- Warehouses -->
+        <div class="rounded-xl border overflow-hidden">
+          <div class="px-4 py-2 bg-[#0e3a4c] text-white font-semibold">Warehouses</div>
+          <div class="p-2">
+            <div class="overflow-auto rounded-xl border">
+              <table class="w-full min-w-[860px] text-sm">
+                <thead class="bg-gray-50">
+                  <tr class="text-gray-600">
+                    <th class="px-3 py-2 text-left">Warehouse</th>
+                    <th class="px-3 py-2 text-left">Bin</th>
+                    <th class="px-3 py-2 text-right">On Hand</th>
+                    <th class="px-3 py-2 text-right">Reserved</th>
+                    <th class="px-3 py-2 text-right">Available</th>
+                    <th class="px-3 py-2 text-right">Min</th>
+                    <th class="px-3 py-2 text-right">Max</th>
+                    <th class="px-3 py-2 text-right">Reorder / Lead</th>
+                    <th class="px-3 py-2">Tracking</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of itemStocks; trackBy: trackByIdx" class="border-b">
+                    <td class="px-3 py-2">{{ getWarehouseName(r.warehouseId) }}</td>
+                    <td class="px-3 py-2">{{ getBinName(r.binId) }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.onHand }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.reserved }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.available }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.min ?? 0 }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.max ?? 0 }}</td>
+                    <td class="px-3 py-2 text-right">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
+                    <td class="px-3 py-2">
+                      <span *ngIf="r.batchFlag" class="mr-1">Batch</span>
+                      <span *ngIf="r.serialFlag">Serial</span>
+                      <span *ngIf="!r.batchFlag && !r.serialFlag" class="text-gray-400">—</span>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot *ngIf="itemStocks?.length">
+                  <tr class="bg-gray-50 font-semibold">
+                    <td class="px-3 py-2 text-right" colspan="2">Totals</td>
+                    <td class="px-3 py-2 text-right">{{ totals.onHand }}</td>
+                    <td class="px-3 py-2 text-right">{{ totals.reserved }}</td>
+                    <td class="px-3 py-2 text-right">{{ totals.available }}</td>
+                    <td class="px-3 py-2 text-right">—</td>
+                    <td class="px-3 py-2 text-right">—</td>
+                    <td class="px-3 py-2 text-right">—</td>
+                    <td class="px-3 py-2">—</td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn text-white" style="background-color:#2E5F73" (click)="onSubmitModal()">Save line</button>
+        <!-- Pricing quick view -->
+        <div class="rounded-xl border overflow-hidden">
+          <div class="px-4 py-2 bg-[#0e3a4c] text-white font-semibold">Pricing</div>
+          <div class="p-2">
+            <div class="overflow-auto rounded-xl border">
+              <table class="w-full min-w-[520px] text-sm">
+                <thead class="bg-gray-50">
+                  <tr class="text-gray-600">
+                    <th class="px-3 py-2 text-left">Supplier</th>
+                    <th class="px-3 py-2 text-left">Price</th>
+                    <th class="px-3 py-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
+                     <td class="px-3 py-2">
+                      <input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.supplier" name="supplier-r-{{i}}">
+                    </td>
+                    <td class="px-3 py-2">
+                      <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.price" name="price-r-{{i}}">
+                    </td>
+                   
+                    <td class="px-3 py-2">
+                      <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
+                        <i class="fa fa-trash mr-1"></i> Remove
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!prices?.length">
+                    <td colspan="3" class="px-3 py-6 text-center text-gray-400">No price lines.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="mt-3 px-3 py-2 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="addPriceLine()">+ Add line</button>
+          </div>
         </div>
+
+        <!-- Suppliers/Substitutes quick view -->
+        <!-- <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-xl border p-2">
+            <h4 class="text-sm font-semibold text-gray-800 mb-2">Suppliers</h4>
+            <div class="flex flex-wrap gap-2">
+              <span *ngFor="let s of suppliers; trackBy: trackByIdx" class="px-2 py-1 rounded-lg border bg-gray-50 text-gray-700">{{ s }}</span>
+              <span *ngIf="!suppliers?.length" class="text-gray-400 text-sm">None</span>
+            </div>
+          </div>
+          <div class="rounded-xl border p-4">
+            <h4 class="text-sm font-semibold text-gray-800 mb-2">Substitutes</h4>
+            <div class="flex flex-wrap gap-2">
+              <span *ngFor="let s of substitutes; trackBy: trackByIdx" class="px-2 py-1 rounded-lg border bg-gray-50 text-gray-700">{{ s }}</span>
+              <span *ngIf="!substitutes?.length" class="text-gray-400 text-sm">None</span>
+            </div>
+          </div>
+        </div> -->
       </div>
+
+    </div>
+
+    <!-- Card Footer: Wizard Navigation -->
+    <div class="border-t px-1 py-1 flex justify-between bg-white">
+      <button class="px-3 py-2 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="prev()" [disabled]="step===0">← Back</button>
+      <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]" (click)="next()" *ngIf="step<steps.length-1">Next →</button>
+      <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]" (click)="onSave()" *ngIf="step===steps.length-1">Save Item</button>
     </div>
   </div>
+
+  <!-- ================= Tailwind Modal (deprecated block left commented) ================= -->
+
+ <!-- Warehouses Modal (PRL style, but with Warehouse fields) -->
+<div *ngIf="showWhModal" class="prl-overlay" aria-modal="true" role="dialog">
+  <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="wh-title">
+    <!-- Header -->
+    <div class="prl-head">
+      <h2 id="wh-title" class="prl-title">Add Warehouse Line</h2>
+      <button type="button" class="prl-close" (click)="closeWhModal()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Body -->
+    <form #whForm="ngForm" (ngSubmit)="submitWarehouse(true)">
+      <div class="prl-grid">
+        <!-- Warehouse -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Warehouse</label>
+          <select
+            class="prl-input"
+            [(ngModel)]="whDraft.warehouseId"
+            name="warehouseId"
+            (change)="getBinsForWarehouse(whDraft.warehouseId)"
+            required>
+            <option [ngValue]="null" disabled>Select warehouse</option>
+            <option *ngFor="let w of warehouseList" [ngValue]="w.id">{{ w.name }}</option>
+          </select>
+        </div>
+
+        <!-- Bin -->
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Bin / Location</label>
+          <select
+            class="prl-input"
+            [(ngModel)]="whDraft.binId"
+            name="binId"
+            [disabled]="!whDraft.warehouseId"
+            required>
+            <option [ngValue]="null" disabled>Select bin</option>
+            <option *ngFor="let b of binList" [ngValue]="b.binId">
+              {{ b.binName }}
+            </option>
+          </select>
+        </div>
+
+        <div class="prl-col-12 prl-md-6">
+          <label class="prl-label">Strategy</label>
+          <select
+            class="prl-input"
+            [(ngModel)]="whDraft.strategyId"
+            name="strategyId"
+            required>
+            <option [ngValue]="null" disabled>Select Strategy</option>
+            <option *ngFor="let b of strategyList" [ngValue]="b.id">
+              {{ b.strategyName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- On Hand -->
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">On Hand</label>
+          <input
+            type="number"
+            class="prl-input"
+            [(ngModel)]="whDraft.onHand"
+            name="onHand"
+            min="0"
+            (input)="recalcDraft()">
+        </div>
+
+        <!-- Reserved -->
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Reserved</label>
+          <input
+            type="number"
+            class="prl-input"
+            [(ngModel)]="whDraft.reserved"
+            name="reserved"
+            min="0"
+            (input)="recalcDraft()">
+        </div>
+
+        <!-- Available (readonly) -->
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Available</label>
+          <input
+            type="number"
+            class="prl-input prl-input-disabled"
+            [value]="whDraft.available"
+            name="available"
+            disabled>
+        </div>
+
+        <!-- Reorder Qty -->
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Reorder Qty</label>
+          <input type="number" class="prl-input" [(ngModel)]="whDraft.reorderQty" name="reorderQty" min="0">
+        </div>
+
+        <!-- Min / Max / Lead Time -->
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Min</label>
+          <input type="number" class="prl-input" [(ngModel)]="whDraft.min" name="min" min="0">
+        </div>
+
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Max</label>
+          <input type="number" class="prl-input" [(ngModel)]="whDraft.max" name="max" min="0">
+        </div>
+
+        <div class="prl-col-12 prl-md-3">
+          <label class="prl-label">Lead time (days)</label>
+          <input type="number" class="prl-input" [(ngModel)]="whDraft.leadTimeDays" name="leadTimeDays" min="0">
+        </div>
+
+        <!-- Tracking -->
+        <div class="prl-col-12">
+          <label class="prl-label">Tracking</label>
+          <div class="flex items-center gap-6 mt-1">
+            <label class="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                [(ngModel)]="whDraft.batchFlag"
+                name="batchFlag"
+                (change)="whDraft.batchFlag && (whDraft.serialFlag = false)">
+              <span>Batch</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                [(ngModel)]="whDraft.serialFlag"
+                name="serialFlag"
+                (change)="whDraft.serialFlag && (whDraft.batchFlag = false)">
+              <span>Serial</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer (from PRL modal) -->
+      <div class="prl-foot">
+        <button type="button" class="prl-btn prl-btn-outline-brand" (click)="submitWarehouse(false)">Add Another</button>
+        <button type="submit" class="prl-btn prl-btn-primary" [disabled]="whForm.invalid">Add &amp; Close</button>
+        <button type="button" class="prl-btn" (click)="closeWhModal()">Close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </section>
