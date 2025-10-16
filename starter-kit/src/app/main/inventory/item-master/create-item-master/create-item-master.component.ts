@@ -81,7 +81,7 @@ export class CreateItemMasterComponent implements OnInit {
   supplierDropdownOpen = false;
   filteredSuppliers: SupplierLite[] = [];
   private activePriceIndex: number | null = null;   // <-- which row is being edited
-
+minDate = '';
   // Strategies
   strategyList:any;
 
@@ -145,6 +145,7 @@ export class CreateItemMasterComponent implements OnInit {
   ) {this.userId = localStorage.getItem('id');}
 
   ngOnInit(): void {
+    this.setMinDate();
     this.loadItems();
     this.loadCatalogs();
     this.loadWarehouses();
@@ -152,6 +153,7 @@ export class CreateItemMasterComponent implements OnInit {
     this.getAllTaxCode();
     this.getAllSupplier();
     this.getAllStrategy();
+    console.log("userid",this.userId)
   }
 
   // ---------- Helpers ----------
@@ -169,6 +171,9 @@ export class CreateItemMasterComponent implements OnInit {
       pictureUrl: '',
       lastCost: null,
       isActive: true,
+      createdBy:this.userId,
+      updatedBy:this.userId,
+      expiryDate: null as string | null
     };
   }
   private makeEmptyStockDraft(): ItemStockRow {
@@ -176,13 +181,13 @@ export class CreateItemMasterComponent implements OnInit {
       warehouseId: null,
       binId: null,
       strategyId: null,
-      onHand: 0,
-      reserved: 0,
-      available: 0,
-      min: 0,
-      max: 0,
-      reorderQty: 0,
-      leadTimeDays: 0,
+      onHand: null,
+      reserved: null,
+      available: null,
+      min: null,
+      max: null,
+      reorderQty: null,
+      leadTimeDays: null,
       batchFlag: false,
       serialFlag: false,
     };
@@ -222,21 +227,21 @@ export class CreateItemMasterComponent implements OnInit {
     await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
     return;
   }
-
+debugger
   const stocksPayload = this.itemStocks.map(r => ({
     warehouseId: r.warehouseId,
     binId: r.binId,
     strategyId: r.strategyId,
     onHand: Number(r.onHand || 0),
+    available: Number(r.available),
     reserved: Number(r.reserved || 0),
     minQty: Number(r.min || 0),
     maxQty: Number(r.max || 0),
     reorderQty: Number(r.reorderQty || 0),
     leadTimeDays: Number(r.leadTimeDays || 0),
     batchFlag: !!r.batchFlag,
-    serialFlag: !!r.serialFlag,
-    createdBy: this.userId,
-    updatedBy: this.userId
+    serialFlag: !!r.serialFlag
+
   }));
 
   const payload = {
@@ -244,7 +249,8 @@ export class CreateItemMasterComponent implements OnInit {
     itemStocks: stocksPayload,
     prices: (this.prices ?? []).filter(p => p.price != null),
     suppliers: this.suppliers,
-    substitutes: this.substitutes,
+    substitutes: this.substitutes
+   
   };
 
   const creating = !payload.id || payload.id <= 0;
@@ -299,7 +305,13 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 }
-
+ setMinDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    this.minDate = `${yyyy}-${mm}-${dd}`;
+  }
 
   onClone(): void {
     if (!this.item?.sku || !this.item?.name) {
@@ -336,7 +348,12 @@ export class CreateItemMasterComponent implements OnInit {
     const files = (ev.target as HTMLInputElement).files ? Array.from((ev.target as HTMLInputElement).files!) : [];
     if (files.length) Swal.fire({ icon:'info', title:'Selected', text:`${files.length} attachment(s) chosen` });
   }
-
+onExpiryChange(e: Event) {
+  const value = (e.target as HTMLInputElement).value || null;
+  this.item.expiryDate = value;
+  this.item.createdBy = this.userId;
+  this.item.updatedBy = this.userId;
+}
   // ---------- Select handlers ----------
   onItemSelectedId(id: number | null) {
     if (!id) return;

@@ -6,13 +6,14 @@
     <div class="sticky top-0 z-10 bg-white border-b px-1 py-1 flex items-center justify-between">
       <h2 class="text-xl font-semibold text-[#2E5F73]">Item Master</h2>
 
-      <div class="flex gap-2">
+      <!-- <div class="flex gap-2">
         <button (click)="onSave()" class="px-3 py-2 rounded-lg bg-[#2E5F73] text-white font-medium hover:opacity-90">
           <i class="fa fa-save"></i> Save
         </button>
+        </div> -->
         <!-- <button (click)="onClone()" class="px-3 py-2 rounded-lg border text-gray-700 hover:bg-gray-50">Clone</button>
         <button (click)="onArchive()" class="px-3 py-2 rounded-lg border text-gray-700 hover:bg-gray-50">Archive</button> -->
-      </div>
+      
     </div>
 
     <!-- Card Body -->
@@ -115,6 +116,19 @@
               <option *ngFor="let t of taxCodeList" [ngValue]="t.id">{{ t.name }}</option>
             </select>
           </div>
+<div>
+  <label class="text-xs font-semibold text-gray-600">Expiry Date</label>
+  <input
+    type="date"
+    class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]"
+    placeholder="Select expiry date"
+    [(ngModel)]="item.expiryDate"
+    name="expiryDate"
+    [min]="minDate"
+    (change)="onExpiryChange($event)"
+  />
+  <small class="text-muted">Optional. Leave empty if item doesn’t expire.</small>
+</div>
 
           <!-- Specs -->
           <div class="md:col-span-2">
@@ -209,19 +223,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
-                <!-- <td class="px-3 py-2">
-  <ng-select
-    [items]="supplierList"
-    bindLabel="name"
-    bindValue="id"
-    placeholder="Select supplier"
-    [(ngModel)]="p.supplier"         
-    name="supplier-{{ i }}"
-    [clearable]="false"
-    class="w-full">
-  </ng-select>
-</td> -->
-<!-- Supplier -->
+
  <td>
 <div class="relative flex-1 prl-dropdown md:col-span-1" #supplierSearchBox>
   <input
@@ -281,7 +283,10 @@
       <!-- (omitted in your current screen) -->
 
       <!-- ===== STEP 6: AUDIT ===== -->
-      <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
+      <!-- <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
+        Audit trail: created/updated by X at Y (demo)
+      </div> -->
+       <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
         Audit trail: created/updated by X at Y (demo)
       </div>
 
@@ -417,7 +422,11 @@
     <div class="border-t px-1 py-1 flex justify-between bg-white">
       <button class="px-3 py-2 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="prev()" [disabled]="step===0">← Back</button>
       <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]" (click)="next()" *ngIf="step<steps.length-1">Next →</button>
-      <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]" (click)="onSave()" *ngIf="step===steps.length-1">Save Item</button>
+      <!-- <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]" (click)="onSave()" *ngIf="step===steps.length-1">Save Item</button> -->
+       <button (click)="onSave()" class="px-3 py-2 rounded-lg bg-[#2E5F73] text-white font-medium hover:opacity-90" *ngIf="step===steps.length-1">
+          <i class="fa fa-save"></i> Save
+        </button>
+      
     </div>
   </div>
 
@@ -504,15 +513,17 @@
         </div>
 
         <!-- Available (readonly) -->
-        <div class="prl-col-12 prl-md-3">
-          <label class="prl-label">Available</label>
-          <input
-            type="number"
-            class="prl-input prl-input-disabled"
-            [value]="whDraft.available"
-            name="available"
-            disabled>
-        </div>
+       <div class="prl-col-12 prl-md-3">
+  <label class="prl-label">Available</label>
+  <input
+    type="number"
+    class="prl-input prl-input-disabled"
+    [(ngModel)]="whDraft.available"
+    name="available"
+    disabled
+    readonly>
+</div>
+
 
         <!-- Reorder Qty -->
         <div class="prl-col-12 prl-md-3">
@@ -537,7 +548,7 @@
         </div>
 
         <!-- Tracking -->
-        <div class="prl-col-12">
+        <div class="prl-col-12 prl-md-3">
           <label class="prl-label">Tracking</label>
           <div class="flex items-center gap-6 mt-1">
             <label class="inline-flex items-center gap-2">
