@@ -23,6 +23,10 @@ export class WarehouseService {
         return this.http.get<any[]>(this.url + WarehouseApiUrls.GetWarehouseById + id);
     }
 
+    GetNameByWarehouseAsync(name: any): Observable<any[]> {
+        return this.http.get<any[]>(this.url + WarehouseApiUrls.GetNameByWarehouseAsync + name);
+    }
+
     insertWarehouse(data: any): Observable<any> {
         return this.http.post<any>(this.url + WarehouseApiUrls.CreateWarehouse, data);
     }
