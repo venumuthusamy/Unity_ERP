@@ -20,11 +20,26 @@ type SimpleItem = {
   label?: string | null;
   catagoryName: string;
 };
+type PriceRow = {
+  price: number | null;
+  SupplierId: number | string | null;
+  supplierName?: string | null;
+  supplierSearch?: string | null;
+};
 
 interface Warehouse { id: number | string; name: string; }
-interface Bin { id: number | string; name?: string; binId?: number|string; binName?: string; warehouseId?: number | string; }
+interface Bin { id: number | string; name?: string; binID?: number|string; binName?: string; warehouseId?: number | string; }
 interface SupplierLite { id: number | string; name: string; code?: string; }
-
+interface ItemMasterAudit {
+  auditId: number;
+  itemId: number;
+  action: 'CREATE'|'UPDATE'|'DELETE'|string;
+  occurredAtUtc: string;
+  userId?: number|null;
+  oldValuesJson?: string|null;
+  newValuesJson?: string|null;
+  remarks?: string|null;
+};
 interface ItemStockRow {
   warehouseId: number | string | null;
   binId: number | string | null;
@@ -39,7 +54,8 @@ interface ItemStockRow {
   batchFlag: boolean;
   serialFlag: boolean;
   isApproved:boolean,
-  isTransfered:boolean
+  isTransfered:boolean,
+  stockIssueID: number
 }
 
 @Component({
@@ -60,10 +76,17 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
     }
-    if (this.step < this.steps.length - 1) this.step++;
+     if (this.step < this.steps.length - 1) {
+    this.step++;
+    if (this.step === 3) this.loadAudits();
+  }
   }
   prev() { if (this.step > 0) this.step--; }
 
+
+
+audits: ItemMasterAudit[] = [];
+expandedAudit: Record<number, boolean> = {};
   // Form model
   item: any = this.makeEmptyItem();
 
@@ -71,7 +94,7 @@ export class CreateItemMasterComponent implements OnInit {
   selectedItemId: number | null = null;
 
   // Pricing rows (keeping your field name: SupplierId)
-  prices: Array<{ price: number | null; SupplierId: any }> = [];
+ prices: PriceRow[] = [];
 
   // ===== Supplier dropdown state/data =====
   supplierList: SupplierLite[] = [];
@@ -111,7 +134,9 @@ minDate = '';
   // Modal state
   showWhModal = false;
   whDraft: ItemStockRow = this.makeEmptyStockDraft();
-
+isEditMode: boolean = false;
+editingIndex: number = -1;
+    
   // Files
   @ViewChild('pictureInput') pictureInput!: ElementRef<HTMLInputElement>;
   @ViewChild('attachmentsInput') attachmentsInput!: ElementRef<HTMLInputElement>;
@@ -193,7 +218,8 @@ minDate = '';
       batchFlag: false,
       serialFlag: false,
       isApproved:false,
-      isTransfered:false
+      isTransfered:false,
+      stockIssueID:0
     };
   }
   trackByIdx = (_: any, i: number) => i;
@@ -246,7 +272,8 @@ debugger
     batchFlag: !!r.batchFlag,
     serialFlag: !!r.serialFlag,
     isApproved:false,
-    isTransfered:false
+    isTransfered:false,
+    stockIssueID:0
   }));
 
   const payload = {
@@ -268,6 +295,8 @@ debugger
       if (creating) {
         const newId = Number(res?.data?.id ?? res?.data ?? res?.id ?? 0);
         if (!this.item.id && newId) this.item.id = newId;
+
+        if (this.step === 3) this.loadAudits();
       }
 
       Swal.fire({
@@ -372,21 +401,118 @@ onExpiryChange(e: Event) {
   }
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
+// Open the Warehouse modal in EDIT mode, pre-filled with row i
+editLine(i: number): void {
+  const r = this.itemStocks[i];
+  if (!r) return;
 
-  // ---------- Warehouse modal ----------
-  submitWarehouse(closeAfter: boolean): void {
-    if (!this.whDraft.warehouseId) {
-      Swal.fire({ icon: 'warning', title: 'Select warehouse' });
-      return;
+  this.isEditMode = true;
+  this.editingIndex = i;
+
+  // Prefill the draft with a shallow clone of the row
+  this.whDraft = {
+    warehouseId: r.warehouseId ?? null,
+    binId: r.binId ?? null,
+    strategyId: r.strategyId ?? null,
+    onHand: Number(r.onHand ?? 0),
+    reserved: Number(r.reserved ?? 0),
+    available: Math.max(0, Number(r.available ?? (Number(r.onHand ?? 0) - Number(r.reserved ?? 0)))),
+    min: r.min ?? null,
+    max: r.max ?? null,
+    reorderQty: r.reorderQty ?? null,
+    leadTimeDays: r.leadTimeDays ?? null,
+    batchFlag: !!r.batchFlag,
+    serialFlag: !!r.serialFlag,
+    isApproved: !!r.isApproved,
+    isTransfered: !!r.isTransfered,
+    stockIssueID:0
+  };
+
+  // Load bins for that warehouse so the Bin select is populated correctly
+  this.getBinsForWarehouse(this.whDraft.warehouseId);
+
+  // Show modal (re-use your existing modal)
+  this.showWhModal = true;
+  document.body.style.overflow = 'hidden';
+}
+// ---------- Warehouse modal ----------
+submitWarehouse(closeAfter: boolean): void {
+  // Always recompute available & clamp negatives
+  this.recalcDraft();
+
+  // Basic validations
+  if (!this.whDraft.warehouseId) {
+    Swal.fire({ icon: 'warning', title: 'Select warehouse' });
+    return;
+  }
+  if (!this.whDraft.binId) {
+    Swal.fire({ icon: 'warning', title: 'Select bin' });
+    return;
+  }
+  if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
+    Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' });
+    return;
+  }
+  if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) {
+    Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' });
+    return;
+  }
+
+  // Prevent duplicate Warehouse+Bin (except the same row while editing)
+  const dupIdx = this.itemStocks.findIndex(x =>
+    String(x.warehouseId) === String(this.whDraft.warehouseId) &&
+    String(x.binId) === String(this.whDraft.binId)
+  );
+  if (dupIdx !== -1 && (!this.isEditMode || dupIdx !== this.editingIndex)) {
+    Swal.fire({ icon:'warning', title:'Duplicate', text:'This Warehouse + Bin already exists.' });
+    return;
+  }
+
+  // Normalize the row to persist
+  const normalized = {
+    warehouseId: this.whDraft.warehouseId,
+    binId: this.whDraft.binId,
+    strategyId: this.whDraft.strategyId,
+    onHand: Number(this.whDraft.onHand ?? 0),
+    reserved: Number(this.whDraft.reserved ?? 0),
+    available: Math.max(0, Number(this.whDraft.onHand ?? 0) - Number(this.whDraft.reserved ?? 0)),
+    min: this.whDraft.min ?? null,
+    max: this.whDraft.max ?? null,
+    reorderQty: this.whDraft.reorderQty ?? null,
+    leadTimeDays: this.whDraft.leadTimeDays ?? null,
+    batchFlag: !!this.whDraft.batchFlag,
+    serialFlag: !!this.whDraft.serialFlag,
+    isApproved: !!this.whDraft.isApproved,
+    isTransfered: !!this.whDraft.isTransfered
+  } as ItemStockRow;
+
+  if (this.isEditMode && this.editingIndex > -1) {
+    // --- EDIT path ---
+    const next = [...this.itemStocks];
+    next[this.editingIndex] = { ...next[this.editingIndex], ...normalized };
+    this.itemStocks = next;
+
+    if (closeAfter) {
+      this.closeWhModal();
+      // reset edit flags
+      this.isEditMode = false;
+      this.editingIndex = -1;
+    } else {
+      // Switch back to add mode for quick entry, keep the same warehouse for speed
+      const keepWarehouse = this.whDraft.warehouseId;
+      this.isEditMode = false;
+      this.editingIndex = -1;
+      this.whDraft = this.makeEmptyStockDraft();
+      this.whDraft.warehouseId = keepWarehouse;
+      this.getBinsForWarehouse(this.whDraft.warehouseId);
     }
-    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
-      Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' });
-      return;
-    }
-    this.itemStocks.push({ ...this.whDraft });
+  } else {
+    // --- ADD path (your original behavior) ---
+    this.itemStocks.push({ ...normalized });
     if (closeAfter) this.closeWhModal();
     else this.whDraft = this.makeEmptyStockDraft();
   }
+}
 
   removeWarehouseRow(i: number): void {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
@@ -405,11 +531,17 @@ onExpiryChange(e: Event) {
   }
 
   getBinName(id: any): string {
+    debugger
     if (id == null) return '-';
     // support { id,name } or { binId, binName }
-    const byId = this.binList.find(b => String((b.binId ?? b.id)) === String(id));
+    const byId = this.binList.find(b => String((b.binID ?? b.id)) === String(id));
     return (byId?.binName ?? byId?.name) || '-';
   }
+getStrategyName(id: any): string {
+  if (id == null) return '-';
+  const s = (this.strategyList || []).find((x: any) => String(x.id) === String(id));
+  return s?.strategyName || s?.name || '-';
+}
 
   getById(list: any[], id: any) { return list?.find?.(x => String(x.id)===String(id)); }
 
@@ -491,10 +623,13 @@ onExpiryChange(e: Event) {
   }
 
   // ---------- Pricing ----------
-  addPriceLine(): void {
-    // keep your structure; SupplierId will be filled by the dropdown selection
-    this.prices = [...this.prices, { price: null, SupplierId: null }];
-  }
+addPriceLine(): void {
+  this.prices = [...this.prices, { price: null, SupplierId: null, supplierName: null, supplierSearch: '' }];
+  this.activePriceIndex = null;
+  this.filteredSuppliers = [];
+  this.supplierDropdownOpen = false;
+}
+
   removePriceLine(i: number): void {
     this.prices = this.prices.filter((_, idx) => idx !== i);
   }
@@ -551,31 +686,32 @@ onExpiryChange(e: Event) {
   }
 
   // ====== Supplier Search Dropdown logic ======
-  filterSuppliers(): void {
-    const q = (this.modalLine1.supplierSearch || '').toLowerCase().trim();
-    if (!q) {
-      this.filteredSuppliers = this.supplierList.slice(0, 20);
-      return;
-    }
-    this.filteredSuppliers = this.supplierList.filter(s =>
-      (s.name && s.name.toLowerCase().includes(q)) ||
-      (s.code && s.code.toLowerCase().includes(q)) ||
-      (String(s.id).toLowerCase().includes(q))
-    );
-  }
+filterSuppliersForRow(i: number): void {
+  const q = (this.prices[i]?.supplierSearch || '').toLowerCase().trim();
+  this.filteredSuppliers = !q
+    ? this.supplierList.slice(0, 20)
+    : this.supplierList.filter(s =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.code && s.code.toLowerCase().includes(q)) ||
+        String(s.id).toLowerCase().includes(q)
+      );
+}
 
   /** When a result is clicked, fill the global input AND the active price line */
-  selectSupplier(s: SupplierLite, ev?: MouseEvent): void {
-    ev?.stopPropagation();
-    this.modalLine1.supplierId = s.id;
-    this.modalLine1.supplierName = s.name;
-    this.modalLine1.supplierSearch = s.name;
-    this.supplierDropdownOpen = false;
+ 
+selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
+  ev?.stopPropagation();
+  const row = this.prices[i];
+  if (!row) return;
 
-    if (this.activePriceIndex != null && this.prices[this.activePriceIndex]) {
-      this.prices[this.activePriceIndex].SupplierId = s.id; // keep your field name
-    }
-  }
+  row.SupplierId = s.id;
+  row.supplierName = s.name;
+  row.supplierSearch = s.name;
+
+  // keep dropdown scoped to the active row
+  this.activePriceIndex = i;
+  this.supplierDropdownOpen = false;
+}
 
   // ---------- Global focus & click handling ----------
   /** detect which pricing row's supplier input is focused (no HTML change needed) */
@@ -600,8 +736,8 @@ onExpiryChange(e: Event) {
       }
 
       // prime list if empty
-      const q = (this.modalLine1.supplierSearch || '').trim();
-      if (q) this.filterSuppliers(); else this.filteredSuppliers = this.supplierList.slice(0, 20);
+     // const q = (this.modalLine1.supplierSearch || '').trim();
+     // if (q) this.filterSuppliersForRow(); else this.filteredSuppliers = this.supplierList.slice(0, 20);
     }
   }
 
@@ -634,6 +770,8 @@ onExpiryChange(e: Event) {
     document.body.style.overflow = '';
   }
 
+  
+
   onModalRootClick(ev: MouseEvent) {
     ev.stopPropagation();
     const t = ev.target as HTMLElement;
@@ -653,4 +791,30 @@ onExpiryChange(e: Event) {
     this.whDraft.reserved = reserved;
     this.whDraft.available = Math.max(0, onHand - reserved);
   }
+  loadAudits(): void {
+  const id = Number(this.item?.id || 0);
+  if (!id) { this.audits = []; return; }
+  this.itemsSvc.getItemAudit(id).subscribe({
+    next: r => this.audits = r?.data ?? [],
+    error: _ => this.audits = []
+  });
+}
+
+badgeTone(a: string) {
+  switch (a) {
+    case 'CREATE': return 'bg-green-100 text-green-700 border-green-200';
+    case 'UPDATE': return 'bg-amber-100 text-amber-700 border-amber-200';
+    case 'DELETE': return 'bg-red-100 text-red-700 border-red-200';
+    default:       return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+}
+
+diffs(a: ItemMasterAudit) {
+  const before = a.oldValuesJson ? JSON.parse(a.oldValuesJson) : {};
+  const after  = a.newValuesJson ? JSON.parse(a.newValuesJson) : {};
+  const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+  return keys
+    .map(k => ({ field: k, before: before[k], after: after[k] }))
+    .filter(r => a.action !== 'UPDATE' || r.before !== r.after);
+}
 }

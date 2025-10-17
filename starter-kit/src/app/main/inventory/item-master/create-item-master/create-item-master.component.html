@@ -127,7 +127,7 @@
     [min]="minDate"
     (change)="onExpiryChange($event)"
   />
-  <small class="text-muted">Optional. Leave empty if item doesn’t expire.</small>
+  <!-- <small class="text-muted">Optional. Leave empty if item doesn’t expire.</small> -->
 </div>
 
           <!-- Specs -->
@@ -145,64 +145,78 @@
           <button class="px-3 py-2 rounded-xl bg-[#0e3a4c] text-white text-sm font-medium hover:bg-[#0b2e3d]" (click)="openWhModal()">+ Add Line</button>
         </div>
 
-        <div class="overflow-auto rounded-xl border">
-          <table class="w-full min-w-[860px] text-sm">
-            <thead class="bg-[#0e3a4c] text-white">
-              <tr>
-                <th class="px-3 py-2 text-left">Warehouse</th>
-                <th class="px-3 py-2 text-left">Bin / Location</th>
-                <th class="px-3 py-2 text-right">On Hand</th>
-                <th class="px-3 py-2 text-right">Reserved</th>
-                <th class="px-3 py-2 text-right">Available</th>
-                <th class="px-3 py-2 text-right">Min</th>
-                <th class="px-3 py-2 text-right">Max</th>
-                <th class="px-3 py-2 text-right">Reorder / Lead</th>
-                <th class="px-3 py-2">Tracking</th>
-                <th class="px-3 py-2 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of itemStocks; let i=index; trackBy: trackByIdx" class="border-b">
-                <td class="px-3 py-2">{{ getWarehouseName(r.warehouseId) }}</td>
-                <td class="px-3 py-2">{{ getBinName(r.binId) }}</td>
-                <td class="px-3 py-2 text-right">{{ r.onHand }}</td>
-                <td class="px-3 py-2 text-right">{{ r.reserved }}</td>
-                <td class="px-3 py-2 text-right">{{ r.available }}</td>
-                <td class="px-3 py-2 text-right">{{ r.min ?? 0 }}</td>
-                <td class="px-3 py-2 text-right">{{ r.max ?? 0 }}</td>
-                <td class="px-3 py-2 text-right">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
-                <td class="px-3 py-2">
-                  <span *ngIf="r.batchFlag" class="mr-1">Batch</span>
-                  <span *ngIf="r.serialFlag">Serial</span>
-                  <span *ngIf="!r.batchFlag && !r.serialFlag" class="text-gray-400">—</span>
-                </td>
-                <td class="px-3 py-2 text-center">
-                  <button class="px-2 py-1 rounded-lg border text-red-600 hover:bg-red-50" (click)="removeWarehouseRow(i)">
-                    <i class="fa fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
+     <div class="overflow-auto rounded-xl border">
+  <!-- bump min width a bit since we add one column -->
+  <table class="w-full min-w-[980px] text-sm">
+    <thead class="bg-[#0e3a4c] text-white">
+      <tr>
+        <th class="px-3 py-2 text-left">Warehouse</th>
+        <th class="px-3 py-2 text-left">Bin / Location</th>
 
-              <tr *ngIf="!itemStocks?.length">
-                <td colspan="10" class="px-3 py-6 text-center text-gray-400">No lines yet. Click “Add Line”.</td>
-              </tr>
-            </tbody>
+        <!-- NEW: Strategy -->
+        <th class="px-3 py-2 text-left">Strategy</th>
 
-            <tfoot *ngIf="itemStocks?.length">
-              <tr class="bg-gray-50 font-semibold">
-                <td class="px-3 py-2 text-right" colspan="2">Totals</td>
-                <td class="px-3 py-2 text-right">{{ totals.onHand }}</td>
-                <td class="px-3 py-2 text-right">{{ totals.reserved }}</td>
-                <td class="px-3 py-2 text-right">{{ totals.available }}</td>
-                <td class="px-3 py-2 text-right">—</td>
-                <td class="px-3 py-2 text-right">—</td>
-                <td class="px-3 py-2 text-right">—</td>
-                <td class="px-3 py-2">—</td>
-                <td class="px-3 py-2">—</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <th class="px-3 py-2 text-right">On Hand</th>
+        <th class="px-3 py-2 text-right">Reserved</th>
+        <th class="px-3 py-2 text-right">Available</th>
+        <th class="px-3 py-2 text-right">Min</th>
+        <th class="px-3 py-2 text-right">Max</th>
+        <th class="px-3 py-2 text-right">Reorder / Lead</th>
+        <th class="px-3 py-2">Tracking</th>
+        <th class="px-3 py-2 text-center">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let r of itemStocks; let i=index; trackBy: trackByIdx" class="border-b">
+        <td class="px-3 py-2">{{ getWarehouseName(r.warehouseId) }}</td>
+        <td class="px-3 py-2">{{ getBinName(r.binId) }}</td>
+
+        <!-- NEW: Strategy -->
+        <td class="px-3 py-2">{{ getStrategyName(r.strategyId) }}</td>
+
+        <td class="px-3 py-2 text-right">{{ r.onHand }}</td>
+        <td class="px-3 py-2 text-right">{{ r.reserved }}</td>
+        <td class="px-3 py-2 text-right">{{ r.available }}</td>
+        <td class="px-3 py-2 text-right">{{ r.min ?? 0 }}</td>
+        <td class="px-3 py-2 text-right">{{ r.max ?? 0 }}</td>
+        <td class="px-3 py-2 text-right">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
+        <td class="px-3 py-2">
+          <span *ngIf="r.batchFlag" class="mr-1">Batch</span>
+          <span *ngIf="r.serialFlag">Serial</span>
+          <span *ngIf="!r.batchFlag && !r.serialFlag" class="text-gray-400">—</span>
+        </td>
+        <td class="px-3 py-2 text-center">
+          <button type="button" (click)="editLine(i)" class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 mr-1" title="Edit" aria-label="Edit line">
+            <i class="fas fa-pen text-blue-600"></i>
+          </button>
+          <button type="button" (click)="removeWarehouseRow(i)" class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100" title="Remove" aria-label="Remove line">
+            <i class="fas fa-trash text-red-500"></i>
+          </button>
+        </td>
+      </tr>
+
+      <tr *ngIf="!itemStocks?.length">
+        <td colspan="11" class="px-3 py-6 text-center text-gray-400">No lines yet. Click “Add Line”.</td>
+      </tr>
+    </tbody>
+
+    <tfoot *ngIf="itemStocks?.length">
+      <tr class="bg-gray-50 font-semibold">
+        <!-- was colspan="2"; now 3 to cover Warehouse + Bin + Strategy -->
+        <td class="px-3 py-2 text-right" colspan="3">Totals</td>
+        <td class="px-3 py-2 text-right">{{ totals.onHand }}</td>
+        <td class="px-3 py-2 text-right">{{ totals.reserved }}</td>
+        <td class="px-3 py-2 text-right">{{ totals.available }}</td>
+        <td class="px-3 py-2 text-right"></td>
+        <td class="px-3 py-2 text-right"></td>
+        <td class="px-3 py-2 text-right"></td>
+        <td class="px-3 py-2"></td>
+        <td class="px-3 py-2"></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
 
         <p class="mt-2 text-xs text-gray-500"><b>Available = On Hand − Reserved</b> (never negative).</p>
       </div>
@@ -225,40 +239,42 @@
               <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
 
  <td>
-<div class="relative flex-1 prl-dropdown md:col-span-1" #supplierSearchBox>
-  <input
-    type="text"
-    name="supplierSearch"
-    [(ngModel)]="modalLine1.supplierSearch"
-    (focus)="supplierDropdownOpen = true"
-    (input)="filterSuppliers()"
-    autocomplete="off"
-    class="prl-input pr-10"
-  />
+  <div class="relative flex-1 prl-dropdown md:col-span-1">
+    <input
+      type="text"
+      name="supplierSearch-{{i}}"
+      [(ngModel)]="p.supplierSearch"
+      (focus)="supplierDropdownOpen = true; activePriceIndex = i; filterSuppliersForRow(i)"
+      (input)="filterSuppliersForRow(i)"
+      autocomplete="off"
+      class="prl-input pr-10"
+      placeholder="Search supplier"
+    />
 
-  <!-- results -->
-  <div *ngIf="supplierDropdownOpen && filteredSuppliers?.length" class="prl-menu">
+    <!-- results -->
+    <div *ngIf="supplierDropdownOpen && filteredSuppliers?.length && activePriceIndex===i" class="prl-menu">
+      <div
+        *ngFor="let s of filteredSuppliers; trackBy: trackBySupplierId"
+        (click)="selectSupplierForRow(i, s, $event)"
+        class="prl-mi prl-mi-split"
+      >
+        <span class="truncate">{{ s.name }}</span>
+        <small class="prl-muted ml-3">#{{ s.code || s.id }}</small>
+      </div>
+    </div>
+
+    <!-- no matches -->
     <div
-      *ngFor="let s of filteredSuppliers; trackBy: trackBySupplierId"
-      (click)="selectSupplier(s, $event)"
-      class="prl-mi prl-mi-split"
+      *ngIf="supplierDropdownOpen && activePriceIndex===i
+             && (!filteredSuppliers || !filteredSuppliers.length)
+             && (p.supplierSearch && p.supplierSearch.trim().length)"
+      class="prl-menu"
     >
-      <span class="truncate">{{ s.name }}</span>
-      <small class="prl-muted ml-3">#{{ s.code || s.id }}</small>
+      <div class="prl-mi text-gray-400">No matches</div>
     </div>
   </div>
-
-  <!-- no matches -->
-  <div
-    *ngIf="supplierDropdownOpen
-           && (!filteredSuppliers || !filteredSuppliers.length)
-           && (modalLine1.supplierSearch && modalLine1.supplierSearch.trim().length)"
-    class="prl-menu"
-  >
-    <div class="prl-mi text-gray-400">No matches</div>
-  </div>
-</div>
 </td>
+
                 <td class="px-3 py-2">
                   <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.price" name="price-{{i}}" placeholder="0.00">
                 </td>
@@ -275,8 +291,8 @@
             </tbody>
           </table>
         </div>
-
-        <button class="mt-3 px-3 py-2 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="addPriceLine()">+ Add line</button>
+ <button class="px-3 py-2 mt-2 rounded-xl bg-[#0e3a4c] text-white text-sm font-medium hover:bg-[#0b2e3d]" (click)="addPriceLine()">+ Add Line</button>
+       
       </div>
 
       <!-- ===== STEP 3: SUPPLIERS ===== -->
@@ -286,9 +302,78 @@
       <!-- <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
         Audit trail: created/updated by X at Y (demo)
       </div> -->
-       <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
-        Audit trail: created/updated by X at Y (demo)
-      </div>
+      <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-700">
+  <div class="flex items-center justify-between mb-2">
+    <h3 class="text-sm font-semibold text-gray-800">Audit trail</h3>
+    <div class="flex items-center gap-2">
+      <span *ngIf="item?.id" class="text-xs text-gray-500">Item #{{ item.id }}</span>
+      <button class="px-2 py-1 rounded border hover:bg-gray-50" (click)="loadAudits()">Refresh</button>
+    </div>
+  </div>
+
+  <div *ngIf="!item?.id" class="text-gray-500">Save the item first to see its audit history.</div>
+
+  <ng-container *ngIf="item?.id">
+    <div *ngIf="!audits.length" class="text-gray-500">No audit entries yet.</div>
+
+    <ul class="space-y-2" *ngIf="audits.length">
+      <li *ngFor="let a of audits" class="rounded-lg border p-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                  [ngClass]="badgeTone(a.action)">
+              {{ a.action }}
+            </span>
+            <span class="text-gray-600">
+              {{ a.occurredAtUtc | date:'yyyy-MM-dd HH:mm:ss' }} UTC
+              <ng-container *ngIf="a.userId"> · User #{{ a.userId }}</ng-container>
+              <ng-container *ngIf="a.remarks"> · {{ a.remarks }}</ng-container>
+            </span>
+          </div>
+          <button class="text-[#2E5F73] hover:underline"
+                  (click)="expandedAudit[a.auditId] = !expandedAudit[a.auditId]">
+            {{ expandedAudit[a.auditId] ? 'Hide details' : 'View details' }}
+          </button>
+        </div>
+
+        <div *ngIf="expandedAudit[a.auditId]" class="mt-2">
+          <div *ngIf="a.action === 'UPDATE'; else snapshotBlock">
+            <table class="w-full text-xs border">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-2 py-1">Field</th>
+                  <th class="text-left px-2 py-1">Before</th>
+                  <th class="text-left px-2 py-1">After</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let d of diffs(a)" class="border-t">
+                  <td class="px-2 py-1 font-medium">{{ d.field }}</td>
+                  <td class="px-2 py-1 text-gray-600">{{ d.before }}</td>
+                  <td class="px-2 py-1 text-gray-900">{{ d.after }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #snapshotBlock>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="border rounded p-2">
+                <div class="text-[11px] font-semibold mb-1">Before</div>
+                <pre class="text-[11px] whitespace-pre-wrap break-words">{{ a.oldValuesJson }}</pre>
+              </div>
+              <div class="border rounded p-2">
+                <div class="text-[11px] font-semibold mb-1">After</div>
+                <pre class="text-[11px] whitespace-pre-wrap break-words">{{ a.newValuesJson }}</pre>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </li>
+    </ul>
+  </ng-container>
+</div>
+
 
       <!-- ===== STEP 7: REVIEW ===== -->
       <div *ngIf="step === 4" class="space-y-2">

@@ -72,7 +72,7 @@ export const menu: CoreMenu[] = [
     icon: 'file',
     children: [
       { id: 'Inventory', title: 'Inventory', translate: 'MENU.INVENTORY.INVENOTYR', type: 'item', icon: 'circle', url: '/Inventory/Create-inventory' },
-      { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/Create-itemmaster' },
+      { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/List-itemmaster' },
       { id: 'StackOverview', title: 'Stock-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview' },
       { id: 'StackTransfer', title: 'Stock-Transfer', translate: 'MENU.INVENTORY.STACKTRANSFER', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer' },
       { id: 'StockTake', title: 'Stock-Take', translate: 'MENU.INVENTORY.STOCKTAKE', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake' },
