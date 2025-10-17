@@ -69,7 +69,7 @@ const routes = [
   },
    {
     path: 'edit-stocktake/:id',
-    component: StockTransferCreateComponent,
+    component: StockTakeComponent,
     data: { animation: 'edit-stocktake' }
   },
 ]

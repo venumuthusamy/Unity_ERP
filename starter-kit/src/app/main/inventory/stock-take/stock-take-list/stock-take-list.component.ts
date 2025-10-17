@@ -4,7 +4,8 @@ import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
-import {StockTakeService} from '../stock-take.service'
+import { StockTakeService } from '../stock-take.service'
+import { ItemMasterService } from '../../item-master/item-master.service';
 
 @Component({
   selector: 'app-stock-take-list',
@@ -28,14 +29,19 @@ export class StockTakeListComponent implements OnInit {
   passData: any;
   showLinesModal = false;
   modalLines: any[] = [];
-
+  userId: any;
+  modalTotal: any;
+  itemList: any;
 
 
   constructor(private stockTakeService: StockTakeService, private router: Router,
-    private datePipe: DatePipe,
-  ) { }
+    private datePipe: DatePipe, private itemMasterService: ItemMasterService,
+  ) { this.userId = localStorage.getItem('id'); }
   ngOnInit(): void {
     this.loadRequests();
+    this.itemMasterService.getAllItemMaster().subscribe((res: any) => {
+      this.itemList = res.data;
+    })
   }
   filterUpdate(event) {
 
@@ -90,7 +96,7 @@ export class StockTakeListComponent implements OnInit {
       confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.stockTakeService.deleteStockTake(id).subscribe({
+        this.stockTakeService.deleteStockTake(id, this.userId).subscribe({
           next: () => {
             this.loadRequests();
             Swal.fire('Deleted!', 'Stock Take has been deleted.', 'success');
@@ -106,22 +112,37 @@ export class StockTakeListComponent implements OnInit {
     this.router.navigate(['/Inventory/create-stocktake']);
 
   }
+openLinesModal(row: any) {
+  // 1) get array safely
+  const raw = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
 
-  openLinesModal(row: any) {
-    debugger
-    // Normalize lines (supports array or JSON string)
-    let lines: any[] = [];
-    try {
-      lines = Array.isArray(row?.poLines) ? row.poLines : JSON.parse(row?.poLines || '[]');
-    } catch {
-      lines = [];
-    }
+  // 2) normalize to numbers + safe strings
+  const N = (v: any) => Number.isFinite(Number(v)) ? Number(v) : 0;
 
-    // Compute total 
-    const total = lines.reduce((sum, l) => sum + (Number(l?.total) || 0), 0);
+  const lines = raw.map((l: any) => ({
+    barcode: (l?.barcode ?? '-') as string,
+    itemId:(l?.itemId),
+    itemName: (l?.itemName ?? l?.name ?? '-') as string,
+    onHand:   N(l?.onHand ?? l?.available),
+    countedQty: N(l?.countedQty),
+    varianceQty: N(l?.countedQty) - N(l?.onHand ?? l?.available),
+    remarks: (l?.remarks ?? '-') as string
+  }));
 
-    this.modalLines = lines;
-    this.showLinesModal = true;
+  // 3) compute totals
+  this.modalTotal = {
+    available: lines.reduce((s, x) => s + x.onHand, 0),
+    counted:   lines.reduce((s, x) => s + x.countedQty, 0),
+    variance:  lines.reduce((s, x) => s + x.varianceQty, 0)
+  };
+
+  this.modalLines = lines;
+  this.showLinesModal = true;
+}
+
+  getItemName(id: number | string | null) {
+    const x = this.itemList.find(i => i.id === id);
+    return x?.name ?? String(id ?? '');
   }
 
   closeLinesModal() {
