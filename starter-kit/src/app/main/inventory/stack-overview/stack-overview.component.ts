@@ -6,43 +6,44 @@ import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.servi
 import * as feather from 'feather-icons';
 import { Router } from '@angular/router';
 import { StackOverviewService } from './stack-overview.service';
+import Swal from 'sweetalert2';
 
-
+// NEW: export libs
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ApiItemRow {
   id?: number | string;
   sku?: string;
   name?: string;
   itemName?: string;
-  wareHouse?: string;
-  warehouse?: string;
-  bin?: string;
+  warehouseName?: string;
+  binName?: string;
   onHand?: number;
   reserved?: number;
   min?: number;
   minQty?: number;
   available?: number;
-  expiry?: string | Date | null;
+  expiryDate?: string;
   warehouseId?: number;
   binId?: number;
 }
 
 interface StockRow {
-  idKey: string;              // unique composite key or id
-  sku?: string | null;
+  idKey: string;
+  sku: string | null;
   item: string;
   warehouse: string;
   bin: string;
   onHand: number;
-  reserved?: number;
+  reserved: number;
   min: number;
   available: number;
-  expiry?: string | Date | null;
-
-  // extra ID fields if needed for backend payload
+  expiry: Date | null;
   warehouseId?: number;
   binId?: number;
-  apiRow?: ApiItemRow;        // keep original row for reference
+  apiRow?: ApiItemRow;
 }
 
 @Component({
@@ -51,10 +52,9 @@ interface StockRow {
   styleUrls: ['./stack-overview.component.scss']
 })
 export class StackOverviewComponent implements OnInit {
-  // ===== Dropdowns =====
   warehouses: Array<{ id: number | string; name: string }> = [];
+  exportFileName = '';
 
-  // ===== UI states =====
   selectedWarehouse: number | string | null = null;
   minOnly = false;
   expOnly = false;
@@ -67,7 +67,6 @@ export class StackOverviewComponent implements OnInit {
   filteredRows: StockRow[] = [];
 
   selectedKeys = new Set<string>();
-
   strictSameWarehouse = true;
 
   stockIssueOptions: Array<{ id: number | string; name: string }> = [];
@@ -78,6 +77,7 @@ export class StackOverviewComponent implements OnInit {
     stockIssueName?: string | null;
     originalInHand: number;
     available: number;
+    reserved: number;
     newInHand: number | null;
     minAllowed: number;
     maxAllowed: number;
@@ -88,6 +88,7 @@ export class StackOverviewComponent implements OnInit {
     stockIssueName: null,
     originalInHand: 0,
     available: 0,
+    reserved: 0,
     newInHand: null,
     minAllowed: 1,
     maxAllowed: 0,
@@ -109,39 +110,37 @@ export class StackOverviewComponent implements OnInit {
     setTimeout(() => (feather as any)?.replace?.(), 0);
   }
 
-  private toStockRow(api: ApiItemRow): StockRow {
-    const name = api.name ?? api.itemName ?? api.sku ?? '(item)';
-    const sku = api.sku ?? null;
-    const whName = api.warehouse ?? api.wareHouse ?? 'Central';
-    const bin = api.bin ?? 'A1';
+  private parseExpiry(src?: string): Date | null {
+    if (!src) return null;
+    if (src.startsWith('0001-01-01')) return null;
+    const d = new Date(src);
+    return isNaN(d.getTime()) ? null : d;
+  }
 
+  private toStockRow(api: ApiItemRow): StockRow {
+    const warehouse = api.warehouseName ?? '';
+    const item = api.name ?? api.itemName ?? '';
+    const sku = api.sku ?? null;
+    const bin = api.binName ?? '';
     const onHand = Number(api.onHand ?? 0);
     const reserved = Number(api.reserved ?? 0);
     const min = Number(api.min ?? api.minQty ?? 0);
-    const available = Number(api.available ?? 0);
-    const expiry = api.expiry ?? null;
-
-    // composite key or use api.id if unique
-    const idKey = [
-      api.id ?? '',
-      sku ?? '',
-      whName,
-      bin
-    ].join('|').toLowerCase();
+    const available = Number(api.available != null ? api.available : (onHand - reserved));
+    const expiry = this.parseExpiry(api.expiryDate);
 
     return {
-      idKey,
+      idKey: [api.id ?? '', warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
+      warehouse,
+      item,
       sku,
-      item: String(name),
-      warehouse: String(whName),
-      bin: String(bin),
+      bin,
       onHand,
       reserved,
       min,
       available,
       expiry,
-      warehouseId: api.warehouse ? Number(api.warehouseId) : undefined,
-      binId: api.bin ? Number(api.binId) : undefined,
+      warehouseId: api.warehouseId,
+      binId: api.binId,
       apiRow: api
     };
   }
@@ -163,20 +162,21 @@ export class StackOverviewComponent implements OnInit {
   loadMasterItem(): void {
     this.loading = true;
     this.errorMsg = null;
-    this.itemMasterService.getAllItemMaster().subscribe({
+
+    this.stockService.GetAllStockList().subscribe({
       next: (res: any) => {
         if (res?.isSuccess && Array.isArray(res.data)) {
           this.rows = res.data.map((item: ApiItemRow) => this.toStockRow(item));
           this.filteredRows = [...this.rows];
         } else {
-          this.errorMsg = 'No data found.';
+          this.errorMsg = 'No stock data found.';
         }
         this.loading = false;
       },
-      error: err => {
+      error: (err) => {
         this.loading = false;
-        this.errorMsg = 'Failed to load Item Master list.';
-        console.error('Item Master load error', err);
+        this.errorMsg = 'Failed to load stock list.';
+        console.error('Stock list load error', err);
       }
     });
   }
@@ -232,9 +232,7 @@ export class StackOverviewComponent implements OnInit {
       const currentWh = this.getSelectedWarehouses();
       const targetWh = r.warehouse;
       if (currentWh.size === 1 && !currentWh.has(targetWh)) {
-        // Prevent cross-warehouse selection
         (ev.target as HTMLInputElement).checked = false;
-        // You may show an alert or toast
         return;
       }
     }
@@ -309,28 +307,59 @@ export class StackOverviewComponent implements OnInit {
     return [...this.getSelectedWarehouses()][0] ?? null;
   }
 
+  // ===== Modals / Stock Issue / Adjustment =====
   openAdjustModal(tpl: any, row: StockRow) {
     this.loadStockissue();
-    const original = row.onHand;
-    const available = row.available;
-    const minAllowed = 1;
-    const maxAllowed = available;
 
-    const startVal = Math.min(Math.max(original, minAllowed), maxAllowed);
+    const original = Number(row.onHand ?? 0);
+    const reserved = Number(row.reserved ?? 0);
+    const available = Number(row.available ?? Math.max(0, original - reserved));
+    const minAllowed = Math.max(0, original - available);
+    const maxAllowed = original + available;
 
     this.adjust = {
       row,
       stockIssueId: null,
       stockIssueName: null,
       originalInHand: original,
+      reserved,
       available,
-      newInHand: startVal,
+      newInHand: original,
       minAllowed,
       maxAllowed,
       qtyError: null
     };
 
     this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
+    setTimeout(() => (window as any).feather?.replace?.(), 0);
+  }
+
+  validateNewInHand() {
+    const { minAllowed, maxAllowed } = this.adjust;
+    let v = Number(this.adjust.newInHand);
+    if (!Number.isFinite(v)) {
+      this.adjust.qtyError = 'Enter a valid number.';
+      return;
+    }
+    if (v < minAllowed || v > maxAllowed) {
+      this.adjust.qtyError = `In-hand must be between ${minAllowed} and ${maxAllowed}.`;
+    } else {
+      this.adjust.qtyError = null;
+    }
+  }
+
+  onInHandBlur() {
+    const { minAllowed, maxAllowed } = this.adjust;
+    let v = Number(this.adjust.newInHand);
+    if (!Number.isFinite(v)) v = this.adjust.originalInHand;
+    if (v < minAllowed) v = minAllowed;
+    if (v > maxAllowed) v = maxAllowed;
+    this.adjust.newInHand = v;
+    this.validateNewInHand();
+  }
+
+  canSubmitAdjust(): boolean {
+    return !!(this.adjust.row && this.adjust.stockIssueId != null && this.adjust.newInHand != null && this.adjust.qtyError == null);
   }
 
   onStockIssueChange(issueId: number | string | null) {
@@ -339,30 +368,59 @@ export class StackOverviewComponent implements OnInit {
     this.adjust.stockIssueName = found?.name ?? null;
   }
 
-  validateNewInHand() {
-    let v = Number(this.adjust.newInHand);
-    const { minAllowed, maxAllowed } = this.adjust;
-    if (!Number.isFinite(v)) v = minAllowed;
-    if (v < minAllowed) v = minAllowed;
-    if (v > maxAllowed) v = maxAllowed;
-    this.adjust.newInHand = v;
-    this.adjust.qtyError = null;
-  }
+  // ✅ NEW: Backend call to update OnHand + Available
+// ✅ NEW payload includes stockIssueId
+submitAdjust(modalRef: any) {
+  this.validateNewInHand();
+  if (!this.canSubmitAdjust() || !this.adjust.row) return;
 
-  canSubmitAdjust(): boolean {
-    return !!(this.adjust.row && this.adjust.stockIssueId && this.adjust.newInHand != null && !this.adjust.qtyError);
-  }
+  const row = this.adjust.row;
+  const payload = {
+    itemId: row.apiRow?.id,
+    warehouseId: row.apiRow?.warehouseId,
+    binId: row.apiRow?.binId,
+    newOnHand: Number(this.adjust.newInHand),
+    stockIssueId: this.adjust.stockIssueId ?? null   // ⬅️ send the dropdown id
+  };
 
-  submitAdjust(modalRef: any) {
-    this.validateNewInHand();
-    if (!this.canSubmitAdjust()) return;
-    if (this.adjust.row) {
-      this.adjust.row.onHand = Number(this.adjust.newInHand);
-      // Possibly recalc available etc.
+  this.loading = true;
+  this.stockService.AdjustOnHand(payload).subscribe({
+    next: (res: any) => {
+      this.loading = false;
+
+      // reflect DB-truth (or fallback)
+      const onHand = Number(res?.data?.onHand ?? payload.newOnHand);
+      const reserved = Number(res?.data?.reserved ?? row.reserved ?? 0);
+      const available = Number(res?.data?.available ?? (onHand - reserved));
+
+      row.onHand = onHand;
+      row.reserved = reserved;
+      row.available = available;
+
+      this.applyFilters();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Adjustment Successful',
+        text: 'Stock levels updated successfully.',
+        confirmButtonColor: '#2E5F73'
+      });
+
+      modalRef.close('submitted');
+    },
+    error: (err) => {
+      this.loading = false;
+      console.error('Adjust failed', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Adjustment Failed',
+        text: err?.error?.message || 'Could not adjust stock.',
+        confirmButtonColor: '#d33'
+      });
     }
-    this.applyFilters();
-    modalRef.close('submitted');
-  }
+  });
+}
+
 
   loadStockissue() {
     this.stockIssueService.getAllStockissue().subscribe(res => {
@@ -374,48 +432,164 @@ export class StackOverviewComponent implements OnInit {
     });
   }
 
-submitTransfer(): void {
-  if (!this.sameWarehouseSelected) {
-    alert('Select items from a single warehouse to transfer.');
-    return;
+  private toSqlDate(d: Date | null | undefined): string | null {
+    if (!d) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
-  const selRows = this.getSelectedRows();
-  const now = new Date();
-  const userId = 1001; // TODO: Replace with actual logged-in user ID
-
-  const payload = selRows.map(r => ({
-    itemID: r.apiRow?.id,               // from backend API
-    fromWarehouseID: r.warehouseId,     // ensure this is available
-    toWarehouseID: 0,                   // default to 0
-    available: r.available ?? 0,
-    onHand: r.onHand ?? 0,
-    reserved: r.reserved ?? 0,
-    min: r.min ?? 0,
-    expiry: r.expiry?? new Date(), // format date as YYYYMM
-    isApproved: 0,                      // default false
-    createdBy: userId,
-    createdDate: now,
-    updatedBy: userId,
-    updatedDate: now
-  }));
-
-  this.stockService.insertStock(payload).subscribe({
-    next: res => {
-      alert('Transfer successful');
-      this.selectedKeys.clear();
-      this.loadMasterItem();
-    },
-    error: err => {
-      console.error('Transfer failed', err);
-      alert('Transfer failed');
+  // ===== Transfer =====
+  submitTransfer(): void {
+    if (!this.sameWarehouseSelected) {
+      alert('Select items from a single warehouse to transfer.');
+      return;
     }
-  });
-}
 
+    const selRows = this.getSelectedRows();
+    if (!selRows.length) {
+      alert('No items selected.');
+      return;
+    }
 
-  exportData() {
-    // implement export logic (e.g. CSV)
+    const now = new Date();
+    const userId = 1001;
+    const toWarehouseID = 0;
+
+    const payload = selRows.map(r => ({
+      ItemId: r.apiRow?.id,
+      Available: r.available ?? 0,
+      OnHand: r.onHand ?? 0,
+      Reserved: r.reserved ?? 0,
+      Min: r.min ?? 0,
+      Expiry: this.toSqlDate(r.expiry),
+      CreatedBy: userId,
+      CreatedDate: now,
+      UpdatedBy: userId,
+      UpdatedDate: now,
+      FromWarehouseID: r.warehouseId ?? null,
+      ToWarehouseID: toWarehouseID,
+      IsApproved: false,
+      FromWarehouseName: r.warehouse ?? '',
+      ItemName: r.item ?? '',
+      Sku: r.sku ?? '',
+      BinId: r.binId ?? null,
+      BinName: r.bin ?? '',
+      remarks:''
+    }));
+
+    this.stockService.insertStock(payload).subscribe({
+      next: _res => {
+        const transferRequests = selRows.map(r => ({
+          itemId: r.apiRow?.id,
+          warehouseId: r.warehouseId,
+          binId: r.binId
+        }));
+
+        this.stockService.markAsTransferredBulk(transferRequests).subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Transfer Successful',
+              text: 'Selected items have been transferred successfully.',
+              confirmButtonColor: '#2E5F73'
+            }).then(() => {
+              this.selectedKeys.clear();
+              this.router.navigate(['/Inventory/create-stocktransfer']);
+            });
+          },
+          error: err => {
+            console.error('Failed to mark transferred', err);
+            Swal.fire({
+              icon: 'warning',
+              title: 'Partial Success',
+              text: 'Stock inserted but some items could not be marked as transferred.',
+              confirmButtonColor: '#d33'
+            });
+          }
+        });
+      },
+      error: err => {
+        console.error('Transfer failed', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Transfer Failed',
+          text: 'Something went wrong during transfer. Please try again.',
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
+  }
+
+  openExportModal(tpl: any) {
+    this.exportFileName = '';
+    this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
+  }
+
+  private buildExportRows(): Array<Record<string, any>> {
+    const toDate = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+    return (this.filteredRows || []).map(r => ({
+      Warehouse: r.warehouse ?? '',
+      Item: r.item ?? '',
+      SKU: r.sku ?? '',
+      Bin: r.bin ?? '',
+      OnHand: r.onHand ?? 0,
+      Reserved: r.reserved ?? 0,
+      Min: r.min ?? 0,
+      Available: r.available ?? 0,
+      Expiry: toDate(r.expiry),
+    }));
+  }
+
+  private todayStamp(): string {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+  }
+
+  private safeFile(s: string): string {
+    return (s || 'stock-overview').replace(/[\\/:*?"<>|]+/g, '').trim() || 'stock-overview';
+  }
+
+  exportAsExcel(): void {
+    const data = this.buildExportRows();
+    const ws = XLSX.utils.json_to_sheet(data);
+    (ws as any)['!cols'] = [
+      { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Stock Overview');
+    XLSX.writeFile(wb, `${this.safeFile(this.exportFileName)}.xlsx`);
+  }
+
+  exportAsPdf(): void {
+    const data = this.buildExportRows();
+    const headers = [['Warehouse', 'Item', 'SKU', 'Bin', 'On Hand', 'Reserved', 'Min', 'Available', 'Expiry']];
+    const body = data.map(r => [r.Warehouse, r.Item, r.SKU, r.Bin, r.OnHand, r.Reserved, r.Min, r.Available, r.Expiry]);
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    doc.setFontSize(12);
+    doc.setFillColor(46, 95, 115);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 46, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Stock Overview', 40, 30);
+
+    doc.setTextColor(0, 0, 0);
+    autoTable(doc, {
+      head: headers,
+      body,
+      startY: 64,
+      styles: { fontSize: 9, cellPadding: 6 },
+      headStyles: { fillColor: [46, 95, 115], textColor: [255, 255, 255] },
+      theme: 'grid',
+      tableWidth: 'auto',
+    });
+
+    doc.save(`${this.safeFile(this.exportFileName)}.pdf`);
   }
 
   getWarehouseNameById(id: number | string | null): string | null {

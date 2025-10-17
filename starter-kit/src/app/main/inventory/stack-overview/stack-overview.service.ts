@@ -35,4 +35,21 @@ export class StackOverviewService {
          return this.http.delete<any>(this.url + StockAPIUrls.DeleteStock + id);
      }
  
+    GetAllStockList(): Observable<any[]> {
+         return this.http.get<any[]>(this.url + StockAPIUrls.GetAllStockList);
+     }
+ 
+       GetAllItemStockList(): Observable<any[]> {
+         return this.http.get<any[]>(this.url + StockAPIUrls.GetAllItemStockList);
+     }
+      markAsTransferredBulk(data: any): Observable<any> {
+         return this.http.post<any>(this.url + StockAPIUrls.markAsTransferredBulk, data);
+     }
+    GetAllStockTransferedList(): Observable<any[]> {
+         return this.http.get<any[]>(this.url + StockAPIUrls.GetAllStockTransferedList);
+     }
+ 
+  AdjustOnHand(data: any): Observable<any> {
+         return this.http.post<any>(this.url + StockAPIUrls.AdjustOnHand, data);
+     }
 }

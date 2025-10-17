@@ -1,25 +1,39 @@
-// stock-transfer-create.component.ts
-import { Component, OnInit, AfterViewInit, AfterViewChecked } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import * as feather from 'feather-icons';
+import { StackOverviewService } from '../../stack-overview/stack-overview.service';
+import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 
-interface MoveRow {
-  selected: boolean;          // user-selected to move
-  id: number | string;
-  itemName: string;
-  available: number;          // current stock available
-  qty: number | null;         // qty to move
-  batchSerial?: string | null;
-  remarks?: string | null;
-  
+interface ApiItemRow {
+  id?: number | string;
+  sku?: string;
+  name?: string;
+  itemName?: string;
+  warehouseName?: string;
+  binName?: string;
+  onHand?: number;
+  reserved?: number;
+  min?: number;
+  minQty?: number;
+  available?: number;
+  expiryDate?: string;
+  warehouseId?: number;
+  binId?: number;
 }
 
-interface StockTransferLine {
-  itemId: number | string;
-  itemName: string;
-  qty: number;
-  batchSerial: string | null;
-  remarks: string | null;
+interface StockRow {
+  idKey: string;
+  sku: string | null;
+  item: string;
+  warehouse: string;
+  bin: string;
+  onHand: number;
+  reserved: number;
+  min: number;
+  available: number;
+  expiry: Date | null;
+  warehouseId?: number;
+  binId?: number;
+  apiRow?: ApiItemRow;
 }
 
 @Component({
@@ -27,45 +41,113 @@ interface StockTransferLine {
   templateUrl: './stock-transfer-create.component.html',
   styleUrls: ['./stock-transfer-create.component.scss']
 })
-export class StockTransferCreateComponent implements OnInit, AfterViewInit, AfterViewChecked {
+export class StockTransferCreateComponent implements OnInit {
+  fromWarehouseName = '';
+  rows: StockRow[] = [];
+  filteredRows: StockRow[] = [];
 
-  // Warehouses (use numbers if your API expects them)
-  warehouses = [
-    { id: 'all',     name: 'All' },
-    { id: 'central', name: 'Central' },
-    { id: 'east',    name: 'East' }
-  ];
-
-  fromWarehouse: string | number | null = null;
+  fromWarehouse: string | number | null = null; // readonly in UI (name shown)
   toWarehouse:   string | number | null = null;
-  reason = '';
+  remarks = '';
 
-  // table rows
-  rows: MoveRow[] = [];
+  toWarehouseList: any;
 
-  // selected lines used by Save/Submit
-  stockLines: StockTransferLine[] = [];
-
-  constructor(private router: Router) {}
-
-  // Feather icons refresh
-  ngAfterViewInit(): void {
-    feather.replace();
-  }
-  ngAfterViewChecked(): void {
-    feather.replace();
-  }
+  constructor(
+    private router: Router,
+    private stockService: StackOverviewService,
+    private warehouseServcie: WarehouseService
+  ) {}
 
   ngOnInit(): void {
-    // Seed demo rows — replace with your API
-    this.rows = [
-      { id: 101, itemName: 'Rice 5kg',   available: 120, qty: null, batchSerial: '', remarks: '', selected: false },
-      { id: 102, itemName: 'Wheat 10kg', available: 70,  qty: null, batchSerial: '', remarks: '', selected: false },
-    ];
+    this.loadMasterItem();
   }
 
-  // ===== Badge helper (as you had) =====
-  badgeToneClasses(tone: 'blue' | 'green' | 'amber' | 'red' = 'blue') {
+  onSaveDraft(): void {
+    // build payload without selections if needed
+  }
+
+  onSubmitForApproval(): void {
+    // submit without selections if needed
+  }
+
+  private parseExpiry(src?: string): Date | null {
+    if (!src) return null;
+    if (src.startsWith('0001-01-01')) return null;
+    const d = new Date(src);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private toStockRow(api: ApiItemRow): StockRow {
+    const warehouse = api.warehouseName ?? '';
+    const item = api.name ?? api.itemName ?? '';
+    const sku = api.sku ?? null;
+    const bin = api.binName ?? '';
+    const onHand = Number(api.onHand ?? 0);
+    const reserved = Number(api.reserved ?? 0);
+    const min = Number(api.min ?? api.minQty ?? 0);
+    const available = Number(
+      api.available != null ? api.available : (onHand - reserved)
+    );
+    const expiry = this.parseExpiry(api.expiryDate);
+
+    return {
+      idKey: [api.id ?? '', warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
+      warehouse,
+      item,
+      sku,
+      bin,
+      onHand,
+      reserved,
+      min,
+      available,
+      expiry,
+      warehouseId: api.warehouseId,
+      binId: api.binId,
+      apiRow: api
+    };
+  }
+
+  loadMasterItem(): void {
+    this.stockService.GetAllStockTransferedList().subscribe({
+      next: (res: any) => {
+        const list: ApiItemRow[] = res?.isSuccess && Array.isArray(res.data) ? res.data : [];
+        this.rows = list.map(item => this.toStockRow(item));
+        this.filteredRows = [...this.rows];
+
+        // set From Warehouse name from first row if available
+        this.fromWarehouseName = this.rows.length ? this.rows[0].warehouse : '';
+
+        if (this.fromWarehouseName) {
+          this.loadToWareHouse(this.fromWarehouseName);
+        } else {
+          this.toWarehouseList = [];
+        }
+      },
+      error: (err) => {
+        console.error('Load stock transfer list failed', err);
+        this.rows = [];
+        this.filteredRows = [];
+        this.fromWarehouseName = '';
+        this.toWarehouseList = [];
+      }
+    });
+  }
+
+  loadToWareHouse(fromName: string): void {
+    this.warehouseServcie.GetNameByWarehouseAsync(fromName).subscribe({
+      next: (res: any) => {
+        this.toWarehouseList = res?.data ?? [];
+      },
+      error: (err) => {
+        console.error('Load To Warehouse failed', err);
+        this.toWarehouseList = [];
+      }
+    });
+  }
+
+  // keep trackBy for performance
+  trackByRow = (_: number, r: StockRow) => r.idKey;
+    badgeToneClasses(tone: 'blue' | 'green' | 'amber' | 'red' = 'blue') {
     const map: Record<string, { bg: string; text: string; border: string }> = {
       blue:  { bg: 'bg-blue-50',  text: 'text-blue-700',  border: 'border-blue-100' },
       green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
@@ -76,124 +158,7 @@ export class StockTransferCreateComponent implements OnInit, AfterViewInit, Afte
     return `${t.bg} ${t.text} ${t.border}`;
   }
 
-  // ===== Selection logic (checkbox version) =====
-  /** Valid when 1 ≤ qty ≤ available */
-  canSelect(r: MoveRow): boolean {
-    debugger
-    const q = Number(r.qty);
-    return Number.isFinite(q) && q >= 1 && q <= r.available;
-  }
+  cancel(){
 
-  /** Clamp qty and unselect if invalid */
-  onQtyChange(r: MoveRow): void {
-    debugger
-    if (r.qty == null || isNaN(Number(r.qty))) {
-      r.qty = null;
-    } else {
-      const q = Math.floor(Number(r.qty));
-      if (q < 1) r.qty = null;
-      else if (q > r.available) r.qty = r.available;
-      else r.qty = q;
-    }
-    if (!this.canSelect(r)) r.selected = false;
-  }
-
-  /** Count of selected rows */
-  get selectedCount(): number {
-    return this.rows.filter(r => r.selected).length;
-  }
-
-  /** Header checkbox: true when all selectable rows are selected */
-  get allSelected(): boolean {
-    debugger
-    const selectable = this.rows.filter(r => this.canSelect(r));
-    return selectable.length > 0 && selectable.every(r => r.selected);
-  }
-
-  /** For header checkbox indeterminate state */
-  get someSelected(): boolean {
-    return this.rows.some(r => r.selected);
-  }
-
-  /** Header checkbox toggle */
-  toggleAll(checked: boolean): void {
-    debugger
-    this.rows.forEach(r => {
-      if (this.canSelect(r)) r.selected = checked;
-    });
-  }
-
-  /** Buttons: select all / clear all */
-  selectAll(): void {
-    this.rows.forEach(r => {
-      if (this.canSelect(r)) r.selected = true;
-    });
-  }
-  clearAll(): void {
-    this.rows.forEach(r => (r.selected = false));
-  }
-
-  // ===== Actions =====
-  /** Build lines from selected rows */
-  private buildSelectedLines(): StockTransferLine[] {
-    return this.rows
-      .filter(r => r.selected && this.canSelect(r))
-      .map<StockTransferLine>(r => ({
-        itemId: r.id,
-        itemName: r.itemName,
-        qty: r.qty as number,
-        batchSerial: (r.batchSerial ?? '').trim() || null,
-        remarks: (r.remarks ?? '').trim() || null,
-      }));
-  }
-
-  onSaveDraft(): void {
-    this.stockLines = this.buildSelectedLines();
-
-    const payload = {
-      fromWarehouseId: this.fromWarehouse,
-      toWarehouseId: this.toWarehouse,
-      reason: (this.reason ?? '').trim() || null,
-      lines: this.stockLines
-    };
-
-    console.log('Saving draft…', payload);
-    // this.stockTransferService.saveDraft(payload).subscribe(...)
-  }
-
-  onSubmitForApproval(): void {
-    this.stockLines = this.buildSelectedLines();
-
-    // Basic header validations
-    if (!this.fromWarehouse || !this.toWarehouse) {
-      alert('Please choose both From and To warehouses.');
-      return;
-    }
-    if (this.fromWarehouse === this.toWarehouse) {
-      alert('From and To warehouses must be different.');
-      return;
-    }
-    if (this.stockLines.length === 0) {
-      alert('Please select at least one line with a valid quantity.');
-      return;
-    }
-
-    const payload = {
-      fromWarehouseId: this.fromWarehouse,
-      toWarehouseId: this.toWarehouse,
-      reason: (this.reason ?? '').trim() || null,
-      lines: this.stockLines
-    };
-
-    console.log('Submitting for approval…', payload);
-    // this.stockTransferService.submit(payload).subscribe(...)
-  }
-
-  // ===== Navigation =====
-  goToStockTransfer() {
-    this.router.navigate(['/Inventory/list-stocktransfer']);
-  }
-  cancel() {
-    this.router.navigate(['/Inventory/list-stocktransfer']);
   }
 }

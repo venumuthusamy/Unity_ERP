@@ -2,3 +2,90 @@
 @import '@core/scss/base/pages/app-user.scss';
 @import '@core/scss/angular/libs/select.component.scss';
 @import '@core/scss/angular/libs/sweet-alerts.component.scss';
+
+
+/* --- Export Modal polish --- */
+.prl-export-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.prl-export-modal .close-btn {
+  border-radius: 12px;
+  padding: 6px 10px;
+  background: #f4f7f9;
+  border: 1px solid #e6edf2;
+}
+
+.prl-export-modal .export-chip {
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  background: rgba(46,95,115,0.1);
+  color: #2E5F73;
+  display: grid; place-items: center;
+}
+
+.prl-export-modal .count-badge {
+  background: #e9f1f5;
+  color: #2E5F73;
+  border: 1px solid #dbe7ee;
+  font-weight: 600;
+}
+
+.prl-export-modal .ext-hint {
+  background: #f9fbfc;
+  border-left: 0;
+  color: #6b7e8f;
+}
+
+.rounded-left-12 { border-top-left-radius: 12px !important; border-bottom-left-radius: 12px !important; }
+.rounded-right-12 { border-top-right-radius: 12px !important; border-bottom-right-radius: 12px !important; }
+
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-export {
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.btn-export .sub {
+  font-weight: 500;
+  opacity: .8;
+  margin-left: 6px;
+  font-size: .9em;
+}
+
+.btn-export:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+
+.btn-export-excel {
+  background: linear-gradient(180deg, #25a244, #1e8a39);
+  color: #fff;
+}
+.btn-export-excel:hover { border-color: #157a2a; }
+
+.btn-export-pdf {
+  background: linear-gradient(180deg, #e74a3b, #cc3e30);
+  color: #fff;
+}
+.btn-export-pdf:hover { border-color: #b2362a; }
+
+/* make the dialog a comfy width on desktop */
+:host ::ng-deep .modal-dialog {
+  max-width: 560px;
+}

@@ -5,4 +5,7 @@ export class WarehouseApiUrls {
   public static readonly UpdateWarehouse = "/Warehouse/update";
   public static readonly DeleteWarehouse = "/Warehouse/Delete/";
   public static readonly getBinNameByIdAsync = "/Warehouse/getBinNameByIdAsync/";
+   public static readonly GetNameByWarehouseAsync = "/Warehouse/GetNameByWarehouseAsync/"; 
 }
+
+
