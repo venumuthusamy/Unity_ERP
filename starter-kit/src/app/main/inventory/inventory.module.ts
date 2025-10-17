@@ -37,6 +37,11 @@ const routes = [
     component: CreateItemMasterComponent,
     data: { animation: 'CreateItemMasterComponent' }
   },
+   {
+      path: 'Edit-itemmaster/:id',
+      component: CreateItemMasterComponent,
+      
+    },
   {
     path: 'List-itemmaster',
     component: ItemMasterListComponent,
@@ -84,6 +89,7 @@ const routes = [
     StockTakeComponent,
     StackOverviewListComponent,
     StockTakeListComponent,
+     ItemMasterListComponent,
   ],
   imports: [
     CommonModule,

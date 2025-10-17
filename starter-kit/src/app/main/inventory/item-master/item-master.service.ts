@@ -43,4 +43,17 @@ export class ItemMasterService {
   setItemMaster(item: any) {
     this.itemSource.next(item);
   }
+  getItemAudit(itemId: number) {
+  return this.http.get<{ isSuccess: boolean; data: any[] }>(this.url + ItemMasterAPIUrls.getItemAudit + itemId);
+}
+getWarehouseStock(itemId: number): Observable<any[]> {
+    return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemWarehouse+itemId);
+  }
+
+  getSupplierPrices(itemId: number): Observable<any[]> {
+    return this.http.get<any[]>(this.url +ItemMasterAPIUrls.getItemSupplier+itemId);
+  }
+  getAudit(itemId: number) {
+  return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemAudit + itemId);
+}
 }

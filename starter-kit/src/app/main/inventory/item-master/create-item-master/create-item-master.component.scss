@@ -476,6 +476,113 @@
   opacity: 0.8;
 }
 
+/* --- Inventory table polish (works with your current markup) --- */
+
+/* Wrap */
+.rounded-xl.border {
+  border-color: #e5edf2 !important;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(14, 58, 76, 0.06);
+}
+
+/* Table base */
+table.text-sm {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+/* Head */
+table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+table thead th {
+  background: #0e3a4c;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 12px;
+  white-space: nowrap;
+  border-bottom: 1px solid #0b2e3d;
+}
+
+/* Body cells */
+table tbody td {
+  padding: 10px 12px;
+  vertical-align: middle;
+  background: #fff;
+  border-top: 1px solid #f1f5f9;
+  color: #334155;
+  line-height: 1.25;
+}
+
+/* Zebra + hover */
+table tbody tr:nth-child(even) td { background: #fcfdff; }
+table tbody tr:hover td { background: #f7fbfd; }
+
+/* Numeric columns (4..9 in your layout) */
+table tbody tr > td:nth-child(4),
+table tbody tr > td:nth-child(5),
+table tbody tr > td:nth-child(6),
+table tbody tr > td:nth-child(7),
+table tbody tr > td:nth-child(8),
+table tbody tr > td:nth-child(9) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tracking chips (Batch/Serial) */
+table tbody td:nth-child(10) span {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #dbe7ee;
+  color: #0e3a4c;
+  background: #fff;
+}
+
+/* Actions cell buttons */
+table tbody td:last-child .inline-flex.w-8.h-8 {
+  border-radius: 8px;
+  transition: background-color .15s ease, transform .05s ease;
+}
+table tbody td:last-child .inline-flex.w-8.h-8:hover {
+  background: #f1f5f9;
+}
+table tbody td:last-child .inline-flex.w-8.h-8:active {
+  transform: translateY(1px);
+}
+
+/* Totals row */
+table tfoot td {
+  padding: 10px 12px;
+  background: #f6fafc;
+  color: #0e3a4c;
+  border-top: 1px solid #e3eef4;
+  font-weight: 600;
+}
+
+/* Clip long names gracefully */
+table td:nth-child(1),
+table td:nth-child(2),
+table td:nth-child(3) {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scroll container */
+.overflow-auto {
+  /* smooth scroll & avoid harsh edges for sticky head */
+  -webkit-overflow-scrolling: touch;
+}
+
+
+
 
 
 
