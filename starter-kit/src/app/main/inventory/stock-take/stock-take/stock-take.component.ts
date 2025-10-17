@@ -9,6 +9,7 @@ import * as feather from 'feather-icons';
 import Swal from 'sweetalert2';
 import { ItemMasterService } from '../../item-master/item-master.service';
 import { BinService } from '../../../master/bin/bin.service'
+import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 
 interface SelectOpt { id: number | string; name?: string; label?: string; value?: string; }
 
@@ -18,7 +19,9 @@ interface StockTakeLine {
   itemName: string | null;
   onHand: number | null;
   countedQty: number | null;
+  badCountedQty: number | null;
   barcode?: string | null;
+  reasonId: number | string | null;
   remarks?: string | null;
   _error?: string | null; // UI-only
 }
@@ -43,6 +46,7 @@ export class StockTakeComponent implements OnInit {
   takeTypeId: any;
   strategyId: any;
   freeze: boolean = false;
+  status: any
 
   lines: StockTakeLine[] = [];
 
@@ -54,12 +58,13 @@ export class StockTakeComponent implements OnInit {
   strategyCheck: boolean = false;
   stockTakeId: any = 0;
   itemList: any;
+  reasonList: any
 
 
   constructor(private router: Router, private modal: NgbModal, private stockTakeService: StockTakeService,
     private warehouseService: WarehouseService, private BinService: BinService,
     private strategyService: StrategyService, private itemMasterService: ItemMasterService,
-    private route: ActivatedRoute,
+    private route: ActivatedRoute, private StockissueService: StockIssueService,
   ) { }
 
   ngOnInit(): void {
@@ -68,39 +73,47 @@ export class StockTakeComponent implements OnInit {
       warehouse: this.warehouseService.getWarehouse(),
       bin: this.BinService.getAllBin(),
       strategy: this.strategyService.getStrategy(),
-      item: this.itemMasterService.getAllItemMaster()
+      item: this.itemMasterService.getAllItemMaster(),
+      reason: this.StockissueService.getAllStockissue()
     }).subscribe((results: any) => {
       this.warehouseTypes = results.warehouse.data;
       this.LocationTypes = results.bin.data;
       this.strategies = results.strategy.data;
       this.itemList = results.item.data;
+      this.reasonList = results.reason.data;
     });
     this.route.paramMap.subscribe((params: any) => {
       const idStr = params.get('id');
       this.stockTakeId = idStr ? Number(idStr) : 0;
-      if(this.stockTakeId){
+      if (this.stockTakeId) {
         this.stockTakeService.getStockTakeById(this.stockTakeId).subscribe((res: any) => {
-        console.log(res)
-        this.warehouseTypeId = res.data.warehouseTypeId,
-        this.takeTypeId = res.data.takeTypeId,
-        this.strategyId = res.data.strategyId,
-        this.freeze = res.data.freeze
-        this.lines = res.data.lineItems
+          console.log(res)
+          this.warehouseTypeId = res.data.warehouseTypeId,
+            this.takeTypeId = res.data.takeTypeId,
+            this.strategyId = res.data.strategyId,
+            this.freeze = res.data.freeze
+          this.status = res.data.status
+          this.lines = res.data.lineItems
+          if (this.takeTypeId == 1) {
+            this.strategyCheck = true;
+          } else {
+            this.strategyCheck = false
+          }
 
-        const arr = this.warehouseTypes.filter(x => x.id === this.warehouseTypeId);
-        const wh = arr[0];
-        const binIds = String(wh?.binID ?? '')
-          .split(',')
-          .map(s => Number(s.trim()))
-          .filter(Number.isFinite);
-        const allowedIds = new Set(binIds);
-        this.filteredLocationTypes = binIds.length
-          ? this.LocationTypes.filter(loc => allowedIds.has(Number(loc.id)))
-          : [];
-        this.locationId = res.data.locationId  
-      })
+          const arr = this.warehouseTypes.filter(x => x.id === this.warehouseTypeId);
+          const wh = arr[0];
+          const binIds = String(wh?.binID ?? '')
+            .split(',')
+            .map(s => Number(s.trim()))
+            .filter(Number.isFinite);
+          const allowedIds = new Set(binIds);
+          this.filteredLocationTypes = binIds.length
+            ? this.LocationTypes.filter(loc => allowedIds.has(Number(loc.id)))
+            : [];
+          this.locationId = res.data.locationId
+        })
       }
-      
+
     })
   }
   ngAfterViewInit(): void {
@@ -112,6 +125,7 @@ export class StockTakeComponent implements OnInit {
   }
 
   onTypeChanged(id: number) {
+    this.strategyId = null
     this.takeTypeId = id;
     if (this.takeTypeId == 1) {
       this.strategyCheck = true;
@@ -137,22 +151,40 @@ export class StockTakeComponent implements OnInit {
       r._error = null;
     }
   }
+    onUnCountChange(r: StockTakeLine): void {
+    const n = Math.floor(Number(r.badCountedQty));
+    if (!Number.isFinite(n) || n < 0) {
+      r.badCountedQty = null;
+      r._error = 'Enter a valid number (≥ 0)';
+    } else {
+      r.badCountedQty = n;
+      r._error = null;
+    }
+  }
 
   removeLine(i: number): void { this.lines.splice(i, 1); }
 
   // ===== Helpers for modal/table =====
   toNum(v: any): number { return Number(v) || 0; }
-  getVariance(r: StockTakeLine): number { return this.toNum(r.countedQty) - this.toNum(r.onHand); }
+  getVariance(r: StockTakeLine): number {
+    const good = this.toNum(r.countedQty);
+    const bad = this.toNum((r as any).badCountedQty); // or r.badQty if that's your name
+    return (good + bad) - this.toNum(r.onHand);
+  }
   signed(n: number): string { return (n >= 0 ? '+' : '') + n; }
 
   getItemName(id: number | string | null) {
     const x = this.itemList.find(i => i.id === id);
     return x?.name ?? String(id ?? '');
   }
+  getReason(id: number | string | null) {
+    const x = this.reasonList.find(i => i.id === id);
+    return x?.stockIssuesNames ?? String(id ?? '');
+  }
 
   onSubmit(): void {
-
-    if (!this.warehouseTypeId || !this.locationId || !this.takeTypeId) {
+    debugger
+    if (!this.warehouseTypeId || !this.locationId || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
       Swal.fire({
         title: "Failed",
         text: "Please Fill Mandatory Fields",
@@ -186,7 +218,7 @@ export class StockTakeComponent implements OnInit {
       locationId: this.locationId ?? null,
       takeTypeId: this.takeTypeId ?? null,
       strategyId: this.strategyId ?? null,
-      freeze: !!this.freeze
+      freeze: !!this.freeze,
     };
   }
 
@@ -197,8 +229,10 @@ export class StockTakeComponent implements OnInit {
       itemId: dto.itemId,
       itemName: dto.itemName ?? null,
       onHand: Number(dto.onHand) || 0,
-      countedQty: null,
-      barcode: dto.barcode ?? '',
+      countedQty: 0,
+      badCountedQty: 0,
+      // barcode: dto.barcode ?? '',
+      reasonId: dto.reasonId ?? '',
       remarks: dto.remarks ?? '',
     };
   }
@@ -217,7 +251,8 @@ export class StockTakeComponent implements OnInit {
     this.reviewRef = this.modal.open(this.reviewTpl, { size: 'lg', centered: true, backdrop: 'static' });
   }
 
-  onSave(): void {
+  onSave(status): void {
+    this.status = status
     debugger
     const errs: string[] = [];
 
@@ -256,19 +291,36 @@ export class StockTakeComponent implements OnInit {
       takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
       freeze: this.freeze,
-      lineItems: this.lines.map(L => ({
-        id:L.id,
-        itemId: L.itemId,
-        onHand: this.toNum(L.onHand),
-        countedQty: this.toNum(L.countedQty),
-        VarianceQty: this.toNum(L.countedQty) - this.toNum(L.onHand),
-        barcode: (L.barcode ?? '').trim() || null,
-        remarks: (L.remarks ?? '').trim() || null
-      }))
+      status: this.status,
+      lineItems: this.lines.map(L => {
+        const good = this.toNum(L.countedQty);       // usable
+        const bad = this.toNum(L.badCountedQty);    // unusable
+        const total = good + bad;
+
+        return {
+          id: L.id,
+          itemId: L.itemId,
+          onHand: this.toNum(L.onHand),
+
+          // send TOTAL counted; keep the split too (if your API accepts it)
+          countedQty: good,
+        
+          badCountedQty: bad,
+
+          VarianceQty: total - this.toNum(L.onHand),
+
+          // If you require a reason only when there’s bad qty:
+          reasonId: bad > 0 ? L.reasonId : null,
+
+          barcode: (L.barcode ?? '').trim() || null,
+          remarks: (L.remarks ?? '').trim() || null
+        };
+      })
+
     };
 
     if (this.stockTakeId) {
-        this.stockTakeService.updateStockTake(payload).subscribe((res) => {
+      this.stockTakeService.updateStockTake(payload).subscribe((res) => {
         if (res.isSuccess) {
           Swal.fire({
             title: "Hi",
@@ -281,7 +333,7 @@ export class StockTakeComponent implements OnInit {
       });
     }
     else {
-    
+
 
       this.stockTakeService.insertStockTake(payload).subscribe((res) => {
         if (res.isSuccess) {
