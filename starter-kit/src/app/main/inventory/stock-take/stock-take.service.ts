@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -16,6 +16,23 @@ export class StockTakeService {
     getStockTake(): Observable<any[]> {
         return this.http.get<any[]>(this.url + StockTakeApiUrls.GetAllStockTake);
     }
+    getWarehouseItems(req): Observable<any[]> {
+
+        let params = new HttpParams()
+            .set('warehouseId', String(req.warehouseTypeId))
+            .set('binId', String(req.locationId))
+            .set('takeTypeId', String(req.takeTypeId));
+
+        // only add strategyId if defined (optional)
+        if (req.strategyId != null) {
+            params = params.set('strategyId', String(req.strategyId));
+        }
+
+        return this.http.get<any[]>(
+            `${this.url}${StockTakeApiUrls.GetAllWarehouseItems}`,
+            { params }
+        );
+    }
 
     getStockTakeById(id: any): Observable<any[]> {
         return this.http.get<any[]>(this.url + StockTakeApiUrls.GetStockTakeById + id);
@@ -29,8 +46,11 @@ export class StockTakeService {
         return this.http.put<any>(this.url + StockTakeApiUrls.UpdateStockTake, data);
     }
 
-    deleteStockTake(id: any) {
-        return this.http.delete<any>(this.url + StockTakeApiUrls.DeleteStockTake + id);
+
+    deleteStockTake(id: number, userId: number) {
+        const url = `${this.url}${StockTakeApiUrls.DeleteStockTake}${id}`; // e.g. /api/stocktake/123
+        const params = new HttpParams().set('updatedBy', userId);
+        return this.http.delete<any>(url, { params });
     }
 
 }

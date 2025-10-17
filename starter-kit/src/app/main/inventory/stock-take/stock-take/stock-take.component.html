@@ -24,12 +24,12 @@
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Warehouse<span style="color:red">*</span></label>
                 <ng-select [items]="warehouseTypes" bindLabel="name" bindValue="id" [(ngModel)]="warehouseTypeId"
-                    placeholder="Select warehouse" class="w-100">
+                  (ngModelChange)="onWarehouseChanged($event)"  placeholder="Select warehouse" class="w-100">
                 </ng-select>
             </div>
             <div class="col-sm-6 col-md-3">
-                <label class="form-label">Location<span style="color:red">*</span></label>
-                <ng-select [items]="LocationTypes" bindLabel="name" bindValue="id" [(ngModel)]="locationId"
+                <label class="form-label">Bin/Location<span style="color:red">*</span></label>
+                <ng-select [items]="filteredLocationTypes" bindLabel="binName" bindValue="id" [(ngModel)]="locationId"
                     placeholder="Select Location" class="w-100">
                 </ng-select>
             </div>
@@ -41,7 +41,7 @@
             </div>
 
             <div class="col-sm-6 col-md-3">
-                <label class="form-label">Strategy<span style="color:red">*</span></label>
+                <label class="form-label">Strategy</label>
                 <ng-select [items]="strategies" bindLabel="strategyName" bindValue="id" [(ngModel)]="strategyId"
                     placeholder="Select strategy" class="w-100" [disabled] = "strategyCheck">
                 </ng-select>
@@ -72,11 +72,11 @@
                     <tr>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Scan/Barcode</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Item</th>
-                        <!-- <th style="background-color:#2E5F73; color:white; width:120px;">Available</th> -->
+                        <th style="background-color:#2E5F73; color:white; width:120px;">Available</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;white-space: nowrap;">Physical
                             Count</th>
                         <th style="background-color:#2E5F73; color:white;width:200px;">Remarks</th>
-                        <th style="background-color:#2E5F73; color:white; width:200px;">Action</th>
+                        <!-- <th style="background-color:#2E5F73; color:white; width:200px;">Action</th> -->
                     </tr>
                 </thead>
                 <tbody>
@@ -84,22 +84,22 @@
                         <td><input type="text" class="form-control" [(ngModel)]="r.barcode"
                                 placeholder="Scan or enter barcode" /></td>
                         <td>
-                            <ng-select [items]="items" bindLabel="name" bindValue="id" [(ngModel)]="r.itemId"
-                                 placeholder="Item" class="w-100"></ng-select>
+                            <ng-select [items]="itemList" bindLabel="name" bindValue="id" [(ngModel)]="r.itemId"
+                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
-                        <!-- <td class="text-muted">{{ r.availableQty ?? 0 }}</td> -->
+                        <td class="text-muted">{{ r.onHand ?? 0 }}</td>
                         <td>
-                            <input type="number" class="form-control" [(ngModel)]="r.counted"
+                            <input type="number" class="form-control" [(ngModel)]="r.countedQty"
                                 (ngModelChange)="onCountChange(r)" min="0" placeholder="0" />
                             <div *ngIf="r._error" class="small text-danger mt-1">{{ r._error }}</div>
                         </td>
                         <td><input type="text" class="form-control" [(ngModel)]="r.remarks" placeholder="Remarks" />
                         </td>
-                        <td class="text-center">
+                        <!-- <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeLine(i)">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                        </td>
+                        </td> -->
                     </tr>
 
                     <tr *ngIf="!lines.length">
@@ -136,7 +136,7 @@
                 <thead>
                     <tr>
                         <th>Item</th>
-                        <th class="text-end">Available</th>
+                        <th class="text-end">Available(OnHand)</th>
                         <th class="text-end">Physical Count</th>
                         <th class="text-end">Variance</th>
                         <th>Remarks</th>
@@ -145,8 +145,8 @@
                 <tbody>
                     <tr *ngFor="let r of lines">
                         <td>{{ r.itemName || getItemName(r.itemId) }}</td>
-                        <td class="text-end">{{ toNum(r.availableQty) }}</td>
-                        <td class="text-end">{{ toNum(r.counted) }}</td>
+                        <td class="text-end">{{ toNum(r.onHand) }}</td>
+                        <td class="text-end">{{ toNum(r.countedQty) }}</td>
                         <td class="text-end" [ngClass]="getVariance(r) >= 0 ? 'text-success' : 'text-danger'">
                             {{ signed(getVariance(r)) }}
                         </td>
