@@ -121,17 +121,88 @@
             </table>
         </div>
 
-
         <!-- Footer actions -->
         <div class="d-flex align-items-center pt-3 mt-3 border-top">
             <div class="d-flex align-items-center gap-2 ms-auto">
-                <button type="button" class="btn btn-outline-primary" [disabled]="!lines.length"
-                    (click)="openReview()">Review Variances</button>
+                <!-- <button type="button" class="btn btn-outline-primary" [disabled]="!lines.length"
+                    (click)="openReview()">Review Variances</button> -->
 
                 <button type="button" class="btn text-white" style="background-color:#2E5F73;" 
                     (click)="onSave(1)">Draft</button>
+            </div>
+        </div>
+
+                <!-- Left-side Stock Review button -->
+<div class="d-flex align-items-center justify-content-between mt-3">
+  <div>
+    <button
+      type="button"
+      class="btn"
+      [class]="showStockReview ? 'btn-outline-secondary' : 'btn-outline-primary'"
+      (click)="toggleStockReview()"style="background-color:#2E5F73;color:#fff">
+      <i class="fas fa-clipboard-check me-1"></i>
+      {{ showStockReview ? 'Hide Stock Review' : 'Stock Review' }}
+    </button>
+  </div>
+</div>
+
+<!-- Collapsible review panel (NO action column) -->
+<div *ngIf="showStockReview" class="mt-2 border rounded-3 p-2">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div class="d-flex align-items-center gap-2">
+      <div class="form-check me-3">
+        <input  #chkSelectAllRef class="form-check-input" type="checkbox" id="chkSelectAllRef"
+               [(ngModel)]="selectAllReview" (change)="toggleSelectAllReview()">
+        <label class="form-check-label" for="chkSelectAllRef">Select all</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th style="width:42px;background-color:#2E5F73;color: #fff;"></th>
+          <th style="background-color:#2E5F73;color: #fff;">Item</th>
+          <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">On Hand</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Usable Count</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Unusable Count</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Total Count</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;">Variance</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;">Reason</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;">Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of reviewRows">
+          <td><input type="checkbox" [(ngModel)]="r.selected"  (change)="onRowSelectedChanged()"></td>
+          <td class="text-truncate" style="max-width:220px;">
+            {{ r.itemName || getItemName(r.itemId) }}
+          </td>
+          <td class="text-end">{{ toNum(r.onHand) }}</td>
+          <td class="text-end">{{ toNum(r.countedQty) }}</td>
+          <td class="text-end">{{ toNum(r.badCountedQty) }}</td>
+          <td class="text-end">{{ toNum(r.countedQty) + toNum(r.badCountedQty) }}</td>
+          <td class="text-end" [ngClass]="getVariance(r) >= 0 ? 'text-success' : 'text-danger'">
+            {{ signed(getVariance(r)) }}
+          </td>
+          <td class="text-end"><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reasonId"
+                                 placeholder="Item" class="w-100"></ng-select></td>
+          <td class="text-end">{{ r.remarks }}</td>
+        </tr>
+
+        <tr *ngIf="!reviewRows.length">
+          <td colspan="8" class="text-center text-muted py-3">No lines to review.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+ <!-- Footer actions -->
+        <div class="d-flex align-items-center pt-3 mt-3 border-top">
+            <div class="d-flex align-items-center gap-2 ms-auto">
                 <button type="button" class="btn text-white" style="background-color:#2E5F73;" 
-                (click)="onSave(2)">Approved</button>
+                (click)="onSaveStockReview(2)">Approved</button>
             </div>
         </div>
     </div>

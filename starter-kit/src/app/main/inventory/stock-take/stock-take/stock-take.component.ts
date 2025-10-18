@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { StockTakeService } from '../stock-take.service';
@@ -24,6 +24,7 @@ interface StockTakeLine {
   reasonId: number | string | null;
   remarks?: string | null;
   _error?: string | null; // UI-only
+  selected: any
 }
 
 @Component({
@@ -53,12 +54,19 @@ export class StockTakeComponent implements OnInit {
 
 
   @ViewChild('reviewTpl', { static: true }) reviewTpl!: any;
+  @ViewChild('chkSelectAllRef') chkSelectAllRef!: ElementRef<HTMLInputElement>;
   private reviewRef?: NgbModalRef;
 
   strategyCheck: boolean = false;
   stockTakeId: any = 0;
   itemList: any;
   reasonList: any
+  showStockReview = false;
+  selectAllReview = false;
+
+  reviewRows: Array<StockTakeLine & {
+    selected?: boolean;
+  }> = [];
 
 
   constructor(private router: Router, private modal: NgbModal, private stockTakeService: StockTakeService,
@@ -89,28 +97,34 @@ export class StockTakeComponent implements OnInit {
         this.stockTakeService.getStockTakeById(this.stockTakeId).subscribe((res: any) => {
           console.log(res)
           this.warehouseTypeId = res.data.warehouseTypeId,
-            this.takeTypeId = res.data.takeTypeId,
-            this.strategyId = res.data.strategyId,
-            this.freeze = res.data.freeze
+          this.locationId = res.data.locationId,
+          this.takeTypeId = res.data.takeTypeId,
+          this.strategyId = res.data.strategyId,
+          this.freeze = res.data.freeze
           this.status = res.data.status
           this.lines = res.data.lineItems
+           this.reviewRows = (this.lines || []).map(l => ({
+        ...l,
+        selected: l.selected ?? false,   // ← default unchecked rows to false
+      }));
           if (this.takeTypeId == 1) {
             this.strategyCheck = true;
           } else {
             this.strategyCheck = false
           }
 
-          const arr = this.warehouseTypes.filter(x => x.id === this.warehouseTypeId);
-          const wh = arr[0];
+          const arr = this.warehouseTypes?.filter(x => x.id === this.warehouseTypeId);
+          const wh = arr?.[0];
           const binIds = String(wh?.binID ?? '')
             .split(',')
             .map(s => Number(s.trim()))
             .filter(Number.isFinite);
           const allowedIds = new Set(binIds);
           this.filteredLocationTypes = binIds.length
-            ? this.LocationTypes.filter(loc => allowedIds.has(Number(loc.id)))
+            ? this.LocationTypes?.filter(loc => allowedIds.has(Number(loc.id)))
             : [];
           this.locationId = res.data.locationId
+          this.toggleStockReview()
         })
       }
 
@@ -151,7 +165,7 @@ export class StockTakeComponent implements OnInit {
       r._error = null;
     }
   }
-    onUnCountChange(r: StockTakeLine): void {
+  onUnCountChange(r: StockTakeLine): void {
     const n = Math.floor(Number(r.badCountedQty));
     if (!Number.isFinite(n) || n < 0) {
       r.badCountedQty = null;
@@ -174,7 +188,7 @@ export class StockTakeComponent implements OnInit {
   signed(n: number): string { return (n >= 0 ? '+' : '') + n; }
 
   getItemName(id: number | string | null) {
-    const x = this.itemList.find(i => i.id === id);
+    const x = this.itemList?.find(i => i.id === id);
     return x?.name ?? String(id ?? '');
   }
   getReason(id: number | string | null) {
@@ -304,7 +318,7 @@ export class StockTakeComponent implements OnInit {
 
           // send TOTAL counted; keep the split too (if your API accepts it)
           countedQty: good,
-        
+
           badCountedQty: bad,
 
           VarianceQty: total - this.toNum(L.onHand),
@@ -313,7 +327,8 @@ export class StockTakeComponent implements OnInit {
           reasonId: bad > 0 ? L.reasonId : null,
 
           barcode: (L.barcode ?? '').trim() || null,
-          remarks: (L.remarks ?? '').trim() || null
+          remarks: (L.remarks ?? '').trim() || null,
+          selected: false
         };
       })
 
@@ -367,6 +382,110 @@ export class StockTakeComponent implements OnInit {
       : [];
 
   }
+
+  toggleStockReview(): void {
+    this.showStockReview = !this.showStockReview;
+    if (this.showStockReview) {
+      this.reviewRows = (this.lines || []).map(l => ({
+        ...l,
+        selected: l.selected ?? false,   // ← default unchecked rows to false
+      }));
+      this.updateSelectAllFromRows();
+    }
+  }
+
+  /** Called when header checkbox changes */
+  toggleSelectAllReview(): void {
+    (this.reviewRows || []).forEach(r => (r.selected = this.selectAllReview));
+    // no indeterminate when user explicitly toggles header
+    if (this.chkSelectAllRef) this.chkSelectAllRef.nativeElement.indeterminate = false;
+  }
+
+  /** Call this after any row checkbox change to sync header state */
+  onRowSelectedChanged(): void {
+    this.updateSelectAllFromRows();
+  }
+
+  /** Keeps header checkbox checked/indeterminate in sync with row selection */
+  private updateSelectAllFromRows(): void {
+    const total = this.reviewRows?.length || 0;
+    const selectedCount = (this.reviewRows || []).filter(r => !!r.selected).length;
+
+    this.selectAllReview = total > 0 && selectedCount === total;
+
+    // Set indeterminate when some but not all are selected
+    const indeterminate = selectedCount > 0 && selectedCount < total;
+    if (this.chkSelectAllRef) this.chkSelectAllRef.nativeElement.indeterminate = indeterminate;
+  }
+  onSaveStockReview(status: number): void {
+    this.status = status;
+
+    // Send all rows, not just selected
+    // const rows = this.reviewRows || [];
+
+    if (!this.reviewRows.length) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No lines',
+        text: 'There are no lines to send.',
+        confirmButtonColor: '#2E5F73'
+      });
+      return;
+    }
+
+    const payload = {
+      id: this.stockTakeId ?? 0,
+      warehouseTypeId: this.warehouseTypeId,
+      locationId: this.locationId,
+      takeTypeId: this.takeTypeId,
+      strategyId: this.strategyId,
+      freeze: this.freeze,
+      status: this.status,
+      lineItems: this.reviewRows.map(r => ({
+        id: r.id,
+        itemId: r.itemId,
+        onHand: this.toNum(r.onHand),
+        countedQty: this.toNum(r.countedQty),
+        badCountedQty: this.toNum(r.badCountedQty),
+        varianceQty: (this.toNum(r.countedQty) + this.toNum(r.badCountedQty)) - this.toNum(r.onHand),
+        reasonId: r.reasonId ?? null,
+        remarks: r.remarks ?? null,
+        barcode: r.barcode ?? null,
+        selected: !!r.selected,   // ← keep the flag so backend knows which were approved
+      })),
+    };
+
+    this.stockTakeService.updateStockTake(payload).subscribe({
+      next: (res: any) => {
+        if (res?.isSuccess) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Review updated',
+            text: res.message || 'Lines saved.',
+            confirmButtonColor: '#2E5F73'
+          });
+          this.showStockReview = false;
+          this.router.navigateByUrl('/Inventory/list-stocktake');
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Failed',
+            text: res?.message || 'Unable to save review.',
+            confirmButtonColor: '#2E5F73'
+          });
+        }
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Something went wrong while saving review.',
+          confirmButtonColor: '#2E5F73'
+        });
+      }
+    });
+  }
+
 
 }
 
