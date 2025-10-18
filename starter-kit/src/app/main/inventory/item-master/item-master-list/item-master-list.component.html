@@ -68,83 +68,130 @@
 
 <!-- Put the modal template anywhere in the component template -->
 <ng-template #itemViewModal let-m="modal">
-  <div class="modal-header">
-    <h5 class="modal-title">Item: {{ currentItem?.name }} ({{ currentItem?.sku }})</h5>
-    <button type="button" class="close" aria-label="Close" (click)="m.dismiss()">
+  <div class="modal-header brand-modal-header">
+ <h5 class="modal-title"
+    style="margin:0;font-weight:700;color:#2E5F73;letter-spacing:.2px;
+           display:flex;align-items:baseline;gap:6px;">
+  <span>Item:</span>
+  <span style="font-size:18px">{{ currentItem?.name || '-' }}</span>
+  <span style="opacity:.7;font-weight:600">(</span>
+  <span style="font-size:12px;background:#eaf2f5;color:#0e3a4c;border:1px solid #d5e4ea;
+               padding:1px 6px;border-radius:8px;line-height:1;">{{ currentItem?.sku || '-' }}</span>
+  <span style="opacity:.7;font-weight:600">)</span>
+</h5>
+
+
+    <button type="button" class="close" aria-label="Close" (click)="closeModal()">
       <span aria-hidden="true">&times;</span>
     </button>
   </div>
 
-  <div class="modal-body">
-
+  <div class="modal-body p-0">
     <!-- Tabs -->
-    <ul class="nav nav-pills mb-3">
+    <ul class="nav nav-pills brand-pills px-3 pt-3 mb-2">
       <li class="nav-item">
-        <a class="nav-link" [class.active]="activeTab==='warehouse'"
-           (click)="switchTab('warehouse')">View Warehouse</a>
+        <a class="nav-link"
+           [class.active]="activeTab==='warehouse'"
+           (click)="switchTab('warehouse')">
+          View Warehouse
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" [class.active]="activeTab==='supplier'"
-           (click)="switchTab('supplier')">View Supplier</a>
+        <a class="nav-link"
+           [class.active]="activeTab==='supplier'"
+           (click)="switchTab('supplier')">
+          View Supplier
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" [class.active]="activeTab==='audit'"
-           (click)="switchTab('audit')">View Audit</a>
+        <a class="nav-link"
+           [class.active]="activeTab==='audit'"
+           (click)="switchTab('audit')">
+          View Audit
+        </a>
       </li>
     </ul>
 
     <!-- Warehouse table -->
-    <div *ngIf="activeTab==='warehouse'">
-      <ngx-datatable class="bootstrap" [rows]="warehouseRows" [columnMode]="'force'"
-                     [headerHeight]="40" [rowHeight]="'auto'">
+    <div *ngIf="activeTab==='warehouse'" class="px-3 pb-3">
+      <ngx-datatable
+        class="bootstrap brand-grid"
+        [rows]="warehouseRows"
+        [columnMode]="'force'"
+        [headerHeight]="44"
+        [rowHeight]="'auto'">
         <ngx-datatable-column name="Warehouse" prop="warehouseName"></ngx-datatable-column>
         <ngx-datatable-column name="Bin" prop="binName"></ngx-datatable-column>
-        <ngx-datatable-column name="On Hand" prop="onHand"></ngx-datatable-column>
-        <ngx-datatable-column name="Reserved" prop="reserved"></ngx-datatable-column>
-        <ngx-datatable-column name="Available" prop="available"></ngx-datatable-column>
-        <ngx-datatable-column name="Min" prop="minQty"></ngx-datatable-column>
-        <ngx-datatable-column name="Max" prop="maxQty"></ngx-datatable-column>
-        <ngx-datatable-column name="Reorder" prop="reorderQty"></ngx-datatable-column>
-        <ngx-datatable-column name="Lead (days)" prop="leadTimeDays"></ngx-datatable-column>
+        <ngx-datatable-column name="On Hand" prop="onHand" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Reserved" prop="reserved" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Available" prop="available" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Min" prop="minQty" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Max" prop="maxQty" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Reorder" prop="reorderQty" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
+        <ngx-datatable-column name="Lead (days)" prop="leadTimeDays" [headerClass]="'th-right'" [cellClass]="'td-right'"></ngx-datatable-column>
         <ngx-datatable-column name="Batch" prop="batchFlag">
-          <ng-template ngx-datatable-cell-template let-value="value">{{ value ? 'Yes' : 'No' }}</ng-template>
+          <ng-template ngx-datatable-cell-template let-value="value">
+            <span class="chip" [class.chip-yes]="value" [class.chip-no]="!value">{{ value ? 'Yes' : 'No' }}</span>
+          </ng-template>
         </ngx-datatable-column>
         <ngx-datatable-column name="Serial" prop="serialFlag">
-          <ng-template ngx-datatable-cell-template let-value="value">{{ value ? 'Yes' : 'No' }}</ng-template>
+          <ng-template ngx-datatable-cell-template let-value="value">
+            <span class="chip" [class.chip-yes]="value" [class.chip-no]="!value">{{ value ? 'Yes' : 'No' }}</span>
+          </ng-template>
         </ngx-datatable-column>
       </ngx-datatable>
     </div>
 
     <!-- Supplier table -->
-    <div *ngIf="activeTab==='supplier'">
-      <ngx-datatable class="bootstrap" [rows]="supplierRows" [columnMode]="'force'"
-                     [headerHeight]="40" [rowHeight]="'auto'">
+    <div *ngIf="activeTab==='supplier'" class="px-3 pb-3">
+      <ngx-datatable
+        class="bootstrap brand-grid"
+        [rows]="supplierRows"
+        [columnMode]="'force'"
+        [headerHeight]="44"
+        [rowHeight]="'auto'">
         <ngx-datatable-column name="Supplier" prop="supplierName"></ngx-datatable-column>
-        <ngx-datatable-column name="Price" prop="price"></ngx-datatable-column>
+        <ngx-datatable-column name="Price" prop="price" ></ngx-datatable-column>
+        <ngx-datatable-column name="Barcode" prop="barcode" ></ngx-datatable-column>
       </ngx-datatable>
     </div>
 
     <!-- Audit table -->
-    <div *ngIf="activeTab==='audit'">
-      <ngx-datatable class="bootstrap" [rows]="auditRows" [columnMode]="'force'"
-                     [headerHeight]="40" [rowHeight]="'auto'">
-        <ngx-datatable-column name="Occurred (UTC)" prop="occurredAtUtc"></ngx-datatable-column>
-        <ngx-datatable-column name="Action" prop="action"></ngx-datatable-column>
+    <div *ngIf="activeTab==='audit'" class="px-3 pb-3">
+      <ngx-datatable
+        class="bootstrap brand-grid"
+        [rows]="auditRows"
+        [columnMode]="'force'"
+        [headerHeight]="44"
+        [rowHeight]="'auto'">
         <ngx-datatable-column name="User" prop="userName"></ngx-datatable-column>
-        <ngx-datatable-column name="Remarks" prop="remarks"></ngx-datatable-column>
+
+        <ngx-datatable-column name="Action" prop="action" [cellTemplate]="actionTpl"></ngx-datatable-column>
+        <ng-template #actionTpl let-value="value">
+          <span class="chip"
+                [class.chip-create]="(value||'').toUpperCase()==='CREATE'"
+                [class.chip-update]="(value||'').toUpperCase()==='UPDATE'"
+                [class.chip-delete]="(value||'').toUpperCase()==='DELETE'">
+            {{ (value || '').toUpperCase() }}
+          </span>
+        </ng-template>
+
+        <ngx-datatable-column name="Occurred (UTC)" prop="occurredAtUtc" [cellTemplate]="utcTpl"></ngx-datatable-column>
+        <ng-template #utcTpl let-value="value">
+          {{ value | date:'yyyy-MM-dd HH:mm:ss':'UTC' }} UTC
+        </ng-template>
       </ngx-datatable>
 
-      <!-- Optional detail expand: show old/new JSON on row click -->
-      <div class="mt-2 text-muted" *ngIf="selectedAudit">
-        <div class="mb-1"><strong>Old Values</strong></div>
-        <pre class="small bg-light p-2 rounded">{{ selectedAudit.oldValuesJson }}</pre>
-        <div class="mb-1"><strong>New Values</strong></div>
-        <pre class="small bg-light p-2 rounded">{{ selectedAudit.newValuesJson }}</pre>
+      <div class="audit-detail" *ngIf="selectedAudit">
+        <div class="title">Old Values</div>
+        <pre>{{ selectedAudit.oldValuesJson }}</pre>
+        <div class="title mt-2">New Values</div>
+        <pre>{{ selectedAudit.newValuesJson }}</pre>
       </div>
     </div>
-
   </div>
 </ng-template>
+
 
         <!-- Main columns (map to your API response) -->
         <!-- <ngx-datatable-column name="ID" prop="id" [width]="80"></ngx-datatable-column> -->
@@ -155,28 +202,28 @@
        
 
         <!-- Actions -->
-        <ngx-datatable-column
-          name="Action"
-          [width]="120"
-          [sortable]="false"
-          [canAutoResize]="false">
-          <ng-template let-row="row" ngx-datatable-cell-template>
-            <div class="d-flex align-items-center justify-content-center gap-2">
-              <i class="fas fa-pen text-blue-600"
-                 title="Edit"
-                 style="cursor:pointer;"
-                 (click)="editItem(row.id)"></i>
-            </div>
-          </ng-template>
-          <ng-template let-row="row" ngx-datatable-cell-template>
-            <div class="d-flex align-items-center justify-content-center gap-2">
-              <i class="fas fa-trash text-red-500"
-                 title="Delete"
-                 style="cursor:pointer;"
-                 (click)="deleterItem(row.id)"></i>
-            </div>
-          </ng-template>
-        </ngx-datatable-column>
+      <ngx-datatable-column
+  name="Action"
+  [width]="120"
+  [sortable]="false"
+  [canAutoResize]="false"
+  [resizeable]="false"
+  [draggable]="false">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <div class="d-flex align-items-center justify-content-center gap-3">
+      <i class="fas fa-pen text-blue-600"
+         title="Edit"
+         style="cursor:pointer;"
+         (click)="editItem(row.id)"></i>
+
+      <i class="fas fa-trash"
+         title="Delete"
+         style="cursor:pointer; color:#ef4444;"
+         (click)="deleteItem(row.id)"></i>
+    </div>
+  </ng-template>
+</ngx-datatable-column>
+
 
       </ngx-datatable>
     </div>

@@ -1,4 +1,13 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin, Observable } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { ItemMasterService } from '../item-master.service';
@@ -20,16 +29,19 @@ type SimpleItem = {
   label?: string | null;
   catagoryName: string;
 };
+
 type PriceRow = {
   price: number | null;
+  barcode: string | null;
   SupplierId: number | string | null;
   supplierName?: string | null;
   supplierSearch?: string | null;
 };
 
 interface Warehouse { id: number | string; name: string; }
-interface Bin { id: number | string; name?: string; binID?: number|string; binName?: string; warehouseId?: number | string; }
+interface Bin { id?: number | string; name?: string; binID?: number|string; binName?: string; warehouseId?: number | string; }
 interface SupplierLite { id: number | string; name: string; code?: string; }
+
 interface ItemMasterAudit {
   auditId: number;
   itemId: number;
@@ -39,23 +51,24 @@ interface ItemMasterAudit {
   oldValuesJson?: string|null;
   newValuesJson?: string|null;
   remarks?: string|null;
-};
+}
+
 interface ItemStockRow {
   warehouseId: number | string | null;
   binId: number | string | null;
   strategyId: number | string | null;
-  onHand: number;
-  reserved: number;
-  available: number;
+  onHand: number | null;
+  reserved: number | null;
+  available: number | null;
   min: number | null;
   max: number | null;
   reorderQty: number | null;
   leadTimeDays: number | null;
   batchFlag: boolean;
   serialFlag: boolean;
-  isApproved:boolean,
-  isTransfered:boolean,
-  stockIssueID: number
+  isApproved: boolean;
+  isTransfered: boolean;
+  stockIssueID: number;
 }
 
 @Component({
@@ -65,7 +78,8 @@ interface ItemStockRow {
   encapsulation: ViewEncapsulation.None,
 })
 export class CreateItemMasterComponent implements OnInit {
-  // Wizard steps
+
+  // ===== Wizard =====
   steps = ['Summary','Warehouses','Suppliers','Audit','Review'] as const;
   step = 0;
 
@@ -76,25 +90,30 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
     }
-     if (this.step < this.steps.length - 1) {
-    this.step++;
-    if (this.step === 3) this.loadAudits();
-  }
+    if (this.step < this.steps.length - 1) {
+      this.step++;
+      if (this.step === 3) this.loadAudits();
+    }
   }
   prev() { if (this.step > 0) this.step--; }
 
+  // ===== Edit vs Create =====
+  isEdit = false;
+  editingId: number | null = null;
 
+  // ===== Audit =====
+  audits: ItemMasterAudit[] = [];
+ expandedAudit: Record<string | number, boolean> = {};
+showRaw: Record<string | number, boolean> = {};
 
-audits: ItemMasterAudit[] = [];
-expandedAudit: Record<number, boolean> = {};
-  // Form model
+  // ===== Header model =====
   item: any = this.makeEmptyItem();
 
-  // selectors
+  // ===== Selectors =====
   selectedItemId: number | null = null;
 
-  // Pricing rows (keeping your field name: SupplierId)
- prices: PriceRow[] = [];
+  // ===== Pricing rows =====
+  prices: PriceRow[] = [];
 
   // ===== Supplier dropdown state/data =====
   supplierList: SupplierLite[] = [];
@@ -105,46 +124,9 @@ expandedAudit: Record<number, boolean> = {};
   };
   supplierDropdownOpen = false;
   filteredSuppliers: SupplierLite[] = [];
-  private activePriceIndex: number | null = null;   // <-- which row is being edited
-minDate = '';
-  // Strategies
-  strategyList:any;
+  private activePriceIndex: number | null = null;
 
-  // Suppliers/Substitutes
-  suppliers: string[] = [];
-  supplierDraft = '';
-  substitutes: string[] = [];
-  substituteDraft = '';
-
-  // Catalogs
-  accountHeads: any[] = [];
-  parentHeadList: Array<{ value: number; label: string }> = [];
-  itemsList: SimpleItem[] = [];
-  uomList: Array<{ id?: number; name: string }> = [];
-  taxCodeList: Array<{ id: number; name: string }> = [];
-  costingMethodList: Array<{ id: number; name: string }> = [];
-
-  // Warehouses/Bins
-  warehouseList: Warehouse[] = [];
-  binList: Bin[] = [];
-
-  // Per-warehouse stock
-  itemStocks: ItemStockRow[] = [];
-
-  // Modal state
-  showWhModal = false;
-  whDraft: ItemStockRow = this.makeEmptyStockDraft();
-isEditMode: boolean = false;
-editingIndex: number = -1;
-    
-  // Files
-  @ViewChild('pictureInput') pictureInput!: ElementRef<HTMLInputElement>;
-  @ViewChild('attachmentsInput') attachmentsInput!: ElementRef<HTMLInputElement>;
-
-  // Supplier search dropdown box ref
-  @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
-
-  // ===== Item search dropdown state =====
+  // ===== Item search dropdown (Summary step) =====
   modalLine: {
     itemSearch: string;
     dropdownOpen: boolean;
@@ -154,8 +136,40 @@ editingIndex: number = -1;
     dropdownOpen: false,
     filteredItems: [],
   };
- userId:any;
-  // Refs for click-outside
+
+  minDate = '';
+  userId: any;
+copied: Record<string | number, boolean> = {};
+  // ===== Catalogs & lists =====
+  strategyList: any;
+  suppliers: string[] = [];
+  supplierDraft = '';
+  substitutes: string[] = [];
+  substituteDraft = '';
+  accountHeads: any[] = [];
+  parentHeadList: Array<{ value: number; label: string }> = [];
+  itemsList: SimpleItem[] = [];
+  uomList: Array<{ id?: number; name: string }> = [];
+  taxCodeList: Array<{ id: number; name: string }> = [];
+  costingMethodList: Array<{ id: number; name: string }> = [];
+  warehouseList: Warehouse[] = [];
+  binList: Bin[] = [];
+
+  // ===== Per-warehouse stock =====
+  itemStocks: ItemStockRow[] = [];
+private brand = '#2E5F73';
+  // ===== Modal state =====
+  showWhModal = false;
+  whDraft: ItemStockRow = this.makeEmptyStockDraft();
+  isEditMode: boolean = false;
+  editingIndex: number = -1;
+
+busy: Record<string, boolean> = {};
+
+  // ===== Refs =====
+  @ViewChild('pictureInput') pictureInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('attachmentsInput') attachmentsInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchBox', { static: false }) itemSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
 
@@ -168,75 +182,51 @@ editingIndex: number = -1;
     private taxCodeService: TaxCodeService,
     private coastingmethodService: CoastingMethodService,
     private _SupplierService : SupplierService,
-    private strategyService: StrategyService
-  ) {this.userId = localStorage.getItem('id');}
+    private strategyService: StrategyService,
+    private router: Router,
+    private route: ActivatedRoute,
+  ) {
+    this.userId = localStorage.getItem('id');
+  }
 
+  // ===== Lifecycle =====
   ngOnInit(): void {
     this.setMinDate();
-    this.loadItems();
+
+    // Load static catalogs first (so selects render with options)
     this.loadCatalogs();
     this.loadWarehouses();
     this.loadCostingMethods();
     this.getAllTaxCode();
     this.getAllSupplier();
     this.getAllStrategy();
-    console.log("userid",this.userId)
+
+    // Detect :id → Edit mode
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.isEdit = true;
+      this.editingId = Number(idParam);
+      this.loadForEdit(this.editingId);
+    } else {
+      // Create mode: still load item list for the summary dropdown
+      this.loadItems();
+    }
   }
 
-  // ---------- Helpers ----------
-  private makeEmptyItem() {
-    return {
-      id: 0,
-      sku: '',
-      name: '',
-      category: '',
-      uom: '',
-      barcode: '',
-      costingMethodId: null as number | null,
-      taxCodeId: null as number | null,
-      specs: '',
-      pictureUrl: '',
-      lastCost: null,
-      isActive: true,
-      createdBy:this.userId,
-      updatedBy:this.userId,
-      expiryDate: null as string | null
-    };
-  }
-  private makeEmptyStockDraft(): ItemStockRow {
-    return {
-      warehouseId: null,
-      binId: null,
-      strategyId: null,
-      onHand: null,
-      reserved: null,
-      available: null,
-      min: null,
-      max: null,
-      reorderQty: null,
-      leadTimeDays: null,
-      batchFlag: false,
-      serialFlag: false,
-      isApproved:false,
-      isTransfered:false,
-      stockIssueID:0
-    };
-  }
-  trackByIdx = (_: any, i: number) => i;
-  trackByItemId = (_: number, it: SimpleItem) => it.id;
-  trackBySupplierId = (_: number, s: SupplierLite) => s.id;
-
+  // ======= Derived totals =======
   get totals() {
     const t = { onHand: 0, reserved: 0, available: 0 };
     for (const r of this.itemStocks) {
-      t.onHand += Number(r.onHand || 0);
-      t.reserved += Number(r.reserved || 0);
-      t.available += Math.max(0, Number(r.onHand || 0) - Number(r.reserved || 0));
+      const onHand = Number(r.onHand || 0);
+      const reserved = Number(r.reserved || 0);
+      t.onHand += onHand;
+      t.reserved += reserved;
+      t.available += Math.max(0, onHand - reserved);
     }
     return t;
   }
 
-  // ---------- Load grid ----------
+  // ======= Load list for the summary dropdown =======
   itemsTable: any[] = [];
   loadItems(): void {
     this.itemsSvc.getAllItemMaster().subscribe({
@@ -251,95 +241,175 @@ editingIndex: number = -1;
     });
   }
 
-  // ---------- Save / Clone / Archive ----------
-  async onSave(): Promise<void> {
-  if (!this.item.sku?.trim() || !this.item.name?.trim()) {
-    await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
-    return;
-  }
-debugger
-  const stocksPayload = this.itemStocks.map(r => ({
-    warehouseId: r.warehouseId,
-    binId: r.binId,
-    strategyId: r.strategyId,
-    onHand: Number(r.onHand || 0),
-    available: Number(r.available),
-    reserved: Number(r.reserved || 0),
-    minQty: Number(r.min || 0),
-    maxQty: Number(r.max || 0),
-    reorderQty: Number(r.reorderQty || 0),
-    leadTimeDays: Number(r.leadTimeDays || 0),
-    batchFlag: !!r.batchFlag,
-    serialFlag: !!r.serialFlag,
-    isApproved:false,
-    isTransfered:false,
-    stockIssueID:0
-  }));
+  // ======= Edit loader (header + stocks + prices) =======
+private loadForEdit(id: number): void {
+  debugger
+  forkJoin({
+    header: this.itemsSvc.getItemMasterById(id),
+    stocks: this.itemsSvc.getWarehouseStock(id),
+    prices: this.itemsSvc.getSupplierPrices(id),
+  } as {
+    header: Observable<any>;
+    stocks: Observable<any>;
+    prices: Observable<any>;
+  }).subscribe({
+    next: ({ header, stocks, prices }) => {
+      // ✅ Normalize header
+      const h: any = Array.isArray(header)
+        ? header[0]
+        : (header && 'data' in header ? (header as any).data : header) || {};
 
-  const payload = {
-    ...this.item,
-    itemStocks: stocksPayload,
-    prices: (this.prices ?? []).filter(p => p.price != null),
-    suppliers: this.suppliers,
-    substitutes: this.substitutes
-   
-  };
+      this.item = {
+        id: h.id,
+        sku: h.sku ?? h.itemCode ?? '',
+        name: h.name ?? h.itemName ?? '',
+        category: h.category ?? h.catagoryName ?? '',
+        uom: h.uom ?? h.uomName ?? '',
+        costingMethodId: h.costingMethodId ?? null,
+        taxCodeId: h.taxCodeId ?? null,
+        specs: h.specs ?? '',
+        pictureUrl: h.pictureUrl ?? '',
+        lastCost: h.lastCost ?? null,
+        isActive: h.isActive ?? true,
+        createdBy: this.userId,
+        updatedBy: this.userId,
+        expiryDate: this.toDateOnly(h.expiryDate)
+      };
 
-  const creating = !payload.id || payload.id <= 0;
+      // ✅ Normalize stock rows
+      const stockArr: any[] = Array.isArray(stocks)
+        ? stocks
+        : (stocks && 'data' in stocks ? (stocks as any).data : []) || [];
 
-  const onApiSuccess = (res: any) => {
-    // accept either res.isSuccess or res.issucess (typo-tolerant)
-    const ok = res?.isSuccess === true || res?.issucess === true;
+      this.itemStocks = stockArr.map((r: any) => ({
+        warehouseId: r.warehouseId,
+        binId: r.binId,
+        strategyId: r.strategyId ?? null,
+        onHand: Number(r.onHand || 0),
+        reserved: Number(r.reserved || 0),
+        available: Math.max(
+          0,
+          Number(r.available ?? (Number(r.onHand || 0) - Number(r.reserved || 0)))
+        ),
+        min: r.min ?? r.minQty ?? null,
+        max: r.max ?? r.maxQty ?? null,
+        reorderQty: r.reorderQty ?? null,
+        leadTimeDays: r.leadTimeDays ?? null,
+        batchFlag: !!r.batchFlag,
+        serialFlag: !!r.serialFlag,
+        isApproved: !!r.isApproved,
+        isTransfered: !!r.isTransfered,
+        stockIssueID: r.stockIssueID ?? 0
+      }));
 
-    if (ok) {
-      if (creating) {
-        const newId = Number(res?.data?.id ?? res?.data ?? res?.id ?? 0);
-        if (!this.item.id && newId) this.item.id = newId;
-
-        if (this.step === 3) this.loadAudits();
+        const firstWarehouseId = this.itemStocks?.[0]?.warehouseId ?? null;
+      if (firstWarehouseId != null) {
+        this.getBinsForWarehouse(firstWarehouseId);
       }
+    
+      // ✅ Normalize price rows
+      const priceArr: any[] = Array.isArray(prices)
+        ? prices
+        : (prices && 'data' in prices ? (prices as any).data : []) || [];
 
-      Swal.fire({
-        icon: 'success',
-        title: creating ? 'Created!' : 'Updated!',
-        text: res?.message || (creating ? 'Item created successfully' : 'Item updated successfully'),
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#0e3a4c'
-      });
+      this.prices = priceArr.map((p: any) => ({
+        price: p.price ?? null,
+        barcode: p.barcode ?? null,
+        SupplierId: p.supplierId ?? p.SupplierId ?? null,
+        supplierName: p.supplierName ?? p.name ?? null,
+        supplierSearch: p.supplierName ?? p.name ?? ''
+      }));
 
-      this.loadItems();
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Failed',
-        text: res?.message || (creating ? 'Create failed' : 'Update failed'),
-        confirmButtonColor: '#0e3a4c'
-      });
+      // ✅ Sync dropdown item name
+      this.modalLine.itemSearch = this.item.name || '';
+    },
+    error: () => {
+      Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' });
     }
-  };
-
-  const onApiError = (_err: any) => {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: creating ? 'Create failed' : 'Update failed',
-      confirmButtonColor: '#0e3a4c'
-    });
-  };
-
-  if (creating) {
-    this.itemsSvc.createItemMaster(payload).subscribe({
-      next: onApiSuccess,
-      error: onApiError
-    });
-  } else {
-    this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({
-      next: onApiSuccess,
-      error: onApiError
-    });
-  }
+  });
 }
- setMinDate() {
+private toDateOnly(d: any): string | null {
+  if (!d) return null;
+  // Handle Date, ISO strings like '2025-10-24T00:00:00', or '2025-10-24'
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null; // guard against bad values
+
+  // Keep the same calendar day regardless of timezone
+  const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000);
+  return local.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+}
+
+
+  // ======= Save (Create/Update) =======
+  async onSave(): Promise<void> {
+    if (!this.item.sku?.trim() || !this.item.name?.trim()) {
+      await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
+      return;
+    }
+
+    const stocksPayload = this.itemStocks.map(r => ({
+      warehouseId: r.warehouseId,
+      binId: r.binId,
+      strategyId: r.strategyId,
+      onHand: Number(r.onHand || 0),
+      available: Math.max(0, Number(r.onHand || 0) - Number(r.reserved || 0)),
+      reserved: Number(r.reserved || 0),
+      minQty: Number(r.min || 0),
+      maxQty: Number(r.max || 0),
+      reorderQty: Number(r.reorderQty || 0),
+      leadTimeDays: Number(r.leadTimeDays || 0),
+      batchFlag: !!r.batchFlag,
+      serialFlag: !!r.serialFlag,
+      isApproved: !!r.isApproved,
+      isTransfered: !!r.isTransfered,
+      stockIssueID: r.stockIssueID ?? 0
+    }));
+
+    const payload = {
+      ...this.item,
+      itemStocks: stocksPayload,
+      prices: (this.prices ?? []).filter(p => p.price != null),
+      suppliers: this.suppliers,
+      substitutes: this.substitutes
+    };
+
+    const creating = !payload.id || payload.id <= 0;
+
+    const onApiSuccess = (res: any) => {
+      const ok = res?.isSuccess === true || res?.issucess === true;
+      if (ok) {
+        if (creating) {
+          const newId = Number(res?.data?.id ?? res?.data ?? res?.id ?? 0);
+          if (!this.item.id && newId) this.item.id = newId;
+          // After create, flip into edit mode for consistency
+          this.isEdit = true;
+          this.editingId = this.item.id;
+        }
+        Swal.fire({
+          icon: 'success',
+          title: creating ? 'Created!' : 'Updated!',
+          text: res?.message || (creating ? 'Item created successfully' : 'Item updated successfully'),
+          confirmButtonColor: '#0e3a4c'
+        });
+        this.loadItems();
+      } else {
+        Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
+      }
+    };
+
+    const onApiError = (_: any) => {
+      Swal.fire({ icon: 'error', title: 'Error', text: creating ? 'Create failed' : 'Update failed', confirmButtonColor: '#0e3a4c' });
+    };
+
+    if (creating) {
+      this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });
+    } else {
+      this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
+    }
+  }
+
+  // ======= Misc UI helpers =======
+  setMinDate() {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -366,14 +436,20 @@ debugger
       .then(res=>{
         if(res.isConfirmed){
           this.itemsSvc.deleteItemMaster(id).subscribe({
-            next:_=>{ Swal.fire({ icon:'success', title:'Archived', text:'Item archived' }); this.item = this.makeEmptyItem(); this.itemStocks=[]; this.loadItems(); },
+            next:_=>{
+              Swal.fire({ icon:'success', title:'Archived', text:'Item archived' });
+              this.item = this.makeEmptyItem();
+              this.itemStocks = [];
+              this.loadItems();
+              this.isEdit = false;
+              this.editingId = null;
+            },
             error:_=> Swal.fire({ icon:'error', title:'Error', text:'Archive failed' }),
           });
         }
       });
   }
 
-  // ---------- Files ----------
   onPictureChange(ev: Event) {
     const f = (ev.target as HTMLInputElement).files?.[0];
     if (f) Swal.fire({ icon:'info', title:'Selected', text:`Picture: ${f.name}` });
@@ -382,13 +458,14 @@ debugger
     const files = (ev.target as HTMLInputElement).files ? Array.from((ev.target as HTMLInputElement).files!) : [];
     if (files.length) Swal.fire({ icon:'info', title:'Selected', text:`${files.length} attachment(s) chosen` });
   }
-onExpiryChange(e: Event) {
-  const value = (e.target as HTMLInputElement).value || null;
-  this.item.expiryDate = value;
-  this.item.createdBy = this.userId;
-  this.item.updatedBy = this.userId;
-}
-  // ---------- Select handlers ----------
+  onExpiryChange(e: Event) {
+    const value = (e.target as HTMLInputElement).value || null;
+    this.item.expiryDate = value;
+    this.item.createdBy = this.userId;
+    this.item.updatedBy = this.userId;
+  }
+
+  // ======= Select handlers =======
   onItemSelectedId(id: number | null) {
     if (!id) return;
     const picked = this.itemsList.find(x => x.id === id);
@@ -401,124 +478,131 @@ onExpiryChange(e: Event) {
   }
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
-// Open the Warehouse modal in EDIT mode, pre-filled with row i
-editLine(i: number): void {
-  const r = this.itemStocks[i];
-  if (!r) return;
 
-  this.isEditMode = true;
-  this.editingIndex = i;
-
-  // Prefill the draft with a shallow clone of the row
-  this.whDraft = {
-    warehouseId: r.warehouseId ?? null,
-    binId: r.binId ?? null,
-    strategyId: r.strategyId ?? null,
-    onHand: Number(r.onHand ?? 0),
-    reserved: Number(r.reserved ?? 0),
-    available: Math.max(0, Number(r.available ?? (Number(r.onHand ?? 0) - Number(r.reserved ?? 0)))),
-    min: r.min ?? null,
-    max: r.max ?? null,
-    reorderQty: r.reorderQty ?? null,
-    leadTimeDays: r.leadTimeDays ?? null,
-    batchFlag: !!r.batchFlag,
-    serialFlag: !!r.serialFlag,
-    isApproved: !!r.isApproved,
-    isTransfered: !!r.isTransfered,
-    stockIssueID:0
-  };
-
-  // Load bins for that warehouse so the Bin select is populated correctly
-  this.getBinsForWarehouse(this.whDraft.warehouseId);
-
-  // Show modal (re-use your existing modal)
-  this.showWhModal = true;
-  document.body.style.overflow = 'hidden';
-}
-// ---------- Warehouse modal ----------
-submitWarehouse(closeAfter: boolean): void {
-  // Always recompute available & clamp negatives
-  this.recalcDraft();
-
-  // Basic validations
-  if (!this.whDraft.warehouseId) {
-    Swal.fire({ icon: 'warning', title: 'Select warehouse' });
-    return;
+  // ======= Warehouse modal (Add/Edit row) =======
+  openWhModal(): void {
+    this.whDraft = this.makeEmptyStockDraft();
+    this.showWhModal = true;
+    document.body.style.overflow = 'hidden';
   }
-  if (!this.whDraft.binId) {
-    Swal.fire({ icon: 'warning', title: 'Select bin' });
-    return;
+  closeWhModal(): void {
+    this.showWhModal = false;
+    document.body.style.overflow = '';
   }
-  if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
-    Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' });
-    return;
-  }
-  if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) {
-    Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' });
-    return;
+  onModalRootClick(ev: MouseEvent) {
+    ev.stopPropagation();
+    const t = ev.target as HTMLElement;
+    const insideDropdown = t.closest('.prl-dropdown') || t.closest('.prl-menu');
+    if (insideDropdown) return;
+    this.modalLine.dropdownOpen = false;
   }
 
-  // Prevent duplicate Warehouse+Bin (except the same row while editing)
-  const dupIdx = this.itemStocks.findIndex(x =>
-    String(x.warehouseId) === String(this.whDraft.warehouseId) &&
-    String(x.binId) === String(this.whDraft.binId)
-  );
-  if (dupIdx !== -1 && (!this.isEditMode || dupIdx !== this.editingIndex)) {
-    Swal.fire({ icon:'warning', title:'Duplicate', text:'This Warehouse + Bin already exists.' });
-    return;
+  editLine(i: number): void {
+    const r = this.itemStocks[i];
+    if (!r) return;
+
+    this.isEditMode = true;
+    this.editingIndex = i;
+
+    this.whDraft = {
+      warehouseId: r.warehouseId ?? null,
+      binId: r.binId ?? null,
+      strategyId: r.strategyId ?? null,
+      onHand: Number(r.onHand ?? 0),
+      reserved: Number(r.reserved ?? 0),
+      available: Math.max(0, Number(r.available ?? (Number(r.onHand ?? 0) - Number(r.reserved ?? 0)))),
+      min: r.min ?? null,
+      max: r.max ?? null,
+      reorderQty: r.reorderQty ?? null,
+      leadTimeDays: r.leadTimeDays ?? null,
+      batchFlag: !!r.batchFlag,
+      serialFlag: !!r.serialFlag,
+      isApproved: !!r.isApproved,
+      isTransfered: !!r.isTransfered,
+      stockIssueID: r.stockIssueID ?? 0
+    };
+
+    this.getBinsForWarehouse(this.whDraft.warehouseId);
+    this.showWhModal = true;
+    document.body.style.overflow = 'hidden';
   }
 
-  // Normalize the row to persist
-  const normalized = {
-    warehouseId: this.whDraft.warehouseId,
-    binId: this.whDraft.binId,
-    strategyId: this.whDraft.strategyId,
-    onHand: Number(this.whDraft.onHand ?? 0),
-    reserved: Number(this.whDraft.reserved ?? 0),
-    available: Math.max(0, Number(this.whDraft.onHand ?? 0) - Number(this.whDraft.reserved ?? 0)),
-    min: this.whDraft.min ?? null,
-    max: this.whDraft.max ?? null,
-    reorderQty: this.whDraft.reorderQty ?? null,
-    leadTimeDays: this.whDraft.leadTimeDays ?? null,
-    batchFlag: !!this.whDraft.batchFlag,
-    serialFlag: !!this.whDraft.serialFlag,
-    isApproved: !!this.whDraft.isApproved,
-    isTransfered: !!this.whDraft.isTransfered
-  } as ItemStockRow;
+  submitWarehouse(closeAfter: boolean): void {
+    this.recalcDraft();
 
-  if (this.isEditMode && this.editingIndex > -1) {
-    // --- EDIT path ---
-    const next = [...this.itemStocks];
-    next[this.editingIndex] = { ...next[this.editingIndex], ...normalized };
-    this.itemStocks = next;
-
-    if (closeAfter) {
-      this.closeWhModal();
-      // reset edit flags
-      this.isEditMode = false;
-      this.editingIndex = -1;
-    } else {
-      // Switch back to add mode for quick entry, keep the same warehouse for speed
-      const keepWarehouse = this.whDraft.warehouseId;
-      this.isEditMode = false;
-      this.editingIndex = -1;
-      this.whDraft = this.makeEmptyStockDraft();
-      this.whDraft.warehouseId = keepWarehouse;
-      this.getBinsForWarehouse(this.whDraft.warehouseId);
+    if (!this.whDraft.warehouseId) {
+      Swal.fire({ icon: 'warning', title: 'Select warehouse' });
+      return;
     }
-  } else {
-    // --- ADD path (your original behavior) ---
-    this.itemStocks.push({ ...normalized });
-    if (closeAfter) this.closeWhModal();
-    else this.whDraft = this.makeEmptyStockDraft();
+    if (!this.whDraft.binId) {
+      Swal.fire({ icon: 'warning', title: 'Select bin' });
+      return;
+    }
+    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
+      Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' });
+      return;
+    }
+    if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) {
+      Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' });
+      return;
+    }
+
+    const dupIdx = this.itemStocks.findIndex(x =>
+      String(x.warehouseId) === String(this.whDraft.warehouseId) &&
+      String(x.binId) === String(this.whDraft.binId)
+    );
+    if (dupIdx !== -1 && (!this.isEditMode || dupIdx !== this.editingIndex)) {
+      Swal.fire({ icon:'warning', title:'Duplicate', text:'This Warehouse + Bin already exists.' });
+      return;
+    }
+
+    const normalized = {
+      warehouseId: this.whDraft.warehouseId,
+      binId: this.whDraft.binId,
+      strategyId: this.whDraft.strategyId,
+      onHand: Number(this.whDraft.onHand ?? 0),
+      reserved: Number(this.whDraft.reserved ?? 0),
+      available: Math.max(0, Number(this.whDraft.onHand ?? 0) - Number(this.whDraft.reserved ?? 0)),
+      min: this.whDraft.min ?? null,
+      max: this.whDraft.max ?? null,
+      reorderQty: this.whDraft.reorderQty ?? null,
+      leadTimeDays: this.whDraft.leadTimeDays ?? null,
+      batchFlag: !!this.whDraft.batchFlag,
+      serialFlag: !!this.whDraft.serialFlag,
+      isApproved: !!this.whDraft.isApproved,
+      isTransfered: !!this.whDraft.isTransfered,
+      stockIssueID: this.whDraft.stockIssueID ?? 0
+    } as ItemStockRow;
+
+    if (this.isEditMode && this.editingIndex > -1) {
+      const next = [...this.itemStocks];
+      next[this.editingIndex] = { ...next[this.editingIndex], ...normalized };
+      this.itemStocks = next;
+
+      if (closeAfter) {
+        this.closeWhModal();
+        this.isEditMode = false;
+        this.editingIndex = -1;
+      } else {
+        const keepWarehouse = this.whDraft.warehouseId;
+        this.isEditMode = false;
+        this.editingIndex = -1;
+        this.whDraft = this.makeEmptyStockDraft();
+        this.whDraft.warehouseId = keepWarehouse;
+        this.getBinsForWarehouse(this.whDraft.warehouseId);
+      }
+    } else {
+      this.itemStocks.push({ ...normalized });
+      if (closeAfter) this.closeWhModal();
+      else this.whDraft = this.makeEmptyStockDraft();
+    }
   }
-}
 
   removeWarehouseRow(i: number): void {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
   }
 
-  // ---------- Lookup helpers ----------
+  // ======= Lookups =======
   getBinsForWarehouse(id: number | string | null) {
     this.warehouseService.getBinNameByIdAsync(id).subscribe((response: any) => {
       this.binList = response.data;
@@ -531,21 +615,20 @@ submitWarehouse(closeAfter: boolean): void {
   }
 
   getBinName(id: any): string {
-    debugger
     if (id == null) return '-';
-    // support { id,name } or { binId, binName }
     const byId = this.binList.find(b => String((b.binID ?? b.id)) === String(id));
     return (byId?.binName ?? byId?.name) || '-';
   }
-getStrategyName(id: any): string {
-  if (id == null) return '-';
-  const s = (this.strategyList || []).find((x: any) => String(x.id) === String(id));
-  return s?.strategyName || s?.name || '-';
-}
+
+  getStrategyName(id: any): string {
+    if (id == null) return '-';
+    const s = (this.strategyList || []).find((x: any) => String(x.id) === String(id));
+    return s?.strategyName || s?.name || '-';
+  }
 
   getById(list: any[], id: any) { return list?.find?.(x => String(x.id)===String(id)); }
 
-  // ======= SUPPLIERS API LOAD =======
+  // ======= Suppliers API LOAD =======
   getAllSupplier() {
     this._SupplierService.GetAllSupplier().subscribe((response: any) => {
       this.supplierList = (response?.data ?? []).map((s:any) => ({
@@ -559,7 +642,7 @@ getStrategyName(id: any): string {
     });
   }
 
-  // ---------- Loads ----------
+  // ======= Catalogs =======
   loadWarehouses() {
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
@@ -573,7 +656,9 @@ getStrategyName(id: any): string {
   loadCostingMethods() {
     this.coastingmethodService.getAllCoastingMethod().subscribe((res: any) => {
       const data = res?.data ?? [];
-      this.costingMethodList = data.filter((x:any)=>x.isActive===true).map((x:any)=>({ id:x.id, name:x.costingName }));
+      this.costingMethodList = data
+        .filter((x:any)=>x.isActive===true)
+        .map((x:any)=>({ id:x.id, name:x.costingName }));
     });
   }
 
@@ -581,6 +666,12 @@ getStrategyName(id: any): string {
     this.taxCodeService.getTaxCode().subscribe((response: any) => {
       const data = response?.data ?? [];
       this.taxCodeList = data.map((t:any)=>({ id:t.id, name:t.name }));
+    });
+  }
+
+  getAllStrategy() {
+    this.strategyService.getStrategy().subscribe((response: any) => {
+      this.strategyList = response.data;
     });
   }
 
@@ -622,19 +713,21 @@ getStrategyName(id: any): string {
     return path;
   }
 
-  // ---------- Pricing ----------
-addPriceLine(): void {
-  this.prices = [...this.prices, { price: null, SupplierId: null, supplierName: null, supplierSearch: '' }];
-  this.activePriceIndex = null;
-  this.filteredSuppliers = [];
-  this.supplierDropdownOpen = false;
-}
+  // ======= Pricing =======
+  addPriceLine(): void {
+    this.prices = [
+      ...this.prices,
+      { price: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }
+    ];
+    this.activePriceIndex = null;
+    this.filteredSuppliers = [];
+    this.supplierDropdownOpen = false;
+  }
 
   removePriceLine(i: number): void {
     this.prices = this.prices.filter((_, idx) => idx !== i);
   }
 
-  // ---------- Suppliers/Substitutes ----------
   addSupplier(): void {
     const v = (this.supplierDraft || '').trim();
     if (!v) {
@@ -644,11 +737,7 @@ addPriceLine(): void {
     if (!this.suppliers.includes(v)) this.suppliers = [...this.suppliers, v];
     this.supplierDraft = '';
   }
-  getAllStrategy() {
-    this.strategyService.getStrategy().subscribe((response: any) => {
-      this.strategyList = response.data;
-    });
-  }
+
   addSubstitute(): void {
     const v = (this.substituteDraft || '').trim();
     if (!v) return;
@@ -656,7 +745,7 @@ addPriceLine(): void {
     this.substituteDraft = '';
   }
 
-  // ====== Item Search Dropdown logic ======
+  // ======= Item Search Dropdown logic =======
   onModalItemFocus(open: boolean = true): void {
     this.modalLine.dropdownOpen = open;
     if (open) {
@@ -685,59 +774,46 @@ addPriceLine(): void {
     this.modalLine.dropdownOpen = false;
   }
 
-  // ====== Supplier Search Dropdown logic ======
-filterSuppliersForRow(i: number): void {
-  const q = (this.prices[i]?.supplierSearch || '').toLowerCase().trim();
-  this.filteredSuppliers = !q
-    ? this.supplierList.slice(0, 20)
-    : this.supplierList.filter(s =>
-        (s.name && s.name.toLowerCase().includes(q)) ||
-        (s.code && s.code.toLowerCase().includes(q)) ||
-        String(s.id).toLowerCase().includes(q)
-      );
-}
+  // ======= Supplier Search Dropdown logic =======
+  filterSuppliersForRow(i: number): void {
+    const q = (this.prices[i]?.supplierSearch || '').toLowerCase().trim();
+    this.filteredSuppliers = !q
+      ? this.supplierList.slice(0, 20)
+      : this.supplierList.filter(s =>
+          (s.name && s.name.toLowerCase().includes(q)) ||
+          (s.code && s.code.toLowerCase().includes(q)) ||
+          String(s.id).toLowerCase().includes(q)
+        );
+  }
 
-  /** When a result is clicked, fill the global input AND the active price line */
- 
-selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
-  ev?.stopPropagation();
-  const row = this.prices[i];
-  if (!row) return;
+  selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
+    ev?.stopPropagation();
+    const row = this.prices[i];
+    if (!row) return;
 
-  row.SupplierId = s.id;
-  row.supplierName = s.name;
-  row.supplierSearch = s.name;
+    row.SupplierId = s.id;
+    row.supplierName = s.name;
+    row.supplierSearch = s.name;
 
-  // keep dropdown scoped to the active row
-  this.activePriceIndex = i;
-  this.supplierDropdownOpen = false;
-}
+    this.activePriceIndex = i;
+    this.supplierDropdownOpen = false;
+  }
 
-  // ---------- Global focus & click handling ----------
-  /** detect which pricing row's supplier input is focused (no HTML change needed) */
+  // ======= Global focus & click handling =======
   @HostListener('document:focusin', ['$event'])
   onFocusIn(ev: FocusEvent) {
-    const target = ev.target as HTMLElement;
+    const target = ev.target as HTMLInputElement;
     if (!target) return;
 
-    // Only on the supplier search input
-    if ((target as HTMLInputElement).name === 'supplierSearch') {
+    if (target.name?.startsWith('supplierSearch')) {
       this.supplierDropdownOpen = true;
 
-      // find nearest TR and compute its index among tbody rows (matches *ngFor index)
       const tr = target.closest('tr');
-      if (tr) {
-        const tbody = tr.parentElement;
-        if (tbody) {
-          const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
-          const idx = rows.indexOf(tr);
-          this.activePriceIndex = idx >= 0 ? idx : null;
-        }
+      if (tr && tr.parentElement) {
+        const rows = Array.from(tr.parentElement.querySelectorAll(':scope > tr'));
+        const idx = rows.indexOf(tr);
+        this.activePriceIndex = idx >= 0 ? idx : null;
       }
-
-      // prime list if empty
-     // const q = (this.modalLine1.supplierSearch || '').trim();
-     // if (q) this.filterSuppliersForRow(); else this.filteredSuppliers = this.supplierList.slice(0, 20);
     }
   }
 
@@ -745,45 +821,60 @@ selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
   onDocumentClick(ev: MouseEvent) {
     const t = ev.target as Node;
 
-    // Item dropdown outside-click
     const itemBox = this.itemSearchBox?.nativeElement;
     if (itemBox && !itemBox.contains(t)) {
       this.modalLine.dropdownOpen = false;
     }
 
-    // Supplier dropdown outside-click
     const supplierBox = this.supplierSearchBox?.nativeElement;
     if (supplierBox && !supplierBox.contains(t)) {
       this.supplierDropdownOpen = false;
     }
   }
 
-  // ---------- Modal open/close ----------
-  openWhModal(): void {
-    this.whDraft = this.makeEmptyStockDraft();
-    this.showWhModal = true;
-    document.body.style.overflow = 'hidden';
-  }
-
-  closeWhModal(): void {
-    this.showWhModal = false;
-    document.body.style.overflow = '';
-  }
-
-  
-
-  onModalRootClick(ev: MouseEvent) {
-    ev.stopPropagation();
-    const t = ev.target as HTMLElement;
-    const insideDropdown = t.closest('.prl-dropdown') || t.closest('.prl-menu');
-    if (insideDropdown) return;
-    this.modalLine.dropdownOpen = false;
-  }
-
   @HostListener('document:keydown.escape', ['$event'])
   onEsc(_e: KeyboardEvent) {}
 
-  // ---------- small utilities ----------
+  // ======= Small utilities =======
+  private makeEmptyItem() {
+    return {
+      id: 0,
+      sku: '',
+      name: '',
+      category: '',
+      uom: '',
+      costingMethodId: null as number | null,
+      taxCodeId: null as number | null,
+      specs: '',
+      pictureUrl: '',
+      lastCost: null,
+      isActive: true,
+      createdBy: this.userId,
+      updatedBy: this.userId,
+      expiryDate: null as string | null
+    };
+  }
+
+  private makeEmptyStockDraft(): ItemStockRow {
+    return {
+      warehouseId: null,
+      binId: null,
+      strategyId: null,
+      onHand: null,
+      reserved: null,
+      available: null,
+      min: null,
+      max: null,
+      reorderQty: null,
+      leadTimeDays: null,
+      batchFlag: false,
+      serialFlag: false,
+      isApproved: false,
+      isTransfered: false,
+      stockIssueID: 0
+    };
+  }
+
   recalcDraft(): void {
     const onHand = Math.max(0, Number(this.whDraft.onHand || 0));
     const reserved = Math.max(0, Number(this.whDraft.reserved || 0));
@@ -791,30 +882,233 @@ selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
     this.whDraft.reserved = reserved;
     this.whDraft.available = Math.max(0, onHand - reserved);
   }
+
   loadAudits(): void {
-  const id = Number(this.item?.id || 0);
-  if (!id) { this.audits = []; return; }
-  this.itemsSvc.getItemAudit(id).subscribe({
-    next: r => this.audits = r?.data ?? [],
-    error: _ => this.audits = []
-  });
+    const id = Number(this.item?.id || 0);
+    if (!id) { this.audits = []; return; }
+    this.itemsSvc.getItemAudit(id).subscribe({
+      next: r => this.audits = r?.data ?? [],
+      error: _ => this.audits = []
+    });
+  }
+
+  badgeTone(a: string) {
+    switch (a) {
+      case 'CREATE': return 'bg-green-100 text-green-700 border-green-200';
+      case 'UPDATE': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'DELETE': return 'bg-red-100 text-red-700 border-red-200';
+      default:       return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  }
+
+  // diffs(a: ItemMasterAudit) {
+  //   const before = a.oldValuesJson ? JSON.parse(a.oldValuesJson) : {};
+  //   const after  = a.newValuesJson ? JSON.parse(a.newValuesJson) : {};
+  //   const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+  //   return keys
+  //     .map(k => ({ field: k, before: before[k], after: after[k] }))
+  //     .filter(r => a.action !== 'UPDATE' || r.before !== r.after);
+  // }
+
+  // ======= Nav =======
+  onGoToItemList(): void {
+    this.router.navigate(['/Inventory/List-itemmaster']);
+  }
+chipStyle(action?: string) {
+  const a = (action || '').toUpperCase();
+  // colors per action
+  const map: any = {
+    CREATE: { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46' },   // green
+    UPDATE: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },   // amber
+    DELETE: { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' },   // red
+    DEFAULT:{ bg: '#F1F7F9', border: '#DBE7EE', text: this.brand }   // brand
+  };
+  const c = map[a] || map.DEFAULT;
+
+  return {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '9999px',
+    fontSize: '10px',
+    fontWeight: 700,
+    letterSpacing: '.02em',
+    textTransform: 'uppercase',
+    border: `1px solid ${c.border}`,
+    background: c.bg,
+    color: c.text,
+    lineHeight: '1'
+  } as any;
 }
 
-badgeTone(a: string) {
-  switch (a) {
-    case 'CREATE': return 'bg-green-100 text-green-700 border-green-200';
-    case 'UPDATE': return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'DELETE': return 'bg-red-100 text-red-700 border-red-200';
-    default:       return 'bg-gray-100 text-gray-700 border-gray-200';
+userPillStyle = {
+  display: 'inline-block',
+  padding: '2px 8px',
+  borderRadius: '9999px',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#111827',
+  background: '#F3F4F6',
+  border: '1px solid #E5E7EB',
+  lineHeight: '1.3'
+} as any;
+
+avatarStyle(name?: string) {
+  // subtle colored circle with brand border
+  return {
+    display: 'inline-grid',
+    placeItems: 'center',
+    width: '20px',
+    height: '20px',
+    borderRadius: '9999px',
+    fontSize: '10px',
+    fontWeight: 700,
+    color: '#fff',
+    background: this.brand,
+    border: '1px solid #dbe7ee',
+    boxShadow: '0 1px 0 rgba(0,0,0,.03)',
+    marginRight: '6px'
+  } as any;
+}
+
+initials(full: string) {
+  if (!full) return '?';
+  const parts = full.trim().split(/\s+/);
+  const first = parts[0]?.[0] || '';
+  const last  = parts[1]?.[0] || '';
+  return (first + last).toUpperCase();
+}
+
+toggleDetails(id: string | number) {
+  this.expandedAudit[id] = !this.expandedAudit[id];
+}
+
+/** Pretty-print JSON that may be null or a string/object */
+prettyJson(payload: any): string {
+  if (!payload) return '—';
+  try {
+    const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    return JSON.stringify(obj, null, 2);
+  } catch {
+    // already a string or invalid JSON
+    return String(payload);
   }
 }
 
-diffs(a: ItemMasterAudit) {
-  const before = a.oldValuesJson ? JSON.parse(a.oldValuesJson) : {};
-  const after  = a.newValuesJson ? JSON.parse(a.newValuesJson) : {};
-  const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
-  return keys
-    .map(k => ({ field: k, before: before[k], after: after[k] }))
-    .filter(r => a.action !== 'UPDATE' || r.before !== r.after);
+
+
+private valueToText(v: any): string {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
 }
+ safeParse(x: any) {
+  if (!x) return null;
+  try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return x; }
+}
+async copyJson(a: any) {
+  const payload = {
+    action: a.action,
+    occurredAtUtc: a.occurredAtUtc,
+    user: a.userName || a.userId,
+    before: this.safeParse(a.oldValuesJson),
+    after: this.safeParse(a.newValuesJson)
+  };
+  const text = JSON.stringify(payload, null, 2);
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'success',
+      title: 'Copied to clipboard',
+      showConfirmButton: false,
+      timer: 1200,
+      background: '#f5fafc',
+      color: '#2E5F73'
+    });
+  } catch {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'error',
+      title: 'Copy failed',
+      showConfirmButton: false,
+      timer: 1500
+    });
+  }
+}
+downloadJson(a: any) {
+  const blob = new Blob(
+    [JSON.stringify({
+      action: a.action,
+      occurredAtUtc: a.occurredAtUtc,
+      user: a.userName || a.userId,
+      before: this.safeParse(a.oldValuesJson),
+      after: this.safeParse(a.newValuesJson)
+    }, null, 2)],
+    { type: 'application/json' }
+  );
+  const url = URL.createObjectURL(blob);
+  const aTag = document.createElement('a');
+  aTag.href = url;
+  aTag.download = `audit_${a.auditId || a.occurredAtUtc}.json`;
+  aTag.click();
+  URL.revokeObjectURL(url);
+}
+
+keyOf(a: any, index: number): string {
+  return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
+}
+
+isExpanded(a: any, index: number): boolean {
+  return !!this.expandedAudit[this.keyOf(a, index)];
+}
+
+
+
+toggleRaw(a: any, index: number) {
+  const k = this.keyOf(a, index);
+  this.showRaw[k] = !this.showRaw[k];
+}
+
+// normalize action check
+isUpdate(a: any): boolean {
+  return (a?.action || '').toString().toUpperCase() === 'UPDATE';
+}
+
+// safer parse
+
+
+
+// build diffs; if parsing fails or no changes, returns []
+diffs(a: any): Array<{ field: string; before: any; after: any }> {
+  const oldObj = this.safeParse(a?.oldValuesJson) || {};
+  const newObj = this.safeParse(a?.newValuesJson) || {};
+  const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
+  const rows = keys
+    .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
+    .map(k => ({
+      field: k,
+      before: this.valueToText(oldObj[k]),
+      after: this.valueToText(newObj[k]),
+    }));
+  return rows; // empty array -> template shows "No field-level changes..."
+}
+
+
+
+
+
+
 }
