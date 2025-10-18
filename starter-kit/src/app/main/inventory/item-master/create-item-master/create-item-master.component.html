@@ -1,3 +1,12 @@
+<button (click)="onGoToItemList()"
+        class="btn position-relative d-flex align-items-center justify-content-center"
+        style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
+  <i class="fas fa-arrow-left position-absolute"
+     style="left:0.75rem; top:50%; transform:translateY(-50%);"
+     aria-hidden="true"></i>
+  <span>Go to ItemMaster list</span>
+</button>
+
 <section class="mx-auto max-w-7xl p-1 ui-compact pr-typography">
   <!-- SINGLE CARD -->
   <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
@@ -92,10 +101,10 @@
           </div>
 
           <!-- Barcode -->
-          <div>
+          <!-- <div>
             <label class="text-xs font-semibold text-gray-600">Barcode(s)</label>
             <input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="item.barcode" name="barcode" placeholder="Comma-separated if multiple"/>
-          </div>
+          </div> -->
 
           <!-- Costing -->
           <div>
@@ -147,53 +156,73 @@
 
      <div class="overflow-auto rounded-xl border">
   <!-- bump min width a bit since we add one column -->
-  <table class="w-full min-w-[980px] text-sm">
+  <table class="w-full table-auto">
     <thead class="bg-[#0e3a4c] text-white">
       <tr>
-        <th class="px-3 py-2 text-left">Warehouse</th>
-        <th class="px-3 py-2 text-left">Bin / Location</th>
+        <th class="px-3 py-2 text-center">Warehouse</th>
+        <th class="px-3 py-2 text-center">Bin / Location</th>
 
         <!-- NEW: Strategy -->
-        <th class="px-3 py-2 text-left">Strategy</th>
+        <th class="px-3 py-2 text-center">Strategy</th>
 
-        <th class="px-3 py-2 text-right">On Hand</th>
-        <th class="px-3 py-2 text-right">Reserved</th>
-        <th class="px-3 py-2 text-right">Available</th>
-        <th class="px-3 py-2 text-right">Min</th>
-        <th class="px-3 py-2 text-right">Max</th>
-        <th class="px-3 py-2 text-right">Reorder / Lead</th>
+        <th class="px-3 py-2 text-center">On Hand</th>
+        <th class="px-3 py-2 text-center">Reserved</th>
+        <th class="px-3 py-2 text-center">Available</th>
+        <th class="px-3 py-2 text-center">Min</th>
+        <th class="px-3 py-2 text-center">Max</th>
+        <th class="px-3 py-2 text-center">Reorder / Lead</th>
         <th class="px-3 py-2">Tracking</th>
-        <th class="px-3 py-2 text-center">Actions</th>
+        <th class="px-3 py-2 text-center">Action Buttons</th>
       </tr>
     </thead>
 
     <tbody>
       <tr *ngFor="let r of itemStocks; let i=index; trackBy: trackByIdx" class="border-b">
-        <td class="px-3 py-2">{{ getWarehouseName(r.warehouseId) }}</td>
-        <td class="px-3 py-2">{{ getBinName(r.binId) }}</td>
+        <td class="px-3 py-2 text-center">{{ getWarehouseName(r.warehouseId) }}</td>
+        <td class="px-3 py-2 text-center">{{ getBinName(r.binId) }}</td>
 
         <!-- NEW: Strategy -->
-        <td class="px-3 py-2">{{ getStrategyName(r.strategyId) }}</td>
+        <td class="px-3 py-2 text-center">{{ getStrategyName(r.strategyId) }}</td>
 
-        <td class="px-3 py-2 text-right">{{ r.onHand }}</td>
-        <td class="px-3 py-2 text-right">{{ r.reserved }}</td>
-        <td class="px-3 py-2 text-right">{{ r.available }}</td>
-        <td class="px-3 py-2 text-right">{{ r.min ?? 0 }}</td>
-        <td class="px-3 py-2 text-right">{{ r.max ?? 0 }}</td>
-        <td class="px-3 py-2 text-right">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
+        <td class="px-3 py-2 text-center">{{ r.onHand }}</td>
+        <td class="px-3 py-2 text-center">{{ r.reserved }}</td>
+        <td class="px-3 py-2 text-center">{{ r.available }}</td>
+        <td class="px-3 py-2 text-center">{{ r.min ?? 0 }}</td>
+        <td class="px-3 py-2 text-center">{{ r.max ?? 0 }}</td>
+        <td class="px-3 py-2 text-center">{{ r.reorderQty ?? 0 }} / {{ r.leadTimeDays ?? 0 }}</td>
         <td class="px-3 py-2">
           <span *ngIf="r.batchFlag" class="mr-1">Batch</span>
           <span *ngIf="r.serialFlag">Serial</span>
           <span *ngIf="!r.batchFlag && !r.serialFlag" class="text-gray-400">—</span>
         </td>
-        <td class="px-3 py-2 text-center">
+        <!-- <td class="px-3 py-2 text-center">
           <button type="button" (click)="editLine(i)" class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 mr-1" title="Edit" aria-label="Edit line">
             <i class="fas fa-pen text-blue-600"></i>
           </button>
           <button type="button" (click)="removeWarehouseRow(i)" class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100" title="Remove" aria-label="Remove line">
             <i class="fas fa-trash text-red-500"></i>
           </button>
-        </td>
+        </td> -->
+         <td class="px-3 py-2 text-center">
+                <button
+                  type="button"
+                  (click)="editLine(i)"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 mr-1"
+                  title="Edit"
+                  aria-label="Edit line"
+                >
+                  <i class="fas fa-pen text-blue-600"></i>
+                </button>
+                <button
+                  type="button"
+                 (click)="removeWarehouseRow(i)"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100"
+                  title="Remove"
+                  aria-label="Remove line"
+                >
+                  <i class="fas fa-trash text-red-500"></i>
+                </button>
+              </td>
       </tr>
 
       <tr *ngIf="!itemStocks?.length">
@@ -204,10 +233,10 @@
     <tfoot *ngIf="itemStocks?.length">
       <tr class="bg-gray-50 font-semibold">
         <!-- was colspan="2"; now 3 to cover Warehouse + Bin + Strategy -->
-        <td class="px-3 py-2 text-right" colspan="3">Totals</td>
-        <td class="px-3 py-2 text-right">{{ totals.onHand }}</td>
-        <td class="px-3 py-2 text-right">{{ totals.reserved }}</td>
-        <td class="px-3 py-2 text-right">{{ totals.available }}</td>
+        <td class="px-3 py-2 text-center" colspan="3">Totals</td>
+        <td class="px-3 py-2 text-center">{{ totals.onHand }}</td>
+        <td class="px-3 py-2 text-center">{{ totals.reserved }}</td>
+        <td class="px-3 py-2 text-center">{{ totals.available }}</td>
         <td class="px-3 py-2 text-right"></td>
         <td class="px-3 py-2 text-right"></td>
         <td class="px-3 py-2 text-right"></td>
@@ -222,16 +251,16 @@
       </div>
 
       <!-- ===== STEP 2: Suppliers ===== -->
-      <div *ngIf="step === 2" class="rounded-xl border p-2">
+      <div *ngIf="step === 2" class="rounded-xl border p-2 prl-card-allow-overflow">
         <h3 class="text-sm font-semibold text-gray-800 mb-1">Unit Prices</h3>
 
-        <div class=" rounded-xl border">
-          <table class="w-full  text-sm">
+        <div class=" rounded-xl border prl-table-overflow">
+          <table class=" text-sm">
             <thead class="bg-[#0e3a4c] text-white">
               <tr>
                 <th class="px-3 py-2 text-left">Supplier</th>
                 <th class="px-3 py-2 text-left">Price</th>
-                
+                <th class="px-3 py-2 text-left">Barcode</th>
                 <th class="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
@@ -247,23 +276,23 @@
       (focus)="supplierDropdownOpen = true; activePriceIndex = i; filterSuppliersForRow(i)"
       (input)="filterSuppliersForRow(i)"
       autocomplete="off"
-      class="prl-input pr-10"
+      class="prl-input  overflow-y-auto"
       placeholder="Search supplier"
+      [appendTo]="'body'"
     />
 
-    <!-- results -->
     <div *ngIf="supplierDropdownOpen && filteredSuppliers?.length && activePriceIndex===i" class="prl-menu">
       <div
         *ngFor="let s of filteredSuppliers; trackBy: trackBySupplierId"
         (click)="selectSupplierForRow(i, s, $event)"
-        class="prl-mi prl-mi-split"
+        class="prl-mi prl-mi-split overflow-y-auto"
       >
         <span class="truncate">{{ s.name }}</span>
         <small class="prl-muted ml-3">#{{ s.code || s.id }}</small>
       </div>
     </div>
 
-    <!-- no matches -->
+   
     <div
       *ngIf="supplierDropdownOpen && activePriceIndex===i
              && (!filteredSuppliers || !filteredSuppliers.length)
@@ -278,7 +307,12 @@
                 <td class="px-3 py-2">
                   <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.price" name="price-{{i}}" placeholder="0.00">
                 </td>
-               
+                <td>
+               <div>
+            
+            <input class="w-full rounded-xl border px-3 py-2 text-sm" [(ngModel)]="p.barcode" name="barcode" placeholder="Comma-separated if multiple"/>
+          </div>
+          </td>
                 <td class="px-3 py-2">
                   <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
                     <i class="fa fa-trash mr-1"></i> Remove
@@ -302,10 +336,10 @@
       <!-- <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-600">
         Audit trail: created/updated by X at Y (demo)
       </div> -->
-      <div *ngIf="step === 3" class="rounded-xl border p-2 text-sm text-gray-700">
+    <div *ngIf="step === 3" class="rounded-xl border p-3 text-sm text-gray-700">
   <div class="flex items-center justify-between mb-2">
-    <h3 class="text-sm font-semibold text-gray-800">Audit trail</h3>
-    <div class="flex items-center gap-2">
+    <h3 class="text-base font-semibold text-[#2E5F73]">Audit trail</h3>
+    <div class="flex items-center gap-3">
       <span *ngIf="item?.id" class="text-xs text-gray-500">Item #{{ item.id }}</span>
       <button class="px-2 py-1 rounded border hover:bg-gray-50" (click)="loadAudits()">Refresh</button>
     </div>
@@ -314,57 +348,117 @@
   <div *ngIf="!item?.id" class="text-gray-500">Save the item first to see its audit history.</div>
 
   <ng-container *ngIf="item?.id">
-    <div *ngIf="!audits.length" class="text-gray-500">No audit entries yet.</div>
+    <div *ngIf="!audits?.length" class="text-gray-500">No audit entries yet.</div>
 
-    <ul class="space-y-2" *ngIf="audits.length">
-      <li *ngFor="let a of audits" class="rounded-lg border p-2">
+    <ul class="space-y-3" *ngIf="audits?.length">
+      <li *ngFor="let a of audits" class="rounded-2xl border p-1 shadow-sm">
+        <!-- header row -->
         <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 flex-wrap">
+  <!-- Action chip (inline CSS) -->
+  <span [ngStyle]="chipStyle(a.action)">{{ a.action }}</span>
+
+  <!-- Timestamp -->
+  <span style="color:#4b5563;">{{ a.occurredAtUtc | date:'yyyy-MM-dd HH:mm:ss' }} UTC</span>
+
+  <!-- dot -->
+  <span style="display:inline-block;width:4px;height:4px;margin:0 8px;border-radius:9999px;background:#9ca3af;vertical-align:middle;"></span>
+
+  <!-- User (avatar + pill) -->
+  <ng-container *ngIf="a.userId">
+    <span [ngStyle]="avatarStyle(a.userName)" title="User">
+      {{ initials(a.userName || ('User ' + a.userId)) }}
+    </span>
+    <span [ngStyle]="userPillStyle">
+      {{ a.userName || ('User #' + a.userId) }}
+    </span>
+  </ng-container>
+
+  <!-- Remarks (optional) -->
+  <ng-container *ngIf="a.remarks">
+    <span style="display:inline-block;width:4px;height:4px;margin:0 8px;border-radius:9999px;background:#e5e7eb;vertical-align:middle;"></span>
+    <span style="color:#4b5563;">{{ a.remarks }}</span>
+  </ng-container>
+</div>
+
+
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
-                  [ngClass]="badgeTone(a.action)">
-              {{ a.action }}
-            </span>
-            <span class="text-gray-600">
-              {{ a.occurredAtUtc | date:'yyyy-MM-dd HH:mm:ss' }} UTC
-              <ng-container *ngIf="a.userId"> · User #{{ a.userId }}</ng-container>
-              <ng-container *ngIf="a.remarks"> · {{ a.remarks }}</ng-container>
-            </span>
+            <button class="link" (click)="toggleDetails(a.auditId)">
+              {{ expandedAudit[a.auditId] ? 'Hide details' : 'View details' }}
+              <i class="fas" [class.fa-chevron-up]="expandedAudit[a.auditId]" [class.fa-chevron-down]="!expandedAudit[a.auditId]"></i>
+            </button>
           </div>
-          <button class="text-[#2E5F73] hover:underline"
-                  (click)="expandedAudit[a.auditId] = !expandedAudit[a.auditId]">
-            {{ expandedAudit[a.auditId] ? 'Hide details' : 'View details' }}
-          </button>
         </div>
 
-        <div *ngIf="expandedAudit[a.auditId]" class="mt-2">
-          <div *ngIf="a.action === 'UPDATE'; else snapshotBlock">
-            <table class="w-full text-xs border">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="text-left px-2 py-1">Field</th>
-                  <th class="text-left px-2 py-1">Before</th>
-                  <th class="text-left px-2 py-1">After</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let d of diffs(a)" class="border-t">
-                  <td class="px-2 py-1 font-medium">{{ d.field }}</td>
-                  <td class="px-2 py-1 text-gray-600">{{ d.before }}</td>
-                  <td class="px-2 py-1 text-gray-900">{{ d.after }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <!-- body -->
+        <div *ngIf="expandedAudit[a.auditId]" class="mt-3 space-y-3">
+          <!-- UPDATE: show diff table by default -->
+          <ng-container *ngIf="a.action === 'UPDATE'; else snapshotBlock">
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">Showing changed fields only</div>
+              <div class="flex gap-2">
+              <button class="btn-muted" [disabled]="busy[a.auditId]" (click)="copyJson(a)">
+  {{ busy[a.auditId] ? 'Copying…' : 'Copy JSON' }}
+</button>
+<span *ngIf="copied[a.auditId]" class="ml-2 text-xs text-green-700">Copied!</span>
 
-          <ng-template #snapshotBlock>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="border rounded p-2">
-                <div class="text-[11px] font-semibold mb-1">Before</div>
-                <pre class="text-[11px] whitespace-pre-wrap break-words">{{ a.oldValuesJson }}</pre>
+                <button class="btn-muted" (click)="downloadJson(a)">Download</button>
               </div>
-              <div class="border rounded p-2">
-                <div class="text-[11px] font-semibold mb-1">After</div>
-                <pre class="text-[11px] whitespace-pre-wrap break-words">{{ a.newValuesJson }}</pre>
+            </div>
+
+            <div class="overflow-auto rounded-lg border">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="text-left px-3 py-2 w-40">Field</th>
+                    <th class="text-left px-3 py-2">Before</th>
+                    <th class="text-left px-3 py-2">After</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let d of diffs(a)" class="border-t">
+                    <td class="px-3 py-2 font-medium text-gray-700">{{ d.field }}</td>
+                    <td class="px-3 py-2 text-gray-600 break-words">{{ d.before }}</td>
+                    <td class="px-3 py-2 text-gray-900 break-words">{{ d.after }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <button class="link mt-2" (click)="showRaw[a.auditId] = !showRaw[a.auditId]">
+              {{ showRaw[a.auditId] ? 'Hide snapshots' : 'Show full Before/After snapshots' }}
+            </button>
+
+            <div *ngIf="showRaw[a.auditId]" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="codepanel">
+                <div class="codepanel-title">Before</div>
+                <pre>{{ prettyJson(a.oldValuesJson) }}</pre>
+              </div>
+              <div class="codepanel">
+                <div class="codepanel-title">After</div>
+                <pre>{{ prettyJson(a.newValuesJson) }}</pre>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- CREATE / DELETE: show snapshots -->
+          <ng-template #snapshotBlock>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-500">Snapshot</div>
+              <div class="flex gap-2">
+                <button class="btn-muted" (click)="copyJson(a)">Copy JSON</button>
+                <button class="btn-muted" (click)="downloadJson(a)">Download</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="codepanel">
+                <div class="codepanel-title">Before</div>
+                <pre>{{ prettyJson(a.oldValuesJson) }}</pre>
+              </div>
+              <div class="codepanel">
+                <div class="codepanel-title">After</div>
+                <pre>{{ prettyJson(a.newValuesJson) }}</pre>
               </div>
             </div>
           </ng-template>
@@ -373,6 +467,7 @@
     </ul>
   </ng-container>
 </div>
+
 
 
       <!-- ===== STEP 7: REVIEW ===== -->

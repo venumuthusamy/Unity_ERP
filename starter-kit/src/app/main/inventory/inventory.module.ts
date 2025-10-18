@@ -15,7 +15,8 @@ import { StockTransferCreateComponent } from './stock-transfer/stock-transfer-cr
 import { StockTakeComponent } from './stock-take/stock-take/stock-take.component';
 import { StackOverviewListComponent } from './stack-overview/stack-overview-list/stack-overview-list.component';
 import { StockTakeListComponent } from './stock-take/stock-take-list/stock-take-list.component';
-
+import { OverlayModule } from '@angular/cdk/overlay';
+import { PortalModule } from '@angular/cdk/portal';
 const routes = [
   {
     path: 'Create-inventory',
@@ -100,7 +101,8 @@ const routes = [
     ReactiveFormsModule,
     SweetAlert2Module.forRoot(),
     NgSelectModule,
-
+ OverlayModule,
+    PortalModule
   ]
 })
 export class InventoryModule { }
