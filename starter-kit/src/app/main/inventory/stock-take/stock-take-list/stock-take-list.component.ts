@@ -32,7 +32,13 @@ export class StockTakeListComponent implements OnInit {
   userId: any;
   modalTotal: any;
   itemList: any;
+  takeTypes = [
+    { id: 1, label: 'Full', },
+    { id: 2, label: 'Cycle', }
+  ];
 
+
+  takeTypeMap: Record<number, string> = {};
 
   constructor(private stockTakeService: StockTakeService, private router: Router,
     private datePipe: DatePipe, private itemMasterService: ItemMasterService,
@@ -48,17 +54,14 @@ export class StockTakeListComponent implements OnInit {
     const val = event.target.value.toLowerCase();
     const temp = this.tempData.filter((d) => {
 
-      if (d.warehousename.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.warehousename.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.warehouseName.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.warehouseName.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.location.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.location.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.locationName.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.locationName.toLowerCase().indexOf(val) !== -1 || !val;
       }
-      if (d.type.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.type.toLowerCase().indexOf(val) !== -1 || !val;
-      }
-      if (d.strategy.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.strategy.toLowerCase().indexOf(val) !== -1 || !val;
+      if (d.takeTypeLabel.toLowerCase().indexOf(val) !== -1 || !val) {
+        return d.takeTypeLabel.toLowerCase().indexOf(val) !== -1 || !val;
       }
 
     });
@@ -66,12 +69,17 @@ export class StockTakeListComponent implements OnInit {
     this.table.offset = 0;
   }
 
+
   loadRequests() {
+    for (const t of this.takeTypes) {
+      this.takeTypeMap[t.id] = t.label;
+    }
     this.stockTakeService.getStockTake().subscribe({
       next: (res: any) => {
         this.rows = res.data.map((req: any) => {
           return {
             ...req,
+            takeTypeLabel: this.takeTypeMap[req.takeTypeId] ?? String(req.takeTypeId)
           };
         });
         this.tempData = this.rows
@@ -112,33 +120,33 @@ export class StockTakeListComponent implements OnInit {
     this.router.navigate(['/Inventory/create-stocktake']);
 
   }
-openLinesModal(row: any) {
-  // 1) get array safely
-  const raw = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
+  openLinesModal(row: any) {
+    // 1) get array safely
+    const raw = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
 
-  // 2) normalize to numbers + safe strings
-  const N = (v: any) => Number.isFinite(Number(v)) ? Number(v) : 0;
+    // 2) normalize to numbers + safe strings
+    const N = (v: any) => Number.isFinite(Number(v)) ? Number(v) : 0;
 
-  const lines = raw.map((l: any) => ({
-    barcode: (l?.barcode ?? '-') as string,
-    itemId:(l?.itemId),
-    itemName: (l?.itemName ?? l?.name ?? '-') as string,
-    onHand:   N(l?.onHand ?? l?.available),
-    countedQty: N(l?.countedQty),
-    varianceQty: N(l?.countedQty) - N(l?.onHand ?? l?.available),
-    remarks: (l?.remarks ?? '-') as string
-  }));
+    const lines = raw.map((l: any) => ({
+      barcode: (l?.barcode ?? '-') as string,
+      itemId: (l?.itemId),
+      itemName: (l?.itemName ?? l?.name ?? '-') as string,
+      onHand: N(l?.onHand ?? l?.available),
+      countedQty: N(l?.countedQty) + N(l?.badCountedQty),
+      // varianceQty: N(l?.countedQty) - N(l?.onHand),
+      remarks: (l?.remarks ?? '-') as string
+    }));
 
-  // 3) compute totals
-  this.modalTotal = {
-    available: lines.reduce((s, x) => s + x.onHand, 0),
-    counted:   lines.reduce((s, x) => s + x.countedQty, 0),
-    variance:  lines.reduce((s, x) => s + x.varianceQty, 0)
-  };
+    // 3) compute totals
+    this.modalTotal = {
+      available: lines.reduce((s, x) => s + x.onHand, 0),
+      counted: lines.reduce((s, x) => s + x.countedQty, 0),
+      variance: lines.reduce((s, x) => s + x.varianceQty, 0)
+    };
 
-  this.modalLines = lines;
-  this.showLinesModal = true;
-}
+    this.modalLines = lines;
+    this.showLinesModal = true;
+  }
 
   getItemName(id: number | string | null) {
     const x = this.itemList.find(i => i.id === id);
@@ -154,6 +162,68 @@ openLinesModal(row: any) {
   }
   ngAfterViewInit(): void {
     feather.replace();
+  }
+  private getLinesArray(row: any): any[] {
+    if (Array.isArray(row?.lineItems)) return row.lineItems;
+    try { return JSON.parse(row?.lineItems || '[]'); } catch { return []; }
+  }
+
+  private hasAnySelected(row: any): boolean {
+    const lines = this.getLinesArray(row);
+    return lines.some(l => !!l.selected);
+  }
+
+  post(row: any) {
+    // Only allow when Approved (2). API also guards this.
+    if (row.status !== 2) {
+      Swal.fire({ icon: 'info', title: 'Not allowed', text: 'Only Approved stock takes can be posted.' });
+      return;
+    }
+    if (!this.hasAnySelected(row)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No lines selected',
+        text: 'Select at least one line in the Stock Review before posting.'
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Post inventory?',
+      text: 'This will create inventory adjustments and set OnHand.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#2E5F73',
+      confirmButtonText: 'Yes, Post'
+    }).then((r) => {
+      if (!r.isConfirmed) return;
+
+      row._posting = true;
+      this.stockTakeService.postInventory(row.id, {
+        remarks: `Posted from list`,
+        applyToStock: true,
+        markPosted: true,
+        onlySelected: true,  // post only rows where Selected=1
+        txnDate: null
+      }).subscribe({
+        next: (res: any) => {
+          row._posting = false;
+          if (res?.isSuccess) {
+            Swal.fire({ icon: 'success', title: 'Posted', text: res.message || 'Inventory posted.' });
+            // reflect Posted state
+            row.status = 3;
+            this.rows = [...this.rows]; // trigger change detection
+          } else {
+            Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Post failed.' });
+          }
+        },
+        error: (err) => {
+          row._posting = false;
+          const msg = err?.error?.message || 'Unable to post.';
+          Swal.fire({ icon: 'error', title: 'Error', text: msg });
+        }
+      });
+    });
   }
 
 }

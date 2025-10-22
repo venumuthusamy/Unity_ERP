@@ -20,6 +20,7 @@ export class StockTakeService {
 
         let params = new HttpParams()
             .set('warehouseId', String(req.warehouseTypeId))
+            .set('supplierId', String(req.supplierId))
             .set('binId', String(req.locationId))
             .set('takeTypeId', String(req.takeTypeId));
 
@@ -52,5 +53,17 @@ export class StockTakeService {
         const params = new HttpParams().set('updatedBy', userId);
         return this.http.delete<any>(url, { params });
     }
+    // stock-take.service.ts
+    postInventory(stockTakeId: number, body: {
+        reasonId?: number | null;
+        remarks?: string | null;
+        applyToStock?: boolean;
+        markPosted?: boolean;
+        txnDate?: string | null;
+        onlySelected?: boolean;
+    }) {
+        return this.http.post<any>(this.url + `/stocktake/${stockTakeId}/post`, body);
+    }
+
 
 }

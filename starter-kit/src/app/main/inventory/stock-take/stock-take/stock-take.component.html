@@ -33,6 +33,12 @@
                     placeholder="Select Location" class="w-100">
                 </ng-select>
             </div>
+             <div class="col-sm-6 col-md-3">
+                <label class="form-label">Supplier<span style="color:red">*</span></label>
+                <ng-select [items]="supplierList" bindLabel="name" bindValue="id" [(ngModel)]="supplierId"
+                  (ngModelChange)="onSupplierChanged($event)"  placeholder="Select Supplier" class="w-100">
+                </ng-select>
+            </div>
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Type<span style="color:red">*</span></label>
                 <ng-select [items]="takeTypes" bindLabel="label" bindValue="id" [(ngModel)]="takeTypeId"
@@ -72,7 +78,7 @@
                     <tr>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Item</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Scan/Barcode</th>
-                        <th style="background-color:#2E5F73; color:white; width:120px;">Available</th>
+                        <!-- <th style="background-color:#2E5F73; color:white; width:120px;">Available</th> -->
                         <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Usable
                             Count</th>
                             <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Unusable
@@ -91,7 +97,7 @@
                         <td><input type="text" class="form-control" [(ngModel)]="r.barcode"
                                 placeholder="Scan or enter barcode" /></td>
                       
-                        <td class="text-muted">{{ r.onHand ?? 0 }}</td>
+                        <!-- <td class="text-muted">{{ r.onHand ?? 0 }}</td> -->
                         <td>
                             <input type="number" class="form-control" [(ngModel)]="r.countedQty"
                                 (ngModelChange)="onCountChange(r)" min="0" placeholder="0" />
@@ -102,8 +108,10 @@
                                 (ngModelChange)="onUnCountChange(r)" min="0" placeholder="0" />
                             <div *ngIf="r._error" class="small text-danger mt-1">{{ r._error }}</div>
                         </td>
-                        <td><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reasonId"
+                        <!-- <td><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reason"
                                  placeholder="Item" class="w-100"></ng-select>
+                        </td> -->
+                        <td><input type="text" class="form-control" [(ngModel)]="r.reason" placeholder="Reason" />
                         </td>
                         <td><input type="text" class="form-control" [(ngModel)]="r.remarks" placeholder="Remarks" />
                         </td>
@@ -141,7 +149,7 @@
       [class]="showStockReview ? 'btn-outline-secondary' : 'btn-outline-primary'"
       (click)="toggleStockReview()"style="background-color:#2E5F73;color:#fff">
       <i class="fas fa-clipboard-check me-1"></i>
-      {{ showStockReview ? 'Hide Stock Review' : 'Stock Review' }}
+      {{ showStockReview ? 'Hide Stock Review Variance' : 'Stock Review Variance' }}
     </button>
   </div>
 </div>
@@ -164,7 +172,7 @@
         <tr>
           <th style="width:42px;background-color:#2E5F73;color: #fff;"></th>
           <th style="background-color:#2E5F73;color: #fff;">Item</th>
-          <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">On Hand</th>
+          <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">Available</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Usable Count</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Unusable Count</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Total Count</th>
@@ -186,9 +194,11 @@
           <td class="text-end" [ngClass]="getVariance(r) >= 0 ? 'text-success' : 'text-danger'">
             {{ signed(getVariance(r)) }}
           </td>
-          <td class="text-end"><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reasonId"
-                                 placeholder="Item" class="w-100"></ng-select></td>
-          <td class="text-end">{{ r.remarks }}</td>
+          <!-- <td class="text-end"><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reason"
+                                 placeholder="Item" class="w-100"></ng-select></td> -->
+          <td class="text-end">{{ r.reason }}</td>                                 
+          <td><input type="text" class="form-control" [(ngModel)]="r.remarks" placeholder="Remarks" />
+                        </td>                       
         </tr>
 
         <tr *ngIf="!reviewRows.length">
@@ -199,7 +209,7 @@
   </div>
 </div>
  <!-- Footer actions -->
-        <div class="d-flex align-items-center pt-3 mt-3 border-top">
+        <div *ngIf="showStockReview" class="d-flex align-items-center pt-3 mt-3 border-top">
             <div class="d-flex align-items-center gap-2 ms-auto">
                 <button type="button" class="btn text-white" style="background-color:#2E5F73;" 
                 (click)="onSaveStockReview(2)">Approved</button>
@@ -241,7 +251,8 @@
                             {{ signed(getVariance(r)) }}
                         </td>
                          <td class="text-end">
-                            {{ getReason(r.reasonId) }}
+                            <!-- {{ getReason(r.reason) }} -->
+                               {{ r.reason }}
                         </td>
                         <td>{{ r.remarks }}</td>
                     </tr>
