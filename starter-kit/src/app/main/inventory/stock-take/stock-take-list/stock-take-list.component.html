@@ -56,6 +56,7 @@
 
 
                     <ngx-datatable-column name="Location" prop="locationName" [width]="140"></ngx-datatable-column>
+                    <ngx-datatable-column name="Supplier" prop="supplierName" [width]="140"></ngx-datatable-column>
 
                     <ngx-datatable-column name="Type" prop="takeTypeId" [width]="120">
                         <ng-template ngx-datatable-cell-template let-value="value">
@@ -65,21 +66,38 @@
 
                     <ngx-datatable-column name="Status" prop="status" [width]="120">
                         <ng-template let-value="value" ngx-datatable-cell-template>
-                            <span class="badge rounded-pill" [ngClass]="value === 1 ? 'bg-secondary' : 'bg-success'">
-                                {{ value === 1 ? 'Draft' : 'Approved' }}
+                            <span class="badge rounded-pill" [ngClass]="{
+        'bg-secondary': value === 1,
+        'bg-success'  : value === 2,
+        'bg-dark'     : value === 3
+      }">
+                                {{ value === 1 ? 'Draft' : (value === 2 ? 'Approved' : 'Posted') }}
                             </span>
                         </ng-template>
                     </ngx-datatable-column>
+
 
                     <!-- Edit/Delete Actions -->
                     <ngx-datatable-column name="Action" [width]="120">
                         <ng-template let-row="row" ngx-datatable-cell-template>
                             <!-- Actions -->
-                            <i class="fas fa-pen text-success me-3" style="cursor:pointer" title="Edit"
+                            <i class="fas fa-pen me-3" 
+                               
                                 (click)="editStockTake(row)"></i>
 
-                            <i class="fas fa-trash text-danger" style="cursor:pointer" title="Delete"
-                                (click)="deleteStockTake(row.id)"></i>
+                            <i class="fas fa-trash me-3" [ngClass]="row.status === 3 ? 'text-muted' : 'text-danger'"
+                                [style.pointer-events]="row.status === 3 ? 'none' : 'auto'"
+                                [attr.title]="row.status === 3 ? 'Cannot delete (Posted)' : 'Delete'"
+                                (click)="row.status === 3 ? null : deleteStockTake(row.id)">
+                            </i>
+
+
+                            <button *ngIf="row.status === 2" class="btn btn-sm btn-success" title="Post inventory"
+                                [disabled]="row._posting" (click)="post(row)">
+                                <i class="fas fa-upload"></i> Post
+                            </button>
+
+                            <span *ngIf="row.status === 3" class="text-muted">Posted</span>
 
                         </ng-template>
                     </ngx-datatable-column>
@@ -114,8 +132,8 @@
                 <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
                     <thead>
                         <tr style="background:#2E5F73; color:#fff;">
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Scan/Barcode</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Item</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Scan/Barcode</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Available</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Physical count</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Variance</th>
@@ -127,13 +145,13 @@
                         <tr *ngFor="let l of modalLines; let i = index"
                             [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
                             style="border-bottom:1px solid #f1f5f9;">
-                            <td
+                               <td
                                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.barcode || '-' }}
+                                {{ getItemName(l.itemId) }}
                             </td>
                             <td
                                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ getItemName(l.itemId) }}
+                                {{ l.barcode || '-' }}
                             </td>
 
                             <td style="padding:10px 12px;">
@@ -142,8 +160,8 @@
                             <td style="padding:10px 12px;">
                                 {{ l.countedQty || 0 }}
                             </td>
-                            <td style="padding:10px 12px;" >
-                                {{ l.varianceQty || 0 }}
+                            <td style="padding:10px 12px;">
+                                {{ l.countedQty - l.onHand || 0 }}
                             </td>
                             <td style="padding:10px 12px;">
                                 {{ l.remarks || '-' }}

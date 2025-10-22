@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { StockTakeService } from '../stock-take.service';
@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { ItemMasterService } from '../../item-master/item-master.service';
 import { BinService } from '../../../master/bin/bin.service'
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
+import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 
 interface SelectOpt { id: number | string; name?: string; label?: string; value?: string; }
 
@@ -21,7 +22,7 @@ interface StockTakeLine {
   countedQty: number | null;
   badCountedQty: number | null;
   barcode?: string | null;
-  reasonId: number | string | null;
+  reason: number | string | null;
   remarks?: string | null;
   _error?: string | null; // UI-only
   selected: any
@@ -44,6 +45,7 @@ export class StockTakeComponent implements OnInit {
   strategies: any
   warehouseTypeId: any
   locationId: any
+  supplierId:any
   takeTypeId: any;
   strategyId: any;
   freeze: boolean = false;
@@ -61,6 +63,7 @@ export class StockTakeComponent implements OnInit {
   stockTakeId: any = 0;
   itemList: any;
   reasonList: any
+  supplierList: any
   showStockReview = false;
   selectAllReview = false;
 
@@ -73,6 +76,7 @@ export class StockTakeComponent implements OnInit {
     private warehouseService: WarehouseService, private BinService: BinService,
     private strategyService: StrategyService, private itemMasterService: ItemMasterService,
     private route: ActivatedRoute, private StockissueService: StockIssueService,
+    private supplierService : SupplierService,private cd: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -82,13 +86,15 @@ export class StockTakeComponent implements OnInit {
       bin: this.BinService.getAllBin(),
       strategy: this.strategyService.getStrategy(),
       item: this.itemMasterService.getAllItemMaster(),
-      reason: this.StockissueService.getAllStockissue()
+      reason: this.StockissueService.getAllStockissue(),
+      supplier:  this.supplierService.GetAllSupplier()
     }).subscribe((results: any) => {
       this.warehouseTypes = results.warehouse.data;
       this.LocationTypes = results.bin.data;
       this.strategies = results.strategy.data;
       this.itemList = results.item.data;
       this.reasonList = results.reason.data;
+      this.supplierList = results.supplier.data;
     });
     this.route.paramMap.subscribe((params: any) => {
       const idStr = params.get('id');
@@ -98,6 +104,7 @@ export class StockTakeComponent implements OnInit {
           console.log(res)
           this.warehouseTypeId = res.data.warehouseTypeId,
           this.locationId = res.data.locationId,
+          this.supplierId = res.data.supplierId,
           this.takeTypeId = res.data.takeTypeId,
           this.strategyId = res.data.strategyId,
           this.freeze = res.data.freeze
@@ -195,10 +202,22 @@ export class StockTakeComponent implements OnInit {
     const x = this.reasonList.find(i => i.id === id);
     return x?.stockIssuesNames ?? String(id ?? '');
   }
+  onSupplierChanged(supplierId: number | null): void {
+    debugger
+    this.supplierId = supplierId;
+    this.resetLines();                // wipe any previous results
+  }
+   private resetLines(): void {
+    this.lines = [];                  // new reference
+    this.reviewRows = [];             // new reference
+    this.selectAllReview = false;
+    this.cd.detectChanges();          // force view to notice
+  }
 
   onSubmit(): void {
+    this.resetLines();
     debugger
-    if (!this.warehouseTypeId || !this.locationId || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
+    if (!this.warehouseTypeId ||!this.supplierId || !this.locationId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
       Swal.fire({
         title: "Failed",
         text: "Please Fill Mandatory Fields",
@@ -230,6 +249,7 @@ export class StockTakeComponent implements OnInit {
     return {
       warehouseTypeId: this.warehouseTypeId ?? null,
       locationId: this.locationId ?? null,
+      supplierId: this.supplierId ?? null,
       takeTypeId: this.takeTypeId ?? null,
       strategyId: this.strategyId ?? null,
       freeze: !!this.freeze,
@@ -246,7 +266,7 @@ export class StockTakeComponent implements OnInit {
       countedQty: 0,
       badCountedQty: 0,
       // barcode: dto.barcode ?? '',
-      reasonId: dto.reasonId ?? '',
+      reason: dto.reason ?? '',
       remarks: dto.remarks ?? '',
     };
   }
@@ -302,6 +322,7 @@ export class StockTakeComponent implements OnInit {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
       locationId: this.locationId,
+      supplierId: this.supplierId,
       takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
       freeze: this.freeze,
@@ -324,7 +345,7 @@ export class StockTakeComponent implements OnInit {
           VarianceQty: total - this.toNum(L.onHand),
 
           // If you require a reason only when there’s bad qty:
-          reasonId: bad > 0 ? L.reasonId : null,
+          reason: bad > 0 ? L.reason : null,
 
           barcode: (L.barcode ?? '').trim() || null,
           remarks: (L.remarks ?? '').trim() || null,
@@ -418,12 +439,13 @@ export class StockTakeComponent implements OnInit {
     if (this.chkSelectAllRef) this.chkSelectAllRef.nativeElement.indeterminate = indeterminate;
   }
   onSaveStockReview(status: number): void {
+    debugger
     this.status = status;
 
     // Send all rows, not just selected
-    // const rows = this.reviewRows || [];
+    const rows = this.reviewRows || [];
 
-    if (!this.reviewRows.length) {
+    if (!rows.length) {
       Swal.fire({
         icon: 'info',
         title: 'No lines',
@@ -437,6 +459,7 @@ export class StockTakeComponent implements OnInit {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
       locationId: this.locationId,
+      supplierId: this.supplierId,
       takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
       freeze: this.freeze,
@@ -448,7 +471,7 @@ export class StockTakeComponent implements OnInit {
         countedQty: this.toNum(r.countedQty),
         badCountedQty: this.toNum(r.badCountedQty),
         varianceQty: (this.toNum(r.countedQty) + this.toNum(r.badCountedQty)) - this.toNum(r.onHand),
-        reasonId: r.reasonId ?? null,
+        reason: r.reason ?? null,
         remarks: r.remarks ?? null,
         barcode: r.barcode ?? null,
         selected: !!r.selected,   // ← keep the flag so backend knows which were approved
