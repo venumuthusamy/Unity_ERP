@@ -92,72 +92,98 @@
         <small *ngIf="hasInvalidSelected()" class="text-danger mb-2">
           Fix transfer quantities for selected rows before submitting.
         </small>
+<button
+  type="button"
+  class="btn btn-brand rounded-12 btn-eq d-inline-flex align-items-center gap-2"
+  style="background:#2E5F73;color:#fff"
+  [disabled]="selectedCount === 0 || !sameWarehouseSelected || hasInvalidSelected()"
+  (click)="openSubmitModal(submitModal)"
+>
+  <!-- v5: fas fa-paper-plane | v6: fa-solid fa-paper-plane -->
+  <i class="fas fa-paper-plane" aria-hidden="true"></i>
+  <span>Submit for approval</span>
+  <span class="count-pill" *ngIf="selectedCount"> ({{ selectedCount }}) </span>
+</button>
 
-        <button
-          type="button"
-          class="btn btn-brand rounded-12 btn-eq"
-          style="background:#2E5F73;color:#fff"
-          [disabled]="selectedCount === 0 || !sameWarehouseSelected || hasInvalidSelected()"
-          (click)="openSubmitModal(submitModal)"
-        >
-          Submit for approval ({{ selectedCount }})
-        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal (Submit for Approval) -->
 <ng-template #submitModal let-close="close" let-dismiss="dismiss">
-  <div class="modal-header" style="background:#2E5F73;color:#fff;">
-    <h5 class="modal-title">Submit for Approval</h5>
-    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="dismiss('x')"></button>
-  </div>
+  <div class="modal-content uxv2 rounded-4">
+    <!-- Ribbon -->
+    <div class="uxv2__ribbon"></div>
 
-  <div class="modal-body">
-    <div class="row g-3">
-      <!-- From warehouse (READ-ONLY INPUT) -->
-      <div class="col-md-6">
-        <label class="form-label">From warehouse <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" [value]="fromWarehouseName || ''" readonly />
-        <small class="text-danger" *ngIf="modalTouched && !modal.fromWarehouseId">Required</small>
+    <!-- Header -->
+    <div class="modal-header uxv2__header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="me-1" style="font-size:18px; color:#2E5F73" class="fas fa-paper-plane"></i>
+        <h5 class="modal-title mb-0">Submit for Approval</h5>
       </div>
+      <button type="button" class="btn-close" aria-label="Close" (click)="dismiss('x')"></button>
+    </div>
 
-      <!-- To warehouse -->
-      <div class="col-md-6">
-        <label class="form-label">To warehouse <span class="text-danger">*</span></label>
-        <ng-select
-          [items]="toWarehouseList"
-          bindLabel="name"
-          bindValue="id"
-          placeholder="Select warehouse"
-          [(ngModel)]="modal.toWarehouseId"
-          class="w-100"
-        >
-        </ng-select>
-        <small class="text-danger" *ngIf="modalTouched && !modal.toWarehouseId">Required</small>
-        <small class="text-danger" *ngIf="modalTouched && sameWarehouse()"
-          >From/To cannot be the same</small
-        >
-      </div>
+    <!-- Body -->
+    <div class="modal-body uxv2__body">
+      <div class="row g-4">
+        <!-- From -->
+        <div class="col-12 col-md-6">
+          <label class="uxv2__label">FROM WAREHOUSE <span class="text-danger">*</span></label>
+          <div class="uxv2__chip" [class.is-invalid]="modalTouched && !modal.fromWarehouseId">
+            <i class="fas fa-warehouse me-2"></i>
+            <span>{{ fromWarehouseName || '—' }}</span>
+          </div>
+          <small *ngIf="modalTouched && !modal.fromWarehouseId" class="text-danger d-block mt-1">Required</small>
+        </div>
 
-      <!-- Remarks -->
-      <div class="col-12">
-        <label class="form-label">Remarks</label>
-        <textarea
-          class="form-control rounded-12"
-          rows="2"
-          [(ngModel)]="modal.remarks"
-          placeholder="Optional notes"
-        ></textarea>
+        <!-- To -->
+        <div class="col-12 col-md-6">
+          <label class="uxv2__label">TO WAREHOUSE <span class="text-danger">*</span></label>
+          <ng-select
+            class="uxv2__select"
+            [items]="toWarehouseList"
+            bindLabel="name"
+            bindValue="id"
+            placeholder="Select warehouse"
+            [(ngModel)]="modal.toWarehouseId"
+            [ngClass]="{'is-invalid': modalTouched && (!modal.toWarehouseId || sameWarehouse())}">
+          </ng-select>
+          <small *ngIf="modalTouched && !modal.toWarehouseId" class="text-danger d-block mt-1">Required</small>
+          <small *ngIf="modalTouched && sameWarehouse()" class="text-danger d-block mt-1">From/To cannot be the same</small>
+        </div>
+
+        <!-- Remarks -->
+        <div class="col-12">
+          <label class="uxv2__label">REMARKS</label>
+          <textarea
+            rows="3"
+            class="form-control uxv2__textarea"
+            [(ngModel)]="modal.remarks"
+            placeholder="Optional notes"></textarea>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="modal-footer">
-    <button class="btn btn-outline-secondary rounded-12" (click)="dismiss('cancel')">Cancel</button>
-    <button class="btn rounded-12" style="background:#2E5F73;color:#fff" (click)="submitFromModal(close)">
-      Submit
-    </button>
+    <!-- Footer -->
+<div class="modal-footer uxv2__footer">
+  <button
+    class="btn btn-cancel btn-pill d-inline-flex align-items-center"
+    (click)="dismiss('cancel')">
+    <i class="fa-solid fa-circle-xmark me-2" aria-hidden="true"></i>
+    <span>Cancel</span>
+  </button>
+
+  <button
+    class="btn btn-submit btn-pill d-inline-flex align-items-center"
+    (click)="submitFromModal(close)">
+    <i class="fa-solid fa-paper-plane me-2" aria-hidden="true"></i>
+    <span>Submit</span>
+  </button>
+</div>
+
+
   </div>
 </ng-template>
+
+
