@@ -18,6 +18,8 @@ interface StockTakeLine {
   id: number;
   itemId: number | string | null;
   itemName: string | null;
+  binId: number
+  binName:any
   onHand: number | null;
   countedQty: number | null;
   badCountedQty: number | null;
@@ -37,14 +39,12 @@ export class StockTakeComponent implements OnInit {
 
   warehouseTypes: any
   LocationTypes: any
-  filteredLocationTypes: any
   takeTypes = [
     { id: 1, label: 'Full', },
     { id: 2, label: 'Cycle', }
   ];
   strategies: any
   warehouseTypeId: any
-  locationId: any
   supplierId:any
   takeTypeId: any;
   strategyId: any;
@@ -103,7 +103,6 @@ export class StockTakeComponent implements OnInit {
         this.stockTakeService.getStockTakeById(this.stockTakeId).subscribe((res: any) => {
           console.log(res)
           this.warehouseTypeId = res.data.warehouseTypeId,
-          this.locationId = res.data.locationId,
           this.supplierId = res.data.supplierId,
           this.takeTypeId = res.data.takeTypeId,
           this.strategyId = res.data.strategyId,
@@ -119,18 +118,6 @@ export class StockTakeComponent implements OnInit {
           } else {
             this.strategyCheck = false
           }
-
-          const arr = this.warehouseTypes?.filter(x => x.id === this.warehouseTypeId);
-          const wh = arr?.[0];
-          const binIds = String(wh?.binID ?? '')
-            .split(',')
-            .map(s => Number(s.trim()))
-            .filter(Number.isFinite);
-          const allowedIds = new Set(binIds);
-          this.filteredLocationTypes = binIds.length
-            ? this.LocationTypes?.filter(loc => allowedIds.has(Number(loc.id)))
-            : [];
-          this.locationId = res.data.locationId
           this.toggleStockReview()
         })
       }
@@ -198,6 +185,10 @@ export class StockTakeComponent implements OnInit {
     const x = this.itemList?.find(i => i.id === id);
     return x?.name ?? String(id ?? '');
   }
+   getBinName(id: number | string | null) {
+    const x = this.LocationTypes?.find(i => i.id === id);
+    return x?.binName ?? String(id ?? '');
+  }
   getReason(id: number | string | null) {
     const x = this.reasonList.find(i => i.id === id);
     return x?.stockIssuesNames ?? String(id ?? '');
@@ -217,7 +208,7 @@ export class StockTakeComponent implements OnInit {
   onSubmit(): void {
     this.resetLines();
     debugger
-    if (!this.warehouseTypeId ||!this.supplierId || !this.locationId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
+    if (!this.warehouseTypeId ||!this.supplierId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
       Swal.fire({
         title: "Failed",
         text: "Please Fill Mandatory Fields",
@@ -248,7 +239,6 @@ export class StockTakeComponent implements OnInit {
   private buildPlanReq() {
     return {
       warehouseTypeId: this.warehouseTypeId ?? null,
-      locationId: this.locationId ?? null,
       supplierId: this.supplierId ?? null,
       takeTypeId: this.takeTypeId ?? null,
       strategyId: this.strategyId ?? null,
@@ -262,6 +252,7 @@ export class StockTakeComponent implements OnInit {
       id: dto.id,
       itemId: dto.itemId,
       itemName: dto.itemName ?? null,
+      binId: dto.binId,
       onHand: Number(dto.onHand) || 0,
       countedQty: 0,
       badCountedQty: 0,
@@ -321,7 +312,6 @@ export class StockTakeComponent implements OnInit {
     const payload = {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
-      locationId: this.locationId,
       supplierId: this.supplierId,
       takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
@@ -335,6 +325,7 @@ export class StockTakeComponent implements OnInit {
         return {
           id: L.id,
           itemId: L.itemId,
+          binId:L.binId,
           onHand: this.toNum(L.onHand),
 
           // send TOTAL counted; keep the split too (if your API accepts it)
@@ -389,20 +380,7 @@ export class StockTakeComponent implements OnInit {
   goToStockTakeList(): void {
     this.router.navigate(['/Inventory/list-stocktake']); // adjust route
   }
-  onWarehouseChanged(value) {
-    this.locationId = null
-    const arr = this.warehouseTypes.filter(x => x.id === value);
-    const wh = arr[0];
-    const binIds = String(wh?.binID ?? '')
-      .split(',')
-      .map(s => Number(s.trim()))
-      .filter(Number.isFinite);
-    const allowedIds = new Set(binIds);
-    this.filteredLocationTypes = binIds.length
-      ? this.LocationTypes.filter(loc => allowedIds.has(Number(loc.id)))
-      : [];
 
-  }
 
   toggleStockReview(): void {
     this.showStockReview = !this.showStockReview;
@@ -458,7 +436,6 @@ export class StockTakeComponent implements OnInit {
     const payload = {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
-      locationId: this.locationId,
       supplierId: this.supplierId,
       takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
@@ -467,6 +444,7 @@ export class StockTakeComponent implements OnInit {
       lineItems: this.reviewRows.map(r => ({
         id: r.id,
         itemId: r.itemId,
+        binId : r.binId,
         onHand: this.toNum(r.onHand),
         countedQty: this.toNum(r.countedQty),
         badCountedQty: this.toNum(r.badCountedQty),
