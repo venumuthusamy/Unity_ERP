@@ -200,11 +200,12 @@ export class StockTakeListComponent implements OnInit {
 
       row._posting = true;
       this.stockTakeService.postInventory(row.id, {
-        remarks: `Posted from list`,
+        reason : row.reason,
+        remarks: row.remarks,
         applyToStock: true,
         markPosted: true,
+        txnDate: null,
         onlySelected: true,  // post only rows where Selected=1
-        txnDate: null
       }).subscribe({
         next: (res: any) => {
           row._posting = false;

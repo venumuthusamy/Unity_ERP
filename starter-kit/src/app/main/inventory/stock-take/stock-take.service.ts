@@ -21,7 +21,7 @@ export class StockTakeService {
         let params = new HttpParams()
             .set('warehouseId', String(req.warehouseTypeId))
             .set('supplierId', String(req.supplierId))
-            .set('binId', String(req.locationId))
+            
             .set('takeTypeId', String(req.takeTypeId));
 
         // only add strategyId if defined (optional)
@@ -55,7 +55,7 @@ export class StockTakeService {
     }
     // stock-take.service.ts
     postInventory(stockTakeId: number, body: {
-        reasonId?: number | null;
+        reason?: number | null;
         remarks?: string | null;
         applyToStock?: boolean;
         markPosted?: boolean;

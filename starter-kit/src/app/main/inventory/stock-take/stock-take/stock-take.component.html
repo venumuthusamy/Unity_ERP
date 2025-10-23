@@ -24,13 +24,7 @@
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Warehouse<span style="color:red">*</span></label>
                 <ng-select [items]="warehouseTypes" bindLabel="name" bindValue="id" [(ngModel)]="warehouseTypeId"
-                  (ngModelChange)="onWarehouseChanged($event)"  placeholder="Select warehouse" class="w-100">
-                </ng-select>
-            </div>
-            <div class="col-sm-6 col-md-3">
-                <label class="form-label">Bin/Location<span style="color:red">*</span></label>
-                <ng-select [items]="filteredLocationTypes" bindLabel="binName" bindValue="id" [(ngModel)]="locationId"
-                    placeholder="Select Location" class="w-100">
+                 placeholder="Select warehouse" class="w-100">
                 </ng-select>
             </div>
              <div class="col-sm-6 col-md-3">
@@ -76,13 +70,12 @@
             <table class="table table-bordered mb-0 align-middle">
                 <thead>
                     <tr>
+                        <th style="background-color:#2E5F73; color:white; width:200px;">Location</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Item</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Scan/Barcode</th>
                         <!-- <th style="background-color:#2E5F73; color:white; width:120px;">Available</th> -->
-                        <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Usable
-                            Count</th>
-                            <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Unusable
-                            Count</th>
+                        <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Counted Good Qty</th>
+                            <th style="background-color:#2E5F73; color:white; width:150px;white-space: nowrap;">Counted Bad Qty</th>
                         <th style="background-color:#2E5F73; color:white;width:250px;">Reason</th>    
                         <th style="background-color:#2E5F73; color:white;width:200px;">Remarks</th>
                         <!-- <th style="background-color:#2E5F73; color:white; width:200px;">Action</th> -->
@@ -90,6 +83,10 @@
                 </thead>
                 <tbody>
                     <tr *ngFor="let r of lines; let i = index">
+                         <td>
+                            <ng-select [items]="LocationTypes" bindLabel="binName" bindValue="id" [(ngModel)]="r.binId"
+                                 placeholder="Item" class="w-100" disabled></ng-select>
+                        </td>
                         <td>
                             <ng-select [items]="itemList" bindLabel="name" bindValue="id" [(ngModel)]="r.itemId"
                                  placeholder="Item" class="w-100" disabled></ng-select>
@@ -136,7 +133,7 @@
                     (click)="openReview()">Review Variances</button> -->
 
                 <button type="button" class="btn text-white" style="background-color:#2E5F73;" 
-                    (click)="onSave(1)">Draft</button>
+                    (click)="onSave(1)">Save</button>
             </div>
         </div>
 
@@ -171,10 +168,11 @@
       <thead>
         <tr>
           <th style="width:42px;background-color:#2E5F73;color: #fff;"></th>
+          <th style="background-color:#2E5F73;color: #fff;">Location</th>
           <th style="background-color:#2E5F73;color: #fff;">Item</th>
           <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">Available</th>
-          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Usable Count</th>
-          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Unusable Count</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Counted Good Qty</th>
+          <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Counted Bad Qty</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;white-space:nowrap">Total Count</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;">Variance</th>
           <th class="text-end"style="background-color:#2E5F73;color: #fff;">Reason</th>
@@ -184,6 +182,7 @@
       <tbody>
         <tr *ngFor="let r of reviewRows">
           <td><input type="checkbox" [(ngModel)]="r.selected"  (change)="onRowSelectedChanged()"></td>
+          <td class="text-truncate" style="max-width:220px;">{{ r.binName || getBinName(r.binId) }}</td>
           <td class="text-truncate" style="max-width:220px;">
             {{ r.itemName || getItemName(r.itemId) }}
           </td>
@@ -230,10 +229,11 @@
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>
+                        <th>Location</th>
                         <th>Item</th>
                         <th class="text-end">Available(OnHand)</th>
-                        <th class="text-end">Usable Count</th>
-                        <th class="text-end">UnUsable Count</th>
+                        <th class="text-end">Counted Good Qty</th>
+                        <th class="text-end">Counted Bad Qty</th>
                          <th class="text-end">Total Count</th>
                         <th class="text-end">Variance</th>
                         <th class="text-end">Reason</th>
@@ -242,6 +242,7 @@
                 </thead>
                 <tbody>
                     <tr *ngFor="let r of lines">
+                        <td>{{ r.binName }}</td>
                         <td>{{ r.itemName || getItemName(r.itemId) }}</td>
                         <td class="text-end">{{ toNum(r.onHand) }}</td>
                         <td class="text-end">{{ toNum(r.countedQty) }}</td>
