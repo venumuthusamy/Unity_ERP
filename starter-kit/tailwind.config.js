@@ -11,6 +11,9 @@ module.exports = {
       spacing: {
         btnx: "0.75rem",    // custom horizontal padding
         btny: "0.25rem",    // custom vertical padding
+      },
+       colors: {
+        primary: '#2E5F73',
       }
     },
   },
