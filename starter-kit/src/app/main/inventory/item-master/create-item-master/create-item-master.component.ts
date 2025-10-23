@@ -68,6 +68,8 @@ interface ItemStockRow {
   isApproved: boolean;
   isTransfered: boolean;
   stockIssueID: number;
+   isFullTransfer: boolean;
+  isPartialTransfer: boolean;
 }
 
 /** Inline BOM row (linked with supplier) */
@@ -284,7 +286,9 @@ export class CreateItemMasterComponent implements OnInit {
           serialFlag: !!r.serialFlag,
           isApproved: !!r.isApproved,
           isTransfered: !!r.isTransfered,
-          stockIssueID: r.stockIssueID ?? 0
+          stockIssueID: r.stockIssueID ?? 0,
+          isFullTransfer:r.isFullTransfer,
+          isPartialTransfer:r.isPartialTransfer
         }));
 
         const priceArr: any[] = Array.isArray(prices)
@@ -338,7 +342,9 @@ export class CreateItemMasterComponent implements OnInit {
       serialFlag: !!r.serialFlag,
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
-      stockIssueID: r.stockIssueID ?? 0
+      stockIssueID: r.stockIssueID ?? 0,
+           isFullTransfer:r.isFullTransfer,
+          isPartialTransfer:r.isPartialTransfer
     }));
 
     const bomPayload = (this.bomRows || []).map(r => ({
@@ -446,7 +452,9 @@ export class CreateItemMasterComponent implements OnInit {
       serialFlag: !!r.serialFlag,
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
-      stockIssueID: r.stockIssueID ?? 0
+      stockIssueID: r.stockIssueID ?? 0,
+           isFullTransfer:r.isFullTransfer,
+          isPartialTransfer:r.isPartialTransfer
     };
     this.getBinsForWarehouse(this.whDraft.warehouseId);
     this.showWhModal = true;
@@ -482,7 +490,9 @@ export class CreateItemMasterComponent implements OnInit {
       serialFlag: !!this.whDraft.serialFlag,
       isApproved: !!this.whDraft.isApproved,
       isTransfered: !!this.whDraft.isTransfered,
-      stockIssueID: this.whDraft.stockIssueID ?? 0
+      stockIssueID: this.whDraft.stockIssueID ?? 0,
+           isFullTransfer:this.whDraft.isFullTransfer,
+          isPartialTransfer:this.whDraft.isPartialTransfer
     };
 
     if (this.isEditMode && this.editingIndex > -1) {
@@ -714,7 +724,9 @@ export class CreateItemMasterComponent implements OnInit {
       serialFlag: false,
       isApproved: false,
       isTransfered: false,
-      stockIssueID: 0
+      stockIssueID: 0,
+      isFullTransfer:false,
+      isPartialTransfer:false
     };
   }
   recalcDraft(): void {

@@ -228,21 +228,19 @@
   </ng-template>
 </div>
 
-<!-- Export Modal -->
-<!-- Export Modal (REPLACE your existing one) -->
 <ng-template #exportModal let-modal>
   <div class="prl-export-modal modal-content shadow-lg">
     <!-- Header -->
     <div class="modal-header border-0 pb-0">
       <div class="d-flex align-items-center gap-2">
         <div class="export-chip" aria-hidden="true">
-  <i class="fa-solid fa-share-from-square"></i>
-</div>
+          <i class="fa-solid fa-share-from-square"></i>
+        </div>
         <h5 class="modal-title mb-0" style="color:#2E5F73">Export Stock Overview</h5>
       </div>
 
-      <button type="button" class="btn btn-light btn-icon close-btn" (click)="modal.dismiss('close')"
-              aria-label="Close">
+      <button type="button" class="btn btn-light btn-icon close-btn"
+              (click)="modal.dismiss('close')" aria-label="Close">
         <i class="fa fa-times"></i>
       </button>
     </div>
@@ -251,37 +249,41 @@
     <div class="modal-body pt-2">
       <p class="text-muted mb-3">
         Choose a format to export
-        <!-- <span class="badge count-badge">{{ filteredRows?.length || 0 }}</span> row(s). -->
         <span class="d-block small mt-1">Tip: exports exactly what you see (current filters applied).</span>
       </p>
 
-      <!-- Filename -->
+      <!-- Filename (display-only, NOT editable) -->
       <div class="form-group mb-3">
         <label class="form-label mb-1">Filename</label>
         <div class="input-group">
-          <input type="text" class="form-control rounded-left-12" [(ngModel)]="exportFileName"
-                 placeholder="stock-overview_YYYYMMDD" />
+          <input
+            type="text"
+            class="form-control rounded-left-12"
+            [value]="exportFileName"
+            readonly
+            tabindex="-1"
+          />
           <span class="input-group-text rounded-right-12 ext-hint">.xlsx / .pdf</span>
         </div>
       </div>
 
       <!-- Buttons (two big tiles) -->
       <div class="export-grid">
-        <button type="button" class="btn btn-export btn-export-excel" (click)="exportAsExcel(); modal.close('excel')">
+        <button type="button" class="btn btn-export btn-export-excel"
+                (click)="exportAsExcel(); modal.close('excel')">
           <i class="fa fa-file-excel-o mr-2" aria-hidden="true"></i>
           Excel
           <span class="sub">(.xlsx)</span>
         </button>
 
-        <button type="button" class="btn btn-export btn-export-pdf" (click)="exportAsPdf(); modal.close('pdf')">
+        <button type="button" class="btn btn-export btn-export-pdf"
+                (click)="exportAsPdf(); modal.close('pdf')">
           <i class="fa fa-file-pdf-o mr-2" aria-hidden="true"></i>
           PDF
           <span class="sub">(.pdf)</span>
         </button>
       </div>
     </div>
-
-
   </div>
 </ng-template>
 

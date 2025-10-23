@@ -53,7 +53,7 @@ interface StockRow {
 })
 export class StackOverviewComponent implements OnInit {
   warehouses: Array<{ id: number | string; name: string }> = [];
-  exportFileName = '';
+  exportFileName = ''; // <-- will be auto-filled as stock-overview-YYYYMMDDHHmmss
 
   selectedWarehouse: number | string | null = null;
   minOnly = false;
@@ -110,6 +110,35 @@ export class StackOverviewComponent implements OnInit {
     setTimeout(() => (feather as any)?.replace?.(), 0);
   }
 
+  // ===== Helpers for fixed filename =====
+  private pad(n: number, w = 2): string { return String(n).padStart(w, '0'); }
+
+  private timestamp(): string {
+    const now = new Date();
+    return `${now.getFullYear()}${this.pad(now.getMonth() + 1)}${this.pad(now.getDate())}` +
+           `${this.pad(now.getHours())}${this.pad(now.getMinutes())}${this.pad(now.getSeconds())}`;
+  }
+
+  private sanitizeBaseName(s: string): string {
+    return (s || 'stock-overview')
+      .replace(/[\\/:*?"<>|]+/g, '')   // illegal FS chars
+      .replace(/\s+/g, '-')            // spaces -> dashes
+      .trim()
+      || 'stock-overview';
+  }
+
+  private buildFixedFileBase(): string {
+    // always "stock-overview-YYYYMMDDHHmmss"
+    const base = this.sanitizeBaseName('stock-overview');
+    return `${base}-${this.timestamp()}`.toLowerCase();
+  }
+
+  private safeFile(s: string): string {
+    // keep for final sanitation before saving (no extension)
+    return this.sanitizeBaseName(s).toLowerCase();
+  }
+
+  // ===== Expiry parsing =====
   private parseExpiry(src?: string): Date | null {
     if (!src) return null;
     if (src.startsWith('0001-01-01')) return null;
@@ -368,59 +397,56 @@ export class StackOverviewComponent implements OnInit {
     this.adjust.stockIssueName = found?.name ?? null;
   }
 
-  // ✅ NEW: Backend call to update OnHand + Available
-// ✅ NEW payload includes stockIssueId
-submitAdjust(modalRef: any) {
-  this.validateNewInHand();
-  if (!this.canSubmitAdjust() || !this.adjust.row) return;
+  // ✅ Backend call to update OnHand + Available (payload includes stockIssueId)
+  submitAdjust(modalRef: any) {
+    this.validateNewInHand();
+    if (!this.canSubmitAdjust() || !this.adjust.row) return;
 
-  const row = this.adjust.row;
-  const payload = {
-    itemId: row.apiRow?.id,
-    warehouseId: row.apiRow?.warehouseId,
-    binId: row.apiRow?.binId,
-    newOnHand: Number(this.adjust.newInHand),
-    stockIssueId: this.adjust.stockIssueId ?? null   // ⬅️ send the dropdown id
-  };
+    const row = this.adjust.row;
+    const payload = {
+      itemId: row.apiRow?.id,
+      warehouseId: row.apiRow?.warehouseId,
+      binId: row.apiRow?.binId,
+      newOnHand: Number(this.adjust.newInHand),
+      stockIssueId: this.adjust.stockIssueId ?? null
+    };
 
-  this.loading = true;
-  this.stockService.AdjustOnHand(payload).subscribe({
-    next: (res: any) => {
-      this.loading = false;
+    this.loading = true;
+    this.stockService.AdjustOnHand(payload).subscribe({
+      next: (res: any) => {
+        this.loading = false;
 
-      // reflect DB-truth (or fallback)
-      const onHand = Number(res?.data?.onHand ?? payload.newOnHand);
-      const reserved = Number(res?.data?.reserved ?? row.reserved ?? 0);
-      const available = Number(res?.data?.available ?? (onHand - reserved));
+        const onHand = Number(res?.data?.onHand ?? payload.newOnHand);
+        const reserved = Number(res?.data?.reserved ?? row.reserved ?? 0);
+        const available = Number(res?.data?.available ?? (onHand - reserved));
 
-      row.onHand = onHand;
-      row.reserved = reserved;
-      row.available = available;
+        row.onHand = onHand;
+        row.reserved = reserved;
+        row.available = available;
 
-      this.applyFilters();
+        this.applyFilters();
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Adjustment Successful',
-        text: 'Stock levels updated successfully.',
-        confirmButtonColor: '#2E5F73'
-      });
+        Swal.fire({
+          icon: 'success',
+          title: 'Adjustment Successful',
+          text: 'Stock levels updated successfully.',
+          confirmButtonColor: '#2E5F73'
+        });
 
-      modalRef.close('submitted');
-    },
-    error: (err) => {
-      this.loading = false;
-      console.error('Adjust failed', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Adjustment Failed',
-        text: err?.error?.message || 'Could not adjust stock.',
-        confirmButtonColor: '#d33'
-      });
-    }
-  });
-}
-
+        modalRef.close('submitted');
+      },
+      error: (err) => {
+        this.loading = false;
+        console.error('Adjust failed', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Adjustment Failed',
+          text: err?.error?.message || 'Could not adjust stock.',
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
+  }
 
   loadStockissue() {
     this.stockIssueService.getAllStockissue().subscribe(res => {
@@ -476,7 +502,8 @@ submitAdjust(modalRef: any) {
       Sku: r.sku ?? '',
       BinId: r.binId ?? null,
       BinName: r.bin ?? '',
-      remarks:''
+      remarks:'',
+      transferQty:0
     }));
 
     this.stockService.insertStock(payload).subscribe({
@@ -522,8 +549,10 @@ submitAdjust(modalRef: any) {
     });
   }
 
+  // ===== Export =====
   openExportModal(tpl: any) {
-    this.exportFileName = '';
+    // refresh the timestamp each time user opens the modal
+    this.exportFileName = this.safeFile(this.buildFixedFileBase()); // e.g. stock-overview-20251022070730
     this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
   }
 
@@ -542,18 +571,6 @@ submitAdjust(modalRef: any) {
     }));
   }
 
-  private todayStamp(): string {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}${m}${day}`;
-  }
-
-  private safeFile(s: string): string {
-    return (s || 'stock-overview').replace(/[\\/:*?"<>|]+/g, '').trim() || 'stock-overview';
-  }
-
   exportAsExcel(): void {
     const data = this.buildExportRows();
     const ws = XLSX.utils.json_to_sheet(data);
@@ -563,7 +580,9 @@ submitAdjust(modalRef: any) {
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Stock Overview');
-    XLSX.writeFile(wb, `${this.safeFile(this.exportFileName)}.xlsx`);
+
+    const base = this.exportFileName || this.safeFile(this.buildFixedFileBase());
+    XLSX.writeFile(wb, `${base}.xlsx`);
   }
 
   exportAsPdf(): void {
@@ -589,9 +608,11 @@ submitAdjust(modalRef: any) {
       tableWidth: 'auto',
     });
 
-    doc.save(`${this.safeFile(this.exportFileName)}.pdf`);
+    const base = this.exportFileName || this.safeFile(this.buildFixedFileBase());
+    doc.save(`${base}.pdf`);
   }
 
+  // ===== Misc helpers =====
   getWarehouseNameById(id: number | string | null): string | null {
     if (id == null || id === '') return null;
     const w = this.warehouses.find(w => String(w.id) === String(id));
