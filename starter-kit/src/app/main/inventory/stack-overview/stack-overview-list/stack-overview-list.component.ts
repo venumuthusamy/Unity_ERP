@@ -2,11 +2,10 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { StackOverviewService } from '../stack-overview.service';
-// import { ItemMasterService } from '../../item-master/item-master.service'; // keep if you need it
 
-/** Raw row from API */
+/** Raw row from API (per bin / per warehouse row) */
 interface ApiStockRow {
-  id: number;
+  id: number;                // itemId
   sku: string;
   name: string;
   category?: string;
@@ -14,23 +13,23 @@ interface ApiStockRow {
 
   warehouseId?: number;
   warehouseName?: string;
-  binId?: number;
-  binName?: string;
+  binId?: number | null;
+  binName?: string | null;
 
   onHand?: number;
   reserved?: number;
   available?: number;
   minQty?: number;
   maxQty?: number;
-  expiryDate?: string; // ISO string
+  expiryDate?: string;       // ISO string
 }
 
-/** Location inside an item */
+/** Location inside a (item, warehouse) group — i.e., a bin line */
 interface ItemLocation {
   warehouseId?: number;
   warehouseName?: string;
-  binId?: number;
-  binName?: string;
+  binId?: number | null;
+  binName?: string | null;
   onHand?: number;
   reserved?: number;
   available?: number;
@@ -39,20 +38,24 @@ interface ItemLocation {
   expiryDate?: string | null;
 }
 
-/** Grouped row shown in the grid */
-export interface ItemMaster {
-  id: number;
+/** Grid row: one row per (itemId, warehouseId) */
+export interface ItemWarehouseRow {
+  gridKey: string;           // `${itemId}|${warehouseId ?? 0}` for uniqueness
+  id: number;                // itemId
   sku: string;
   name: string;
   category?: string;
   uom?: string;
 
-  // aggregated from all locations
+  warehouseId?: number | null;
+  warehouseName?: string | null;
+
+  // aggregated totals *within that warehouse only*
   totalOnHand?: number;
   totalReserved?: number;
   totalAvailable?: number;
 
-  // details for modal
+  // details for modal (bins for this (item, warehouse) only)
   locations: ItemLocation[];
 }
 
@@ -63,10 +66,10 @@ export interface ItemMaster {
   encapsulation: ViewEncapsulation.None,
 })
 export class StackOverviewListComponent implements OnInit {
-  rows: ItemMaster[] = [];
-  filteredRows: ItemMaster[] = [];
+  rows: ItemWarehouseRow[] = [];
+  filteredRows: ItemWarehouseRow[] = [];
 
-  selectedItem: ItemMaster | null = null;
+  selectedItem: ItemWarehouseRow | null = null;
 
   // paging + search
   pageSizes = [10, 25, 50, 100];
@@ -78,7 +81,6 @@ export class StackOverviewListComponent implements OnInit {
   errorMsg: string | null = null;
 
   constructor(
-    // private itemMasterService: ItemMasterService,
     private router: Router,
     private stockService: StackOverviewService,
     private modal: NgbModal
@@ -88,8 +90,8 @@ export class StackOverviewListComponent implements OnInit {
     this.loadMasterItem();
   }
 
-  /** Build a stable identity for ngx-datatable */
-  rowIdentity = (row: ItemMaster) => row.id;
+  /** Stable identity for ngx-datatable */
+  rowIdentity = (row: ItemWarehouseRow) => row.gridKey;
 
   loadMasterItem(): void {
     this.loading = true;
@@ -99,17 +101,26 @@ export class StackOverviewListComponent implements OnInit {
       next: (res: any) => {
         const raw: ApiStockRow[] = Array.isArray(res?.data) ? res.data : [];
 
-        // group by item id
-        const map = new Map<number, ItemMaster>();
+        // Group by (itemId, warehouseId)
+        const map = new Map<string, ItemWarehouseRow>();
 
         for (const r of raw) {
-          if (!map.has(r.id)) {
-            map.set(r.id, {
-              id: r.id,
+          const itemId = r.id;
+          const whId = r.warehouseId ?? 0;
+          const key = `${itemId}|${whId}`;
+
+          if (!map.has(key)) {
+            map.set(key, {
+              gridKey: key,
+              id: itemId,
               sku: r.sku,
               name: r.name,
               category: r.category,
               uom: r.uom,
+
+              warehouseId: r.warehouseId ?? null,
+              warehouseName: r.warehouseName ?? null,
+
               totalOnHand: 0,
               totalReserved: 0,
               totalAvailable: 0,
@@ -117,21 +128,21 @@ export class StackOverviewListComponent implements OnInit {
             });
           }
 
-          const item = map.get(r.id)!;
+          const row = map.get(key)!;
 
           const onHand = r.onHand ?? 0;
           const reserved = r.reserved ?? 0;
-          const available = r.available ?? 0;
+          const available = r.available ?? (onHand - reserved);
 
-          item.totalOnHand = (item.totalOnHand ?? 0) + onHand;
-          item.totalReserved = (item.totalReserved ?? 0) + reserved;
-          item.totalAvailable = (item.totalAvailable ?? 0) + available;
+          row.totalOnHand = (row.totalOnHand ?? 0) + onHand;
+          row.totalReserved = (row.totalReserved ?? 0) + reserved;
+          row.totalAvailable = (row.totalAvailable ?? 0) + available;
 
-          item.locations.push({
+          row.locations.push({
             warehouseId: r.warehouseId,
             warehouseName: r.warehouseName,
-            binId: r.binId,
-            binName: r.binName,
+            binId: r.binId ?? null,
+            binName: r.binName ?? null,
             onHand,
             reserved,
             available,
@@ -155,7 +166,7 @@ export class StackOverviewListComponent implements OnInit {
     });
   }
 
-  /** Search across item fields and inside locations (warehouse/bin) */
+  /** Search across item fields + warehouse + bins */
   applyFilter(): void {
     const q = (this.searchValue || '').toLowerCase().trim();
     if (!q) {
@@ -169,7 +180,8 @@ export class StackOverviewListComponent implements OnInit {
         (r.sku ?? '').toLowerCase().includes(q) ||
         (r.name ?? '').toLowerCase().includes(q) ||
         (r.category ?? '').toLowerCase().includes(q) ||
-        (r.uom ?? '').toLowerCase().includes(q);
+        (r.uom ?? '').toLowerCase().includes(q) ||
+        (r.warehouseName ?? '').toLowerCase().includes(q);
 
       if (baseHit) return true;
 
@@ -180,17 +192,10 @@ export class StackOverviewListComponent implements OnInit {
     });
   }
 
-  /** Open modal with warehouse/bin breakdown */
-  openViewModal(row: ItemMaster, tpl: any): void {
+  /** Open modal with only this warehouse’s bins for the item */
+  openViewModal(row: ItemWarehouseRow, tpl: any): void {
     this.selectedItem = row;
     this.modal.open(tpl, { centered: true, size: 'xl', backdrop: 'static' });
-  }
-
-  /** Edit action */
-  editItem(id: number): void {
-    // TODO: replace with your route
-    // this.router.navigate(['/inventory/item-master/edit', id]);
-    console.log('edit', id);
   }
 
   /** Create */
