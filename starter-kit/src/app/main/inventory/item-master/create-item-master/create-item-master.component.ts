@@ -25,8 +25,6 @@ type SimpleItem = {
   itemName: string;
   itemCode?: string;
   uomName?: string;
-  budgetLineId?: number;
-  label?: string | null;
   catagoryName: string;
 };
 
@@ -48,6 +46,7 @@ interface ItemMasterAudit {
   action: 'CREATE'|'UPDATE'|'DELETE'|string;
   occurredAtUtc: string;
   userId?: number|null;
+  userName?: string|null;
   oldValuesJson?: string|null;
   newValuesJson?: string|null;
   remarks?: string|null;
@@ -71,6 +70,16 @@ interface ItemStockRow {
   stockIssueID: number;
 }
 
+/** Inline BOM row (linked with supplier) */
+interface BomInlineRow {
+  supplierId: number | string | null;
+  supplierName: string | null;
+  existingCost: number;
+  unitCost: number | null;
+}
+
+interface BomTotals { rollup: number; count: number; }
+
 @Component({
   selector: 'app-create-item-master',
   templateUrl: './create-item-master.component.html',
@@ -79,8 +88,11 @@ interface ItemStockRow {
 })
 export class CreateItemMasterComponent implements OnInit {
 
-  // ===== Wizard =====
-  steps = ['Summary','Warehouses','Suppliers','Audit','Review'] as const;
+  // ===== Steps: dynamic (Create vs Edit) =====
+  private readonly stepsEdit   = ['Summary','Warehouses','Suppliers','BOM','Audit','Review'] as const;
+  private readonly stepsCreate = ['Summary','Warehouses','Suppliers','Review'] as const;
+  get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
+
   step = 0;
 
   next() {
@@ -90,9 +102,15 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
     }
-    if (this.step < this.steps.length - 1) {
+
+    if (this.step < this.stepsView.length - 1) {
       this.step++;
-      if (this.step === 3) this.loadAudits();
+
+      // Only for edit mode: prepare BOM & Audit when entering those steps
+      if (this.isEdit && this.step === 3) this.syncBomFromPrices(); // BOM
+      if (this.isEdit && this.step === 4) this.loadAudits();        // Audit
+
+      this.maybeScrollToReviewBottom();
     }
   }
   prev() { if (this.step > 0) this.step--; }
@@ -103,51 +121,24 @@ export class CreateItemMasterComponent implements OnInit {
 
   // ===== Audit =====
   audits: ItemMasterAudit[] = [];
- expandedAudit: Record<string | number, boolean> = {};
-showRaw: Record<string | number, boolean> = {};
+  expandedAudit: Record<string | number, boolean> = {};
+  busy: Record<string, boolean> = {};
+  copied: Record<string, boolean> = {}; // used by template
 
   // ===== Header model =====
   item: any = this.makeEmptyItem();
 
-  // ===== Selectors =====
+  // ===== Lists / selectors =====
   selectedItemId: number | null = null;
-
-  // ===== Pricing rows =====
   prices: PriceRow[] = [];
-
-  // ===== Supplier dropdown state/data =====
   supplierList: SupplierLite[] = [];
-  modalLine1 = {
-    supplierId: null as number|string|null,
-    supplierName: '',
-    supplierSearch: '',
-  };
   supplierDropdownOpen = false;
   filteredSuppliers: SupplierLite[] = [];
-  private activePriceIndex: number | null = null;
+  activePriceIndex: number | null = null;
 
-  // ===== Item search dropdown (Summary step) =====
-  modalLine: {
-    itemSearch: string;
-    dropdownOpen: boolean;
-    filteredItems: SimpleItem[];
-  } = {
-    itemSearch: '',
-    dropdownOpen: false,
-    filteredItems: [],
-  };
+  modalLine = { itemSearch: '', dropdownOpen: false, filteredItems: [] as SimpleItem[] };
 
-  minDate = '';
-  userId: any;
-copied: Record<string | number, boolean> = {};
-  // ===== Catalogs & lists =====
   strategyList: any;
-  suppliers: string[] = [];
-  supplierDraft = '';
-  substitutes: string[] = [];
-  substituteDraft = '';
-  accountHeads: any[] = [];
-  parentHeadList: Array<{ value: number; label: string }> = [];
   itemsList: SimpleItem[] = [];
   uomList: Array<{ id?: number; name: string }> = [];
   taxCodeList: Array<{ id: number; name: string }> = [];
@@ -157,22 +148,26 @@ copied: Record<string | number, boolean> = {};
 
   // ===== Per-warehouse stock =====
   itemStocks: ItemStockRow[] = [];
-private brand = '#2E5F73';
-  // ===== Modal state =====
+
+  // ===== Warehouse modal state =====
   showWhModal = false;
   whDraft: ItemStockRow = this.makeEmptyStockDraft();
   isEditMode: boolean = false;
   editingIndex: number = -1;
 
-busy: Record<string, boolean> = {};
+  // ===== BOM (INLINE) =====
+  bomRows: BomInlineRow[] = [];
+  bomTotals: BomTotals = { rollup: 0, count: 0 };
 
-  // ===== Refs =====
-  @ViewChild('pictureInput') pictureInput!: ElementRef<HTMLInputElement>;
-  @ViewChild('attachmentsInput') attachmentsInput!: ElementRef<HTMLInputElement>;
+  brand = '#2E5F73';
+  minDate = '';
+  userId: any;
+  showRaw: Record<string | number, boolean> = {};
   @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchBox', { static: false }) itemSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
-
+   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
+   @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
   constructor(
     private itemsSvc: ItemMasterService,
     private chartOfAccountService: ChartofaccountService,
@@ -181,7 +176,7 @@ busy: Record<string, boolean> = {};
     private warehouseService: WarehouseService,
     private taxCodeService: TaxCodeService,
     private coastingmethodService: CoastingMethodService,
-    private _SupplierService : SupplierService,
+    private supplierService : SupplierService,
     private strategyService: StrategyService,
     private router: Router,
     private route: ActivatedRoute,
@@ -193,7 +188,7 @@ busy: Record<string, boolean> = {};
   ngOnInit(): void {
     this.setMinDate();
 
-    // Load static catalogs first (so selects render with options)
+    // catalogs
     this.loadCatalogs();
     this.loadWarehouses();
     this.loadCostingMethods();
@@ -201,19 +196,18 @@ busy: Record<string, boolean> = {};
     this.getAllSupplier();
     this.getAllStrategy();
 
-    // Detect :id → Edit mode
+    // detect edit
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.isEdit = true;
       this.editingId = Number(idParam);
       this.loadForEdit(this.editingId);
     } else {
-      // Create mode: still load item list for the summary dropdown
       this.loadItems();
     }
   }
 
-  // ======= Derived totals =======
+  // ===== Derived totals for warehouse =====
   get totals() {
     const t = { onHand: 0, reserved: 0, available: 0 };
     for (const r of this.itemStocks) {
@@ -226,7 +220,7 @@ busy: Record<string, boolean> = {};
     return t;
   }
 
-  // ======= Load list for the summary dropdown =======
+  // ===== Items list for dropdown =====
   itemsTable: any[] = [];
   loadItems(): void {
     this.itemsSvc.getAllItemMaster().subscribe({
@@ -241,106 +235,88 @@ busy: Record<string, boolean> = {};
     });
   }
 
-  // ======= Edit loader (header + stocks + prices) =======
-private loadForEdit(id: number): void {
-  debugger
-  forkJoin({
-    header: this.itemsSvc.getItemMasterById(id),
-    stocks: this.itemsSvc.getWarehouseStock(id),
-    prices: this.itemsSvc.getSupplierPrices(id),
-  } as {
-    header: Observable<any>;
-    stocks: Observable<any>;
-    prices: Observable<any>;
-  }).subscribe({
-    next: ({ header, stocks, prices }) => {
-      // ✅ Normalize header
-      const h: any = Array.isArray(header)
-        ? header[0]
-        : (header && 'data' in header ? (header as any).data : header) || {};
+  // ===== Edit loader =====
+  private loadForEdit(id: number): void {
+    forkJoin({
+      header: this.itemsSvc.getItemMasterById(id),
+      stocks: this.itemsSvc.getWarehouseStock(id),
+      prices: this.itemsSvc.getSupplierPrices(id),
+    } as { header: Observable<any>; stocks: Observable<any>; prices: Observable<any>; })
+    .subscribe({
+      next: ({ header, stocks, prices }) => {
+        const h: any = Array.isArray(header)
+          ? header[0]
+          : (header && 'data' in header ? (header as any).data : header) || {};
 
-      this.item = {
-        id: h.id,
-        sku: h.sku ?? h.itemCode ?? '',
-        name: h.name ?? h.itemName ?? '',
-        category: h.category ?? h.catagoryName ?? '',
-        uom: h.uom ?? h.uomName ?? '',
-        costingMethodId: h.costingMethodId ?? null,
-        taxCodeId: h.taxCodeId ?? null,
-        specs: h.specs ?? '',
-        pictureUrl: h.pictureUrl ?? '',
-        lastCost: h.lastCost ?? null,
-        isActive: h.isActive ?? true,
-        createdBy: this.userId,
-        updatedBy: this.userId,
-        expiryDate: this.toDateOnly(h.expiryDate)
-      };
+        this.item = {
+          id: h.id,
+          sku: h.sku ?? h.itemCode ?? '',
+          name: h.name ?? h.itemName ?? '',
+          category: h.category ?? h.catagoryName ?? '',
+          uom: h.uom ?? h.uomName ?? '',
+          costingMethodId: h.costingMethodId ?? null,
+          taxCodeId: h.taxCodeId ?? null,
+          specs: h.specs ?? '',
+          pictureUrl: h.pictureUrl ?? '',
+          lastCost: h.lastCost ?? null,
+          isActive: h.isActive ?? true,
+          createdBy: this.userId,
+          updatedBy: this.userId,
+          expiryDate: this.toDateOnly(h.expiryDate)
+        };
 
-      // ✅ Normalize stock rows
-      const stockArr: any[] = Array.isArray(stocks)
-        ? stocks
-        : (stocks && 'data' in stocks ? (stocks as any).data : []) || [];
+        const stockArr: any[] = Array.isArray(stocks)
+          ? stocks
+          : (stocks && 'data' in stocks ? (stocks as any).data : []) || [];
 
-      this.itemStocks = stockArr.map((r: any) => ({
-        warehouseId: r.warehouseId,
-        binId: r.binId,
-        strategyId: r.strategyId ?? null,
-        onHand: Number(r.onHand || 0),
-        reserved: Number(r.reserved || 0),
-        available: Math.max(
-          0,
-          Number(r.available ?? (Number(r.onHand || 0) - Number(r.reserved || 0)))
-        ),
-        min: r.min ?? r.minQty ?? null,
-        max: r.max ?? r.maxQty ?? null,
-        reorderQty: r.reorderQty ?? null,
-        leadTimeDays: r.leadTimeDays ?? null,
-        batchFlag: !!r.batchFlag,
-        serialFlag: !!r.serialFlag,
-        isApproved: !!r.isApproved,
-        isTransfered: !!r.isTransfered,
-        stockIssueID: r.stockIssueID ?? 0
-      }));
+        this.itemStocks = stockArr.map((r: any) => ({
+          warehouseId: r.warehouseId,
+          binId: r.binId,
+          strategyId: r.strategyId ?? null,
+          onHand: Number(r.onHand || 0),
+          reserved: Number(r.reserved || 0),
+          available: Math.max(0, Number(r.available ?? (Number(r.onHand || 0) - Number(r.reserved || 0)))),
+          min: r.min ?? r.minQty ?? null,
+          max: r.max ?? r.maxQty ?? null,
+          reorderQty: r.reorderQty ?? null,
+          leadTimeDays: r.leadTimeDays ?? null,
+          batchFlag: !!r.batchFlag,
+          serialFlag: !!r.serialFlag,
+          isApproved: !!r.isApproved,
+          isTransfered: !!r.isTransfered,
+          stockIssueID: r.stockIssueID ?? 0
+        }));
 
-        const firstWarehouseId = this.itemStocks?.[0]?.warehouseId ?? null;
-      if (firstWarehouseId != null) {
-        this.getBinsForWarehouse(firstWarehouseId);
-      }
-    
-      // ✅ Normalize price rows
-      const priceArr: any[] = Array.isArray(prices)
-        ? prices
-        : (prices && 'data' in prices ? (prices as any).data : []) || [];
+        const priceArr: any[] = Array.isArray(prices)
+          ? prices
+          : (prices && 'data' in prices ? (prices as any).data : []) || [];
 
-      this.prices = priceArr.map((p: any) => ({
-        price: p.price ?? null,
-        barcode: p.barcode ?? null,
-        SupplierId: p.supplierId ?? p.SupplierId ?? null,
-        supplierName: p.supplierName ?? p.name ?? null,
-        supplierSearch: p.supplierName ?? p.name ?? ''
-      }));
+        this.prices = priceArr.map((p: any) => ({
+          price: p.price ?? null,
+          barcode: p.barcode ?? null,
+          SupplierId: p.supplierId ?? p.SupplierId ?? null,
+          supplierName: p.supplierName ?? p.name ?? null,
+          supplierSearch: p.supplierName ?? p.name ?? ''
+        }));
 
-      // ✅ Sync dropdown item name
-      this.modalLine.itemSearch = this.item.name || '';
-    },
-    error: () => {
-      Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' });
-    }
-  });
-}
-private toDateOnly(d: any): string | null {
-  if (!d) return null;
-  // Handle Date, ISO strings like '2025-10-24T00:00:00', or '2025-10-24'
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return null; // guard against bad values
+        this.modalLine.itemSearch = this.item.name || '';
 
-  // Keep the same calendar day regardless of timezone
-  const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000);
-  return local.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-}
+        // Initialize BOM from current prices
+        this.syncBomFromPrices();
+      },
+      error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
+    });
+  }
 
+  private toDateOnly(d: any): string | null {
+    if (!d) return null;
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return null;
+    const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000);
+    return local.toISOString().split('T')[0];
+  }
 
-  // ======= Save (Create/Update) =======
+  // ===== Save =====
   async onSave(): Promise<void> {
     if (!this.item.sku?.trim() || !this.item.name?.trim()) {
       await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
@@ -365,13 +341,22 @@ private toDateOnly(d: any): string | null {
       stockIssueID: r.stockIssueID ?? 0
     }));
 
-    const payload = {
+    const bomPayload = (this.bomRows || []).map(r => ({
+      supplierId: r.supplierId,
+      supplierName: r.supplierName,
+      existingCost: Number(r.existingCost || 0),
+      unitCost: Number(((r.unitCost ?? r.existingCost) || 0))
+    }));
+
+    const payload: any = {
       ...this.item,
       itemStocks: stocksPayload,
       prices: (this.prices ?? []).filter(p => p.price != null),
-      suppliers: this.suppliers,
-      substitutes: this.substitutes
     };
+
+    if (this.isEdit) {
+      payload.bomLines = bomPayload;
+    }
 
     const creating = !payload.id || payload.id <= 0;
 
@@ -381,9 +366,11 @@ private toDateOnly(d: any): string | null {
         if (creating) {
           const newId = Number(res?.data?.id ?? res?.data ?? res?.id ?? 0);
           if (!this.item.id && newId) this.item.id = newId;
-          // After create, flip into edit mode for consistency
           this.isEdit = true;
           this.editingId = this.item.id;
+          if (this.step > this.stepsView.length - 1) {
+            this.step = this.stepsView.length - 1;
+          }
         }
         Swal.fire({
           icon: 'success',
@@ -392,23 +379,20 @@ private toDateOnly(d: any): string | null {
           confirmButtonColor: '#0e3a4c'
         });
         this.loadItems();
+        this.onGoToItemList();
       } else {
         Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
       }
     };
-
     const onApiError = (_: any) => {
       Swal.fire({ icon: 'error', title: 'Error', text: creating ? 'Create failed' : 'Update failed', confirmButtonColor: '#0e3a4c' });
     };
 
-    if (creating) {
-      this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });
-    } else {
-      this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
-    }
+    if (creating) this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });
+    else this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
   }
 
-  // ======= Misc UI helpers =======
+  // ===== Misc UI helpers =====
   setMinDate() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -416,70 +400,16 @@ private toDateOnly(d: any): string | null {
     const dd = String(d.getDate()).padStart(2, '0');
     this.minDate = `${yyyy}-${mm}-${dd}`;
   }
-
-  onClone(): void {
-    if (!this.item?.sku || !this.item?.name) {
-      Swal.fire({ icon:'warning', title:'Nothing to clone', text:'Please load or create an item first.' });
-      return;
-    }
-    const clone = { ...this.item, id: 0, sku: `${this.item.sku}-CLONE-${Date.now().toString().slice(-4)}`, name: `${this.item.name} (Clone)` };
-    this.itemsSvc.createItemMaster(clone).subscribe({
-      next: _ => { Swal.fire({ icon:'success', title:'Cloned', text:'Item cloned successfully' }); this.loadItems(); },
-      error: _ => Swal.fire({ icon:'error', title:'Error', text:'Clone failed' }),
-    });
-  }
-
-  onArchive(): void {
-    const id = Number(this.item?.id);
-    if (!id) return;
-    Swal.fire({ icon:'warning', title:'Archive Item?', text:'This will deactivate the item.', showCancelButton:true, confirmButtonText:'Archive' })
-      .then(res=>{
-        if(res.isConfirmed){
-          this.itemsSvc.deleteItemMaster(id).subscribe({
-            next:_=>{
-              Swal.fire({ icon:'success', title:'Archived', text:'Item archived' });
-              this.item = this.makeEmptyItem();
-              this.itemStocks = [];
-              this.loadItems();
-              this.isEdit = false;
-              this.editingId = null;
-            },
-            error:_=> Swal.fire({ icon:'error', title:'Error', text:'Archive failed' }),
-          });
-        }
-      });
-  }
-
-  onPictureChange(ev: Event) {
-    const f = (ev.target as HTMLInputElement).files?.[0];
-    if (f) Swal.fire({ icon:'info', title:'Selected', text:`Picture: ${f.name}` });
-  }
-  onAttachmentsChange(ev: Event) {
-    const files = (ev.target as HTMLInputElement).files ? Array.from((ev.target as HTMLInputElement).files!) : [];
-    if (files.length) Swal.fire({ icon:'info', title:'Selected', text:`${files.length} attachment(s) chosen` });
-  }
   onExpiryChange(e: Event) {
     const value = (e.target as HTMLInputElement).value || null;
     this.item.expiryDate = value;
     this.item.createdBy = this.userId;
     this.item.updatedBy = this.userId;
   }
-
-  // ======= Select handlers =======
-  onItemSelectedId(id: number | null) {
-    if (!id) return;
-    const picked = this.itemsList.find(x => x.id === id);
-    if (!picked) return;
-
-    this.item.name = picked.itemName;
-    this.item.sku  = picked.itemCode ?? '';
-    this.item.uom  = picked.uomName ?? '';
-    this.item.category  = picked.catagoryName ?? '';
-  }
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
 
-  // ======= Warehouse modal (Add/Edit row) =======
+  // ===== Warehouse modal =====
   openWhModal(): void {
     this.whDraft = this.makeEmptyStockDraft();
     this.showWhModal = true;
@@ -496,14 +426,11 @@ private toDateOnly(d: any): string | null {
     if (insideDropdown) return;
     this.modalLine.dropdownOpen = false;
   }
-
   editLine(i: number): void {
     const r = this.itemStocks[i];
     if (!r) return;
-
     this.isEditMode = true;
     this.editingIndex = i;
-
     this.whDraft = {
       warehouseId: r.warehouseId ?? null,
       binId: r.binId ?? null,
@@ -521,31 +448,15 @@ private toDateOnly(d: any): string | null {
       isTransfered: !!r.isTransfered,
       stockIssueID: r.stockIssueID ?? 0
     };
-
     this.getBinsForWarehouse(this.whDraft.warehouseId);
     this.showWhModal = true;
-    document.body.style.overflow = 'hidden';
   }
-
   submitWarehouse(closeAfter: boolean): void {
     this.recalcDraft();
-
-    if (!this.whDraft.warehouseId) {
-      Swal.fire({ icon: 'warning', title: 'Select warehouse' });
-      return;
-    }
-    if (!this.whDraft.binId) {
-      Swal.fire({ icon: 'warning', title: 'Select bin' });
-      return;
-    }
-    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
-      Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' });
-      return;
-    }
-    if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) {
-      Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' });
-      return;
-    }
+    if (!this.whDraft.warehouseId) { Swal.fire({ icon: 'warning', title: 'Select warehouse' }); return; }
+    if (!this.whDraft.binId) { Swal.fire({ icon: 'warning', title: 'Select bin' }); return; }
+    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) { Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' }); return; }
+    if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) { Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' }); return; }
 
     const dupIdx = this.itemStocks.findIndex(x =>
       String(x.warehouseId) === String(this.whDraft.warehouseId) &&
@@ -556,7 +467,7 @@ private toDateOnly(d: any): string | null {
       return;
     }
 
-    const normalized = {
+    const normalized: ItemStockRow = {
       warehouseId: this.whDraft.warehouseId,
       binId: this.whDraft.binId,
       strategyId: this.whDraft.strategyId,
@@ -572,7 +483,7 @@ private toDateOnly(d: any): string | null {
       isApproved: !!this.whDraft.isApproved,
       isTransfered: !!this.whDraft.isTransfered,
       stockIssueID: this.whDraft.stockIssueID ?? 0
-    } as ItemStockRow;
+    };
 
     if (this.isEditMode && this.editingIndex > -1) {
       const next = [...this.itemStocks];
@@ -597,52 +508,45 @@ private toDateOnly(d: any): string | null {
       else this.whDraft = this.makeEmptyStockDraft();
     }
   }
-
   removeWarehouseRow(i: number): void {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
   }
 
-  // ======= Lookups =======
+  // ===== Lookups =====
   getBinsForWarehouse(id: number | string | null) {
     this.warehouseService.getBinNameByIdAsync(id).subscribe((response: any) => {
-      this.binList = response.data;
+      this.binList = response?.data ?? [];
     });
   }
-
   getWarehouseName(id: any): string {
     const w = this.warehouseList.find(x => String(x.id) === String(id));
     return w?.name ?? '-';
   }
-
   getBinName(id: any): string {
     if (id == null) return '-';
-    const byId = this.binList.find(b => String((b.binID ?? b.id)) === String(id));
-    return (byId?.binName ?? byId?.name) || '-';
+    const byId = this.binList.find(b => String((b.binID ?? (b as any).id)) === String(id));
+    return (byId?.binName ?? (byId as any)?.name) || '-';
   }
-
   getStrategyName(id: any): string {
     if (id == null) return '-';
     const s = (this.strategyList || []).find((x: any) => String(x.id) === String(id));
     return s?.strategyName || s?.name || '-';
   }
-
   getById(list: any[], id: any) { return list?.find?.(x => String(x.id)===String(id)); }
 
-  // ======= Suppliers API LOAD =======
+  // ===== Suppliers =====
   getAllSupplier() {
-    this._SupplierService.GetAllSupplier().subscribe((response: any) => {
+    this.supplierService.GetAllSupplier().subscribe((response: any) => {
       this.supplierList = (response?.data ?? []).map((s:any) => ({
         id: s.id,
         name: s.name ?? s.supplierName ?? `Supplier-${s.id}`,
         code: s.code ?? s.supplierCode ?? undefined
       }));
-      if (!this.modalLine1.supplierSearch) {
-        this.filteredSuppliers = this.supplierList.slice(0, 20);
-      }
+      if (!this.prices.length) this.filteredSuppliers = this.supplierList.slice(0, 20);
     });
   }
 
-  // ======= Catalogs =======
+  // ===== Catalogs =====
   loadWarehouses() {
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
@@ -652,100 +556,54 @@ private toDateOnly(d: any): string | null {
       error: (err: any) => console.error('Error loading warehouses', err)
     });
   }
-
   loadCostingMethods() {
     this.coastingmethodService.getAllCoastingMethod().subscribe((res: any) => {
       const data = res?.data ?? [];
-      this.costingMethodList = data
-        .filter((x:any)=>x.isActive===true)
-        .map((x:any)=>({ id:x.id, name:x.costingName }));
+      this.costingMethodList = data.filter((x:any)=>x.isActive===true).map((x:any)=>({ id:x.id, name:x.costingName }));
     });
   }
-
   getAllTaxCode() {
     this.taxCodeService.getTaxCode().subscribe((response: any) => {
       const data = response?.data ?? [];
       this.taxCodeList = data.map((t:any)=>({ id:t.id, name:t.name }));
     });
   }
-
   getAllStrategy() {
     this.strategyService.getStrategy().subscribe((response: any) => {
       this.strategyList = response.data;
     });
   }
-
   loadCatalogs() {
-    this.chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
-      this.accountHeads = res?.data ?? [];
-      this.parentHeadList = this.accountHeads.map((head: any) => ({ value: head.id, label: this.buildFullPath(head) }));
-
+    this.chartOfAccountService.getAllChartOfAccount().subscribe(() => {
       this.itemsService.getAllItem().subscribe((ires: any) => {
         const raw = ires?.data ?? [];
-        this.itemsList = raw.map((item: any) => {
-          const matched = this.parentHeadList.find(h => +h.value === +item.budgetLineId);
-          return {
-            id: Number(item.id ?? item.itemId ?? 0),
-            itemName: item.itemName ?? item.name ?? '',
-            itemCode: item.itemCode ?? '',
-            uomName: item.uomName ?? item.uom ?? '',
-            budgetLineId: item.budgetLineId,
-            label: matched ? matched.label : null,
-            catagoryName: item.catagoryName
-          } as SimpleItem;
-        });
+        this.itemsList = raw.map((item: any) => ({
+          id: Number(item.id ?? item.itemId ?? 0),
+          itemName: item.itemName ?? item.name ?? '',
+          itemCode: item.itemCode ?? '',
+          uomName: item.uomName ?? item.uom ?? '',
+          catagoryName: item.catagoryName
+        } as SimpleItem));
       });
     });
-
     this.uomService.getAllUom().subscribe((res: any) => {
       this.uomList = (res?.data ?? []).map((u:any)=>({ id:u.id, name:u.name }));
     });
   }
 
-  buildFullPath(item: any): string {
-    if (!item) return '';
-    let path = item.headName;
-    let current = this.accountHeads.find((x: any) => x.id === item.parentHead);
-    while (current) {
-      path = `${current.headName} >> ${path}`;
-      current = this.accountHeads.find((x: any) => x.id === current.parentHead);
-    }
-    return path;
-  }
-
-  // ======= Pricing =======
+  // ===== Pricing =====
   addPriceLine(): void {
-    this.prices = [
-      ...this.prices,
-      { price: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }
-    ];
+    this.prices = [...this.prices, { price: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }];
     this.activePriceIndex = null;
     this.filteredSuppliers = [];
     this.supplierDropdownOpen = false;
   }
-
   removePriceLine(i: number): void {
     this.prices = this.prices.filter((_, idx) => idx !== i);
+    if (this.isEdit) this.syncBomFromPrices();
   }
 
-  addSupplier(): void {
-    const v = (this.supplierDraft || '').trim();
-    if (!v) {
-      Swal.fire({ icon: 'warning', title: 'Empty', text: 'Enter a supplier name' });
-      return;
-    }
-    if (!this.suppliers.includes(v)) this.suppliers = [...this.suppliers, v];
-    this.supplierDraft = '';
-  }
-
-  addSubstitute(): void {
-    const v = (this.substituteDraft || '').trim();
-    if (!v) return;
-    if (!this.substitutes.includes(v)) this.substitutes = [...this.substitutes, v];
-    this.substituteDraft = '';
-  }
-
-  // ======= Item Search Dropdown logic =======
+  // ===== Item dropdown =====
   onModalItemFocus(open: boolean = true): void {
     this.modalLine.dropdownOpen = open;
     if (open) {
@@ -755,7 +613,6 @@ private toDateOnly(d: any): string | null {
       setTimeout(() => this.itemSearchInput?.nativeElement?.focus(), 0);
     }
   }
-
   filterModalItems(): void {
     const q = (this.modalLine.itemSearch || '').toLowerCase();
     this.modalLine.filteredItems = this.itemsList.filter(
@@ -764,7 +621,7 @@ private toDateOnly(d: any): string | null {
         (it.itemCode || '').toLowerCase().includes(q)
     );
   }
-
+  trackByItemId = (_: number, row: SimpleItem) => row.id;
   selectModalItem(row: SimpleItem): void {
     this.item.name = row.itemName || '';
     this.item.sku = row.itemCode || '';
@@ -774,7 +631,7 @@ private toDateOnly(d: any): string | null {
     this.modalLine.dropdownOpen = false;
   }
 
-  // ======= Supplier Search Dropdown logic =======
+  // ===== Supplier dropdown =====
   filterSuppliersForRow(i: number): void {
     const q = (this.prices[i]?.supplierSearch || '').toLowerCase().trim();
     this.filteredSuppliers = !q
@@ -785,29 +642,26 @@ private toDateOnly(d: any): string | null {
           String(s.id).toLowerCase().includes(q)
         );
   }
-
+  trackBySupplierId = (_: number, s: SupplierLite) => s.id;
   selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
     ev?.stopPropagation();
     const row = this.prices[i];
     if (!row) return;
-
     row.SupplierId = s.id;
     row.supplierName = s.name;
     row.supplierSearch = s.name;
-
     this.activePriceIndex = i;
     this.supplierDropdownOpen = false;
+    if (this.isEdit) this.syncBomFromPrices();
   }
 
-  // ======= Global focus & click handling =======
+  // ===== Global focus & click =====
   @HostListener('document:focusin', ['$event'])
   onFocusIn(ev: FocusEvent) {
     const target = ev.target as HTMLInputElement;
     if (!target) return;
-
     if (target.name?.startsWith('supplierSearch')) {
       this.supplierDropdownOpen = true;
-
       const tr = target.closest('tr');
       if (tr && tr.parentElement) {
         const rows = Array.from(tr.parentElement.querySelectorAll(':scope > tr'));
@@ -816,26 +670,16 @@ private toDateOnly(d: any): string | null {
       }
     }
   }
-
   @HostListener('document:click', ['$event'])
   onDocumentClick(ev: MouseEvent) {
     const t = ev.target as Node;
-
     const itemBox = this.itemSearchBox?.nativeElement;
-    if (itemBox && !itemBox.contains(t)) {
-      this.modalLine.dropdownOpen = false;
-    }
-
+    if (itemBox && !itemBox.contains(t)) this.modalLine.dropdownOpen = false;
     const supplierBox = this.supplierSearchBox?.nativeElement;
-    if (supplierBox && !supplierBox.contains(t)) {
-      this.supplierDropdownOpen = false;
-    }
+    if (supplierBox && !supplierBox.contains(t)) this.supplierDropdownOpen = false;
   }
 
-  @HostListener('document:keydown.escape', ['$event'])
-  onEsc(_e: KeyboardEvent) {}
-
-  // ======= Small utilities =======
+  // ===== Small utilities =====
   private makeEmptyItem() {
     return {
       id: 0,
@@ -854,7 +698,6 @@ private toDateOnly(d: any): string | null {
       expiryDate: null as string | null
     };
   }
-
   private makeEmptyStockDraft(): ItemStockRow {
     return {
       warehouseId: null,
@@ -874,7 +717,6 @@ private toDateOnly(d: any): string | null {
       stockIssueID: 0
     };
   }
-
   recalcDraft(): void {
     const onHand = Math.max(0, Number(this.whDraft.onHand || 0));
     const reserved = Math.max(0, Number(this.whDraft.reserved || 0));
@@ -892,223 +734,307 @@ private toDateOnly(d: any): string | null {
     });
   }
 
-  badgeTone(a: string) {
-    switch (a) {
-      case 'CREATE': return 'bg-green-100 text-green-700 border-green-200';
-      case 'UPDATE': return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'DELETE': return 'bg-red-100 text-red-700 border-red-200';
-      default:       return 'bg-gray-100 text-gray-700 border-gray-200';
+  // ===== Styles/helpers used by template =====
+  avatarStyle(name?: string) {
+    return {
+      display: 'inline-grid',
+      placeItems: 'center',
+      width: '20px',
+      height: '20px',
+      borderRadius: '9999px',
+      fontSize: '10px',
+      fontWeight: 700,
+      color: '#fff',
+      background: this.brand,
+      border: '1px solid #dbe7ee',
+      boxShadow: '0 1px 0 rgba(0,0,0,.03)',
+      marginRight: '6px'
+    } as any;
+  }
+  get userPillStyle() {
+    return {
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '9999px',
+      background: '#F1F5F9',
+      border: '1px solid #E2E8F0',
+      fontSize: '11px',
+      color: '#334155'
+    } as any;
+  }
+  initials(full: string) {
+    if (!full) return '?';
+    const parts = full.trim().split(/\s+/);
+    const first = parts[0]?.[0] || '';
+    const last  = parts[1]?.[0] || '';
+    return (first + last).toUpperCase();
+  }
+  toggleDetails(id: string | number) {
+    this.expandedAudit[id] = !this.expandedAudit[id];
+  }
+  prettyJson(payload: any): string {
+    if (!payload) return '—';
+    try {
+      const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return String(payload);
     }
   }
-
-  // diffs(a: ItemMasterAudit) {
-  //   const before = a.oldValuesJson ? JSON.parse(a.oldValuesJson) : {};
-  //   const after  = a.newValuesJson ? JSON.parse(a.newValuesJson) : {};
-  //   const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
-  //   return keys
-  //     .map(k => ({ field: k, before: before[k], after: after[k] }))
-  //     .filter(r => a.action !== 'UPDATE' || r.before !== r.after);
-  // }
-
-  // ======= Nav =======
-  onGoToItemList(): void {
-    this.router.navigate(['/Inventory/List-itemmaster']);
+  private valueToText(v: any): string {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
   }
-chipStyle(action?: string) {
-  const a = (action || '').toUpperCase();
-  // colors per action
-  const map: any = {
-    CREATE: { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46' },   // green
-    UPDATE: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },   // amber
-    DELETE: { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' },   // red
-    DEFAULT:{ bg: '#F1F7F9', border: '#DBE7EE', text: this.brand }   // brand
-  };
-  const c = map[a] || map.DEFAULT;
-
-  return {
-    display: 'inline-block',
-    padding: '4px 10px',
-    borderRadius: '9999px',
-    fontSize: '10px',
-    fontWeight: 700,
-    letterSpacing: '.02em',
-    textTransform: 'uppercase',
-    border: `1px solid ${c.border}`,
-    background: c.bg,
-    color: c.text,
-    lineHeight: '1'
-  } as any;
-}
-
-userPillStyle = {
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: '9999px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#111827',
-  background: '#F3F4F6',
-  border: '1px solid #E5E7EB',
-  lineHeight: '1.3'
-} as any;
-
-avatarStyle(name?: string) {
-  // subtle colored circle with brand border
-  return {
-    display: 'inline-grid',
-    placeItems: 'center',
-    width: '20px',
-    height: '20px',
-    borderRadius: '9999px',
-    fontSize: '10px',
-    fontWeight: 700,
-    color: '#fff',
-    background: this.brand,
-    border: '1px solid #dbe7ee',
-    boxShadow: '0 1px 0 rgba(0,0,0,.03)',
-    marginRight: '6px'
-  } as any;
-}
-
-initials(full: string) {
-  if (!full) return '?';
-  const parts = full.trim().split(/\s+/);
-  const first = parts[0]?.[0] || '';
-  const last  = parts[1]?.[0] || '';
-  return (first + last).toUpperCase();
-}
-
-toggleDetails(id: string | number) {
-  this.expandedAudit[id] = !this.expandedAudit[id];
-}
-
-/** Pretty-print JSON that may be null or a string/object */
-prettyJson(payload: any): string {
-  if (!payload) return '—';
-  try {
-    const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
-    return JSON.stringify(obj, null, 2);
-  } catch {
-    // already a string or invalid JSON
-    return String(payload);
+  safeParse(x: any) {
+    if (!x) return null;
+    try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return x; }
   }
-}
 
-
-
-private valueToText(v: any): string {
-  if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') return JSON.stringify(v);
-  return String(v);
-}
- safeParse(x: any) {
-  if (!x) return null;
-  try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return x; }
-}
-async copyJson(a: any) {
-  const payload = {
-    action: a.action,
-    occurredAtUtc: a.occurredAtUtc,
-    user: a.userName || a.userId,
-    before: this.safeParse(a.oldValuesJson),
-    after: this.safeParse(a.newValuesJson)
-  };
-  const text = JSON.stringify(payload, null, 2);
-
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-
-    Swal.fire({
-      toast: true,
-      position: 'top',
-      icon: 'success',
-      title: 'Copied to clipboard',
-      showConfirmButton: false,
-      timer: 1200,
-      background: '#f5fafc',
-      color: '#2E5F73'
-    });
-  } catch {
-    Swal.fire({
-      toast: true,
-      position: 'top',
-      icon: 'error',
-      title: 'Copy failed',
-      showConfirmButton: false,
-      timer: 1500
-    });
-  }
-}
-downloadJson(a: any) {
-  const blob = new Blob(
-    [JSON.stringify({
+  async copyJson(a: any) {
+    const k = String(a.auditId ?? a.occurredAtUtc ?? '');
+    this.busy[k] = true;
+    const payload = {
       action: a.action,
       occurredAtUtc: a.occurredAtUtc,
       user: a.userName || a.userId,
       before: this.safeParse(a.oldValuesJson),
       after: this.safeParse(a.newValuesJson)
-    }, null, 2)],
-    { type: 'application/json' }
-  );
-  const url = URL.createObjectURL(blob);
-  const aTag = document.createElement('a');
-  aTag.href = url;
-  aTag.download = `audit_${a.auditId || a.occurredAtUtc}.json`;
-  aTag.click();
-  URL.revokeObjectURL(url);
-}
+    };
+    const text = JSON.stringify(payload, null, 2);
 
-keyOf(a: any, index: number): string {
-  return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
-}
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      this.copied[k] = true;
+      setTimeout(()=> this.copied[k] = false, 1500);
+    } catch {
+      Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'error',
+        title: 'Copy failed',
+        showConfirmButton: false,
+        timer: 1500
+      });
+    } finally {
+      this.busy[k] = false;
+    }
+  }
 
-isExpanded(a: any, index: number): boolean {
-  return !!this.expandedAudit[this.keyOf(a, index)];
-}
+  downloadJson(a: any) {
+    const blob = new Blob(
+      [JSON.stringify({
+        action: a.action,
+        occurredAtUtc: a.occurredAtUtc,
+        user: a.userName || a.userId,
+        before: this.safeParse(a.oldValuesJson),
+        after: this.safeParse(a.newValuesJson)
+      }, null, 2)],
+      { type: 'application/json' }
+    );
+    const url = URL.createObjectURL(blob);
+    const aTag = document.createElement('a');
+    aTag.href = url;
+    aTag.download = `audit_${a.auditId || a.occurredAtUtc}.json`;
+    aTag.click();
+    URL.revokeObjectURL(url);
+  }
 
+  keyOf(a: any, index: number): string {
+    return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
+  }
+  isExpanded(a: any, index: number): boolean {
+    return !!this.expandedAudit[this.keyOf(a, index)];
+  }
+  toggleRaw(a: any, index: number) {
+    const k = this.keyOf(a, index);
+    this.showRaw[k] = !this.showRaw[k];
+  }
 
+  // normalize action check (case-insensitive)
+  isUpdate(a: any): boolean {
+    return (a?.action || '').toString().toUpperCase() === 'UPDATE';
+  }
 
-toggleRaw(a: any, index: number) {
-  const k = this.keyOf(a, index);
-  this.showRaw[k] = !this.showRaw[k];
-}
+  // build diffs; if parsing fails or no changes, returns []
+  diffs(a: any): Array<{ field: string; before: any; after: any }> {
+    const oldObj = this.safeParse(a?.oldValuesJson) || {};
+    const newObj = this.safeParse(a?.newValuesJson) || {};
+    if (typeof oldObj !== 'object' || typeof newObj !== 'object') return [];
 
-// normalize action check
-isUpdate(a: any): boolean {
-  return (a?.action || '').toString().toUpperCase() === 'UPDATE';
-}
+    const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
+    const rows = keys
+      .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
+      .map(k => ({
+        field: k,
+        before: this.valueToText((oldObj as any)[k]),
+        after: this.valueToText((newObj as any)[k]),
+      }));
+    return rows;
+  }
 
-// safer parse
+  chipStyle(action?: string) {
+    const a = (action || '').toUpperCase();
+    const map: any = {
+      CREATE: { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46' },
+      UPDATE: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
+      DELETE: { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' },
+      DEFAULT:{ bg: '#F1F7F9', border: '#DBE7EE', text: this.brand }
+    };
+    const c = map[a] || map.DEFAULT;
+    return {
+      display: 'inline-block',
+      padding: '4px 10px',
+      borderRadius: '9999px',
+      fontSize: '10px',
+      fontWeight: 700,
+      letterSpacing: '.02em',
+      textTransform: 'uppercase',
+      border: `1px solid ${c.border}`,
+      background: c.bg,
+      color: c.text,
+      lineHeight: '1'
+    } as any;
+  }
 
+  // ===== BOM inline helpers =====
+  syncBomFromPrices(opts: { preserveUnitCost?: boolean } = { preserveUnitCost: true }): void {
+    const preserve = opts.preserveUnitCost !== false;
+    const norm = (s: any) => String(s ?? '').trim().toLowerCase();
+    const prevByKey = new Map<string, BomInlineRow>();
+    for (const r of this.bomRows || []) {
+      const key = `${String(r.supplierId ?? '')}::${norm(r.supplierName)}`;
+      prevByKey.set(key, r);
+    }
 
+    const next: BomInlineRow[] = (this.prices || [])
+      .filter(p => p.price != null)
+      .map(p => {
+        const supplierId   = p.SupplierId ?? null;
+        const supplierName = p.supplierName ?? null;
+        const existingCost = Number(p.price || 0);
+        const key = `${String(supplierId ?? '')}::${norm(supplierName)}`;
+        const prev = prevByKey.get(key);
+        const unitCost = preserve && prev && prev.unitCost != null
+          ? Number(prev.unitCost)
+          : existingCost;
+        return { supplierId, supplierName, existingCost, unitCost };
+      });
 
-// build diffs; if parsing fails or no changes, returns []
-diffs(a: any): Array<{ field: string; before: any; after: any }> {
-  const oldObj = this.safeParse(a?.oldValuesJson) || {};
-  const newObj = this.safeParse(a?.newValuesJson) || {};
-  const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
-  const rows = keys
-    .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
-    .map(k => ({
-      field: k,
-      before: this.valueToText(oldObj[k]),
-      after: this.valueToText(newObj[k]),
-    }));
-  return rows; // empty array -> template shows "No field-level changes..."
-}
+    this.bomRows = next;
+    this.recomputeBomTotalsInline();
+  }
 
+  applyBomToPrices(): void {
+    if (!this.bomRows?.length || !this.prices?.length) return;
 
+    const norm = (s: any) => String(s ?? '').trim().toLowerCase();
+    const mapById = new Map<string, number>();
+    const mapByName = new Map<string, number>();
 
+    for (const r of this.bomRows) {
+      const cost = Number((r.unitCost ?? r.existingCost ?? 0));
+      if (r.supplierId != null) {
+        mapById.set(String(r.supplierId), cost);
+      }
+      if (r.supplierName) {
+        mapByName.set(norm(r.supplierName), cost);
+      }
+    }
 
+    this.prices = this.prices.map(p => {
+      const idKey = p.SupplierId != null ? String(p.SupplierId) : '';
+      const nameKey = norm(p.supplierName);
+      let nextPrice: number | null = null;
+      if (idKey && mapById.has(idKey)) {
+        nextPrice = mapById.get(idKey)!;
+      } else if (nameKey && mapByName.has(nameKey)) {
+        nextPrice = mapByName.get(nameKey)!;
+      }
+      if (nextPrice == null) return p;
+      return { ...p, price: nextPrice };
+    });
+  }
 
+  addBomRow(): void {
+    this.bomRows = [
+      ...this.bomRows,
+      { supplierId: null, supplierName: null, existingCost: 0, unitCost: null }
+    ];
+    this.recomputeBomTotalsInline();
+  }
+  removeBomRow(i: number): void {
+    this.bomRows = this.bomRows.filter((_, idx) => idx !== i);
+    this.recomputeBomTotalsInline();
+  }
+  recomputeBomTotalsInline(): void {
+    const roll = (this.bomRows || []).reduce((sum, r) => sum + Number(r.unitCost || 0), 0);
+    this.bomTotals = { rollup: this.toNum(roll, 6), count: this.bomRows.length };
+  }
+  private toNum(v: any, dp = 6): number {
+    const n = Number(v ?? 0);
+    if (!isFinite(n)) return 0;
+    const p = Math.pow(10, dp);
+    return Math.round(n * p) / p;
+  }
+  trackByIdx = (i: number, _l: any) => i;
 
+  // ===== Navigation =====
+  onGoToItemList(): void {
+    this.router.navigate(['/Inventory/List-itemmaster']);
+  }
+    private scrollTo(position: 'top' | 'bottom') {
+    const anchor = position === 'bottom'
+      ? this.bottomOfWizard?.nativeElement
+      : this.topOfWizard?.nativeElement;
+
+    if (anchor?.scrollIntoView) {
+      anchor.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
+    }
+
+    anchor?.parentElement?.scrollTo?.({
+      top: position === 'bottom'
+        ? anchor.parentElement.scrollHeight
+        : 0,
+      left: 0,
+      behavior: 'auto'
+    });
+
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    if (position === 'bottom') {
+      scrollingElement.scrollTop = scrollingElement.scrollHeight;
+      window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+    } else {
+      scrollingElement.scrollTop = 0;
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+  }
+   private isOnReviewStep(): boolean {
+    return (!this.isEdit && this.step === 3) || (this.isEdit && this.step === 5);
+  }
+
+  /** Scroll to the bottom anchor if we're on the Review step */
+  private maybeScrollToReviewBottom() {
+    if (!this.isOnReviewStep()) return;
+
+    // Give Angular a tick to render the block before scrolling
+    setTimeout(() => {
+      this.bottomOfWizard?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      });
+    }, 0);
+  }
+
+  
 }
