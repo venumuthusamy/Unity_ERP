@@ -95,7 +95,7 @@ export class StackOverviewListComponent implements OnInit {
     this.loading = true;
     this.errorMsg = null;
 
-    this.stockService.GetAllItemStockList().subscribe({
+    this.stockService.GetAllStockList().subscribe({
       next: (res: any) => {
         const raw: ApiStockRow[] = Array.isArray(res?.data) ? res.data : [];
 
