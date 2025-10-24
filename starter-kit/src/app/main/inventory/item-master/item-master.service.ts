@@ -56,4 +56,7 @@ getWarehouseStock(itemId: number): Observable<any[]> {
   getAudit(itemId: number) {
   return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemAudit + itemId);
 }
+  getBom(itemId: number) {
+  return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemBom + itemId);
+}
 }
