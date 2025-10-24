@@ -40,22 +40,22 @@
           </select>
         </div>
 
-        <!-- Receipt Date (auto-set from PO date in TS) -->
+        <!-- PO Date (auto-set from PO date in TS) -->
         <div (click)="!isPoDateDisabled && dateInput.showPicker()">
-  <label class="block text-gray-600">PO Date</label>
-  <input
-    #dateInput
-    type="date"
-    [(ngModel)]="receiptDate"
-    [disabled]="isPoDateDisabled"
-    [readOnly]="isPoDateDisabled"                           
-    [min]="minDate"
-    class="ctl w-full border border-gray-300 bg-white focus:outline-none focus:ring-2
-           focus:ring-[#0e3a4c]/20 focus:border-[#0e3a4c]"
-    [class.opacity-60]="isPoDateDisabled"
-    [class.cursor-not-allowed]="isPoDateDisabled"
-  />
-</div>
+          <label class="block text-gray-600">PO Date</label>
+          <input
+            #dateInput
+            type="date"
+            [(ngModel)]="receiptDate"
+            [disabled]="isPoDateDisabled"
+            [readOnly]="isPoDateDisabled"
+            [min]="minDate"
+            class="ctl w-full border border-gray-300 bg-white focus:outline-none focus:ring-2
+                   focus:ring-[#0e3a4c]/20 focus:border-[#0e3a4c]"
+            [class.opacity-60]="isPoDateDisabled"
+            [class.cursor-not-allowed]="isPoDateDisabled"
+          />
+        </div>
 
         <!-- Over-receipt Tolerance -->
         <div>
@@ -68,15 +68,19 @@
 
       <!-- Lines Table (Create form) -->
       <div class="overflow-x-auto ring-1 ring-gray-300 mt-2">
-        <table class="table-compact w-full min-w-[1700px] text-sm">
+        <table class="table-compact w-full min-w-[1900px] text-sm">
           <thead class="text-white" style="background-color:#2E5F73">
             <tr>
               <th class="text-left">Item / Product</th>
               <th class="text-left">Supplier Name</th>
+
+              <!-- NEW -->
+              <th class="text-left">Warehouse</th>
+              <th class="text-left">Bin</th>
+
               <th class="text-left">Batch / Serial</th>
               <th class="text-left">Qty Received</th>
 
-              <!-- Rest of existing columns -->
               <th class="text-left">Quality Check</th>
               <th class="text-left">Frozen/Chilled/Dry</th>
               <th class="text-left">Surface Temp</th>
@@ -107,6 +111,57 @@
                        class="ctl w-52 border border-gray-300 bg-gray-50 text-gray-800" />
               </td>
 
+<!-- Warehouse -->
+<td class="min-w-[16rem]">
+  <ng-select
+    [items]="warehouses"
+    bindLabel="name"
+    bindValue="id"
+    [(ngModel)]="r.warehouseId"
+    (change)="onWarehouseChange(r)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-56 ctl wh-select">
+    <ng-option [value]="null" disabled>Select</ng-option>
+  </ng-select>
+</td>
+
+<!-- Bin -->
+<td class="min-w-[16rem]">
+  <ng-select
+    [items]="getBins(r.warehouseId)"
+    bindLabel="binName"
+    bindValue="id"
+    [(ngModel)]="r.binId"
+    (change)="r.binName = lookupBinName(r.binId)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [searchable]="true"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-56 ctl wh-select">
+    <ng-option [value]="null">Select</ng-option>
+  </ng-select>
+</td>
+
+<td class="min-w-[12rem]">
+  <ng-select
+    [items]="strategies"
+    bindLabel="name"
+    bindValue="id"
+    [(ngModel)]="r.strategyId"
+    (change)="r.strategyName = lookupStrategyName(r.strategyId)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-48 ctl">
+    <ng-option [value]="null">Select</ng-option>
+  </ng-select>
+</td>
+
               <!-- Batch / Serial -->
               <td>
                 <input
@@ -131,8 +186,7 @@
               <td>
                 <select
                   [(ngModel)]="r.qualityCheck"
-                  class="ctl w-36 border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]"
-                >
+                  class="ctl w-36 border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/15 focus:border-[#0e3a4c]">
                   <option value="">Select</option>
                   <option value="pass">Pass</option>
                   <option value="fail">Fail</option>
@@ -266,15 +320,19 @@
   </div>
 
   <div class="overflow-x-auto rounded-lg border border-gray-300">
-    <table class="table-compact w-full min-w-[1700px] text-sm">
+    <table class="table-compact w-full min-w-[1900px] text-sm">
       <thead class="text-white" style="background-color:#2E5F73">
         <tr>
           <th class="text-left">Item Code</th>
           <th class="text-left">Supplier</th>
+
+          <!-- NEW -->
+          <th class="text-left">Warehouse</th>
+          <th class="text-left">Bin</th>
+
           <th class="text-left">Batch / Serial</th>
           <th class="text-left">Qty Rcvd</th>
 
-          <!-- Rest -->
           <th class="text-left">Quality</th>
           <th class="text-left">Storage Type</th>
           <th class="text-left">Surface Temp</th>
@@ -297,6 +355,11 @@
         <tr *ngFor="let row of generatedGRN.grnJson; let i = index">
           <td>{{ row.itemCode || row.item }}</td>
           <td>{{ row.supplierName }}</td>
+
+          <!-- NEW -->
+          <td>{{ row.warehouseName || lookupWarehouseName(row.warehouseId) }}</td>
+          <td>{{ row.binName || lookupBinName(row.binId) }}</td>
+
           <td>{{ row.batchSerial }}</td>
           <td>{{ row.qtyReceived }}</td>
 
@@ -313,10 +376,9 @@
           <td>{{ row.time }}</td>
           <td>
             <img *ngIf="row.initial"
-     [src]="row.initial"
-     class="h-7 w-7 object-contain rounded cursor-pointer border border-gray-300"
-     (click)="openPreview(row.initial)" />
-
+                 [src]="row.initial"
+                 class="h-7 w-7 object-contain rounded cursor-pointer border border-gray-300"
+                 (click)="openPreview(row.initial)" />
           </td>
           <td>{{ row.remarks }}</td>
           <td>
@@ -352,32 +414,32 @@
 
 <!-- ========== EDIT MODE: EDITABLE GRN SUMMARY (COMPACT) ========== -->
 <div *ngIf="isEditMode && generatedGRN" class="ui-compact-slim bg-white rounded-xl shadow-sm border border-gray-200 p-4">
- <!-- Header -->
-<div class="mb-3">
-  <div class="flex items-center justify-between">
-    <h3 class="text-[18px] font-semibold" style="color:#2E5F73">Edit GRN</h3>
-    <!-- (put any right-side actions here if you have them) -->
-  </div>
 
-  <!-- Second line: GRN / PO -->
-  <div class="mt-1 flex flex-wrap gap-2">
-    <span class="pill bg-gray-100 text-gray-700">GRN: {{ generatedGRN.grnNo }}</span>
-    <span class="pill bg-gray-100 text-gray-700">PO: {{ generatedGRN.poNo || generatedGRN.poid }}</span>
-    <!-- <span *ngIf="generatedGRN.flagIssuesId" class="pill bg-red-100 text-red-700">Flag #{{ generatedGRN.flagIssuesId }}</span> -->
+  <!-- Header -->
+  <div class="mb-3">
+    <div class="flex items-center justify-between">
+      <h3 class="text-[18px] font-semibold" style="color:#2E5F73">Edit GRN</h3>
+    </div>
+    <div class="mt-1 flex flex-wrap gap-2">
+      <span class="pill bg-gray-100 text-gray-700">GRN: {{ generatedGRN.grnNo }}</span>
+      <span class="pill bg-gray-100 text-gray-700">PO: {{ generatedGRN.poNo || generatedGRN.poid }}</span>
+    </div>
   </div>
-</div>
-
 
   <div class="overflow-x-auto rounded-lg border border-gray-300">
-    <table class="table-compact w-full min-w-[1700px] text-sm">
+    <table class="table-compact w-full min-w-[1900px] text-sm">
       <thead class="text-white" style="background-color:#2E5F73">
         <tr>
           <th class="text-left">Item Code</th>
           <th class="text-left">Supplier</th>
+
+          <!-- NEW -->
+          <th class="text-left">Warehouse</th>
+          <th class="text-left">Bin</th>
+
           <th class="text-left">Batch / Serial</th>
           <th class="text-left">Qty Rcvd</th>
 
-          <!-- Rest -->
           <th class="text-left">Quality</th>
           <th class="text-left">Storage Type</th>
           <th class="text-left">Surface Temp</th>
@@ -400,31 +462,70 @@
         <tr *ngFor="let row of editRows; let i = index; trackBy: trackByIndex"
             class="hover:bg-gray-50"
             [class.opacity-70]="row.isPostInventory">
-          <!-- Item Code -->
+
           <td>{{ row.itemCode || row.item }}</td>
 
-          <!-- Supplier -->
           <td>
             <input [(ngModel)]="row.supplierName" class="ctl w-48 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Batch/Serial -->
+<td class="min-w-[16rem]">
+  <ng-select
+    [items]="warehouses"
+    bindLabel="name"
+    bindValue="id"
+    [(ngModel)]="r.warehouseId"
+    (change)="onWarehouseChange(r)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-56 ctl wh-select">
+    <ng-option [value]="null" disabled>Select</ng-option>
+  </ng-select>
+</td>
+
+<!-- Bin -->
+<td class="min-w-[16rem]">
+  <ng-select
+    [items]="getBins(r.warehouseId)"
+    bindLabel="binName"
+    bindValue="id"
+    [(ngModel)]="r.binId"
+    (change)="r.binName = lookupBinName(r.binId)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [searchable]="true"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-56 ctl wh-select">
+    <ng-option [value]="null">Select</ng-option>
+  </ng-select>
+</td>
+<td class="min-w-[12rem]">
+  <ng-select
+    [items]="strategies"
+    bindLabel="name"
+    bindValue="id"
+    [(ngModel)]="r.strategyId"
+    (change)="r.strategyName = lookupStrategyName(r.strategyId)"
+    [appendTo]="'body'"
+    [dropdownPosition]="'bottom'"
+    [clearable]="true"
+    placeholder="Select"
+    class="w-48 ctl">
+    <ng-option [value]="null">Select</ng-option>
+  </ng-select>
+</td>
+
           <td>
             <input [(ngModel)]="row.batchSerial" class="ctl w-36 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Qty Rcvd -->
           <td>
-            <input
-              type="number"
-              min="0"
-              [(ngModel)]="row.qtyReceived"
-              (keypress)="allowOnlyNumbers($event)"
-              class="ctl w-24 border border-gray-300 bg-white"
-            />
+            <input type="number" min="0" [(ngModel)]="row.qtyReceived" (keypress)="allowOnlyNumbers($event)" class="ctl w-24 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Quality -->
           <td>
             <select [(ngModel)]="row.qualityCheck" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -434,7 +535,6 @@
             </select>
           </td>
 
-          <!-- Storage Type -->
           <td>
             <select [(ngModel)]="row.storageType" class="ctl w-36 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -444,24 +544,14 @@
             </select>
           </td>
 
-          <!-- Surface Temp -->
           <td>
             <input [(ngModel)]="row.surfaceTemp" class="ctl w-24 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Expiry -->
           <td (click)="expiryInput.showPicker()">
-            <input
-              #expiryInput
-              type="date"
-              [(ngModel)]="row.expiry"
-              [min]="minDate"
-              required
-              class="ctl w-40 border border-gray-300 bg-white cursor-pointer"
-            />
+            <input #expiryInput type="date" [(ngModel)]="row.expiry" [min]="minDate" required class="ctl w-40 border border-gray-300 bg-white cursor-pointer" />
           </td>
 
-          <!-- Pest Sign -->
           <td>
             <select [(ngModel)]="row.pestSign" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -470,7 +560,6 @@
             </select>
           </td>
 
-          <!-- Dry / Spillage -->
           <td>
             <select [(ngModel)]="row.drySpillage" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -479,7 +568,6 @@
             </select>
           </td>
 
-          <!-- Odor -->
           <td>
             <select [(ngModel)]="row.odor" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -488,12 +576,10 @@
             </select>
           </td>
 
-          <!-- Plate # -->
           <td>
             <input [(ngModel)]="row.plateNumber" class="ctl w-28 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Defect Labels -->
           <td>
             <select [(ngModel)]="row.defectLabels" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -502,7 +588,6 @@
             </select>
           </td>
 
-          <!-- Damaged Pkg -->
           <td>
             <select [(ngModel)]="row.damagedPackage" class="ctl w-28 border border-gray-300 bg-white">
               <option value="">Select</option>
@@ -511,33 +596,23 @@
             </select>
           </td>
 
-          <!-- Time -->
           <td>
             <input type="time" [(ngModel)]="row.time" class="ctl w-28 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Initial (thumbnail + preview trigger) -->
           <td>
             <ng-container *ngIf="row.initial; else addInitBtn">
-              <img
-                [src]="row.initial"
-                alt="initial"
-                class="h-7 w-7 object-contain rounded cursor-pointer border border-gray-300"
-                (click)="openPreview(row.initial)"
-              />
+              <img [src]="row.initial" alt="initial" class="h-7 w-7 object-contain rounded cursor-pointer border border-gray-300" (click)="openPreview(row.initial)" />
             </ng-container>
             <ng-template #addInitBtn>
-              <button type="button" class="ctl w-20 border border-gray-300 bg-white"
-                      (click)="openInitialModal(row, i)">Add</button>
+              <button type="button" class="ctl w-20 border border-gray-300 bg-white" (click)="openInitialModal(row, i)">Add</button>
             </ng-template>
           </td>
 
-          <!-- Remarks -->
           <td>
             <input [(ngModel)]="row.remarks" class="ctl w-56 border border-gray-300 bg-white" />
           </td>
 
-          <!-- Status -->
           <td>
             <span class="pill"
                   [ngClass]="{
@@ -548,18 +623,13 @@
             </span>
           </td>
 
-          <!-- Actions -->
           <td>
             <div class="row-actions flex items-center justify-end gap-2">
-              <button type="button"
-                      class="btn-compact inline-flex items-center gap-2 text-white"
-                      style="background:#d97706"
-                      (click)="onFlagIssuesRow(row, i)">
+              <button type="button" class="btn-compact inline-flex items-center gap-2 text-white" style="background:#d97706" (click)="onFlagIssuesRow(row, i)">
                 <i class="fa fa-flag text-[11px] opacity-90"></i> Flag Issues
               </button>
 
-              <button type="button"
-                      class="btn-compact inline-flex items-center gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              <button type="button" class="btn-compact inline-flex items-center gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       style="background:#2E5F73"
                       (click)="onPostInventoryRow(row, i)"
                       [disabled]="isPostInventoryDisabled || row.isPostInventory">
@@ -572,54 +642,23 @@
     </table>
   </div>
 </div>
+
 <!-- ========== IMAGE PREVIEW MODAL (compact) ========== -->
 <ng-container *ngIf="showPreview">
-  <div
-    class="fixed inset-0 z-[1100] flex items-center justify-center"
-    role="dialog"
-    aria-modal="true"
-    (keydown.escape)="closePreview()"
-  >
-    <!-- Backdrop -->
+  <div class="fixed inset-0 z-[1100] flex items-center justify-center" role="dialog" aria-modal="true" (keydown.escape)="closePreview()">
     <div class="absolute inset-0 bg-black/60" (click)="closePreview()"></div>
-
-    <!-- Modal -->
-    <div
-      class="relative bg-white rounded-xl shadow-lg w-[92vw] max-w-md"
-      (click)="$event.stopPropagation()"
-    >
-      <!-- Header -->
+    <div class="relative bg-white rounded-xl shadow-lg w-[92vw] max-w-md" (click)="$event.stopPropagation()">
       <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200">
         <h4 class="text-sm font-semibold text-gray-700 m-0">Initial Preview</h4>
-        <button
-          type="button"
-          class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100"
-          (click)="closePreview()"
-          aria-label="Close"
-          title="Close"
-        >
+        <button type="button" class="h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100" (click)="closePreview()" aria-label="Close">
           <i class="fa fa-times text-[12px]"></i>
         </button>
       </div>
-
-      <!-- Body -->
       <div class="p-3">
-        <img
-          [src]="previewSrc || ''"
-          alt="initial preview"
-          class="mx-auto object-contain"
-          style="max-height: 60vh; width: 100%;"
-        />
+        <img [src]="previewSrc || ''" alt="initial preview" class="mx-auto object-contain" style="max-height: 60vh; width: 100%;" />
       </div>
-
-      <!-- Footer -->
       <div class="flex items-center justify-end gap-2 px-3 py-2 border-t border-gray-200">
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-          style="background:#2E5F73"
-          (click)="closePreview()"
-        >
+        <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:#2E5F73" (click)="closePreview()">
           <i class="fa fa-check text-[10px] opacity-90"></i> Close
         </button>
       </div>
@@ -627,21 +666,13 @@
   </div>
 </ng-container>
 
-
 <!-- ========== INITIAL / SIGNATURE MODAL ========== -->
-<div *ngIf="showInitialModal"
-     class="ui-compact-slim fixed inset-0 z-[1000] flex items-center justify-center"
-     (keydown.escape)="closeInitialModal()">
+<div *ngIf="showInitialModal" class="ui-compact-slim fixed inset-0 z-[1000] flex items-center justify-center" (keydown.escape)="closeInitialModal()">
   <div class="absolute inset-0 bg-black/40" (click)="closeInitialModal()"></div>
 
-  <!-- width up: max-w-lg (≈32rem) + responsive 92vw -->
-  <div class="modal-box relative bg-white shadow-xl ring-1 ring-black/5 w-[92vw] max-w-lg rounded-2xl"
-       role="dialog" aria-modal="true">
-    <button type="button"
-            class="absolute top-2 right-2 h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100"
-            (click)="closeInitialModal()" aria-label="Close">✕</button>
+  <div class="modal-box relative bg-white shadow-xl ring-1 ring-black/5 w-[92vw] max-w-lg rounded-2xl" role="dialog" aria-modal="true">
+    <button type="button" class="absolute top-2 right-2 h-8 w-8 grid place-items-center rounded-full hover:bg-gray-100" (click)="closeInitialModal()" aria-label="Close">✕</button>
 
-    <!-- padding slightly increased -->
     <div class="px-5 pt-4">
       <div class="modal-tabs flex items-center justify-center border-b border-gray-200 gap-6">
         <button type="button" class="pb-2 text-sm font-semibold transition"
@@ -661,7 +692,6 @@
     <div class="px-5 pb-5 pt-4">
       <!-- IMAGE TAB -->
       <div *ngIf="activeTab === 'image'">
-        <!-- height up: min-h from 10rem → 12rem -->
         <div class="relative w-full border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition min-h-[12rem]"
              [ngClass]="isDragOver ? 'border-[#0e3a4c]' : 'border-gray-300'"
              (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" (click)="fileInput.click()">
@@ -674,10 +704,7 @@
 
           <ng-template #previewTpl>
             <div class="flex items-center justify-center h-full">
-              <!-- image box a bit taller -->
-              <img [src]="uploadedImage" alt="Preview"
-                   class="max-h-44 max-w-full object-contain rounded-lg shadow-sm"
-                   style="pointer-events:none;" />
+              <img [src]="uploadedImage" alt="Preview" class="max-h-44 max-w-full object-contain rounded-lg shadow-sm" style="pointer-events:none;" />
             </div>
           </ng-template>
 
@@ -697,7 +724,6 @@
       <!-- SIGNATURE TAB -->
       <div *ngIf="activeTab === 'signature'">
         <div class="border rounded-xl overflow-hidden mb-3">
-          <!-- height up: 140px → 160px -->
           <canvas #signaturePad class="block" style="touch-action:none;width:100%;height:160px"></canvas>
         </div>
 
@@ -714,16 +740,14 @@
   </div>
 </div>
 
-
-<!-- ========== FLAG ISSUES MODAL (reuse) ========== -->
+<!-- ========== FLAG ISSUES MODAL ========== -->
 <div *ngIf="flagModal.open" class="ui-compact-slim fixed inset-0 z-[1000] flex items-center justify-center px-3 md:px-0" (keydown.escape)="closeFlagIssuesModal()">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closeFlagIssuesModal()"></div>
 
   <div class="modal-box relative bg-white shadow-2xl p-4">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-[18px] font-semibold text-gray-800">🚩 Flag an Issue</h3>
-      <button type="button" class="h-8 w-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
-              (click)="closeFlagIssuesModal()" aria-label="Close">
+      <button type="button" class="h-8 w-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100" (click)="closeFlagIssuesModal()" aria-label="Close">
         <span class="text-lg">×</span>
       </button>
     </div>

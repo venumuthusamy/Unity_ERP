@@ -18,6 +18,7 @@ import { StockTakeListComponent } from './stock-take/stock-take-list/stock-take-
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { StockHistoryComponent } from './stock-transfer/stock-history/stock-history.component';
+import { StockAdjustmentComponent } from './stock-adjustment/stock-adjustment.component';
 const routes = [
   {
     path: 'Create-inventory',
@@ -75,6 +76,11 @@ const routes = [
     data: { animation: 'list-stocktake' }
   },
   {
+    path: 'list-stockadjustment',
+    component: StockAdjustmentComponent,
+    data: { animation: 'list-stockadjustment' }
+  },
+  {
     path: 'create-stocktake',
     component: StockTakeComponent,
     data: { animation: 'create-stocktake' }
@@ -98,6 +104,7 @@ const routes = [
     StockTakeListComponent,
      ItemMasterListComponent,
      StockHistoryComponent,
+     StockAdjustmentComponent,
   ],
   imports: [
     CommonModule,
