@@ -1,14 +1,21 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, AfterViewInit, AfterViewChecked, HostListener } from '@angular/core';
+import {
+  Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef,
+  AfterViewInit, AfterViewChecked, HostListener
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import SignaturePad from 'signature_pad';
 import { forkJoin, of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import feather from 'feather-icons';
+
 import { PurchaseGoodreceiptService } from './purchase-goodreceipt.service';
 import { FlagissueService } from 'app/main/master/flagissue/flagissue.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { POService } from '../purchase-order/purchase-order.service';
+import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
+import { StockAdjustmentService } from 'app/main/inventory/stock-adjustment/stock-adjustment.service';
+import { StrategyService } from 'app/main/master/strategies/strategy.service';
 
 export interface LineRow {
   itemText: string;
@@ -16,10 +23,20 @@ export interface LineRow {
   supplierId: number | null;
   supplierName: string;
 
-  // kept fields
-  qtyReceived: number | null;                       // Quantity received
-  qualityCheck: 'pass' | 'fail' | 'notverify' | ''; // QC status
-  batchSerial: string;                              // Batch / Serial
+  // Location
+  warehouseId: number | null;
+  binId: number | null;
+  warehouseName?: string | null;
+  binName?: string | null;
+
+  // NEW: Strategy
+  strategyId: number | null;
+  strategyName?: string | null;
+
+  // Existing fields
+  qtyReceived: number | null;
+  qualityCheck: 'pass' | 'fail' | 'notverify' | '';
+  batchSerial: string;
 
   storageType: string;
   surfaceTemp: string;
@@ -60,12 +77,12 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
   minDate = '';
   showSummary = false;
 
-  // Generic image viewer (kept)
+  // Image viewer
   imageViewer = { open: false, src: null as string | null };
   openImage(src: string){ this.imageViewer = { open: true, src }; document.body.style.overflow = 'hidden'; }
   closeImage(){ this.imageViewer = { open: false, src: null }; document.body.style.overflow = ''; }
 
-  // Initial thumbnail Preview (tiny modal)
+  // Initial preview
   showPreview = false;
   previewSrc: string | null = null;
   openPreview(src: string) {
@@ -85,18 +102,18 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     if (this.showPreview) this.closePreview();
   }
 
+  // Initial/Signature modal
   showInitialModal = false;
   activeTab: 'image' | 'signature' = 'image';
   uploadedImage: string | ArrayBuffer | null = null;
   selectedRowIndex: number | null = null;
 
+  // Flag issues
   flagModal = { open: false };
   selectedFlagIssueId: number | null = null;
   selectedRowForFlagIndex: number | null = null;
 
-  // auto-lock receipt date after PO selection
   isPoDateDisabled = false;
-
   isDragOver = false;
 
   @ViewChild('signaturePad', { static: false }) signaturePadElement!: ElementRef<HTMLCanvasElement>;
@@ -109,10 +126,17 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
   currentSupplierId: number | null = null;
   currentSupplierName = '';
 
+  // Dropdown sources
+  warehouses: Array<{ id: number; name: string }> = [];
+  binsByWarehouse: Record<number, Array<{ id: number; binName: string }>> = {};
+  strategies: Array<{ id: number; name: string }> = [];
+
   grnRows: LineRow[] = [
     {
       itemText: '', itemCode: '',
       supplierId: null, supplierName: '',
+      warehouseId: null, binId: null, warehouseName: null, binName: null,
+      strategyId: null, strategyName: null,
 
       qtyReceived: null,
       qualityCheck: '',
@@ -152,7 +176,10 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     private _SupplierService: SupplierService,
     private cdRef: ChangeDetectorRef,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private warehouseService: WarehouseService,
+    private stockadjustmentService: StockAdjustmentService,
+    private strategyService: StrategyService
   ) {}
 
   ngAfterViewInit() { feather.replace(); }
@@ -161,6 +188,8 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
   ngOnInit() {
     this.setMinDate();
     this.loadPOs();
+    this.loadWarehouses();
+    this.loadStrategy();   // <-- load strategy list
 
     // detect edit mode via route
     this.route.paramMap.subscribe(pm => {
@@ -184,7 +213,6 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
 
   goToDebitNoteList(){ this.router.navigate(['/purchase/list-Purchasegoodreceipt']); }
 
-  // numeric guard (digits only; allows nav keys)
   allowOnlyNumbers(event: KeyboardEvent): void {
     const allowedControl = ['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab', 'Delete', 'Home', 'End'];
     if (allowedControl.includes(event.key)) return;
@@ -202,7 +230,15 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       itemCode: r.itemCode,
       supplierId: r.supplierId,
 
-      // fields we keep
+      // include warehouse/bin/strategy
+      warehouseId: r.warehouseId ?? null,
+      binId: r.binId ?? null,
+      warehouseName: r.warehouseName ?? this.lookupWarehouseName(r.warehouseId),
+      binName: r.binName ?? this.lookupBinName(r.binId),
+      strategyId: r.strategyId ?? null,
+      strategyName: r.strategyName ?? this.lookupStrategyName(r.strategyId),
+
+      // rest
       qtyReceived: r.qtyReceived ?? null,
       qualityCheck: r.qualityCheck ?? '',
       batchSerial: r.batchSerial ?? '',
@@ -235,8 +271,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       isActive: true
     };
 
-    const call$ = this.purchaseGoodReceiptService.createGRN(payload);
-    call$.subscribe({
+    this.purchaseGoodReceiptService.createGRN(payload).subscribe({
       next: (res: any) => {
         Swal.fire({
           icon: 'success',
@@ -258,7 +293,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     });
   }
 
-  /* ============= AFTER-CREATE: LOAD SUMMARY IN CREATE MODE (READ-ONLY) ============= */
+  /* ============= AFTER-CREATE: LOAD SUMMARY (READ-ONLY) ============= */
   private loadSummaryForCreate(id: number) {
     this.purchaseGoodReceiptService.getByIdGRN(id).subscribe({
       next: (res: any) => {
@@ -274,23 +309,35 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
 
         this.currentSupplierId = this.toNum(data?.supplierId ?? data?.SupplierId);
 
-        // parse rows
+        // rows
         let rows: any[] = [];
         try {
           const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
           rows = Array.isArray(raw) ? raw : JSON.parse(raw);
         } catch { rows = []; }
 
-        const rowsCoerced = rows.map((r: any) => ({
-          ...r,
-          qtyReceived: this.coerceNumberOrNull(r?.qtyReceived),
-          qualityCheck: this.coerceQuality(r?.qualityCheck),
-          batchSerial: r?.batchSerial ?? '',
-          expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
-          isFlagIssue: !!r?.isFlagIssue,
-          isPostInventory: !!r?.isPostInventory,
-          flagIssueId: r?.flagIssueId ?? null
-        }));
+        const rowsCoerced = rows.map((r: any) => {
+          const warehouseId = this.toNum(r?.warehouseId);
+          const binId = this.toNum(r?.binId);
+          const strategyId = this.toNum(r?.strategyId);
+          return {
+            ...r,
+            warehouseId,
+            binId,
+            strategyId,
+            warehouseName: r?.warehouseName ?? this.lookupWarehouseName(warehouseId),
+            binName: r?.binName ?? this.lookupBinName(binId),
+            strategyName: r?.strategyName ?? this.lookupStrategyName(strategyId),
+
+            qtyReceived: this.coerceNumberOrNull(r?.qtyReceived),
+            qualityCheck: this.coerceQuality(r?.qualityCheck),
+            batchSerial: r?.batchSerial ?? '',
+            expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
+            isFlagIssue: !!r?.isFlagIssue,
+            isPostInventory: !!r?.isPostInventory,
+            flagIssueId: r?.flagIssueId ?? null
+          };
+        });
 
         this.generatedGRN = {
           id: data?.id,
@@ -299,6 +346,11 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
           poNo: '',
           grnJson: rowsCoerced
         };
+
+        // Preload bins used
+        const whSet = new Set<number>();
+        rowsCoerced.forEach(r => { if (r.warehouseId) whSet.add(r.warehouseId); });
+        whSet.forEach(id => this.ensureBinsLoaded(id));
 
         // load PO number
         const poId = Number(this.generatedGRN.poid);
@@ -315,7 +367,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
           });
         }
 
-        // supplier names (display only)
+        // suppliers display
         const ids = new Set<number>();
         rowsCoerced.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
         if (this.currentSupplierId) ids.add(this.currentSupplierId);
@@ -351,13 +403,13 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     });
   }
 
-  /* ===================== EDIT MODE: LOAD + SUMMARY ===================== */
+  /* ===================== EDIT MODE ===================== */
   private loadForEdit(id: number) {
     this.purchaseGoodReceiptService.getByIdGRN(id).subscribe({
       next: (res: any) => {
         const data = res?.data ?? res;
 
-        // Header
+        // header
         const poid = this.toNum(data?.poid ?? data?.POId);
         this.selectedPO = poid;
 
@@ -367,7 +419,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
 
         this.currentSupplierId = this.toNum(data?.supplierId ?? data?.SupplierId);
 
-        // Parse rows
+        // rows
         let rows: any[] = [];
         try {
           const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
@@ -375,7 +427,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
         } catch { rows = []; }
         if (!rows.length) rows = [{}];
 
-        // Collect supplier ids
+        // supplier lookups
         const ids = new Set<number>();
         rows.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
         if (this.currentSupplierId) ids.add(this.currentSupplierId);
@@ -398,14 +450,12 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
         forkJoin(lookups.length ? lookups : [of([0, ''] as [number, string])]).subscribe(pairs => {
           this.supplierNameMap = new Map<number, string>(pairs.filter(p => !!p[0]));
 
-          // fallback to PO supplier if header missing
           if (!this.currentSupplierId && this.selectedPO) {
             const po = this.purchaseOrder.find(p => p.id === this.selectedPO);
             if (po?.supplierId) this.currentSupplierId = po.supplierId;
           }
           this.currentSupplierName = this.currentSupplierId ? (this.supplierNameMap.get(this.currentSupplierId) || '') : '';
 
-          // Build editable summary rows
           const rowsWithNames = rows.map((r: any) => {
             const rid = this.toNum(r?.supplierId) ?? this.currentSupplierId ?? null;
             const supplierName =
@@ -414,20 +464,37 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
               this.currentSupplierName ||
               '';
 
+            const warehouseId = this.toNum(r?.warehouseId);
+            const binId = this.toNum(r?.binId);
+            const strategyId = this.toNum(r?.strategyId);
+
             return {
               ...r,
+              supplierId: rid,
+              supplierName,
+
+              warehouseId,
+              binId,
+              strategyId,
+
+              warehouseName: r?.warehouseName ?? this.lookupWarehouseName(warehouseId),
+              binName: r?.binName ?? this.lookupBinName(binId),
+              strategyName: r?.strategyName ?? this.lookupStrategyName(strategyId),
+
               qtyReceived: this.coerceNumberOrNull(r?.qtyReceived),
               qualityCheck: this.coerceQuality(r?.qualityCheck),
               batchSerial: r?.batchSerial ?? '',
-
-              supplierId: rid,
-              supplierName,
               expiry: r?.expiry ? this.toDateInput(r.expiry) : '',
               isFlagIssue: !!r?.isFlagIssue,
               isPostInventory: !!r?.isPostInventory,
               flagIssueId: r?.flagIssueId ?? null
             };
           });
+
+          // Preload bins used
+          const whSet = new Set<number>();
+          rowsWithNames.forEach(r => { if (r.warehouseId) whSet.add(r.warehouseId); });
+          whSet.forEach(id => this.ensureBinsLoaded(id));
 
           this.generatedGRN = {
             id: data?.id,
@@ -437,7 +504,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
             grnJson: rowsWithNames
           };
 
-          // Load PO number for header display
+          // PO number
           const poId = Number(this.generatedGRN.poid);
           if (poId) {
             this.purchaseorderService.getPOById(poId).subscribe({
@@ -459,7 +526,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     });
   }
 
-  /* ====== Flag Issues flow ====== */
+  /* ====== Flag Issues ====== */
   loadFlagIssues() {
     this.flagIssuesService.getAllFlagIssue().subscribe({
       next: (res: any) => { this.flagIssuesList = res?.data || []; },
@@ -566,14 +633,11 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     );
   }
 
-  /* ========= EDIT TABLE SOURCE =========
-     Use this in your HTML: *ngFor="let row of editRows; let i = index; trackBy: trackByIndex"
-     This hides rows where isPostInventory === true. */
+  /* ========= EDIT TABLE SOURCE ========= */
   get editRows() {
     return (this.generatedGRN?.grnJson ?? []).filter((r: any) => !r?.isPostInventory);
   }
 
-  // Optional: to show a badge like "3 posted rows hidden"
   get hiddenPostedCount(): number {
     return (this.generatedGRN?.grnJson ?? []).reduce((n, r: any) => n + (r?.isPostInventory ? 1 : 0), 0);
   }
@@ -613,7 +677,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
   onPOChange(selectedId: number | null) {
     if (!selectedId) {
       this.resetForm();
-      this.isPoDateDisabled = false;           // re-enable when PO cleared
+      this.isPoDateDisabled = false;
       return;
     }
 
@@ -629,12 +693,12 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       const dt = new Date(po.poDate);
       if (!isNaN(+dt)) {
         this.receiptDate = this.toDateInput(dt);
-        this.isPoDateDisabled = true;          // lock after setting
+        this.isPoDateDisabled = true;
       } else {
-        this.isPoDateDisabled = false;         // bad date -> keep editable
+        this.isPoDateDisabled = false;
       }
     } else {
-      this.isPoDateDisabled = false;           // no date from PO -> keep editable
+      this.isPoDateDisabled = false;
     }
 
     this.currentSupplierId = this.toNum(po.supplierId);
@@ -674,7 +738,14 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
         supplierId,
         supplierName,
 
-        // defaults for create
+        warehouseId: null,
+        binId: null,
+        warehouseName: null,
+        binName: null,
+
+        strategyId: null,
+        strategyName: null,
+
         qtyReceived: null,
         qualityCheck: 'notverify',
         batchSerial: '',
@@ -705,7 +776,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     return m ? m[1] : '';
   }
 
-  /* ================= Modal: Image/Signature ================= */
+  /* ================= MODALS: Image/Signature ================= */
   openInitialModal(row: LineRow, index: number) {
     this.selectedRowIndex = index;
     this.activeTab = 'image';
@@ -728,7 +799,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
 
   onImageSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input?.files?.[0];
+       const file = input?.files?.[0];
     if (file) this.readFile(file);
   }
 
@@ -790,6 +861,83 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     this.closeInitialModal();
   }
 
+  /* =================== Warehouse/Bin helpers =================== */
+  onWarehouseChange(row: LineRow) {
+    if (row.warehouseId) this.ensureBinsLoaded(row.warehouseId);
+    const valid = this.getBins(row.warehouseId).some(b => b.id === row.binId);
+    if (!valid) row.binId = null;
+
+    row.warehouseName = this.lookupWarehouseName(row.warehouseId);
+    row.binName = this.lookupBinName(row.binId);
+  }
+
+  getBins(warehouseId: number | null | undefined) {
+    if (!warehouseId) return [];
+    return this.binsByWarehouse[warehouseId] ?? [];
+  }
+
+  lookupWarehouseName(id?: number | null) {
+    if (!id) return '';
+    return this.warehouses.find(w => w.id === id)?.name ?? '';
+  }
+  lookupBinName(id?: number | null) {
+    if (!id) return '';
+    for (const list of Object.values(this.binsByWarehouse)) {
+      const found = list.find(b => b.id === id);
+      if (found) return found.binName;
+    }
+    return '';
+  }
+
+  private ensureBinsLoaded(warehouseId: number) {
+    if (!warehouseId || this.binsByWarehouse[warehouseId]) return;
+    this.stockadjustmentService.GetBinDetailsbywarehouseID(warehouseId).subscribe({
+      next: (res: any) => {
+        const list = (res?.data ?? []).map((b: any) => ({
+          id: Number(b.id ?? b.binId ?? b.BinId),
+          binName: String(b.binName ?? b.name ?? b.bin ?? '')
+        }));
+        this.binsByWarehouse[warehouseId] = list;
+        this.cdRef.markForCheck();
+      },
+      error: err => console.error('Error loading bins for warehouse', warehouseId, err)
+    });
+  }
+
+  /* ================= Loaders ================= */
+  private loadWarehouses() {
+    this.warehouseService.getWarehouse().subscribe({
+      next: (res: any) => {
+        const arr = res?.data ?? res ?? [];
+        this.warehouses = arr.map((w: any) => ({
+          id: Number(w.id ?? w.Id),
+          name: String(w.name ?? w.warehouseName ?? w.WarehouseName ?? '')
+        })).filter((w: any) => !!w.id && !!w.name);
+      },
+      error: (err) => console.error('Warehouses load failed', err)
+    });
+  }
+
+  // NEW: Strategy loader
+  private loadStrategy() {
+    this.strategyService.getStrategy().subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res ?? [];
+        this.strategies = data.map((s: any) => ({
+          id: Number(s.id ?? s.strategyId ?? s.Id),
+          name: String(s.name ?? s.strategyName ?? s.StrategyName ?? '')
+        })).filter((x: any) => !!x.id && !!x.name);
+      },
+      error: (err) => console.error('Strategy load failed', err)
+    });
+  }
+
+  // helper to resolve name from id
+  lookupStrategyName(id?: number | null): string {
+    if (!id) return '';
+    return this.strategies.find(s => s.id === id)?.name ?? '';
+  }
+
   /* ================= Utils ================= */
   resetForm() {
     this.selectedPO = null;
@@ -805,11 +953,12 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       {
         itemText: '', itemCode: '',
         supplierId: null, supplierName: '',
+        warehouseId: null, binId: null, warehouseName: null, binName: null,
+        strategyId: null, strategyName: null,
 
         qtyReceived: null,
         qualityCheck: '',
         batchSerial: '',
-
         storageType: '', surfaceTemp: '', expiry: '',
         pestSign: '', drySpillage: '', odor: '',
         plateNumber: '', defectLabels: '', damagedPackage: '',
@@ -838,7 +987,6 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
-  // helpers
   private coerceNumberOrNull(v: any): number | null {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;

@@ -24,7 +24,8 @@ export const locale = {
         STACKOVERVIEW: 'StackOverview',
         ITEMMASTER:'ItemMaster',
         STACKTRANSFER: 'STACKTRANSFER',
-        STOCKTAKE: 'STOCKTAKE'
+        STOCKTAKE: 'STOCKTAKE',
+        STOCKADJUSTMENT: 'StockAdjustment'
       },
       FINANCIAL: {
         TITLE: 'Financial',

@@ -1,0 +1,17 @@
+$brand: #2E5F73;
+
+.badge-flow{
+  border: 1px solid #e5e7eb;
+  background: #f6fafc;
+  color: $brand;                  /* ensures text is visible */
+  letter-spacing: .02em;
+  white-space: nowrap;            /* keep it in one line */
+}
+
+.ng-dropdown-panel {
+  z-index: 9999 !important;
+}
+
+.border.rounded-3.overflow-auto {
+  overflow: visible !important;
+}

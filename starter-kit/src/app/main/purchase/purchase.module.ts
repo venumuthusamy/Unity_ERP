@@ -19,6 +19,7 @@ import { MobileReceivingComponent } from './mobile-receiving/mobile-receiving.co
 import { RfqComponent } from './rfq/rfq.component';
 import { DebitNoteListComponent } from './debit-note/debit-note-list/debit-note-list.component';
 import { DebitNoteCreateComponent } from './debit-note/debit-note-create/debit-note-create.component';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 const routes = [
   {
@@ -119,7 +120,8 @@ const routes = [
     FormsModule,
     NgbModule,
     ReactiveFormsModule,
-    SweetAlert2Module.forRoot()
+    SweetAlert2Module.forRoot(),
+     NgSelectModule
   ]
 })
 export class PurchaseModule { }

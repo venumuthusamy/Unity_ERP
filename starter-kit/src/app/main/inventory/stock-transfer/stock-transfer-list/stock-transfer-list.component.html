@@ -90,9 +90,27 @@
 
            <ngx-datatable-column name="Item Name" prop="name" [width]="160"></ngx-datatable-column>
           <ngx-datatable-column name="From Warehouse" prop="fromWarehouseName" [width]="180"></ngx-datatable-column>
-          <ngx-datatable-column name="To Warehouse"   prop="toWarehouseName"   [width]="180"></ngx-datatable-column>
-           <ngx-datatable-column name="Transfer Qty"         prop="transferQty"           [width]="140"></ngx-datatable-column>
-          <ngx-datatable-column name="Reason"         prop="remarks"           [width]="140"></ngx-datatable-column>
+        <!-- To Warehouse -->
+<ngx-datatable-column name="To Warehouse" [width]="180">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    {{ row?.toWarehouseName && row.toWarehouseName.trim() ? row.toWarehouseName : '—' }}
+  </ng-template>
+</ngx-datatable-column>
+
+<!-- Transfer Qty (keep 0 as 0) -->
+<ngx-datatable-column name="Transfer Qty" [width]="140">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    {{ row?.transferQty === null || row?.transferQty === undefined ? '—' : row.transferQty }}
+  </ng-template>
+</ngx-datatable-column>
+
+<!-- Reason / Remarks -->
+<ngx-datatable-column name="Reason" [width]="140">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    {{ row?.remarks && row.remarks.trim() ? row.remarks : '—' }}
+  </ng-template>
+</ngx-datatable-column>
+
 
           <!-- Status derived from isTransfered & isApproved -->
           <ngx-datatable-column name="Status" [width]="140">

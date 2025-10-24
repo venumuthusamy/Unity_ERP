@@ -60,3 +60,18 @@
 
 /* keep your brand color handy */
 :root { --brand:#2E5F73; }
+
+
+
+/* in styles.css (global) */
+.ng-dropdown-panel {
+  max-height: 180px !important;
+  overflow-y: auto !important;
+  min-width: 12rem !important; /* approximate */
+  box-sizing: border-box;
+}
+
+/* force scrollbar style and spacing */
+.ng-dropdown-panel .ng-dropdown-panel-items {
+  padding: 4px 0;
+}
