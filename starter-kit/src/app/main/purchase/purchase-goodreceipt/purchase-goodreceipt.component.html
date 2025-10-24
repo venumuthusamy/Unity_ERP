@@ -77,7 +77,7 @@
               <!-- NEW -->
               <th class="text-left">Warehouse</th>
               <th class="text-left">Bin</th>
-
+<th class="text-left">Strategy</th>
               <th class="text-left">Batch / Serial</th>
               <th class="text-left">Qty Received</th>
 
@@ -146,7 +146,7 @@
   </ng-select>
 </td>
 
-<td class="min-w-[12rem]">
+<td class="min-w-[16rem]">
   <ng-select
     [items]="strategies"
     bindLabel="name"
@@ -157,7 +157,7 @@
     [dropdownPosition]="'bottom'"
     [clearable]="true"
     placeholder="Select"
-    class="w-48 ctl">
+    class="w-56 ctl">
     <ng-option [value]="null">Select</ng-option>
   </ng-select>
 </td>
@@ -329,7 +329,7 @@
           <!-- NEW -->
           <th class="text-left">Warehouse</th>
           <th class="text-left">Bin</th>
-
+  <th class="text-left">Strategy</th>
           <th class="text-left">Batch / Serial</th>
           <th class="text-left">Qty Rcvd</th>
 
@@ -359,7 +359,7 @@
           <!-- NEW -->
           <td>{{ row.warehouseName || lookupWarehouseName(row.warehouseId) }}</td>
           <td>{{ row.binName || lookupBinName(row.binId) }}</td>
-
+<td>{{ row.strategyName || lookupStrategyName(row.strategyId) }}</td>
           <td>{{ row.batchSerial }}</td>
           <td>{{ row.qtyReceived }}</td>
 
@@ -436,6 +436,7 @@
           <!-- NEW -->
           <th class="text-left">Warehouse</th>
           <th class="text-left">Bin</th>
+          <th class="text-left">Strategy</th>
 
           <th class="text-left">Batch / Serial</th>
           <th class="text-left">Qty Rcvd</th>
@@ -474,47 +475,41 @@
     [items]="warehouses"
     bindLabel="name"
     bindValue="id"
-    [(ngModel)]="r.warehouseId"
-    (change)="onWarehouseChange(r)"
-    [appendTo]="'body'"
-    [dropdownPosition]="'bottom'"
-    [clearable]="true"
-    placeholder="Select"
+    [(ngModel)]="row.warehouseId"
+    [compareWith]="byId"
+    [disabled]="true"           
+    [clearable]="false"
+    [searchable]="false"
     class="w-56 ctl wh-select">
-    <ng-option [value]="null" disabled>Select</ng-option>
   </ng-select>
 </td>
 
-<!-- Bin -->
+
 <td class="min-w-[16rem]">
   <ng-select
-    [items]="getBins(r.warehouseId)"
+    [items]="getBins(row.warehouseId)"
     bindLabel="binName"
     bindValue="id"
-    [(ngModel)]="r.binId"
-    (change)="r.binName = lookupBinName(r.binId)"
-    [appendTo]="'body'"
-    [dropdownPosition]="'bottom'"
-    [searchable]="true"
-    [clearable]="true"
-    placeholder="Select"
+    [(ngModel)]="row.binId"
+    [compareWith]="byId"
+    [disabled]="true"          
+    [clearable]="false"
+    [searchable]="false"
     class="w-56 ctl wh-select">
-    <ng-option [value]="null">Select</ng-option>
   </ng-select>
 </td>
-<td class="min-w-[12rem]">
+<!-- Strategy (EDIT, disabled) -->
+<td class="min-w-[16rem]">
   <ng-select
     [items]="strategies"
     bindLabel="name"
     bindValue="id"
-    [(ngModel)]="r.strategyId"
-    (change)="r.strategyName = lookupStrategyName(r.strategyId)"
-    [appendTo]="'body'"
-    [dropdownPosition]="'bottom'"
-    [clearable]="true"
-    placeholder="Select"
-    class="w-48 ctl">
-    <ng-option [value]="null">Select</ng-option>
+    [(ngModel)]="row.strategyId"
+    [compareWith]="byId"
+    [disabled]="true"           
+    [clearable]="false"
+    [searchable]="false"
+    class="w-56 ctl">
   </ng-select>
 </td>
 
