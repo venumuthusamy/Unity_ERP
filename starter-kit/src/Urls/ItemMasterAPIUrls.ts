@@ -8,6 +8,6 @@ export class ItemMasterAPIUrls {
   public static readonly getItemAudit         = "/ItemMaster/Audit/";
   public static readonly getItemWarehouse         = "/ItemMaster/GetWarehouse/";
   public static readonly getItemSupplier        = "/ItemMaster/GetSupplier/";
-  
+  public static readonly getItemBom            = "/ItemMaster/GetBom/"
 }
 
