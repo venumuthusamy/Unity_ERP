@@ -17,6 +17,8 @@ interface SelectOpt { id: number | string; name?: string; label?: string; value?
 interface StockTakeLine {
   id: number;
   itemId: number | string | null;
+  WarehouseTypeId:number
+  supplierId : number
   itemName: string | null;
   binId: number
   binName:any
@@ -28,6 +30,7 @@ interface StockTakeLine {
   remarks?: string | null;
   _error?: string | null; // UI-only
   selected: any
+  status:any
 }
 
 @Component({
@@ -118,7 +121,7 @@ export class StockTakeComponent implements OnInit {
           } else {
             this.strategyCheck = false
           }
-          this.toggleStockReview()
+          // this.toggleStockReview()
         })
       }
 
@@ -230,9 +233,24 @@ export class StockTakeComponent implements OnInit {
         if (this.freeze) {
           console.log('Freeze flag was sent; backend should have frozen scope.');
         }
+
+        if(this.lines.length == 0){
+          { Swal.fire({ icon: 'warning', title: 'No Item Stocktake list' }); return; }
+        }
       },
       error: (err) => {
+        debugger
         this.lines = [];
+        const msg =
+                err?.error?.message ||
+                err?.message 
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: msg,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#d33'
+              });
       }
     });
   }
@@ -326,6 +344,9 @@ export class StockTakeComponent implements OnInit {
           id: L.id,
           itemId: L.itemId,
           binId:L.binId,
+          WarehouseTypeId: this.warehouseTypeId,
+          supplierId : this.supplierId,
+          status: this.status,
           onHand: this.toNum(L.onHand),
 
           // send TOTAL counted; keep the split too (if your API accepts it)
@@ -433,6 +454,15 @@ export class StockTakeComponent implements OnInit {
       return;
     }
 
+       if (!this.hasAnySelected(this.reviewRows)) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'No lines selected',
+            text: 'Select at least one line in the Stock Review before Approved.'
+          });
+          return;
+        }
+
     const payload = {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
@@ -445,6 +475,9 @@ export class StockTakeComponent implements OnInit {
         id: r.id,
         itemId: r.itemId,
         binId : r.binId,
+        WarehouseTypeId: this.warehouseTypeId,
+        supplierId : this.supplierId,
+        status: this.status,
         onHand: this.toNum(r.onHand),
         countedQty: this.toNum(r.countedQty),
         badCountedQty: this.toNum(r.badCountedQty),
@@ -456,7 +489,8 @@ export class StockTakeComponent implements OnInit {
       })),
     };
 
-    this.stockTakeService.updateStockTake(payload).subscribe({
+     if (this.stockTakeId) {
+            this.stockTakeService.updateStockTake(payload).subscribe({
       next: (res: any) => {
         if (res?.isSuccess) {
           Swal.fire({
@@ -485,9 +519,32 @@ export class StockTakeComponent implements OnInit {
         });
       }
     });
+     }else{
+         this.stockTakeService.insertStockTake(payload).subscribe((res) => {
+        if (res.isSuccess) {
+          Swal.fire({
+            title: "Hi",
+            text: res.message,
+            icon: "success",
+            allowOutsideClick: false,
+          });
+          this.router.navigateByUrl('/Inventory/list-stocktake')
+        }
+      });
+     }
+
+   
   }
 
 
+
+  private hasAnySelected(row: any): boolean {
+    debugger
+    const lines = row
+    return lines.some(l => !!l.selected);
+  }
+
+  
 }
 
 

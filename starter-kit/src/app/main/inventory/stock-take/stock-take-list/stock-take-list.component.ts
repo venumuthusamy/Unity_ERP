@@ -6,6 +6,7 @@ import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
 import { StockTakeService } from '../stock-take.service'
 import { ItemMasterService } from '../../item-master/item-master.service';
+import { BinService } from '../../../master/bin/bin.service'
 
 @Component({
   selector: 'app-stock-take-list',
@@ -39,14 +40,18 @@ export class StockTakeListComponent implements OnInit {
 
 
   takeTypeMap: Record<number, string> = {};
+  binList: any;
 
   constructor(private stockTakeService: StockTakeService, private router: Router,
-    private datePipe: DatePipe, private itemMasterService: ItemMasterService,
+    private datePipe: DatePipe, private itemMasterService: ItemMasterService,private BinService: BinService,
   ) { this.userId = localStorage.getItem('id'); }
   ngOnInit(): void {
     this.loadRequests();
     this.itemMasterService.getAllItemMaster().subscribe((res: any) => {
       this.itemList = res.data;
+    })
+    this.BinService.getAllBin().subscribe((res: any) => {
+      this.binList = res.data;
     })
   }
   filterUpdate(event) {
@@ -121,6 +126,7 @@ export class StockTakeListComponent implements OnInit {
 
   }
   openLinesModal(row: any) {
+    debugger
     // 1) get array safely
     const raw = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
 
@@ -129,11 +135,14 @@ export class StockTakeListComponent implements OnInit {
 
     const lines = raw.map((l: any) => ({
       barcode: (l?.barcode ?? '-') as string,
+      binId: (l?.binId),
       itemId: (l?.itemId),
       itemName: (l?.itemName ?? l?.name ?? '-') as string,
       onHand: N(l?.onHand ?? l?.available),
-      countedQty: N(l?.countedQty) + N(l?.badCountedQty),
-      // varianceQty: N(l?.countedQty) - N(l?.onHand),
+      countedQty: N(l?.countedQty),
+      badCountedQty:N(l?.badCountedQty),
+      totalQty: N(l?.countedQty)+N(l?.badCountedQty), 
+      variance: (l.countedQty + l.badCountedQty) - N(l.onHand),   
       remarks: (l?.remarks ?? '-') as string
     }));
 
@@ -146,6 +155,11 @@ export class StockTakeListComponent implements OnInit {
 
     this.modalLines = lines;
     this.showLinesModal = true;
+  }
+  getBinName(id: number | string | null) {
+    debugger
+    const x = this.binList.find(i => i.id === id);
+    return x?.binName ?? String(id ?? '');
   }
 
   getItemName(id: number | string | null) {
@@ -174,6 +188,7 @@ export class StockTakeListComponent implements OnInit {
   }
 
   post(row: any) {
+    debugger
     // Only allow when Approved (2). API also guards this.
     if (row.status !== 2) {
       Swal.fire({ icon: 'info', title: 'Not allowed', text: 'Only Approved stock takes can be posted.' });
@@ -226,7 +241,7 @@ export class StockTakeListComponent implements OnInit {
       });
     });
   }
-
+   
 }
 
 
