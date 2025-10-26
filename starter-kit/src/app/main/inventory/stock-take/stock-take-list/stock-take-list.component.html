@@ -79,9 +79,11 @@
                     <ngx-datatable-column name="Action" [width]="120">
                         <ng-template let-row="row" ngx-datatable-cell-template>
                             <!-- Actions -->
-                            <i class="fas fa-pen me-3" 
-                               
-                                (click)="editStockTake(row)"></i>
+                            <i class="fas fa-pen me-3" [ngClass]="row.status === 3 ? 'text-muted' : 'text-primary'"
+                                [style.pointer-events]="row.status === 3 ? 'none' : 'auto'"
+                                [attr.title]="row.status === 3 ? 'Cannot edit (Posted)' : 'Edit'"
+                                (click)="row.status === 3 ? null : editStockTake(row)">
+                            </i>
 
                             <i class="fas fa-trash me-3" [ngClass]="row.status === 3 ? 'text-muted' : 'text-danger'"
                                 [style.pointer-events]="row.status === 3 ? 'none' : 'auto'"
@@ -130,10 +132,13 @@
                 <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
                     <thead>
                         <tr style="background:#2E5F73; color:#fff;">
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Location</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Item</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Scan/Barcode</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Available</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Physical count</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Accepted Qty</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Faulty Qty</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Total Qty</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Variance</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Remarks</th>
 
@@ -143,7 +148,11 @@
                         <tr *ngFor="let l of modalLines; let i = index"
                             [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
                             style="border-bottom:1px solid #f1f5f9;">
-                               <td
+                            <td
+                                style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
+                                {{ getBinName(l.binId) }}
+                            </td>
+                            <td
                                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
                                 {{ getItemName(l.itemId) }}
                             </td>
@@ -159,7 +168,13 @@
                                 {{ l.countedQty || 0 }}
                             </td>
                             <td style="padding:10px 12px;">
-                                {{ l.countedQty - l.onHand || 0 }}
+                                {{ l.badCountedQty || 0 }}
+                            </td>
+                            <td style="padding:10px 12px;">
+                                {{ l.totalQty || 0 }}
+                            </td>
+                            <td style="padding:10px 12px;" [ngClass]="l.variance >= 0 ? 'text-success' : 'text-danger'">
+                                {{ l.variance }}
                             </td>
                             <td style="padding:10px 12px;">
                                 {{ l.remarks || '-' }}
