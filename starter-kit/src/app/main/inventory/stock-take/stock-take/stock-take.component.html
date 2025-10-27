@@ -80,22 +80,22 @@
                         </th>
                         <th style="background-color:#2E5F73; color:white;width:250px;white-space: nowrap;">Reason For
                             Faulty Qty</th>
-                        <th style="background-color:#2E5F73; color:white;width:200px;">Remarks</th>
+                        <th class="remarks-col" style="background-color:#2E5F73; color:white;width:300px;white-space: nowrap;">Remarks</th>
                         <!-- <th style="background-color:#2E5F73; color:white; width:200px;">Action</th> -->
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngFor="let r of lines; let i = index">
-                        <td>
+                        <td style="min-width: 200px;">
                             <ng-select [items]="LocationTypes" bindLabel="binName" bindValue="id" [(ngModel)]="r.binId"
                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
-                        <td>
+                        <td style="min-width: 200px;">
                             <ng-select [items]="itemList" bindLabel="name" bindValue="id" [(ngModel)]="r.itemId"
                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
-                        <td><input type="text" class="form-control" [(ngModel)]="r.barcode"
-                                placeholder="Scan or enter barcode" /></td>
+                        <td style="min-width: 200px;"><input type="text" class="form-control" [(ngModel)]="r.barcode"
+                          (ngModelChange)="onCheckReview()"     placeholder="Enter barcode" /></td>
 
                         <!-- <td class="text-muted">{{ r.onHand ?? 0 }}</td> -->
                         <td>
@@ -111,15 +111,16 @@
                         <!-- <td><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reason"
                                  placeholder="Item" class="w-100"></ng-select>
                         </td> -->
+                        <!-- stock-take-list.component.html OR stock-take.component.html -->
                         <td>
-                            <textarea class="form-control" autosize autosizeMaxRows="6" rows="1" [(ngModel)]="r.reason"
-                                placeholder="Reason"></textarea>
+                            <textarea class="form-control" autosize rows="1" [(ngModel)]="r.reason"
+                                placeholder="Reason" (ngModelChange)="onCheckReview()"></textarea>
+                        </td>
+                        <td class="remarks-col">
+                            <textarea class="form-control" autosize rows="1" [(ngModel)]="r.remarks"
+                                placeholder="Remarks" (ngModelChange)="onCheckReview()"></textarea>
                         </td>
 
-                        <td>
-                            <textarea class="form-control" autosize rows="1" [(ngModel)]="r.remarks"
-                                placeholder="Remarks"></textarea>
-                        </td>
                         <!-- <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeLine(i)">
                                 <i class="fas fa-trash-alt"></i>
@@ -176,7 +177,7 @@
                             <th style="width:42px;background-color:#2E5F73;color: #fff;"></th>
                             <th style="background-color:#2E5F73;color: #fff;">Location</th>
                             <th style="background-color:#2E5F73;color: #fff;">Item</th>
-                            <th style="background-color:#2E5F73;color: #fff;">Scan/Barcode</th>
+                            <th style="background-color:#2E5F73;color: #fff;">Barcode</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">
                                 Available</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">
@@ -209,8 +210,13 @@
                             </td>
                             <!-- <td class="text-end"><ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reason"
                                  placeholder="Item" class="w-100"></ng-select></td> -->
-                            <td class="text-end">{{ r.reason }}</td>
-                            <td><input type="text" class="form-control" [(ngModel)]="r.remarks" placeholder="Remarks" />
+                            <td class="reason-cell">
+                                <!-- remove the long-line issue, preserve user line breaks, and show full text on hover -->
+                                <span class="reason-text" [title]="r.reason">{{ r.reason || '-' }}</span>
+                            </td>
+                            <td class="remarks-col">
+                                <textarea class="form-control" autosize rows="1" [(ngModel)]="r.remarks"
+                                    placeholder="Remarks"></textarea>
                             </td>
                         </tr>
 

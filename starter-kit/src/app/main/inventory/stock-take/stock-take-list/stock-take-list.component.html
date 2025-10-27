@@ -140,6 +140,7 @@
                             <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Faulty Qty</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Total Qty</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Variance</th>
+                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Reason</th>
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Remarks</th>
 
                         </tr>
@@ -176,8 +177,13 @@
                             <td style="padding:10px 12px;" [ngClass]="l.variance >= 0 ? 'text-success' : 'text-danger'">
                                 {{ l.variance }}
                             </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.remarks || '-' }}
+                            <td style="padding:10px 12px;"class="reason-cell">
+                                <span class="reason-text" [title]="l.reason">{{ l.reason || '-' }}</span>
+                                
+                            </td>
+                            <td style="padding:10px 12px;"class="reason-cell">
+                                <span class="reason-text" [title]="l.remarks">{{ l.remarks || '-' }}</span>
+                                
                             </td>
 
                         </tr>
