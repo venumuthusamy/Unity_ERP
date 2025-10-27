@@ -142,7 +142,8 @@ export class StockTakeListComponent implements OnInit {
       countedQty: N(l?.countedQty),
       badCountedQty:N(l?.badCountedQty),
       totalQty: N(l?.countedQty)+N(l?.badCountedQty), 
-      variance: (l.countedQty + l.badCountedQty) - N(l.onHand),   
+      variance: (l.countedQty + l.badCountedQty) - N(l.onHand),  
+      reason: (l?.reason ?? '-') as string ,
       remarks: (l?.remarks ?? '-') as string
     }));
 

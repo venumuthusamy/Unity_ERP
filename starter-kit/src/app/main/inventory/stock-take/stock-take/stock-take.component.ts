@@ -153,6 +153,7 @@ export class StockTakeComponent implements OnInit {
   }
 
   onCountChange(r: StockTakeLine): void {
+    this.showStockReview = false
     const n = Math.floor(Number(r.countedQty));
     if (!Number.isFinite(n) || n < 0) {
       r.countedQty = null;
@@ -163,6 +164,7 @@ export class StockTakeComponent implements OnInit {
     }
   }
   onUnCountChange(r: StockTakeLine): void {
+     this.showStockReview = false
     const n = Math.floor(Number(r.badCountedQty));
     if (!Number.isFinite(n) || n < 0) {
       r.badCountedQty = null;
@@ -544,7 +546,9 @@ export class StockTakeComponent implements OnInit {
     return lines.some(l => !!l.selected);
   }
 
-  
+  onCheckReview(){
+    this.showStockReview = false
+  }
 }
 
 

@@ -19,6 +19,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { StockHistoryComponent } from './stock-transfer/stock-history/stock-history.component';
 import { StockAdjustmentComponent } from './stock-adjustment/stock-adjustment.component';
+import { SharedModule } from 'app/shared/shared.module';
 const routes = [
   {
     path: 'Create-inventory',
@@ -116,7 +117,8 @@ const routes = [
     SweetAlert2Module.forRoot(),
     NgSelectModule,
  OverlayModule,
-    PortalModule
+    PortalModule,
+    SharedModule
   ]
 })
 export class InventoryModule { }
