@@ -767,17 +767,52 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     );
   }
 
-  selectModalItem(item: any) {
-    debugger
-    this.modalLine.itemSearch = item.itemName;
-    this.modalLine.itemCode = item.itemCode;
-    this.modalLine.uomSearch = item.uomName;
-    this.modalLine.uom = item.uomName;
-    this.modalLine.budget = item.label || '';
-    this.modalLine.dropdownOpen = false;
-    this.modalLine.filteredItems = [];
-    this.isItemSelected = true;
-  }
+selectModalItem(item: any) {
+  // First, check if the item exists before doing anything else
+  this.itemsService.checkItemExists(item.itemCode).subscribe({
+    next: (res) => {
+      if (res.data === true) {
+        // ✅ Item exists → Continue your normal logic
+        this.modalLine.itemSearch = item.itemName;
+        this.modalLine.itemCode = item.itemCode;
+        this.modalLine.uomSearch = item.uomName;
+        this.modalLine.uom = item.uomName;
+        this.modalLine.budget = item.label || '';
+        this.modalLine.dropdownOpen = false;
+        this.modalLine.filteredItems = [];
+        this.isItemSelected = true;
+
+        // 👉 Call your existing method (e.g., calculate, refresh, etc.)
+        // this.afterItemSelected(item);
+      } else {
+  this.modalLine = {
+    itemSearch: '',
+    itemCode: '',
+    uomSearch: '',
+    uom: '',
+    budget: '',
+    dropdownOpen: false,
+    filteredItems: []
+  };
+        Swal.fire({
+          icon: 'warning',
+          title: 'Item not found in ItemMaster',
+          text: 'Please add this item to ItemMaster before proceeding.',
+        });
+        
+      }
+    },
+    error: (err) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to verify item existence.',
+      });
+      console.error(err);
+    }
+  });
+}
+
 
   onModalUomFocus() {
     this.modalLine.filteredUoms = [...this.uomList];

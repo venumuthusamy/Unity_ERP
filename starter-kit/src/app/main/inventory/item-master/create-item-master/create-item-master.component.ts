@@ -30,6 +30,7 @@ type SimpleItem = {
 
 type PriceRow = {
   price: number | null;
+  qty: number | null;            // <-- NEW
   barcode: string | null;
   SupplierId: number | string | null;
   supplierName?: string | null;
@@ -68,11 +69,10 @@ interface ItemStockRow {
   isApproved: boolean;
   isTransfered: boolean;
   stockIssueID: number;
-   isFullTransfer: boolean;
+  isFullTransfer: boolean;
   isPartialTransfer: boolean;
 }
 
-/** Inline BOM row (linked with supplier) */
 interface BomInlineRow {
   supplierId: number | string | null;
   supplierName: string | null;
@@ -90,13 +90,13 @@ interface BomTotals { rollup: number; count: number; }
 })
 export class CreateItemMasterComponent implements OnInit {
 
-  // ===== Steps: dynamic (Create vs Edit) =====
+  // ===== Steps: CREATE vs EDIT =====
+  private readonly stepsCreate = ['Summary'] as const;
   private readonly stepsEdit   = ['Summary','Warehouses','Suppliers','BOM','Audit','Review'] as const;
-  private readonly stepsCreate = ['Summary','Warehouses','Suppliers','Review'] as const;
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
+  get lastStepIndex() { return this.stepsView.length - 1; }
 
   step = 0;
-
   next() {
     if (this.step === 0) {
       if (!this.item.name?.trim() && !this.selectedItemId) {
@@ -104,14 +104,10 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
     }
-
-    if (this.step < this.stepsView.length - 1) {
+    if (this.step < this.lastStepIndex) {
       this.step++;
-
-      // Only for edit mode: prepare BOM & Audit when entering those steps
       if (this.isEdit && this.step === 3) this.syncBomFromPrices(); // BOM
       if (this.isEdit && this.step === 4) this.loadAudits();        // Audit
-
       this.maybeScrollToReviewBottom();
     }
   }
@@ -125,7 +121,7 @@ export class CreateItemMasterComponent implements OnInit {
   audits: ItemMasterAudit[] = [];
   expandedAudit: Record<string | number, boolean> = {};
   busy: Record<string, boolean> = {};
-  copied: Record<string, boolean> = {}; // used by template
+  copied: Record<string, boolean> = {};
 
   // ===== Header model =====
   item: any = this.makeEmptyItem();
@@ -168,8 +164,9 @@ export class CreateItemMasterComponent implements OnInit {
   @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchBox', { static: false }) itemSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
-   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
-   @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
+  @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
+  @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
+
   constructor(
     private itemsSvc: ItemMasterService,
     private chartOfAccountService: ChartofaccountService,
@@ -295,8 +292,11 @@ export class CreateItemMasterComponent implements OnInit {
           ? prices
           : (prices && 'data' in prices ? (prices as any).data : []) || [];
 
+        // normalize qty as number
         this.prices = priceArr.map((p: any) => ({
           price: p.price ?? null,
+          qty: (p.qty != null ? Number(p.qty)
+               : (p.quantity != null ? Number(p.quantity) : null)),
           barcode: p.barcode ?? null,
           SupplierId: p.supplierId ?? p.SupplierId ?? null,
           supplierName: p.supplierName ?? p.name ?? null,
@@ -304,8 +304,6 @@ export class CreateItemMasterComponent implements OnInit {
         }));
 
         this.modalLine.itemSearch = this.item.name || '';
-
-        // Initialize BOM from current prices
         this.syncBomFromPrices();
       },
       error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
@@ -343,8 +341,8 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
       stockIssueID: r.stockIssueID ?? 0,
-           isFullTransfer:r.isFullTransfer,
-          isPartialTransfer:r.isPartialTransfer
+      isFullTransfer:r.isFullTransfer,
+      isPartialTransfer:r.isPartialTransfer
     }));
 
     const bomPayload = (this.bomRows || []).map(r => ({
@@ -354,38 +352,40 @@ export class CreateItemMasterComponent implements OnInit {
       unitCost: Number(((r.unitCost ?? r.existingCost) || 0))
     }));
 
+    // normalize prices, include qty as number
+    const pricesPayload = (this.prices ?? [])
+      .filter(p => p.price != null && p.SupplierId != null)
+      .map(p => ({
+        supplierId: p.SupplierId,
+        price: Number(p.price),
+        qty: p.qty == null || p.qty === ('' as any) ? 0 : Number(p.qty),
+        barcode: p.barcode ?? null
+      }));
+
     const payload: any = {
       ...this.item,
       itemStocks: stocksPayload,
-      prices: (this.prices ?? []).filter(p => p.price != null),
+      prices: pricesPayload,
+      ...(this.isEdit ? { bomLines: bomPayload } : {})
     };
-
-    if (this.isEdit) {
-      payload.bomLines = bomPayload;
-    }
 
     const creating = !payload.id || payload.id <= 0;
 
     const onApiSuccess = (res: any) => {
       const ok = res?.isSuccess === true || res?.issucess === true;
       if (ok) {
-        if (creating) {
-          const newId = Number(res?.data?.id ?? res?.data ?? res?.id ?? 0);
-          if (!this.item.id && newId) this.item.id = newId;
-          this.isEdit = true;
-          this.editingId = this.item.id;
-          if (this.step > this.stepsView.length - 1) {
-            this.step = this.stepsView.length - 1;
-          }
-        }
         Swal.fire({
           icon: 'success',
           title: creating ? 'Created!' : 'Updated!',
           text: res?.message || (creating ? 'Item created successfully' : 'Item updated successfully'),
           confirmButtonColor: '#0e3a4c'
         });
+
+        if (creating) {
+          this.onGoToItemList();
+          return;
+        }
         this.loadItems();
-        this.onGoToItemList();
       } else {
         Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
       }
@@ -393,6 +393,9 @@ export class CreateItemMasterComponent implements OnInit {
     const onApiError = (_: any) => {
       Swal.fire({ icon: 'error', title: 'Error', text: creating ? 'Create failed' : 'Update failed', confirmButtonColor: '#0e3a4c' });
     };
+
+    // Optional: debug
+    // console.log('SAVE payload', JSON.stringify(payload));
 
     if (creating) this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });
     else this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
@@ -453,8 +456,8 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
       stockIssueID: r.stockIssueID ?? 0,
-           isFullTransfer:r.isFullTransfer,
-          isPartialTransfer:r.isPartialTransfer
+      isFullTransfer:r.isFullTransfer,
+      isPartialTransfer:r.isPartialTransfer
     };
     this.getBinsForWarehouse(this.whDraft.warehouseId);
     this.showWhModal = true;
@@ -491,8 +494,8 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!this.whDraft.isApproved,
       isTransfered: !!this.whDraft.isTransfered,
       stockIssueID: this.whDraft.stockIssueID ?? 0,
-           isFullTransfer:this.whDraft.isFullTransfer,
-          isPartialTransfer:this.whDraft.isPartialTransfer
+      isFullTransfer:this.whDraft.isFullTransfer,
+      isPartialTransfer:this.whDraft.isPartialTransfer
     };
 
     if (this.isEditMode && this.editingIndex > -1) {
@@ -603,7 +606,10 @@ export class CreateItemMasterComponent implements OnInit {
 
   // ===== Pricing =====
   addPriceLine(): void {
-    this.prices = [...this.prices, { price: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }];
+    this.prices = [
+      ...this.prices,
+      { price: null, qty: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }
+    ];
     this.activePriceIndex = null;
     this.filteredSuppliers = [];
     this.supplierDropdownOpen = false;
@@ -746,7 +752,6 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  // ===== Styles/helpers used by template =====
   avatarStyle(name?: string) {
     return {
       display: 'inline-grid',
@@ -816,8 +821,8 @@ export class CreateItemMasterComponent implements OnInit {
     const text = JSON.stringify(payload, null, 2);
 
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+      if ((navigator as any).clipboard?.writeText) {
+        await (navigator as any).clipboard.writeText(text);
       } else {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -842,56 +847,30 @@ export class CreateItemMasterComponent implements OnInit {
     }
   }
 
-  downloadJson(a: any) {
-    const blob = new Blob(
-      [JSON.stringify({
-        action: a.action,
-        occurredAtUtc: a.occurredAtUtc,
-        user: a.userName || a.userId,
-        before: this.safeParse(a.oldValuesJson),
-        after: this.safeParse(a.newValuesJson)
-      }, null, 2)],
-      { type: 'application/json' }
-    );
-    const url = URL.createObjectURL(blob);
-    const aTag = document.createElement('a');
-    aTag.href = url;
-    aTag.download = `audit_${a.auditId || a.occurredAtUtc}.json`;
-    aTag.click();
-    URL.revokeObjectURL(url);
-  }
-
   keyOf(a: any, index: number): string {
     return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
   }
   isExpanded(a: any, index: number): boolean {
     return !!this.expandedAudit[this.keyOf(a, index)];
   }
-  toggleRaw(a: any, index: number) {
-    const k = this.keyOf(a, index);
-    this.showRaw[k] = !this.showRaw[k];
-  }
 
-  // normalize action check (case-insensitive)
   isUpdate(a: any): boolean {
     return (a?.action || '').toString().toUpperCase() === 'UPDATE';
   }
 
-  // build diffs; if parsing fails or no changes, returns []
   diffs(a: any): Array<{ field: string; before: any; after: any }> {
     const oldObj = this.safeParse(a?.oldValuesJson) || {};
     const newObj = this.safeParse(a?.newValuesJson) || {};
     if (typeof oldObj !== 'object' || typeof newObj !== 'object') return [];
 
     const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
-    const rows = keys
+    return keys
       .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
       .map(k => ({
         field: k,
         before: this.valueToText((oldObj as any)[k]),
-        after: this.valueToText((newObj as any)[k]),
+        after:  this.valueToText((newObj as any)[k]),
       }));
-    return rows;
   }
 
   chipStyle(action?: string) {
@@ -955,23 +934,16 @@ export class CreateItemMasterComponent implements OnInit {
 
     for (const r of this.bomRows) {
       const cost = Number((r.unitCost ?? r.existingCost ?? 0));
-      if (r.supplierId != null) {
-        mapById.set(String(r.supplierId), cost);
-      }
-      if (r.supplierName) {
-        mapByName.set(norm(r.supplierName), cost);
-      }
+      if (r.supplierId != null) mapById.set(String(r.supplierId), cost);
+      if (r.supplierName) mapByName.set(norm(r.supplierName), cost);
     }
 
     this.prices = this.prices.map(p => {
       const idKey = p.SupplierId != null ? String(p.SupplierId) : '';
       const nameKey = norm(p.supplierName);
       let nextPrice: number | null = null;
-      if (idKey && mapById.has(idKey)) {
-        nextPrice = mapById.get(idKey)!;
-      } else if (nameKey && mapByName.has(nameKey)) {
-        nextPrice = mapByName.get(nameKey)!;
-      }
+      if (idKey && mapById.has(idKey)) nextPrice = mapById.get(idKey)!;
+      else if (nameKey && mapByName.has(nameKey)) nextPrice = mapByName.get(nameKey)!;
       if (nextPrice == null) return p;
       return { ...p, price: nextPrice };
     });
@@ -1004,41 +976,11 @@ export class CreateItemMasterComponent implements OnInit {
   onGoToItemList(): void {
     this.router.navigate(['/Inventory/List-itemmaster']);
   }
-    private scrollTo(position: 'top' | 'bottom') {
-    const anchor = position === 'bottom'
-      ? this.bottomOfWizard?.nativeElement
-      : this.topOfWizard?.nativeElement;
-
-    if (anchor?.scrollIntoView) {
-      anchor.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
-    }
-
-    anchor?.parentElement?.scrollTo?.({
-      top: position === 'bottom'
-        ? anchor.parentElement.scrollHeight
-        : 0,
-      left: 0,
-      behavior: 'auto'
-    });
-
-    const scrollingElement = document.scrollingElement || document.documentElement;
-    if (position === 'bottom') {
-      scrollingElement.scrollTop = scrollingElement.scrollHeight;
-      window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-    } else {
-      scrollingElement.scrollTop = 0;
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    }
+  private isOnReviewStep(): boolean {
+    return (this.isEdit && this.step === this.lastStepIndex);
   }
-   private isOnReviewStep(): boolean {
-    return (!this.isEdit && this.step === 3) || (this.isEdit && this.step === 5);
-  }
-
-  /** Scroll to the bottom anchor if we're on the Review step */
   private maybeScrollToReviewBottom() {
     if (!this.isOnReviewStep()) return;
-
-    // Give Angular a tick to render the block before scrolling
     setTimeout(() => {
       this.bottomOfWizard?.nativeElement?.scrollIntoView({
         behavior: 'smooth',
@@ -1047,6 +989,4 @@ export class CreateItemMasterComponent implements OnInit {
       });
     }, 0);
   }
-
-  
 }
