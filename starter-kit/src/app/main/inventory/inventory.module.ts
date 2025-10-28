@@ -20,6 +20,7 @@ import { PortalModule } from '@angular/cdk/portal';
 import { StockHistoryComponent } from './stock-transfer/stock-history/stock-history.component';
 import { StockAdjustmentComponent } from './stock-adjustment/stock-adjustment.component';
 import { SharedModule } from 'app/shared/shared.module';
+import { StockReorderPlanningCreateComponent } from './stock-reorder-planning/stock-reorder-planning-create/stock-reorder-planning-create.component';
 const routes = [
   {
     path: 'Create-inventory',
@@ -91,6 +92,11 @@ const routes = [
     component: StockTakeComponent,
     data: { animation: 'edit-stocktake' }
   },
+   {
+    path: 'create-stockreorderplanning',
+    component: StockReorderPlanningCreateComponent,
+    data: { animation: 'create-stockreorderplanning' }
+  },
 ]
 
 @NgModule({
@@ -106,6 +112,7 @@ const routes = [
      ItemMasterListComponent,
      StockHistoryComponent,
      StockAdjustmentComponent,
+     StockReorderPlanningCreateComponent,
   ],
   imports: [
     CommonModule,

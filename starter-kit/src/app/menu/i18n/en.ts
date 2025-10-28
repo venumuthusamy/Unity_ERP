@@ -25,7 +25,8 @@ export const locale = {
         ITEMMASTER:'ItemMaster',
         STACKTRANSFER: 'STACKTRANSFER',
         STOCKTAKE: 'STOCKTAKE',
-        STOCKADJUSTMENT: 'StockAdjustment'
+        STOCKADJUSTMENT: 'StockAdjustment',
+        STOCKREORDERPLANNING: 'StockReorderPlanning'
       },
       FINANCIAL: {
         TITLE: 'Financial',
