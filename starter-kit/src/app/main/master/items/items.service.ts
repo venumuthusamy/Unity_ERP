@@ -31,4 +31,8 @@ export class ItemsService {
   getByIdItem(id: number): Observable<any> {
     return this.http.get(`${this.url + ItemApiUrls.GetItemById}${id}`);
   }
+
+   checkItemExists(itemCode: string): Observable<any> {
+    return this.http.get(`${this.url + ItemApiUrls.CheckItemExists}${itemCode}`);
+  }
 }

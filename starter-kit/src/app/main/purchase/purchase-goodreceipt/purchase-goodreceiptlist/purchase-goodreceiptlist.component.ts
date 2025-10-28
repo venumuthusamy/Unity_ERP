@@ -1,9 +1,20 @@
-import { Component, HostListener, OnInit, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnInit,
+  ViewChild,
+  AfterViewInit,
+  ViewEncapsulation
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
-import Swal from 'sweetalert2';
 import * as feather from 'feather-icons';
+
+// NEW: lookups for names
+import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
+import { StockAdjustmentService } from 'app/main/inventory/stock-adjustment/stock-adjustment.service';
+import { StrategyService } from 'app/main/master/strategies/strategy.service';
 
 interface GrnRow {
   id: number;
@@ -29,10 +40,18 @@ interface GrnRow {
   isFlagIssue: boolean;
   isPostInventory: boolean;
 
-  /** NEW fields you asked to preview */
+  // surfaced fields
   qtyReceived?: number | null;
   qualityCheck?: string | null;
   batchSerial?: string | null;
+
+  // location/strategy
+  warehouseId?: number | null;
+  binId?: number | null;
+  strategyId?: number | null;
+  warehouseName?: string | null;
+  binName?: string | null;
+  strategyName?: string | null;
 }
 
 type ViewerState = { open: boolean; src: string | null };
@@ -61,12 +80,27 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
   modalLines: any[] = [];
   modalHeader: { grnNo?: string; pono?: string; name?: string; receptionDate?: any } = { grnNo: '' };
 
+  // ======== name caches ========
+  private warehouseNameMap = new Map<number, string>();
+  private strategyNameMap = new Map<number, string>();
+  private binsByWarehouse = new Map<number, Map<number, string>>(); // whId -> (binId -> binName)
+  private warehousesLoaded = false;
+  private strategiesLoaded = false;
+
   constructor(
     private grnService: PurchaseGoodreceiptService,
-    private router: Router
+    private router: Router,
+    // NEW services
+    private warehouseService: WarehouseService,
+    private stockService: StockAdjustmentService,
+    private strategyService: StrategyService
   ) {}
 
   ngOnInit(): void {
+    // preload names (best-effort)
+    this.loadWarehouses();
+    this.loadStrategies();
+
     this.loadGrns();
   }
 
@@ -74,12 +108,12 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.refreshFeatherIcons();
   }
 
-  /** Refresh Feather icons (call after table or DOM updates) */
+  // ---------------- UI helpers ----------------
   refreshFeatherIcons(): void {
     setTimeout(() => feather.replace(), 0);
   }
 
-  /** Load GRNs from API */
+  // ---------------- Data load -----------------
   private loadGrns(): void {
     this.grnService.getAllDetails().subscribe({
       next: (res: any) => {
@@ -108,27 +142,33 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
           isFlagIssue: this.truthy(g.isFlagIssue ?? g.IsFlagIssue ?? false),
           isPostInventory: this.truthy(g.isPostInventory ?? g.IsPostInventory ?? false),
 
-          /** NEW mappings */
+          // extras
           qtyReceived: g.qtyReceived ?? g.QtyReceived ?? null,
           qualityCheck: g.qualityCheck ?? g.QualityCheck ?? null,
           batchSerial: g.batchSerial ?? g.BatchSerial ?? null,
+
+          // names if the list payload already contains them
+          warehouseId: g.warehouseId ?? g.WarehouseId ?? null,
+          binId: g.binId ?? g.BinId ?? null,
+          strategyId: g.strategyId ?? g.StrategyId ?? null,
+          warehouseName: g.warehouseName ?? g.WarehouseName ?? null,
+          binName: g.binName ?? g.BinName ?? null,
+          strategyName: g.strategyName ?? g.StrategyName ?? null
         }));
 
         this.allRows = normalized;
         this.rows = this.collapseByGrn(normalized);
         if (this.table) this.table.offset = 0;
-
-        this.refreshFeatherIcons(); // ensure icons render after table load
+        this.refreshFeatherIcons();
       },
-      error: (err) => {
-        console.error('Error loading GRN list', err);
+      error: () => {
         this.allRows = [];
         this.rows = [];
       }
     });
   }
 
-  /** Collapse multiple items by GRN */
+  // collapse same GRN into one list row
   private collapseByGrn(rows: GrnRow[]): GrnRow[] {
     const map = new Map<string, { base: GrnRow; items: Set<string> }>();
     for (const r of rows) {
@@ -150,7 +190,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /** Search filter */
+  // ---------------- Search ----------------
   filterUpdate(event: Event): void {
     const val = (event.target as HTMLInputElement).value?.toLowerCase().trim() ?? '';
     this.searchValue = val;
@@ -174,12 +214,11 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.refreshFeatherIcons();
   }
 
-  /** Lines modal */
+  // ---------------- Eye modal ----------------
   openLinesModal(row: GrnRow): void {
     this.refreshFeatherIcons();
     if (!row?.grnNo) return;
 
-    // Show these in the modal header strip if you added it in HTML
     this.modalHeader = {
       grnNo: row.grnNo || '',
       pono: row.pono || '',
@@ -190,7 +229,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.modalLines = [];
     this.showLinesModal = true;
 
-    // Try to build from cached rows for same GRN + same status (for consistent display)
+    // prefer cached items for this GRN+status
     const sameGrnRows = this.allRows.filter(r => (r.grnNo || '') === (row.grnNo || ''));
     const sameStatusRows = sameGrnRows.filter(r =>
       this.truthy(r.isPostInventory) === this.truthy(row.isPostInventory) &&
@@ -199,10 +238,11 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
     if (sameStatusRows.length) {
       this.modalLines = sameStatusRows.map(r => this.toModalLine(r, r.name));
+      this.fillMissingNamesForModalLines(); // ensure names shown
       return;
     }
 
-    // Fallback: fetch by id and try to derive a single matching line
+    // fallback: get the full GRN and build one line
     this.grnService.getByIdGRN(row.id).subscribe({
       next: (res: any) => {
         const data = res?.data ?? res ?? {};
@@ -210,15 +250,24 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
         try {
           const raw = data?.grnJson ?? data?.GRNJSON ?? '[]';
           lines = Array.isArray(raw) ? raw : JSON.parse(raw);
-        } catch { lines = []; }
+        } catch {
+          lines = [];
+        }
 
+        // If you want to show all lines in the modal, use lines.map(...).
+        // If you want only one similar line, keep pickOneLine:
         const picked = this.pickOneLine(lines, row);
         if (!picked.supplierName) picked.supplierName = row.name ?? '';
-        this.modalLines = [ this.toModalLine(picked, row.name) ];
+
+        // show all lines (usually preferred in a "Lines" modal)
+        this.modalLines = (lines.length ? lines : [picked]).map(l => this.toModalLine(l, row.name));
+
+        this.fillMissingNamesForModalLines();
       },
-      error: (err) => {
-        console.error('Failed to load GRN by id', err);
-        this.modalLines = [ this.toModalLine(row, row.name) ];
+      error: () => {
+        // graceful fallback
+        this.modalLines = [this.toModalLine(row, row.name)];
+        this.fillMissingNamesForModalLines();
       }
     });
   }
@@ -228,7 +277,6 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.modalLines = [];
   }
 
-  /** Convert any source (row or json line) to modal line object */
   private toModalLine(src: any, fallbackName?: string) {
     const timeDate = this.parseTime(src.time);
     return {
@@ -250,17 +298,142 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
       isFlagIssue: this.truthy(src.isFlagIssue),
       isPostInventory: this.truthy(src.isPostInventory),
 
-      /** NEW fields surfaced into the modal table */
       qtyReceived: this.toNumberOrNull(src.qtyReceived ?? src.QtyReceived),
       qualityCheck: src.qualityCheck ?? src.QualityCheck ?? null,
       batchSerial: src.batchSerial ?? src.BatchSerial ?? null,
+
+      // IDs + names (names may be missing initially)
+      warehouseId: this.toNum(src.warehouseId ?? src.WarehouseId),
+      binId: this.toNum(src.binId ?? src.BinId),
+      strategyId: this.toNum(src.strategyId ?? src.StrategyId),
+      warehouseName: src.warehouseName ?? src.WarehouseName ?? null,
+      binName: src.binName ?? src.BinName ?? null,
+      strategyName: src.strategyName ?? src.StrategyName ?? null
     };
   }
 
+  // -------- name resolution for modal lines --------
+  private fillMissingNamesForModalLines(): void {
+    // try to fill from caches immediately
+    for (const l of this.modalLines) {
+      if (!l.warehouseName && l.warehouseId && this.warehouseNameMap.has(l.warehouseId)) {
+        l.warehouseName = this.warehouseNameMap.get(l.warehouseId)!;
+      }
+      if (!l.strategyName && l.strategyId && this.strategyNameMap.has(l.strategyId)) {
+        l.strategyName = this.strategyNameMap.get(l.strategyId)!;
+      }
+    }
+
+    // collect which warehouses we need bin names for
+    const whToBinsNeeded = new Map<number, Set<number>>();
+    for (const l of this.modalLines) {
+      if (l.warehouseId && l.binId && !l.binName) {
+        if (!whToBinsNeeded.has(l.warehouseId)) whToBinsNeeded.set(l.warehouseId, new Set<number>());
+        whToBinsNeeded.get(l.warehouseId)!.add(l.binId);
+      }
+    }
+
+    // if any warehouse names missing and we didn’t preload, try once
+    if (!this.warehousesLoaded) this.loadWarehouses(() => this.applyWarehouseNames());
+
+    // if any strategy names missing and we didn’t preload, try once
+    if (!this.strategiesLoaded) this.loadStrategies(() => this.applyStrategyNames());
+
+    // fetch bins only for the warehouses that appear in modal
+    whToBinsNeeded.forEach((needBinIds, whId) => {
+      this.ensureBinsLoaded(whId, () => {
+        const map = this.binsByWarehouse.get(whId);
+        if (!map) return;
+        for (const l of this.modalLines) {
+          if (l.warehouseId === whId && l.binId && !l.binName && map.has(l.binId)) {
+            l.binName = map.get(l.binId)!;
+          }
+        }
+      });
+    });
+  }
+
+  private applyWarehouseNames(): void {
+    for (const l of this.modalLines) {
+      if (!l.warehouseName && l.warehouseId && this.warehouseNameMap.has(l.warehouseId)) {
+        l.warehouseName = this.warehouseNameMap.get(l.warehouseId)!;
+      }
+    }
+  }
+
+  private applyStrategyNames(): void {
+    for (const l of this.modalLines) {
+      if (!l.strategyName && l.strategyId && this.strategyNameMap.has(l.strategyId)) {
+        l.strategyName = this.strategyNameMap.get(l.strategyId)!;
+      }
+    }
+  }
+
+  // -------- preload name maps --------
+  private loadWarehouses(after?: () => void) {
+    if (this.warehousesLoaded && after) return after();
+    this.warehouseService.getWarehouse().subscribe({
+      next: (res: any) => {
+        const arr = res?.data ?? res ?? [];
+        for (const w of arr) {
+          const id = Number(w.id ?? w.Id);
+          const name = String(w.name ?? w.warehouseName ?? w.WarehouseName ?? '');
+          if (id && name) this.warehouseNameMap.set(id, name);
+        }
+        this.warehousesLoaded = true;
+        if (after) after();
+      },
+      error: () => { this.warehousesLoaded = true; if (after) after(); }
+    });
+  }
+
+  private loadStrategies(after?: () => void) {
+    if (this.strategiesLoaded && after) return after();
+    this.strategyService.getStrategy().subscribe({
+      next: (res: any) => {
+        const arr = res?.data ?? res ?? [];
+        for (const s of arr) {
+          const id = Number(s.id ?? s.Id);
+          const name = String(s.strategyName ?? s.name ?? s.StrategyName ?? '');
+          if (id && name) this.strategyNameMap.set(id, name);
+        }
+        this.strategiesLoaded = true;
+        if (after) after();
+      },
+      error: () => { this.strategiesLoaded = true; if (after) after(); }
+    });
+  }
+
+  private ensureBinsLoaded(warehouseId: number, after?: () => void) {
+    if (!warehouseId) { if (after) after(); return; }
+    if (this.binsByWarehouse.has(warehouseId)) { if (after) after(); return; }
+
+    this.stockService.GetBinDetailsbywarehouseID(warehouseId).subscribe({
+      next: (res: any) => {
+        const map = new Map<number, string>();
+        const data = res?.data ?? res ?? [];
+        for (const b of data) {
+          const id = Number(b.id ?? b.binId ?? b.BinId);
+          const name = String(b.binName ?? b.name ?? b.bin ?? '');
+          if (id && name) map.set(id, name);
+        }
+        this.binsByWarehouse.set(warehouseId, map);
+        if (after) after();
+      },
+      error: () => { if (after) after(); }
+    });
+  }
+
+  // ---------------- misc helpers ----------------
   private toNumberOrNull(v: any): number | null {
     if (v === null || v === undefined || v === '') return null;
     const n = Number(v);
     return isNaN(n) ? null : n;
+  }
+
+  private toNum(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   }
 
   private parseTime(v: any): Date | null {
@@ -317,37 +490,6 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`);
   }
 
-  // deleteGRN(id: number) {
-  //   Swal.fire({
-  //     title: 'Are you sure?',
-  //     text: "You won't be able to revert this!",
-  //     icon: 'warning',
-  //     showCancelButton: true,
-  //     confirmButtonColor: '#7367F0',
-  //     cancelButtonColor: '#E42728',
-  //     confirmButtonText: 'Yes, Delete it!',
-  //     customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-danger ml-1' },
-  //     allowOutsideClick: false,
-  //   }).then((result) => {
-  //     if (result.isConfirmed) {
-  //       this.grnService.deleteGRN(id).subscribe({
-  //         next: (response: any) => {
-  //           Swal.fire({
-  //             icon: response.isSuccess ? 'success' : 'error',
-  //             title: response.isSuccess ? 'Deleted!' : 'Error!',
-  //             text: response.message,
-  //             allowOutsideClick: false,
-  //           });
-  //           this.loadGrns();
-  //         },
-  //         error: () => {
-  //           Swal.fire({ icon: 'error', title: 'Error!', text: 'Something went wrong while deleting.' });
-  //         }
-  //       });
-  //     }
-  //   });
-  // }
-
   private toDate(d: any): Date | null {
     const dt = new Date(d);
     if (isNaN(+dt)) return null;
@@ -376,8 +518,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     if (t === 'Flagged') return 'badge-warning';
     return 'badge-danger';
   }
-
-  private coerceTimeText(v: any): string | null {
+    private coerceTimeText(v: any): string | null {
     if (!v) return null;
     const d = this.parseTime(v);
     if (!d) return null;
