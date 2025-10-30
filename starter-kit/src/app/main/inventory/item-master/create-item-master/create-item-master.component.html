@@ -220,11 +220,11 @@
                 <th class="px-3 py-2 text-left">Barcode</th>
                 <th class="px-3 py-2 text-left">Accepted Qty</th>
                 <th class="px-3 py-2 text-left">Faulted Qty</th>
-                <th class="px-3 py-2 text-left">Reason for Faulted Qty</th>
+                <th class="px-3 py-2 text-left">FaultedReason</th>
                 <th class="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <!-- <tbody>
               <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
                 <td>
                   <div class="relative flex-1 prl-dropdown">
@@ -273,14 +273,56 @@
 <td></td>
                 <td class="px-3 py-2">
                   <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
-                    <i class="fa fa-trash mr-1"></i> Remove
+                    <i class="fa fa-trash mr-1"></i> 
                   </button>
                 </td>
               </tr>
               <tr *ngIf="!prices?.length">
                 <td colspan="4" class="px-3 py-6 text-center text-gray-400">No price lines. Add one above.</td>
               </tr>
-            </tbody>
+            </tbody> -->
+            <tbody>
+  <tr *ngFor="let p of prices; let i = index; trackBy: trackByIdx" class="border-b">
+    <!-- Supplier -->
+    <td class="px-3 py-2">
+      <span class="text-gray-800">{{ p.supplierName || p.supplierSearch || '-' }}</span>
+    </td>
+
+    <!-- Price -->
+    <td class="px-3 py-2">
+      <span class="text-gray-800">{{ p.price != null ? (p.price | number:'1.2-2') : '-' }}</span>
+    </td>
+
+    <!-- Qty -->
+    <td class="px-3 py-2">
+      <span class="text-gray-800">{{ p.qty || '-' }}</span>
+    </td>
+
+    <!-- Barcode -->
+    <td class="px-3 py-2">
+      <span class="text-gray-800">{{ p.barcode || '-' }}</span>
+    </td>
+
+    <!-- Extra columns (empty or future data placeholders) -->
+    <td></td>
+    <td></td>
+    <td></td>
+
+    <!-- Delete button -->
+    <td class="px-3 py-2 text-right">
+      <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
+        <i class="fa fa-trash mr-1"></i>
+      </button>
+    </td>
+  </tr>
+
+  <tr *ngIf="!prices?.length">
+    <td colspan="8" class="px-3 py-6 text-center text-gray-400">
+      No price lines. Add one above.
+    </td>
+  </tr>
+</tbody>
+
           </table>
         </div>
 

@@ -327,49 +327,78 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     } as UpdateWarehouseAndSupplierPriceDto));
   }
 
-  /* ======= post a single row only when user clicks ======= */
 private postOneRowToInventory(row: any, index: number) {
-  // 0) Validate
-  if (!row?.itemCode) { Swal.fire('Missing item','Item code not found.','warning'); return; }
-  if (!row?.warehouseId) { Swal.fire('Missing warehouse','Select a warehouse before posting.','warning'); return; }
-  const qty = Number(row?.qtyReceived || 0);
-  if (!Number.isFinite(qty) || qty <= 0) { Swal.fire('Quantity required','Enter a received quantity > 0.','warning'); return; }
+    debugger
+    // 0) Validate minimal fields
+    if (!row?.itemCode) {
+      Swal.fire('Missing item', 'Item code not found.', 'warning'); return;
+    }
+    if (!row?.warehouseId) {
+      Swal.fire('Missing warehouse', 'Select a warehouse before posting.', 'warning'); return;
+    }
+    const qty = Number(row?.qtyReceived || 0);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      Swal.fire('Quantity required', 'Enter a received quantity > 0.', 'warning'); return;
+    }
 
-  // 1) Build Apply GRN request (backend will also upsert ItemPrice and accumulate qty)
-  const applyReq: ApplyGrnRequest = {
-    grnNo: this.generatedGRN?.grnNo || '',
-    receptionDate: this.receiptDate || new Date(),
-    updatedBy: (localStorage.getItem('id') || ''),
-    lines: [{
+    // 1) Build single-line ApplyGrn request
+    const applyReq: ApplyGrnRequest = {
+      grnNo: this.generatedGRN?.grnNo || '',
+      receptionDate: this.receiptDate || new Date(),
+      updatedBy: (localStorage.getItem('id') || ''),
+      lines: [{
+        itemCode: String(row.itemCode || '').trim(),
+        supplierId: row.supplierId ?? this.currentSupplierId ?? null,
+        warehouseId: Number(row.warehouseId),
+        binId: row.binId ?? null,
+        strategyId: row.strategyId ?? null,
+        qtyDelta: row.qtyReceived,
+        batchFlag: !!row.batchSerial,
+        serialFlag: false,
+        barcode: row.batchSerial ?? null,
+        price: this.getNumberOrNull(row.unitPrice),
+        remarks: row.remarks ?? null
+      } as ApplyGrnLine]
+    };
+
+    // 2) Build single upsert for stock + price
+    const upsert: UpdateWarehouseAndSupplierPriceDto = {
       itemCode: String(row.itemCode || '').trim(),
-      supplierId: row.supplierId ?? this.currentSupplierId ?? null,
       warehouseId: Number(row.warehouseId),
       binId: row.binId ?? null,
       strategyId: row.strategyId ?? null,
       qtyDelta: qty,
       batchFlag: !!row.batchSerial,
       serialFlag: false,
-      barcode: row.batchSerial ?? null,
+      supplierId: row.supplierId ?? this.currentSupplierId ?? null,
       price: this.getNumberOrNull(row.unitPrice),
-      remarks: row.remarks ?? null
-    } as ApplyGrnLine]
-  };
+      barcode: row.batchSerial ?? null,
+      remarks: row.remarks ?? null,
+      updatedBy: (localStorage.getItem('id') || undefined)
+    };
 
-  // 2) Single backend call
-  this.inventoryService.applyGrnToInventory(applyReq).subscribe({
-    next: () => {
-      this.updateRowAndPersist(
-        index,
-        { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
-        () => Swal.fire('Posted', 'Row posted to inventory.', 'success')
-      );
-    },
-    error: (err) => {
-      console.error('Apply GRN to inventory failed', err);
-      Swal.fire('Failed', 'Could not post this row to inventory.', 'error');
-    }
-  });
-}
+    // 3) Call backend in sequence
+    this.inventoryService.applyGrnToInventory(applyReq).subscribe({
+      next: () => {
+        this.inventoryService.batchUpdateWarehouseAndSupplierPrice([upsert]).subscribe({
+          next: () => {
+            // 4) Mark as posted & persist GRN JSON
+            this.updateRowAndPersist(index, { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 }, () => {
+              Swal.fire('Posted', 'Row posted to inventory.', 'success');
+            });
+          },
+          error: (err) => {
+            console.error('Price/warehouse upsert failed', err);
+            Swal.fire('Partial', 'Stock updated but price/warehouse upsert failed. Retry from this screen.', 'warning');
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Apply GRN to inventory failed', err);
+        Swal.fire('Failed', 'Could not post this row to inventory.', 'error');
+      }
+    });
+  }
 
 
   /* ====== Flag Issues ====== */
