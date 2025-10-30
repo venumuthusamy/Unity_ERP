@@ -20,39 +20,46 @@
               </label>
             </div>
           </div>
-          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
-            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+         <div class="col-md-6 col-12 d-flex justify-content-md-end">
+  <div class="d-flex align-items-center justify-content-md-end gap-2
+              flex-md-nowrap flex-wrap w-100">
 
-              <label class="d-flex align-items-center ml-1 ml-md-0">Search:<input [(ngModel)]="searchValue"
-                  name="searchValue" type="search" class="form-control ml-25" (keyup)="filterUpdate($event)"
-                  (search)="filterUpdate($event)" /></label>
+    <!-- Search FIRST, fixed basis so it doesn't collapse -->
+    <input [(ngModel)]="searchValue"
+           name="searchValue"
+           type="search"
+           class="form-control me-2 flex-shrink-0"
+           placeholder="Search"
+           (keyup)="filterUpdate($event)"
+           (search)="filterUpdate($event)"
+           style="flex:0 0 320px; max-width:40vw;" />
 
-              <button (click)="openCreate()" class="btn m-1 d-inline-flex align-items-center"
-                style="background-color:#2E5F73; color:white; gap:4px;">
-                <i data-feather="plus-circle" class="w-4 h-4"></i>
-                <span>Add</span>
-              </button>
-              <!-- Drafts with corner badge -->
-              <div style="position:relative; display:inline-block;">
-                <button (click)="openDraftsModal()" class="btn m-1 d-inline-flex align-items-center"
-                  style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
-                  <i data-feather="file-text" class="w-4 h-4"></i>
-                  <span>Drafts</span>
-                </button>
+    <button (click)="openCreate()" class="btn d-inline-flex align-items-center flex-shrink-0"
+            style="background-color:#2E5F73; color:white; gap:4px;">
+      <i data-feather="plus-circle" class="w-4 h-4"></i><span>Add</span>
+    </button>
 
-                <!-- corner badge -->
-                <span *ngIf="drafts?.length" style="
-          position:absolute; top:6px; right:12px;
-          min-width:20px; height:20px; padding:0 6px;
-          border-radius:999px; background:orange; color:#fff;
-          display:flex; align-items:center; justify-content:center;
-          font-size:12px; font-weight:700; line-height:1;">
-                  {{ drafts.length }}
-                </span>                
-              </div>
+    <button (click)="openReorderDetails()" class="btn d-inline-flex align-items-center flex-shrink-0"
+            style="border:1px solid #2E5F73; color:#2E5F73; gap:4px; background:white;">
+      <span>Reorder</span>
+    </button>
 
-            </div>
-          </div>
+    <div class="position-relative d-inline-block flex-shrink-0">
+      <button (click)="openDraftsModal()" class="btn d-inline-flex align-items-center"
+              style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
+        <i data-feather="file-text" class="w-4 h-4"></i><span>Drafts</span>
+      </button>
+      <span *ngIf="drafts?.length"
+            style="position:absolute; top:6px; right:12px; min-width:20px; height:20px; padding:0 6px;
+                   border-radius:999px; background:orange; color:#fff; display:flex; align-items:center;
+                   justify-content:center; font-size:12px; font-weight:700; line-height:1;">
+        {{ drafts.length }}
+      </span>
+    </div>
+
+  </div>
+</div>
+
         </div>
         <ngx-datatable class="bootstrap core-bootstrap" [rows]="rows" [rowHeight]="50" [headerHeight]="50"
           [footerHeight]="50" [limit]="selectedOption" [columnMode]="'force'" [scrollbarH]="true" [reorderable]="true">

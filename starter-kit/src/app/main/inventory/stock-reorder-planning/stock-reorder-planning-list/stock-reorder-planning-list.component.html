@@ -54,7 +54,7 @@
                     </ngx-datatable-column>
                     <ngx-datatable-column name="Warehouse" prop="warehouseName" [width]="120"></ngx-datatable-column>
 
-                    <ngx-datatable-column name="Method" prop="methodId" [width]="140"></ngx-datatable-column>
+                    <ngx-datatable-column name="Method" prop="methodname" [width]="140"></ngx-datatable-column>
 
 
                     <ngx-datatable-column name="Status" prop="status" [width]="120">
@@ -67,6 +67,21 @@
                             </span>
                         </ng-template>
                     </ngx-datatable-column>
+
+                       <!-- Edit/Delete Actions -->
+                    <!-- <ngx-datatable-column name="Action" [width]="120">
+                        <ng-template let-row="row" ngx-datatable-cell-template>
+                    
+                            <i class="fas fa-pen me-3" 
+                                (click)="editStockReorder(row)">
+                            </i>
+
+                            <i class="fas fa-trash me-3" 
+                                (click)="deleteStockReorder(row.id)">
+                            </i>
+
+                        </ng-template>
+                    </ngx-datatable-column> -->
 
 
 
