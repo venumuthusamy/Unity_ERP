@@ -21,6 +21,7 @@ import { StockHistoryComponent } from './stock-transfer/stock-history/stock-hist
 import { StockAdjustmentComponent } from './stock-adjustment/stock-adjustment.component';
 import { SharedModule } from 'app/shared/shared.module';
 import { StockReorderPlanningCreateComponent } from './stock-reorder-planning/stock-reorder-planning-create/stock-reorder-planning-create.component';
+import { StockReorderPlanningListComponent } from './stock-reorder-planning/stock-reorder-planning-list/stock-reorder-planning-list.component';
 const routes = [
   {
     path: 'Create-inventory',
@@ -92,6 +93,11 @@ const routes = [
     component: StockTakeComponent,
     data: { animation: 'edit-stocktake' }
   },
+    {
+    path: 'list-stockreorderplanning',
+    component: StockReorderPlanningListComponent,
+    data: { animation: 'list-stockreorderplanning' }
+  },
    {
     path: 'create-stockreorderplanning',
     component: StockReorderPlanningCreateComponent,
@@ -113,6 +119,7 @@ const routes = [
      StockHistoryComponent,
      StockAdjustmentComponent,
      StockReorderPlanningCreateComponent,
+     StockReorderPlanningListComponent,
   ],
   imports: [
     CommonModule,
