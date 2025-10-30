@@ -81,6 +81,7 @@
                      [indeterminate]="isIndeterminate()"
                      (change)="toggleAll($event)">
             </th>
+             <th style="background-color:#2E5F73;color:white;">Supplier Name</th>
             <th style="background-color:#2E5F73;color:white;">Warehouse</th>
             <th style="background-color:#2E5F73;color:white;">Item</th>
             <th style="background-color:#2E5F73;color:white;">SKU</th>
@@ -100,11 +101,12 @@
                      [checked]="isSelected(r)"
                      (change)="toggleRow(r, $event)">
             </td>
+             <td>{{ r.supplierName }}</td>
             <td>{{ r.warehouse }}</td>
             <td>{{ r.item }}</td>
             <td>{{ r.sku }}</td>
             <td>{{ r.bin }}</td>
-            <td>{{ r.onHand }}</td>
+            <td>{{ r.qty }}</td>
             <td>{{ r.reserved }}</td>
             <td>{{ r.min }}</td>
             <td>{{ r.available }}</td>

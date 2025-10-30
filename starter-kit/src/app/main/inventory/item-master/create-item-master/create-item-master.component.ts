@@ -20,6 +20,7 @@ import { CoastingMethodService } from 'app/main/master/coasting-method/coasting-
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { StrategyService } from 'app/main/master/strategies/strategy.service';
 
+/* ----------------- Lightweight view models ----------------- */
 type SimpleItem = {
   id: number;
   itemName: string;
@@ -38,7 +39,13 @@ type PriceRow = {
 };
 
 interface Warehouse { id: number | string; name: string; }
-interface Bin { id?: number | string; name?: string; binID?: number|string; binName?: string; warehouseId?: number | string; }
+interface Bin {
+  id?: number | string;
+  name?: string;
+  binID?: number|string;
+  binName?: string;
+  warehouseId?: number | string;
+}
 interface SupplierLite { id: number | string; name: string; code?: string; }
 
 interface ItemMasterAudit {
@@ -73,15 +80,50 @@ interface ItemStockRow {
   isPartialTransfer: boolean;
 }
 
+/* ----------------- BOM contracts ----------------- */
+// If your API already returns { latest, history }, these are used:
+export interface BomLatestRow {
+  supplierId: number;
+  supplierName: string;
+  existingCost: number;
+  unitCost: number;
+  createdDate: string;
+}
+export interface BomHistoryPoint {
+  supplierId: number;
+  supplierName: string;
+  existingCost: number;
+  unitCost: number;
+  createdDate: string;
+  rn?: number;
+}
+export interface BomSnapshot {
+  latest: BomLatestRow[];
+  history: BomHistoryPoint[];
+}
+
+// If your API returns a flat ItemBom[] from the DB (like your screenshot)
+export interface ItemBomRow {
+  id: number;
+  itemId: number;
+  supplierId: number;
+  existingCost: number;
+  unitCost: number;
+  createdDate: string;
+  createdBy?: number;
+  updatedBy?: number;
+  updatedDate?: string;
+}
+
 interface BomInlineRow {
   supplierId: number | string | null;
   supplierName: string | null;
   existingCost: number;
   unitCost: number | null;
 }
-
 interface BomTotals { rollup: number; count: number; }
 
+/* ----------------- Component ----------------- */
 @Component({
   selector: 'app-create-item-master',
   templateUrl: './create-item-master.component.html',
@@ -89,14 +131,13 @@ interface BomTotals { rollup: number; count: number; }
   encapsulation: ViewEncapsulation.None,
 })
 export class CreateItemMasterComponent implements OnInit {
-
-  // ===== Steps: CREATE vs EDIT =====
+  /* Steps */
   private readonly stepsCreate = ['Summary'] as const;
   private readonly stepsEdit   = ['Summary','Warehouses','Suppliers','BOM','Audit','Review'] as const;
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
   get lastStepIndex() { return this.stepsView.length - 1; }
-
   step = 0;
+
   next() {
     if (this.step === 0) {
       if (!this.item.name?.trim() && !this.selectedItemId) {
@@ -104,29 +145,29 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
     }
-    if (this.step < this.lastStepIndex) {
+    if (this.step < this.stepsView.length - 1) {
       this.step++;
-      if (this.isEdit && this.step === 3) this.syncBomFromPrices(); // BOM
-      if (this.isEdit && this.step === 4) this.loadAudits();        // Audit
+      if (this.isEdit && this.step === 3) this.loadBomSnapshotOrFallback(); // BOM
+      if (this.isEdit && this.step === 4) this.loadAudits();                // Audit
       this.maybeScrollToReviewBottom();
     }
   }
   prev() { if (this.step > 0) this.step--; }
 
-  // ===== Edit vs Create =====
+  /* Edit vs Create */
   isEdit = false;
   editingId: number | null = null;
 
-  // ===== Audit =====
+  /* Audit */
   audits: ItemMasterAudit[] = [];
   expandedAudit: Record<string | number, boolean> = {};
   busy: Record<string, boolean> = {};
   copied: Record<string, boolean> = {};
 
-  // ===== Header model =====
+  /* Header model */
   item: any = this.makeEmptyItem();
 
-  // ===== Lists / selectors =====
+  /* Lists / selectors */
   selectedItemId: number | null = null;
   prices: PriceRow[] = [];
   supplierList: SupplierLite[] = [];
@@ -144,18 +185,24 @@ export class CreateItemMasterComponent implements OnInit {
   warehouseList: Warehouse[] = [];
   binList: Bin[] = [];
 
-  // ===== Per-warehouse stock =====
+  /* Per-warehouse stock */
   itemStocks: ItemStockRow[] = [];
 
-  // ===== Warehouse modal state =====
+  /* Warehouse modal state */
   showWhModal = false;
   whDraft: ItemStockRow = this.makeEmptyStockDraft();
   isEditMode: boolean = false;
   editingIndex: number = -1;
 
-  // ===== BOM (INLINE) =====
+  /* BOM (INLINE) */
   bomRows: BomInlineRow[] = [];
   bomTotals: BomTotals = { rollup: 0, count: 0 };
+
+  /**
+   * Map used by the UI helper to show “last 3” chips.
+   * Key = supplierId, Value = array of history points (unsorted).
+   */
+  bomHistoryBySupplier = new Map<number, BomHistoryPoint[]>();
 
   brand = '#2E5F73';
   minDate = '';
@@ -183,11 +230,9 @@ export class CreateItemMasterComponent implements OnInit {
     this.userId = localStorage.getItem('id');
   }
 
-  // ===== Lifecycle =====
+  /* Lifecycle */
   ngOnInit(): void {
     this.setMinDate();
-
-    // catalogs
     this.loadCatalogs();
     this.loadWarehouses();
     this.loadCostingMethods();
@@ -195,7 +240,6 @@ export class CreateItemMasterComponent implements OnInit {
     this.getAllSupplier();
     this.getAllStrategy();
 
-    // detect edit
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.isEdit = true;
@@ -206,7 +250,7 @@ export class CreateItemMasterComponent implements OnInit {
     }
   }
 
-  // ===== Derived totals for warehouse =====
+  /* Derived totals */
   get totals() {
     const t = { onHand: 0, reserved: 0, available: 0 };
     for (const r of this.itemStocks) {
@@ -219,7 +263,7 @@ export class CreateItemMasterComponent implements OnInit {
     return t;
   }
 
-  // ===== Items list for dropdown =====
+  /* Items list */
   itemsTable: any[] = [];
   loadItems(): void {
     this.itemsSvc.getAllItemMaster().subscribe({
@@ -234,7 +278,7 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  // ===== Edit loader =====
+  /* Edit loader */
   private loadForEdit(id: number): void {
     forkJoin({
       header: this.itemsSvc.getItemMasterById(id),
@@ -292,7 +336,6 @@ export class CreateItemMasterComponent implements OnInit {
           ? prices
           : (prices && 'data' in prices ? (prices as any).data : []) || [];
 
-        // normalize qty as number
         this.prices = priceArr.map((p: any) => ({
           price: p.price ?? null,
           qty: (p.qty != null ? Number(p.qty)
@@ -304,7 +347,7 @@ export class CreateItemMasterComponent implements OnInit {
         }));
 
         this.modalLine.itemSearch = this.item.name || '';
-        this.syncBomFromPrices();
+        this.loadBomSnapshotOrFallback();
       },
       error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
     });
@@ -318,7 +361,7 @@ export class CreateItemMasterComponent implements OnInit {
     return local.toISOString().split('T')[0];
   }
 
-  // ===== Save =====
+  /* Save */
   async onSave(): Promise<void> {
     if (!this.item.sku?.trim() || !this.item.name?.trim()) {
       await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
@@ -368,6 +411,7 @@ export class CreateItemMasterComponent implements OnInit {
       prices: pricesPayload,
       ...(this.isEdit ? { bomLines: bomPayload } : {})
     };
+    if (this.isEdit) payload.bomLines = bomPayload;
 
     const creating = !payload.id || payload.id <= 0;
 
@@ -381,27 +425,21 @@ export class CreateItemMasterComponent implements OnInit {
           confirmButtonColor: '#0e3a4c'
         });
 
-        if (creating) {
-          this.onGoToItemList();
-          return;
-        }
+        if (creating) { this.onGoToItemList(); return; }
         this.loadItems();
+        if (this.item?.id) this.loadBomSnapshotOrFallback();
       } else {
         Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
       }
     };
-    const onApiError = (_: any) => {
+    const onApiError = (_: any) =>
       Swal.fire({ icon: 'error', title: 'Error', text: creating ? 'Create failed' : 'Update failed', confirmButtonColor: '#0e3a4c' });
-    };
-
-    // Optional: debug
-    // console.log('SAVE payload', JSON.stringify(payload));
 
     if (creating) this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });
     else this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
   }
 
-  // ===== Misc UI helpers =====
+  /* Misc UI helpers */
   setMinDate() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -418,15 +456,15 @@ export class CreateItemMasterComponent implements OnInit {
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
 
-  // ===== Warehouse modal =====
+  /* Warehouse modal */
   openWhModal(): void {
     this.whDraft = this.makeEmptyStockDraft();
     this.showWhModal = true;
-    document.body.style.overflow = 'hidden';
+    (document.body.style as any).overflow = 'hidden';
   }
   closeWhModal(): void {
     this.showWhModal = false;
-    document.body.style.overflow = '';
+    (document.body.style as any).overflow = '';
   }
   onModalRootClick(ev: MouseEvent) {
     ev.stopPropagation();
@@ -525,7 +563,7 @@ export class CreateItemMasterComponent implements OnInit {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
   }
 
-  // ===== Lookups =====
+  /* Lookups */
   getBinsForWarehouse(id: number | string | null) {
     this.warehouseService.getBinNameByIdAsync(id).subscribe((response: any) => {
       this.binList = response?.data ?? [];
@@ -547,7 +585,7 @@ export class CreateItemMasterComponent implements OnInit {
   }
   getById(list: any[], id: any) { return list?.find?.(x => String(x.id)===String(id)); }
 
-  // ===== Suppliers =====
+  /* Suppliers */
   getAllSupplier() {
     this.supplierService.GetAllSupplier().subscribe((response: any) => {
       this.supplierList = (response?.data ?? []).map((s:any) => ({
@@ -559,7 +597,7 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  // ===== Catalogs =====
+  /* Catalogs */
   loadWarehouses() {
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
@@ -604,7 +642,7 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  // ===== Pricing =====
+  /* Pricing */
   addPriceLine(): void {
     this.prices = [
       ...this.prices,
@@ -619,7 +657,7 @@ export class CreateItemMasterComponent implements OnInit {
     if (this.isEdit) this.syncBomFromPrices();
   }
 
-  // ===== Item dropdown =====
+  /* Item dropdown */
   onModalItemFocus(open: boolean = true): void {
     this.modalLine.dropdownOpen = open;
     if (open) {
@@ -647,7 +685,7 @@ export class CreateItemMasterComponent implements OnInit {
     this.modalLine.dropdownOpen = false;
   }
 
-  // ===== Supplier dropdown =====
+  /* Supplier dropdown */
   filterSuppliersForRow(i: number): void {
     const q = (this.prices[i]?.supplierSearch || '').toLowerCase().trim();
     this.filteredSuppliers = !q
@@ -671,7 +709,7 @@ export class CreateItemMasterComponent implements OnInit {
     if (this.isEdit) this.syncBomFromPrices();
   }
 
-  // ===== Global focus & click =====
+  /* Global focus & click */
   @HostListener('document:focusin', ['$event'])
   onFocusIn(ev: FocusEvent) {
     const target = ev.target as HTMLInputElement;
@@ -695,7 +733,7 @@ export class CreateItemMasterComponent implements OnInit {
     if (supplierBox && !supplierBox.contains(t)) this.supplierDropdownOpen = false;
   }
 
-  // ===== Small utilities =====
+  /* Small utilities */
   private makeEmptyItem() {
     return {
       id: 0,
@@ -752,7 +790,26 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  avatarStyle(name?: string) {
+  chipStyle(action: string) {
+    const a = (action || '').toUpperCase();
+    const map: any = {
+      CREATE: { bg: '#DCFCE7', color: '#166534', border: '#BBF7D0' },
+      UPDATE: { bg: '#E0F2FE', color: '#075985', border: '#BAE6FD' },
+      DELETE: { bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' }
+    };
+    const s = map[a] || { bg:'#F1F5F9', color:'#334155', border:'#E2E8F0' };
+    return {
+      display:'inline-block',
+      padding:'2px 8px',
+      borderRadius:'9999px',
+      background:s.bg,
+      border:`1px solid ${s.border}`,
+      color:s.color,
+      fontSize:'11px',
+      fontWeight:600
+    };
+  }
+  avatarStyle(_name?: string) {
     return {
       display: 'inline-grid',
       placeItems: 'center',
@@ -786,17 +843,13 @@ export class CreateItemMasterComponent implements OnInit {
     const last  = parts[1]?.[0] || '';
     return (first + last).toUpperCase();
   }
-  toggleDetails(id: string | number) {
-    this.expandedAudit[id] = !this.expandedAudit[id];
-  }
+  toggleDetails(id: string | number) { this.expandedAudit[id] = !this.expandedAudit[id]; }
   prettyJson(payload: any): string {
     if (!payload) return '—';
     try {
       const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
       return JSON.stringify(obj, null, 2);
-    } catch {
-      return String(payload);
-    }
+    } catch { return String(payload); }
   }
   private valueToText(v: any): string {
     if (v === null || v === undefined) return '—';
@@ -834,17 +887,8 @@ export class CreateItemMasterComponent implements OnInit {
       this.copied[k] = true;
       setTimeout(()=> this.copied[k] = false, 1500);
     } catch {
-      Swal.fire({
-        toast: true,
-        position: 'top',
-        icon: 'error',
-        title: 'Copy failed',
-        showConfirmButton: false,
-        timer: 1500
-      });
-    } finally {
-      this.busy[k] = false;
-    }
+      Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'Copy failed', showConfirmButton: false, timer: 1500 });
+    } finally { this.busy[k] = false; }
   }
 
   keyOf(a: any, index: number): string {
@@ -853,16 +897,13 @@ export class CreateItemMasterComponent implements OnInit {
   isExpanded(a: any, index: number): boolean {
     return !!this.expandedAudit[this.keyOf(a, index)];
   }
-
   isUpdate(a: any): boolean {
     return (a?.action || '').toString().toUpperCase() === 'UPDATE';
   }
-
   diffs(a: any): Array<{ field: string; before: any; after: any }> {
     const oldObj = this.safeParse(a?.oldValuesJson) || {};
     const newObj = this.safeParse(a?.newValuesJson) || {};
     if (typeof oldObj !== 'object' || typeof newObj !== 'object') return [];
-
     const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
     return keys
       .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
@@ -873,31 +914,139 @@ export class CreateItemMasterComponent implements OnInit {
       }));
   }
 
-  chipStyle(action?: string) {
-    const a = (action || '').toUpperCase();
-    const map: any = {
-      CREATE: { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46' },
-      UPDATE: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
-      DELETE: { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B' },
-      DEFAULT:{ bg: '#F1F7F9', border: '#DBE7EE', text: this.brand }
-    };
-    const c = map[a] || map.DEFAULT;
-    return {
-      display: 'inline-block',
-      padding: '4px 10px',
-      borderRadius: '9999px',
-      fontSize: '10px',
-      fontWeight: 700,
-      letterSpacing: '.02em',
-      textTransform: 'uppercase',
-      border: `1px solid ${c.border}`,
-      background: c.bg,
-      color: c.text,
-      lineHeight: '1'
-    } as any;
+  /* ----------------- BOM logic ----------------- */
+
+  /** First try backend; if absent, build BOM from supplier prices */
+  private loadBomSnapshotOrFallback(): void {
+    const id = Number(this.item?.id || 0);
+    if (!this.isEdit || !id) { this.syncBomFromPrices(); return; }
+    this.loadBomSnapshot(id, true);
   }
 
-  // ===== BOM inline helpers =====
+  /** Normalize any API response into { latest, history } */
+private normalizeSnapshot(payload: any): BomSnapshot {
+  const root = payload?.data ?? payload ?? {};
+  const latest = Array.isArray(root.latest) ? root.latest : [];
+  const history = Array.isArray(root.history) ? root.history : [];
+  return { latest, history } as BomSnapshot;
+}
+
+/** If the flat endpoint returns an envelope, unwrap it; else return array */
+private normalizeFlat(payload: any): ItemBomRow[] | BomSnapshot {
+  const root = payload?.data ?? payload ?? [];
+  return root;
+}
+
+  /**
+   * Calls API and **normalizes** to a snapshot.
+   * Supports:
+   *  - `getBom(itemId)` → `ItemBomRow[]`
+   *  - or `getBomSnapshot(itemId)` → `{ latest, history }`
+   */
+private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
+  const apiSnap$ = (this.itemsSvc as any).getBomSnapshot?.(itemId) as Observable<any> | undefined;
+  const apiFlat$ = this.itemsSvc.getBom(itemId) as Observable<any>;
+
+  const useFlat = () => apiFlat$.subscribe({
+    next: (raw: any) => {
+      const normalized = this.normalizeFlat(raw);
+      if (Array.isArray(normalized)) {
+        this.populateHistoryFromFlatRows(normalized);
+        this.deriveLatestFromFlatRows(normalized);
+      } else {
+        this.populateFromSnapshot(this.normalizeSnapshot(normalized));
+      }
+    },
+    error: () => { if (fallbackToPrices) this.syncBomFromPrices(); }
+  });
+
+  if (apiSnap$) {
+    apiSnap$.subscribe({
+      next: (snap: any) => this.populateFromSnapshot(this.normalizeSnapshot(snap)),
+      error: () => useFlat()
+    });
+  } else {
+    useFlat();
+  }
+}
+
+
+ private populateFromSnapshot(snap: BomSnapshot) {
+  const latest = Array.isArray(snap?.latest) ? snap.latest : [];
+  const history = Array.isArray(snap?.history) ? snap.history : [];
+
+  // history → map
+  this.bomHistoryBySupplier.clear();
+  for (const h of history) {
+    const sid = Number((h as any).supplierId ?? 0);
+    if (!sid) continue;
+    const point: BomHistoryPoint = {
+      supplierId: sid,
+      supplierName: (h as any).supplierName ?? '',
+      existingCost: Number((h as any).existingCost ?? 0),
+      unitCost: Number((h as any).unitCost ?? (h as any).existingCost ?? 0),
+      createdDate: (h as any).createdDate,
+      rn: (h as any).rn
+    };
+    const arr = this.bomHistoryBySupplier.get(sid) ?? [];
+    arr.push(point);
+    this.bomHistoryBySupplier.set(sid, arr);
+  }
+
+  // latest → grid rows
+  if (latest.length) {
+    this.bomRows = latest.map((r: any) => ({
+      supplierId: Number(r.supplierId ?? 0) || null,
+      supplierName: r.supplierName || '—',
+      existingCost: Number(r.existingCost ?? 0),
+      unitCost: Number(r.unitCost ?? r.existingCost ?? 0)
+    }));
+    this.recomputeBomTotalsInline();
+  } else {
+    this.syncBomFromPrices();
+  }
+}
+
+
+  /** Fill history map from flat ItemBom rows (DB table) */
+  private populateHistoryFromFlatRows(rows: ItemBomRow[]) {
+    this.bomHistoryBySupplier.clear();
+    const toPoint = (r: ItemBomRow): BomHistoryPoint => ({
+      supplierId: r.supplierId,
+      supplierName: this.supplierList.find(s => String(s.id) === String(r.supplierId))?.name ?? '',
+      existingCost: Number(r.existingCost ?? 0),
+      unitCost: Number(r.unitCost ?? r.existingCost ?? 0),
+      createdDate: r.createdDate,
+    });
+
+    for (const r of rows) {
+      const sid = Number(r.supplierId || 0);
+      if (!sid) continue;
+      const arr = this.bomHistoryBySupplier.get(sid) ?? [];
+      arr.push(toPoint(r));
+      this.bomHistoryBySupplier.set(sid, arr);
+    }
+  }
+
+  /** Derive one “latest” line per supplier for the grid from flat rows */
+  private deriveLatestFromFlatRows(rows: ItemBomRow[]) {
+    const bySup = new Map<number, ItemBomRow>();
+    for (const r of rows) {
+      const sid = Number(r.supplierId || 0);
+      const prev = bySup.get(sid);
+      if (!prev || new Date(r.createdDate) > new Date(prev.createdDate)) bySup.set(sid, r);
+    }
+
+    this.bomRows = Array.from(bySup.values()).map(r => ({
+      supplierId: r.supplierId,
+      supplierName: this.supplierList.find(s => String(s.id) === String(r.supplierId))?.name ?? '—',
+      existingCost: Number(r.existingCost ?? 0),
+      unitCost: Number(r.unitCost ?? r.existingCost ?? 0),
+    }));
+    this.recomputeBomTotalsInline();
+  }
+
+  /* Build from Supplier Prices if no backend history */
   syncBomFromPrices(opts: { preserveUnitCost?: boolean } = { preserveUnitCost: true }): void {
     const preserve = opts.preserveUnitCost !== false;
     const norm = (s: any) => String(s ?? '').trim().toLowerCase();
@@ -927,7 +1076,6 @@ export class CreateItemMasterComponent implements OnInit {
 
   applyBomToPrices(): void {
     if (!this.bomRows?.length || !this.prices?.length) return;
-
     const norm = (s: any) => String(s ?? '').trim().toLowerCase();
     const mapById = new Map<string, number>();
     const mapByName = new Map<string, number>();
@@ -950,10 +1098,7 @@ export class CreateItemMasterComponent implements OnInit {
   }
 
   addBomRow(): void {
-    this.bomRows = [
-      ...this.bomRows,
-      { supplierId: null, supplierName: null, existingCost: 0, unitCost: null }
-    ];
+    this.bomRows = [...this.bomRows, { supplierId: null, supplierName: null, existingCost: 0, unitCost: null }];
     this.recomputeBomTotalsInline();
   }
   removeBomRow(i: number): void {
@@ -972,7 +1117,7 @@ export class CreateItemMasterComponent implements OnInit {
   }
   trackByIdx = (i: number, _l: any) => i;
 
-  // ===== Navigation =====
+  /* Navigation */
   onGoToItemList(): void {
     this.router.navigate(['/Inventory/List-itemmaster']);
   }
@@ -982,11 +1127,59 @@ export class CreateItemMasterComponent implements OnInit {
   private maybeScrollToReviewBottom() {
     if (!this.isOnReviewStep()) return;
     setTimeout(() => {
-      this.bottomOfWizard?.nativeElement?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'end',
-        inline: 'nearest'
-      });
+      this.bottomOfWizard?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
     }, 0);
   }
+
+  getLast3CostsForSupplier(supplierId: number | string | null): Array<{ value: number; when: Date }> {
+  const sid = Number(supplierId ?? 0);
+  if (!sid) return [];
+  const hist = this.bomHistoryBySupplier.get(sid) ?? [];
+  if (!hist.length) return [];
+  const sorted = [...hist].sort(
+    (a,b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+  );
+  const seen = new Set<string>();
+  const out: Array<{ value: number; when: Date }> = [];
+  for (const h of sorted) {
+    const val = Number((h.unitCost ?? h.existingCost) ?? 0);
+    const key = val.toFixed(4);
+    if (!seen.has(key)) {
+      out.push({ value: val, when: new Date(h.createdDate) });
+      seen.add(key);
+    }
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+isCurrentCost(curr: number | null | undefined, val: number | null | undefined): boolean {
+  const a = Number(curr ?? 0);
+  const b = Number(val ?? 0);
+  return a.toFixed(4) === b.toFixed(4);
+}
+
+deltaVsPrev(supplierId: number | string | null, current: number | null | undefined) {
+  const arr = this.getLast3CostsForSupplier(supplierId) || [];
+  const prev = arr.length > 1 ? Number(arr[1].value ?? 0) : Number(arr[0]?.value ?? 0);
+  const curr = Number(current ?? 0);
+  const abs  = curr - prev;
+  const pct  = prev !== 0 ? (abs / prev) * 100 : 0;
+  const dir  = abs > 0 ? 'up' : abs < 0 ? 'down' : 'flat';
+  return {
+    abs: Math.abs(abs),
+    pct: Math.abs(pct),
+    dir,
+    tooltip: dir === 'flat' ? 'No change vs previous' :
+             dir === 'up'   ? 'Increased vs previous' :
+                              'Decreased vs previous'
+  };
+}
+
+deltaColorStyle(delta: {dir:'up'|'down'|'flat'}): any {
+  if (delta.dir === 'up')   return {'border-color':'#fecaca','background':'#fff1f2','color':'#991b1b'};
+  if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
+  return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
+}
+
+
 }

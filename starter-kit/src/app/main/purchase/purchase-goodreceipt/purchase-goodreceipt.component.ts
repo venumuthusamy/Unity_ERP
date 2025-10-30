@@ -353,10 +353,10 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
         warehouseId: Number(row.warehouseId),
         binId: row.binId ?? null,
         strategyId: row.strategyId ?? null,
-        qtyDelta: qty,
+        qtyDelta: row.qtyReceived,
         batchFlag: !!row.batchSerial,
         serialFlag: false,
-        barcode: row.barcode ?? null,
+        barcode: row.batchSerial ?? null,
         price: this.getNumberOrNull(row.unitPrice),
         remarks: row.remarks ?? null
       } as ApplyGrnLine]
@@ -373,7 +373,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       serialFlag: false,
       supplierId: row.supplierId ?? this.currentSupplierId ?? null,
       price: this.getNumberOrNull(row.unitPrice),
-      barcode: row.barcode ?? null,
+      barcode: row.batchSerial ?? null,
       remarks: row.remarks ?? null,
       updatedBy: (localStorage.getItem('id') || undefined)
     };

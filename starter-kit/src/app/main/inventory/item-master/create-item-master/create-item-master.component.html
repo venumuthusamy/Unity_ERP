@@ -1,20 +1,14 @@
+<button (click)="onGoToItemList()"
+        class="btn position-relative d-flex align-items-center justify-content-center"
+        style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
+  <i class="fas fa-arrow-left position-absolute"
+     style="left:0.75rem; top:50%; transform:translateY(-50%);"
+     aria-hidden="true"></i>
+  <span>Go to ItemMaster list</span>
+</button>
+
 <section class="space-y-1 mt-1 ui-compact pr-typography">
   <div class="bg-white rounded-2xl shadow p-1 border border-gray-100">
-
-    <!-- Top bar -->
-    <div class="flex items-center justify-between px-1 pt-1">
-      <button (click)="onGoToItemList()"
-              class="btn position-relative d-flex items-center justify-content-center"
-              style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
-        <i class="fas fa-arrow-left position-absolute"
-           style="left:0.75rem; top:50%; transform:translateY(-50%);" aria-hidden="true"></i>
-        <span>Go to ItemMaster list</span>
-      </button>
-
-      <div class="text-right">
-        <span class="text-xs text-gray-500" *ngIf="isEdit && item?.id">Editing Item #{{ item.id }}</span>
-      </div>
-    </div>
 
     <!-- Header -->
     <div class="sticky top-0 z-10 bg-white border-b px-1 py-1">
@@ -32,8 +26,8 @@
     <!-- Body -->
     <div class="p-2 space-y-4">
 
-      <!-- Stepper -->
-      <div class="flex items-center gap-3" *ngIf="stepsView.length > 1">
+      <!-- Steps -->
+      <div class="flex items-center gap-3">
         <ng-container *ngFor="let s of stepsView; let i = index">
           <div class="flex items-center gap-2">
             <div
@@ -51,6 +45,7 @@
       <!-- STEP 0: SUMMARY -->
       <div *ngIf="step === 0" class="rounded-xl border p-1 space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
           <!-- Item search -->
           <div class="relative flex-1 prl-dropdown md:col-span-1" #itemSearchBox>
             <label class="text-xs font-semibold text-gray-600 block">Item Name</label>
@@ -137,7 +132,7 @@
       </div>
 
       <!-- STEP 1: WAREHOUSES -->
-      <div *ngIf="isEdit && step === 1" class="rounded-xl border p-2">
+      <div *ngIf="step === 1" class="rounded-xl border p-2">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-sm font-semibold text-gray-800">Per-warehouse Stock</h3>
         </div>
@@ -223,6 +218,9 @@
                 <th class="px-3 py-2 text-left">Price</th>
                 <th class="px-3 py-2 text-left">Qty</th> <!-- NEW -->
                 <th class="px-3 py-2 text-left">Barcode</th>
+                <th class="px-3 py-2 text-left">Accepted Qty</th>
+                <th class="px-3 py-2 text-left">Faulted Qty</th>
+                <th class="px-3 py-2 text-left">Reason for Faulted Qty</th>
                 <th class="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
@@ -259,8 +257,6 @@
                   <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm"
                          [(ngModel)]="p.price" name="price-{{i}}" min="0" step="0.01" placeholder="0.00">
                 </td>
-
-                <!-- Qty -->
                 <td class="px-3 py-2">
                   <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm"
                          [(ngModel)]="p.qty"
@@ -272,16 +268,17 @@
                   <input class="w-full rounded-xl border px-3 py-2 text-sm"
                          [(ngModel)]="p.barcode" name="barcode-{{i}}" placeholder="Comma-separated if multiple"/>
                 </td>
-
+<td></td>
+<td></td>
+<td></td>
                 <td class="px-3 py-2">
                   <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50" (click)="removePriceLine(i)">
                     <i class="fa fa-trash mr-1"></i> Remove
                   </button>
                 </td>
               </tr>
-
               <tr *ngIf="!prices?.length">
-                <td colspan="5" class="px-3 py-6 text-center text-gray-400">No price lines. Add one above.</td>
+                <td colspan="4" class="px-3 py-6 text-center text-gray-400">No price lines. Add one above.</td>
               </tr>
             </tbody>
           </table>
@@ -292,7 +289,7 @@
                 *ngIf="!isEdit">+ Add Line</button>
       </div>
 
-      <!-- STEP 3: BOM -->
+      <!-- STEP 3: BOM (EDIT) -->
       <div *ngIf="isEdit && step === 3" class="rounded-xl border p-2 prl-card-allow-overflow">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
@@ -301,14 +298,7 @@
             <span class="text-sm font-semibold text-[#0e3a4c]">{{ item?.name || '-' }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-1.5 rounded-xl border text-gray-700 hover:bg-gray-50 text-xs"
-                    (click)="syncBomFromPrices({ preserveUnitCost: false })">
-              Reset Unit Cost to Prices
-            </button>
-            <button class="px-3 py-1.5 rounded-xl bg-[#0e3a4c] text-white text-xs"
-                    (click)="applyBomToPrices()">
-              Push to Prices
-            </button>
+            <!-- optional BOM actions -->
           </div>
         </div>
 
@@ -329,9 +319,56 @@
                 <td class="px-3 py-2">
                   <div class="text-sm">{{ r.supplierName || '—' }}</div>
                 </td>
-                <td class="px-3 py-2 text-right">
-                  {{ r.existingCost | number:'1.2-4' }}
-                </td>
+<td class="px-3 py-2">
+  <!-- get the ARRAY; don't take .length here -->
+  <ng-container *ngIf="(getLast3CostsForSupplier(r.supplierId) || []) as last3">
+    <div class="flex flex-wrap gap-1 items-center" *ngIf="last3.length; else noHist">
+      <!-- Chips -->
+      <ng-container *ngFor="let h of last3; let idx = index">
+        <span
+          class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap"
+          [ngClass]="isCurrentCost(r.unitCost, h.value) ? 'text-white' : 'text-slate-900'"
+          [ngStyle]="isCurrentCost(r.unitCost, h.value)
+                      ? {'background':'#2E5F73','border-color':'#2E5F73'}
+                      : {'background':'#f8fafc','border-color':'#cbd5e1'}"
+          [title]="isCurrentCost(r.unitCost, h.value) ? 'Current price' : 'Previous price'">
+
+          <i *ngIf="isCurrentCost(r.unitCost, h.value)"
+             class="fas fa-star text-[10px] mr-1" aria-hidden="true"></i>
+
+          {{ h.value | number:'1.2-4' }}
+          <small class="ml-1 text-[10px]"
+                 [ngStyle]="{'color': isCurrentCost(r.unitCost, h.value) ? 'rgba(255,255,255,.9)' : '#64748b'}">
+            {{ h.when | date:'yy-MM-dd' }}
+          </small>
+        </span>
+
+        <!-- Delta badge only next to current (vs previous) -->
+        <ng-container *ngIf="isCurrentCost(r.unitCost, h.value) && last3.length > 1">
+          <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ml-1"
+                [ngStyle]="deltaColorStyle(deltaVsPrev(r.supplierId, r.unitCost))"
+                [title]="deltaVsPrev(r.supplierId, r.unitCost).tooltip">
+            <i class="fas mr-1 text-[10px]"
+               [class.fa-arrow-up]="deltaVsPrev(r.supplierId, r.unitCost).dir === 'up'"
+               [class.fa-arrow-down]="deltaVsPrev(r.supplierId, r.unitCost).dir === 'down'"
+               [class.fa-minus]="deltaVsPrev(r.supplierId, r.unitCost).dir === 'flat'"></i>
+            {{ deltaVsPrev(r.supplierId, r.unitCost).abs | number:'1.2-4' }}
+            <small class="ml-1 text-[10px]">
+              ({{ deltaVsPrev(r.supplierId, r.unitCost).pct | number:'1.0-2' }}%)
+            </small>
+          </span>
+        </ng-container>
+      </ng-container>
+    </div>
+  </ng-container>
+
+  <ng-template #noHist>
+    <span class="text-gray-400 text-xs">No history</span>
+  </ng-template>
+</td>
+
+
+
                 <td class="px-3 py-2">
                   <input type="number"
                          class="w-full rounded-xl border px-3 py-2 text-sm"
@@ -348,7 +385,7 @@
               </tr>
 
               <tr *ngIf="!bomRows?.length">
-                <td colspan="5" class="px-3 py-6 text-center text-gray-400">No components. Use “Reset Unit Cost to Prices”.</td>
+                <td colspan="5" class="px-3 py-6 text-center text-gray-400">No components. (Use prices to seed.)</td>
               </tr>
             </tbody>
           </table>
@@ -361,7 +398,7 @@
         </div>
       </div>
 
-      <!-- STEP 4: AUDIT -->
+      <!-- STEP 4: AUDIT (EDIT) -->
       <div *ngIf="isEdit && step === 4" class="rounded-xl border p-3 text-sm text-gray-700">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-base font-semibold text-[#2E5F73]">Audit trail</h3>
@@ -379,6 +416,7 @@
           <ul class="space-y-3" *ngIf="audits?.length">
             <li *ngFor="let a of audits; let idx = index; trackBy: trackByIdx" class="rounded-2xl border p-1 shadow-sm">
 
+              <!-- header row -->
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 flex-wrap">
                   <span [ngStyle]="chipStyle(a.action)">{{ a.action }}</span>
@@ -408,7 +446,10 @@
                 </div>
               </div>
 
+              <!-- body -->
               <div *ngIf="expandedAudit[a.auditId]" class="mt-1 space-y-3">
+
+                <!-- UPDATE: diff table -->
                 <ng-container *ngIf="isUpdate(a); else snapshotBlock">
                   <div class="flex items-center justify-between">
                     <div class="text-xs text-gray-500">Showing changed fields only</div>
@@ -417,6 +458,7 @@
                         {{ busy[a.auditId] ? 'Copying…' : 'Copy JSON' }}
                       </button>
                       <span *ngIf="copied[a.auditId]" class="ml-2 text-xs text-green-700">Copied!</span>
+                      <button class="btn-muted" (click)="downloadJson(a)">Download</button>
                     </div>
                   </div>
 
@@ -438,10 +480,33 @@
                       </tbody>
                     </table>
                   </div>
+
+                  <button class="link mt-2" (click)="showRaw[a.auditId] = !showRaw[a.auditId]">
+                    {{ showRaw[a.auditId] ? 'Hide snapshots' : 'Show full Before/After snapshots' }}
+                  </button>
+
+                  <div *ngIf="showRaw[a.auditId]" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="codepanel">
+                      <div class="codepanel-title">Before</div>
+                      <pre>{{ prettyJson(a.oldValuesJson) }}</pre>
+                    </div>
+                    <div class="codepanel">
+                      <div class="codepanel-title">After</div>
+                      <pre>{{ prettyJson(a.newValuesJson) }}</pre>
+                    </div>
+                  </div>
                 </ng-container>
 
+                <!-- CREATE / DELETE: snapshots -->
                 <ng-template #snapshotBlock>
-                  <div class="text-xs text-gray-500 mb-1">Snapshot</div>
+                  <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Snapshot</div>
+                    <div class="flex gap-2">
+                      <button class="btn-muted" (click)="copyJson(a)">Copy JSON</button>
+                      <button class="btn-muted" (click)="downloadJson(a)">Download</button>
+                    </div>
+                  </div>
+
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="codepanel">
                       <div class="codepanel-title">Before</div>
@@ -510,68 +575,30 @@
               <div *ngFor="let p of prices; let i = index; trackBy: trackByIdx"
                    class="border border-gray-200 bg-gray-50 rounded-md px-2 py-1.5 flex justify-between items-center text-[11px] hover:shadow-sm transition">
                 <div class="font-semibold text-gray-800 truncate">{{ p.supplierName || '-' }}</div>
-                <div class="text-gray-700 font-medium">
-                  ₹{{ p.price || '0.00' }}
-                  <span *ngIf="p.qty != null && p.qty !== ''" class="text-gray-500"> × {{ p.qty }}</span>
-                </div>
+                <div class="text-gray-700 font-medium">₹{{ p.price || '0.00' }}</div>
               </div>
             </div>
             <div *ngIf="!prices?.length" class="text-center text-gray-400 py-2 text-xs">No price lines available.</div>
           </div>
         </div>
-
-        <!-- BOM -->
-        <div class="rounded-xl border p-2">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800">BOM</h3>
-            <div class="text-sm text-gray-700" *ngIf="bomRows?.length">
-              <b>Rolled-up Cost:</b> {{ bomTotals?.rollup | number:'1.2-4' }}
-            </div>
-          </div>
-          <div class="overflow-auto rounded-xl border">
-            <table class="w-full text-sm">
-              <thead class="bg-[#0e3a4c] text-white"><tr>
-                <th class="px-3 py-2 text-left">Supplier</th>
-                <th class="px-3 py-2 text-right">Existing Cost</th>
-                <th class="px-3 py-2 text-right">Unit Cost</th>
-              </tr></thead>
-              <tbody>
-                <tr *ngFor="let r of bomRows; trackBy: trackByIdx" class="border-b">
-                  <td class="px-3 py-2">{{ r.supplierName || '—' }}</td>
-                  <td class="px-3 py-2 text-right">{{ r.existingCost | number:'1.2-4' }}</td>
-                  <td class="px-3 py-2 text-right">{{ r.unitCost | number:'1.2-4' }}</td>
-                </tr>
-                <tr *ngIf="!bomRows?.length">
-                  <td colspan="3" class="px-3 py-6 text-center text-gray-400">No BOM rows.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="text-xs text-gray-500">
-          Finalize with <b>Save</b> below. You can view detailed audit entries in the Audit step.
-        </div>
       </div>
+
     </div>
 
     <!-- Footer -->
     <div class="border-t px-1 py-1 flex justify-between bg-white">
       <button class="px-1 py-1 rounded-xl border text-gray-700 hover:bg-gray-50" (click)="prev()" [disabled]="step===0 || stepsView.length===1">← Back</button>
-
       <button class="px-1 py-1 rounded-xl bg-[#0e3a4c] text-white font-medium hover:bg-[#0b2e3d]"
               (click)="next()" *ngIf="step<stepsView.length-1">Next →</button>
-
       <button (click)="onSave()" class="px-1 py-1 rounded-lg bg-[#2E5F73] text-white font-medium hover:opacity-90"
               *ngIf="step===stepsView.length-1">
         <i class="fa fa-save"></i> Save
       </button>
     </div>
-
-    <div #bottomOfWizard id="bottomOfWizard" style="height:1px;"></div>
+    <div #bottomOfWizard style="height:1px;"></div>
   </div>
 
-  <!-- Warehouse Add/Edit Modal -->
+  <!-- ===== Warehouse Add/Edit Modal ===== -->
   <div *ngIf="showWhModal" class="prl-overlay" aria-modal="true" role="dialog">
     <div class="prl-modal" (click)="onModalRootClick($event)" role="dialog" aria-labelledby="wh-title">
       <div class="prl-head">
