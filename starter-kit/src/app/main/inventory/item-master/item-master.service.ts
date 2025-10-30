@@ -3,9 +3,28 @@ import { Injectable } from '@angular/core';
 import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ItemMasterAPIUrls } from 'Urls/ItemMasterAPIUrls';
-
+export interface BomLatestRow {
+  supplierId: number;
+  supplierName: string;
+  existingCost: number;
+  unitCost: number;
+  createdDate: string;
+}
+export interface BomHistoryPoint {
+  supplierId: number;
+  supplierName: string;
+  existingCost: number;
+  unitCost: number;
+  createdDate: string;
+  rn: number;
+}
+export interface BomSnapshot {
+  latest: BomLatestRow[];
+  history: BomHistoryPoint[];
+}
 @Injectable({ providedIn: 'root' })
 export class ItemMasterService {
+  
   private url = environment.apiUrl; // e.g., 'https://host/api'
 
   private itemSource = new BehaviorSubject<any>(null);
@@ -56,7 +75,14 @@ getWarehouseStock(itemId: number): Observable<any[]> {
   getAudit(itemId: number) {
   return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemAudit + itemId);
 }
-  getBom(itemId: number) {
-  return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemBom + itemId);
+// item-master.service.ts
+getBom(itemId: number) {
+  // Could be BomSnapshot OR BomHistoryPoint[]
+  return this.http.get<BomSnapshot | BomHistoryPoint[]>(
+    this.url + ItemMasterAPIUrls.getItemBom + itemId
+  );
 }
+GetItemDetailsByItemId(id: number): Observable<any[]> {
+    return this.http.get<any[]>(this.url + ItemMasterAPIUrls.GetItemDetailsByItemId+id);
+  }
 }
