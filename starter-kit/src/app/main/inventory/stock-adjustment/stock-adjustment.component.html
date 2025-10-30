@@ -1,158 +1,169 @@
 <!-- Stock Adjustment Card -->
-<div class="card shadow-sm border-0 rounded-3">
+<div class="card shadow-sm border-0 rounded-3 sa-card">
   <div class="card-body">
 
-    <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h2 class="h5 mb-0 text-dark fw-semibold">Stock Adjustment</h2>
-      <span class="badge-flow rounded-pill px-3 py-2 small fw-semibold">
-        Adjust → Approve (per threshold) → Post
-      </span>
+    <!-- Title + Flow -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h2 class="h6 mb-0 text-dark fw-semibold">Stock Adjustment</h2>
+      <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
+        [ngClass]="badgeToneClasses('green')"> Adjust → Approve (per threshold) → Post</span>
     </div>
 
-    <!-- Filters / Header fields -->
-    <div class="row g-3 mb-3">
-
-      <!-- Warehouse -->
-      <div class="col-12 col-md-3">
-        <label class="form-label text-muted small mb-1">Warehouse</label>
-        <ng-select class="ngs ngs-sm w-100"
-                   [items]="warehouses"
-                   bindLabel="name"
-                   bindValue="id"
-                   [clearable]="true"
-                   [searchable]="true"
-                   placeholder="Select warehouse"
-                   [(ngModel)]="adjHdr.warehouseId"
-                   name="adjWarehouse"
-                   (ngModelChange)="onWarehouseChange($event)">
+    <!-- Controls Row -->
+    <div class="row g-2 align-items-end mb-3 sa-controls-row">
+      <!-- Item -->
+      <div class="col-12 col-lg-4">
+        <label class="form-label text-muted small mb-1">Item List</label>
+        <ng-select #itemSelect class="ngs ngs-sm w-100 sa-ngs" [items]="itemOptions" bindLabel="display" bindValue="id"
+          [compareWith]="compareById" [clearable]="true" [searchable]="true" [typeahead]="itemSearch$"
+          [loading]="itemsLoading" placeholder="Select item" [(ngModel)]="selectedItemId" name="adjItemSelect"
+          (change)="onItemPicked($event)">
+          <ng-template ng-option-tmp let-i="item">
+            <div class="d-flex flex-column">
+              <div class="fw-semibold">{{ i.sku }} — {{ i.name }}</div>
+              <div class="small text-muted">
+                OnHand: {{ i.onHand ?? 0 }} | Avail: {{ i.availableQty ?? 0 }}
+              </div>
+            </div>
+          </ng-template>
         </ng-select>
       </div>
 
-      <!-- Bin -->
-      <div class="col-12 col-md-3">
-        <label class="form-label text-muted small mb-1">Bin</label>
-        <ng-select class="ngs ngs-sm w-100"
-                   [items]="filteredBins"
-                   bindLabel="name"
-                   bindValue="id"
-                   [clearable]="true"
-                   [searchable]="true"
-                   placeholder="Select bin"
-                   [(ngModel)]="adjHdr.binId"
-                   name="adjBin"
-                   [disabled]="!adjHdr.warehouseId"
-                   (ngModelChange)="onBinChange($event)">
-        </ng-select>
-      </div>
-
-      <!-- Type -->
-      <div class="col-12 col-md-3">
-        <label class="form-label text-muted small mb-1">Type</label>
-        <ng-select class="ngs ngs-sm w-100"
-                   [items]="adjTypes" bindLabel="label" bindValue="value"
-                   [clearable]="false" [searchable]="false"
-                   [(ngModel)]="adjHdr.type" name="adjType">
-        </ng-select>
-      </div>
-
-      <!-- Reason Code -->
-      <div class="col-12 col-md-3">
-        <label class="form-label text-muted small mb-1">Reason Code</label>
-        <ng-select class="ngs ngs-sm w-100"
-                   [items]="reasons" bindLabel="label" bindValue="value"
-                   [clearable]="true" [searchable]="false"
-                   placeholder="Select reason"
-                   [(ngModel)]="adjHdr.reason" name="adjReason">
-        </ng-select>
-      </div>
-
-      <!-- Approval Threshold -->
-      <div class="col-12 col-md-3">
-        <label class="form-label text-muted small mb-1">Approval Threshold</label>
-        <input type="number" class="form-control form-control-sm rounded-3"
-               [(ngModel)]="adjHdr.threshold" name="adjThreshold">
-      </div>
+      <!-- Spacer -->
+      <div class="col d-none d-lg-block"></div>
 
       <!-- Actions -->
-      <div class="col-12 col-md-3 d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-primary btn-sm rounded-3" (click)="saveDraft()">Save Draft</button>
-        <button type="button" class="btn btn-outline-primary btn-sm rounded-3" (click)="submitForApproval()">Submit for Approval</button>
+      <div class="col-12 col-lg-4 d-flex gap-2 justify-content-lg-end">
+        <button type="button" class="btn btn-primary btn-sm sa-btn" (click)="saveDraft()">Save Draft</button>
+        <button type="button" class="btn btn-outline-primary btn-sm sa-btn" (click)="submitForApproval()">Submit for Approval</button>
       </div>
-
     </div>
 
-    <!-- Lines Grid -->
-    <div class="border rounded-3 overflow-auto">
-      <table class="table table-sm mb-0 align-middle">
-        <thead class="table-light">
-          <tr>
-            <th class="text-start" style="width:160px;">Sku</th>
-            <th class="text-start">Item</th>
-            <th class="text-start" style="width:120px;">Qty</th>
-            <th class="text-start" style="width:200px;">Reason</th>
-            <th class="text-start">Remarks</th>
-          </tr>
-        </thead>
+    <!-- Grid -->
+    <div class="sa-grid border rounded-3 shadow-sm bg-white">
+      <div class="scroll-x-only">
+        <table class="sa-table table align-middle mb-0 no-wrap-cols sa-head-brand">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Item</th>
+              <th>Supplier</th>
+              <th>Warehouse</th>
+              <th>Bin</th>
+              <th class="text-end">Price</th>
+              <th class="text-end">Qty</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          <tr *ngIf="adjLines.length === 0">
-            <td class="text-center text-muted py-4" colspan="5">No lines yet.</td>
-          </tr>
+          <tbody>
+            <tr *ngIf="adjLines.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">No lines yet.</td>
+            </tr>
 
-          <tr *ngFor="let row of adjLines; let i = index; trackBy: trackByIdx">
-            <!-- Sku (readonly) -->
-            <td>
-              <input type="text"
-                     class="form-control form-control-sm rounded-3"
-                     [ngModel]="row.sku"
-                     (ngModelChange)="changeLine(adjLines, i, 'sku', $event)"
-                     name="ad_sku_{{i}}"
-                     readonly>
-            </td>
-
-            <!-- Item name (readonly, from API) -->
-          <td>
-      <input type="text"
-             class="form-control form-control-sm rounded-3"
-             [(ngModel)]="row.item"
-             name="ad_itemname_{{i}}"
-             readonly>
-    </td>
-
-            <!-- Qty (pre-filled with available; still editable) -->
-   <td>
-      <input type="number"
-             class="form-control form-control-sm rounded-3"
-             [(ngModel)]="row.qty"
-             name="ad_qty_{{i}}">
-    </td>
-            <!-- Reason -->
-    <td>
-              <ng-select
-                class="ngs ngs-sm w-100"
-                [items]="reasons"
-                bindLabel="label"
-                bindValue="value"
-                [searchable]="false"
-                [clearable]="true"
-                placeholder="Select reason"
-                [(ngModel)]="row.reason"
-                (change)="changeLine(adjLines, i, 'reason', $event?.value || '')"
-                name="ad_reason_{{i}}">
-              </ng-select>
-            </td>
-            <!-- Remarks -->
-            <td>
-              <input class="form-control form-control-sm rounded-3"
-                     [ngModel]="row.remarks"
-                     (ngModelChange)="changeLine(adjLines, i, 'remarks', $event)"
-                     name="ad_remarks_{{i}}">
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            <tr *ngFor="let row of adjLines; let i = index; trackBy: trackByIdx">
+              <td><span class="sa-pill sa-mono" [title]="row.sku">{{ row.sku || '-' }}</span></td>
+              <td><span class="sa-pill" [title]="row.item">{{ row.item || '-' }}</span></td>
+              <td><span class="sa-pill" [title]="row.supplierName">{{ row.supplierName || '-' }}</span></td>
+              <td><span class="sa-pill" [title]="row.warehouseName">{{ row.warehouseName || '-' }}</span></td>
+              <td><span class="sa-pill" [title]="row.binName">{{ row.binName || '-' }}</span></td>
+              <td class="text-end"><span class="sa-pill sa-mono">{{ row.price ?? 0 }}</span></td>
+              <td class="text-end">
+                <input type="number" class="form-control form-control-sm sa-qty text-end"
+                  [(ngModel)]="row.qty" name="qty_{{i}}" placeholder="0" (ngModelChange)="onQtyChange(i)">
+              </td>
+              <td class="text-center">
+                <button type="button" class="btn btn-sm"
+                  style="border:1px solid #2E5F73; color:#2E5F73; background:white;"
+                  (click)="openAdjustModal(adjustModal, row)">Adjust</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-
   </div>
+
+  <!-- Adjustment Modal -->
+  <ng-template #adjustModal let-modal>
+    <div class="modal-header flex-column align-items-start">
+      <h5 class="modal-title fw-semibold text-dark mb-1">Adjust Stock</h5>
+      <div class="text-muted small">
+        <span class="fw-semibold">{{ selectedRow?.item }}</span>
+        <span class="ms-2">-</span>
+        <span class="ms-2">{{ selectedRow?.sku }}</span>
+      </div>
+      <button type="button" class="btn-close position-absolute end-0 top-0 mt-2 me-2"
+              aria-label="Close" (click)="modal.dismiss()"></button>
+    </div>
+
+    <div class="modal-body">
+      <div class="row g-2">
+        <!-- Warehouse -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Warehouse</label>
+          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.warehouseName" readonly>
+        </div>
+
+        <!-- Bin -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Bin</label>
+          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.binName" readonly>
+        </div>
+
+        <!-- Supplier -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Supplier</label>
+          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.supplierName" readonly>
+        </div>
+
+        <!-- Qty -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Qty</label>
+          <input type="number" class="form-control form-control-sm" [(ngModel)]="selectedRow.qty">
+        </div>
+
+        <!-- Faulty Qty -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Faulty Qty</label>
+          <input type="number" class="form-control form-control-sm" [(ngModel)]="selectedRow.faultyQty">
+        </div>
+
+        <!-- Type -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Type</label>
+          <ng-select class="ngs ngs-sm w-100 sa-ngs"
+                     [items]="['Increase', 'Decrease']"
+                     placeholder="Select type"
+                     [(ngModel)]="selectedRow.type">
+          </ng-select>
+        </div>
+
+        <!-- Reason -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Reason</label>
+          <ng-select class="ngs ngs-sm w-100 sa-ngs"
+                     [items]="stockIssueOptions"
+                     bindLabel="name"
+                     bindValue="id"
+                     placeholder="Select reason"
+                     [(ngModel)]="selectedRow.reason">
+          </ng-select>
+        </div>
+
+        <!-- Remarks (moved here) -->
+        <div class="col-12 col-md-6">
+          <label class="form-label small text-muted mb-1">Remarks</label>
+          <textarea class="form-control form-control-sm" rows="2"
+                    [(ngModel)]="selectedRow.remarks"
+                    placeholder="Enter remarks"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="modal.dismiss()">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="submitAdjustment()">Submit</button>
+    </div>
+  </ng-template>
 </div>

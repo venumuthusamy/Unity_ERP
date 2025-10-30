@@ -11,5 +11,6 @@ export class ItemMasterAPIUrls {
   public static readonly getItemBom            = "/ItemMaster/GetBom/"
    public static readonly ApplyGrn                       = "/ItemMaster/ApplyGrn";
   public static readonly UpdateWarehouseAndSupplierPrice= "/ItemMaster/UpdateWarehouseAndSupplierPrice";
+  public static readonly GetItemDetailsByItemId          = "/ItemMaster/GetItemDetailsByItemId/";
 }
 
