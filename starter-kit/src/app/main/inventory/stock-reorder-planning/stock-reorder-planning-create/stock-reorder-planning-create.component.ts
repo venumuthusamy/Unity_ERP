@@ -1,36 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import Swal from 'sweetalert2';
-import { ReorderPlanningService } from './stock-reorder-planning.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ReorderPlanningService } from '../stock-reorder-planning.service';
+import { map, switchMap, take } from 'rxjs/operators';
+import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
+import { ItemsService } from 'app/main/master/items/items.service';
 
 const METHOD = { MinMax: 1, ROP: 2, MRP: 3 } as const;
 type MethodId = typeof METHOD[keyof typeof METHOD];
 
-interface ReorderRow {
-  itemId: number;
-  itemName: string;
-  sku?: string;
-  warehouseTypeId: number;
-  warehouseName?: string;
 
-  onHand: number;
-  reserved: number;
-  min: number;
-  reorderQty?: number | null;
-  max?: number | null;
-  leadDays: number;
-  usageHorizon: number;
-  safetyStock?: number | null;
-
-  binId?: number | null;
-  binName?: string | null;
-
-  suggested?: number;
-}
 // add to your interface
 interface SupplierBreakdown {
+  id?: number;
   supplierId: number;
   name: string;
   price: number;
@@ -41,6 +25,7 @@ interface SupplierBreakdown {
 
 
 interface ReorderRow {
+  id: 0,
   itemId: number;
   itemName: string;
   sku?: string;
@@ -60,6 +45,7 @@ interface ReorderRow {
   binName?: string | null;
 
   suggested?: number;
+  selected: boolean
 
   // NEW: “tree” children
   supplierBreakdown?: SupplierBreakdown[];
@@ -104,6 +90,8 @@ export class StockReorderPlanningCreateComponent implements OnInit {
   expandedIds = new Set<number>();
   userId: any;
   userName: any;
+  suppliers: any
+  itemlist: any;
 
 
 
@@ -112,6 +100,8 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     private warehouseService: WarehouseService,
     private route: ActivatedRoute,
     private router: Router,
+    private _SupplierService: SupplierService,
+    private itemsService: ItemsService
   ) {
     this.userId = localStorage.getItem('id'),
       this.userName = localStorage.getItem('username')
@@ -120,21 +110,72 @@ export class StockReorderPlanningCreateComponent implements OnInit {
   ngOnInit(): void {
     forkJoin({
       warehouse: this.warehouseService.getWarehouse(),
+      supplier: this._SupplierService.GetAllSupplier(),
+      items: this.itemsService.getAllItem()
     }).subscribe((results: any) => {
       this.warehouses = results.warehouse.data;
+      this.suppliers = results.supplier?.data
+      this.itemlist = results.items?.data
     });
 
-    this.route.paramMap.subscribe((params: any) => {
-      const idStr = params.get('id');
-      this.stockReorderId = idStr ? Number(idStr) : 0;
-      if (this.stockReorderId) {
-        this.reorderPlanningService.getStockReorderById(this.stockReorderId)
-          .subscribe((res: any) => {
-            this.warehouseTypeId = res.data.warehouseTypeId;
-            this.status = res.data.status;
-          });
-      }
+
+    this.route.paramMap.subscribe(pm => {
+      const id = Number(pm.get('id') || 0);
+      this.stockReorderId = id;
+
+      if (!id) { this.rows = []; return; }
+
+      this.reorderPlanningService.getStockReorderById(id)
+        .subscribe((res: any) => {
+          const h = res.data;
+
+          // header fields (also bound via ngModel)
+          this.warehouseTypeId = h.warehouseTypeId ?? null;
+          this.methodId = h.methodId ?? 1;
+          this.horizonDays = h.horizonDays ?? 30;
+          this.includeLeadTime = !!h.includeLeadTime;
+          this.status = h.status ?? 0;
+
+          // LINES: make sure selected exists and is boolean,
+          // and suppliers array is mapped with all fields you bind to.
+          this.rows = (h.lineItems || []).map((l: any) => ({
+            id: l.id,
+            itemId: l.itemId,
+            itemName: this.getItemName(l.itemId),
+            binId: l.binId ?? null,
+            warehouseTypeId: l.warehouseTypeId ?? h.warehouseTypeId,
+            onHand: Number(l.onHand ?? 0),
+            min: l.min == null ? null : Number(l.min),
+            max: l.max == null ? null : Number(l.max),
+            reorderQty: l.reorderQty == null ? null : Number(l.reorderQty),
+            leadDays: Number(l.leadDays ?? 0),
+            usageHorizon: Number(l.usageHorizon ?? h.horizonDays ?? 0),
+            suggested: Number(l.suggested ?? 0),
+            status: l.status ?? h.status ?? 0,
+            selected: !!l.selected,
+
+
+            supplierBreakdown: (l.supplierBreakdown || []).map((s: any) => ({
+              id: s.id || 0,
+              supplierId: s.supplierId,
+              name: this.getSupplierName(s.supplierId),
+              price: Number(s.price ?? 0),
+              qty: Number(s.qty ?? 0),
+              selected: !!s.selected
+            }))
+          }));
+          this.selectedIds = new Set(this.rows.filter(r => r.selected).map(r => r.itemId));
+        });
     });
+  }
+  getSupplierName(id: number | string | null) {
+    const x = this.suppliers?.find(i => i.id === id);
+    return x?.name ?? String(id ?? '');
+  }
+   getItemName(id: number | string | null) {
+    debugger
+    const x = this.itemlist?.find(i => i.id === id);
+    return x?.itemName ?? String(id ?? '');
   }
 
   // New explicit load trigger
@@ -313,6 +354,9 @@ export class StockReorderPlanningCreateComponent implements OnInit {
   toggleRowSelection(id: number, ev: Event) {
     const checked = (ev.target as HTMLInputElement).checked;
     checked ? this.selectedIds.add(id) : this.selectedIds.delete(id);
+    this.rows = this.rows.map(r =>
+      r.itemId === id ? { ...r, selected: checked } : r
+    );
   }
 
   toggleSelectAll(ev: Event) {
@@ -334,22 +378,12 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     // Lazy-load children once (call your API if available)
     if (!r._loadedChildren) {
       r._loadedChildren = true;
-
-      // If you already have an endpoint, swap this for:
-      // this.reorderPlanningService.getItemSuppliers(r.itemId, this.warehouseTypeId!)
-      //   .subscribe(list => r.supplierBreakdown = list);
-
-      // TEMP: demo shape — remove when you wire API
-      // This mirrors your Excel example: SupplierA=100, SupplierB=500 with split onhand
-      // r.supplierBreakdown = [
-      //   { name: 'SupplierA', price: 100, onHand: Math.round((r.onHand ?? 0) * 0.52) },
-      //   { name: 'SupplierB', price: 500, onHand: Math.round((r.onHand ?? 0) * 0.48) },
-      // ];
     }
   }
 
   // one PR per (supplierId + warehouseId)
   onSuggestPO() {
+    this.saveDraft(1)
     debugger
     const selectedRows = this.rows.filter(r => this.selectedIds.has(r.itemId));
     if (!selectedRows.length) {
@@ -424,7 +458,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
           confirmButtonColor: '#2E5F73'
         }).then(() => {
           // navigate to PR list and optionally filter/highlight
-          //this.router.navigate(['/purchase/pr-list'], { queryParams: { recent: 'reorder' } });
+          this.router.navigate(['/purchase/list-purchaseorder'], { queryParams: { recent: 'reorder' } });
         });
       },
       error: (err) => {
@@ -434,19 +468,127 @@ export class StockReorderPlanningCreateComponent implements OnInit {
       complete: () => this.isBusy = false
     });
   }
+  toNum(v: any): number { return Number(v) || 0; }
+  saveDraft(status) {
+    debugger
+    this.status = status;
+
+    // Optional helpers
+    const toNum = (v: any) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const pickDefaultSupplierIndex = (suppliers: any[]): number => {
+      // choose cheapest non-null, >0 price; fallback to first
+      if (!suppliers || suppliers.length === 0) return -1;
+      let idx = -1, best = Number.POSITIVE_INFINITY;
+      suppliers.forEach((s, i) => {
+        const p = Number(s?.price);
+        if (Number.isFinite(p) && p > 0 && p < best) { best = p; idx = i; }
+      });
+      return idx >= 0 ? idx : 0;
+    };
+
+    const payload = {
+      id: this.stockReorderId ?? 0,
+      warehouseTypeId: this.warehouseTypeId,
+      methodId: this.methodId,
+      horizonDays: this.horizonDays,
+      includeLeadTime: this.includeLeadTime ?? false,
+      status: this.status,
+      lineItems: (this.rows || []).map(r => {
+        const suppliers = Array.isArray(r.supplierBreakdown) ? r.supplierBreakdown : [];
+
+        // If your UI already sets s.selected on each supplier, we’ll use that.
+        // Otherwise, pick a default (cheapest) supplier to mark as selected = true.
+        // const hasExplicitSelection = suppliers.some(s => !!s?.selected);
+        // const defaultIdx = hasExplicitSelection ? -1 : pickDefaultSupplierIndex(suppliers);
+
+        return {
+          id: r.id ?? 0,                               // only if your API supports updating existing lines
+          itemId: r.itemId,
+          binId: r.binId ?? null,                      // your API ignores this if not needed
+          WarehouseTypeId: this.warehouseTypeId,       // matches your C# `l.WarehouseTypeId`
+          status: this.status,
+          onHand: toNum(r.onHand),
+          min: toNum(r.min),
+          max: toNum(r.max),
+          reorderQty: toNum(r.reorderQty),
+          leadDays: toNum(r.leadDays),
+          usageHorizon: toNum(r.usageHorizon),
+          suggested: toNum(r.suggested),
+          selected: !!r.selected,                      // row-level checkbox, if you have one
+
+          // IMPORTANT: only send fields your table accepts
+          supplierBreakdown: suppliers.map((s, i) => ({
+
+            supplierId: s.supplierId,          // normalize your source
+            price: toNum(s.price),
+            qty: toNum(s.qty ?? 0),
+            selected: s.selected
+          }))
+        };
+      })
+    };
+
+
+    if (this.stockReorderId) {
+      this.reorderPlanningService.updateStockReorder(payload).subscribe({
+        next: (res: any) => {
+          if (res?.isSuccess) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Stock Rorder updated',
+              text: res.message || 'Lines saved.',
+              confirmButtonColor: '#2E5F73'
+            });
+            this.router.navigateByUrl('/Inventory/list-stockreorderplanning');
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed',
+              text: res?.message || 'Unable to save review.',
+              confirmButtonColor: '#2E5F73'
+            });
+          }
+        },
+        error: () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Something went wrong while saving review.',
+            confirmButtonColor: '#2E5F73'
+          });
+        }
+      });
+    } else {
+      this.reorderPlanningService.insertStockReorder(payload).subscribe((res) => {
+        if (res.isSuccess) {
+          Swal.fire({
+            title: "Hi",
+            text: res.message,
+            icon: "success",
+            allowOutsideClick: false,
+          });
+          this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
+        }
+      });
+    }
+  }
   onCancel() {
     this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
   }
 
   onSupplierToggle(row: { supplierBreakdown }, clicked) {
-  // if user turned one ON, force all others OFF
-  if (clicked.selected) {
-    (row.supplierBreakdown ?? []).forEach(s => {
-      if (s !== clicked) s.selected = false;
-    });
+    // if user turned one ON, force all others OFF
+    if (clicked.selected) {
+      (row.supplierBreakdown ?? []).forEach(s => {
+        if (s !== clicked) s.selected = false;
+      });
+    }
+    // if user turned the only one OFF, we allow “none selected” (no-op)
   }
-  // if user turned the only one OFF, we allow “none selected” (no-op)
-}
 }
 
 function toNum(v: any, d = 0) { return Number.isFinite(+v) ? +v : d; }

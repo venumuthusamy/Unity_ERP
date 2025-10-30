@@ -103,6 +103,11 @@ const routes = [
     component: StockReorderPlanningCreateComponent,
     data: { animation: 'create-stockreorderplanning' }
   },
+  {
+    path: 'edit-stockreorderplanning/:id',
+    component: StockReorderPlanningCreateComponent,
+    data: { animation: 'edit-stockreorderplanning' }
+  },
 ]
 
 @NgModule({

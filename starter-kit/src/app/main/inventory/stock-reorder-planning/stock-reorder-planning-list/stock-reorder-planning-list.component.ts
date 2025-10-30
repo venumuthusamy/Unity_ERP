@@ -4,7 +4,10 @@ import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
-import { ReorderPlanningService } from '../stock-reorder-planning-create/stock-reorder-planning.service';
+import { ReorderPlanningService } from '../stock-reorder-planning.service';
+
+const METHOD_NAME: Record<number, string> = { 1: 'MinMax', 2: 'ROP', 3: 'MRP' };
+
 @Component({
   selector: 'app-stock-reorder-planning-list',
   templateUrl: './stock-reorder-planning-list.component.html',
@@ -64,7 +67,7 @@ export class StockReorderPlanningListComponent implements OnInit {
         this.rows = res.data.map((req: any) => {
           return {
             ...req,
-           
+             methodname: METHOD_NAME[+req.methodId] || '-'
           };
         });
         this.tempData = this.rows
@@ -122,6 +125,13 @@ export class StockReorderPlanningListComponent implements OnInit {
   }
   ngAfterViewInit(): void {
     feather.replace();
+  }
+
+   editStockReorder(row: any) {
+    this.router.navigateByUrl(`/Inventory/edit-stockreorderplanning/${row.id}`)
+  }
+  deleteStockReorder(){
+
   }
 
 }
