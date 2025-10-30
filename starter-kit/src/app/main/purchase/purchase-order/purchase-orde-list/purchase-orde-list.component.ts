@@ -224,7 +224,9 @@ export class PurchaseOrdeListComponent implements OnInit {
       }
     });
   }
-
+  openReorderDetails(){
+    
+  }
 }
 
 

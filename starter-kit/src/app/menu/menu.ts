@@ -77,7 +77,7 @@ export const menu: CoreMenu[] = [
       { id: 'StackTransfer', title: 'Stock-Transfer', translate: 'MENU.INVENTORY.STACKTRANSFER', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer' },
       { id: 'StockTake', title: 'Stock-Take', translate: 'MENU.INVENTORY.STOCKTAKE', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake' },
       { id: 'StockAdjustment', title: 'Stock-Adjustment', translate: 'MENU.INVENTORY.STOCKADJUSTMENT', type: 'item', icon: 'circle', url: '/Inventory/list-stockadjustment' },
-       { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/create-stockreorderplanning' },
+       { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/list-stockreorderplanning' },
 
 
     ]

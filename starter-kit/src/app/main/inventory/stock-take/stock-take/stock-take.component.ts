@@ -211,6 +211,7 @@ export class StockTakeComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.showStockReview = false
     this.resetLines();
     debugger
     if (!this.warehouseTypeId ||!this.supplierId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {

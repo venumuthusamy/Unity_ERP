@@ -26,11 +26,6 @@
               <label class="d-flex align-items-center ml-1 ml-md-0">Search:<input [(ngModel)]="searchValue"
                   name="searchValue" type="search" class="form-control ml-25" (keyup)="filterUpdate($event)"
                   (search)="filterUpdate($event)" /></label>
-              <!-- <button id="Add" class="btn  m-1" (click)="openCreate()" style="background-color: #2E5F73; color: white;"
-                rippleEffect>
-                <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i><span
-                  class="d-none d-sm-inline-block">Add</span>
-              </button> -->
 
               <button (click)="openCreate()" class="btn m-1 d-inline-flex align-items-center"
                 style="background-color:#2E5F73; color:white; gap:4px;">
@@ -53,7 +48,7 @@
           display:flex; align-items:center; justify-content:center;
           font-size:12px; font-weight:700; line-height:1;">
                   {{ drafts.length }}
-                </span>
+                </span>                
               </div>
 
             </div>

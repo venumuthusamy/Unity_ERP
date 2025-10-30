@@ -4,6 +4,9 @@ import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { StockReorderApiUrls } from 'Urls/StockReorderAPIUrls';
 
+type Line  = { itemId: number; qty: number; price: number };
+type Group = { supplierId: number; warehouseId: number; lines: Line[] };
+
 @Injectable({
     providedIn: 'root'
 })
@@ -11,6 +14,7 @@ export class ReorderPlanningService {
     private url = environment.apiUrl
     private requestSource = new BehaviorSubject<any>(null);
     currentRequest = this.requestSource.asObservable();
+    
     constructor(private http: HttpClient) { }
 
     getStockReorder(): Observable<any[]> {
@@ -20,8 +24,8 @@ export class ReorderPlanningService {
 
         let params = new HttpParams()
             .set('warehouseId', String(warehouseTypeId))
-     
-     
+
+
         return this.http.get<any[]>(
             `${this.url}${StockReorderApiUrls.GetAllWarehouseItems}`,
             { params }
@@ -46,5 +50,19 @@ export class ReorderPlanningService {
         const params = new HttpParams().set('updatedBy', userId);
         return this.http.delete<any>(url, { params });
     }
+    
+    createPoSuggestions(body: {
+        groups: Group[];
+        note?: string | null;
+        userId: number;
+        userName?: string | null;
+        departmentId?: number | null;
+    }) {
+        return this.http.post<{ created: { id: number; purchaseRequestNo: string }[] }>(
+            `${this.url}/purchaserequest/reorder-suggestions`,
+            body
+        );
+    }
+
 
 }

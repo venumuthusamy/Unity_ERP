@@ -1,0 +1,61 @@
+.table-active {
+  background-color: #eef6f8 !important;
+  transition: background 0.2s ease-in-out;
+}
+
+.form-control-sm {
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+h6 i {
+  color: #2E5F73;
+}
+
+.reorder-table {
+  table-layout: fixed;          /* force columns to respect colgroup widths */
+
+  th, td { 
+    vertical-align: middle;
+    /* makes numbers align visually better */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* unify padding between text cells and inputs */
+  td.num, th.num {
+    text-align: right !important;
+    padding-right: .75rem !important;
+  }
+
+  /* compact numeric input and right-align text inside it */
+  .num-input {
+    text-align: right;
+    padding-right: .5rem;
+    height: calc(1.5em + .5rem + 2px);  // like form-control-sm
+  }
+}
+
+/* optional: keep checkbox column perfectly centered */
+.reorder-table td:first-child,
+.reorder-table th:first-child {
+  text-align: center;
+}
+.btn-outline-brand {
+  border-color: #2E5F73;
+  color: #fff;
+  background: #2E5F73;
+}
+.supplier-table thead th{
+  background:#2E5F73;
+  color:#fff;
+}
+.item-table thead th{
+  background:#2E5F73;
+  color:#fff;
+}
