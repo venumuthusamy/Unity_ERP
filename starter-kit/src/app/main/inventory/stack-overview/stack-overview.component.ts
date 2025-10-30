@@ -28,6 +28,9 @@ interface ApiItemRow {
   expiryDate?: string;
   warehouseId?: number;
   binId?: number;
+  qty?: number | null;            // make optional & nullable (some APIs send only onHand)
+  supplierName?: string | null;   // make optional & nullable
+  supplierId?: number | null; 
 }
 
 interface StockRow {
@@ -43,7 +46,13 @@ interface StockRow {
   expiry: Date | null;
   warehouseId?: number;
   binId?: number;
+
+  // ✅ add these so the template can render them
+  supplierName: string;
+  qty: number;
+
   apiRow?: ApiItemRow;
+   supplierId?: number | null; 
 }
 
 @Component({
@@ -53,7 +62,7 @@ interface StockRow {
 })
 export class StackOverviewComponent implements OnInit {
   warehouses: Array<{ id: number | string; name: string }> = [];
-  exportFileName = ''; // <-- will be auto-filled as stock-overview-YYYYMMDDHHmmss
+  exportFileName = ''; // will be auto-filled as stock-overview-YYYYMMDDHHmmss
 
   selectedWarehouse: number | string | null = null;
   minOnly = false;
@@ -115,8 +124,8 @@ export class StackOverviewComponent implements OnInit {
 
   private timestamp(): string {
     const now = new Date();
-    return `${now.getFullYear()}${this.pad(now.getMonth() + 1)}${this.pad(now.getDate())}` +
-           `${this.pad(now.getHours())}${this.pad(now.getMinutes())}${this.pad(now.getSeconds())}`;
+    return `${now.getFullYear()}${this.pad(now.getMonth() + 1)}${this.pad(now.getDate())}`
+         + `${this.pad(now.getHours())}${this.pad(now.getMinutes())}${this.pad(now.getSeconds())}`;
   }
 
   private sanitizeBaseName(s: string): string {
@@ -128,13 +137,11 @@ export class StackOverviewComponent implements OnInit {
   }
 
   private buildFixedFileBase(): string {
-    // always "stock-overview-YYYYMMDDHHmmss"
     const base = this.sanitizeBaseName('stock-overview');
     return `${base}-${this.timestamp()}`.toLowerCase();
   }
 
   private safeFile(s: string): string {
-    // keep for final sanitation before saving (no extension)
     return this.sanitizeBaseName(s).toLowerCase();
   }
 
@@ -146,6 +153,7 @@ export class StackOverviewComponent implements OnInit {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  // ✅ Normalize API → UI row (includes supplierName & qty)
   private toStockRow(api: ApiItemRow): StockRow {
     const warehouse = api.warehouseName ?? '';
     const item = api.name ?? api.itemName ?? '';
@@ -156,6 +164,10 @@ export class StackOverviewComponent implements OnInit {
     const min = Number(api.min ?? api.minQty ?? 0);
     const available = Number(api.available != null ? api.available : (onHand - reserved));
     const expiry = this.parseExpiry(api.expiryDate);
+
+    // prefer explicit qty; if not present, fall back to onHand
+    const qty = Number(api.qty ?? onHand);
+    const supplierName = (api.supplierName ?? '').toString().trim() || '-';
 
     return {
       idKey: [api.id ?? '', warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
@@ -170,6 +182,9 @@ export class StackOverviewComponent implements OnInit {
       expiry,
       warehouseId: api.warehouseId,
       binId: api.binId,
+      supplierName,
+      qty,
+      supplierId: (api as any).supplierId ?? null,
       apiRow: api
     };
   }
@@ -197,6 +212,7 @@ export class StackOverviewComponent implements OnInit {
         if (res?.isSuccess && Array.isArray(res.data)) {
           this.rows = res.data.map((item: ApiItemRow) => this.toStockRow(item));
           this.filteredRows = [...this.rows];
+          setTimeout(() => (feather as any)?.replace?.(), 0);
         } else {
           this.errorMsg = 'No stock data found.';
         }
@@ -234,7 +250,9 @@ export class StackOverviewComponent implements OnInit {
     const tokens = this.tokenize(this.searchText);
     if (tokens.length) {
       filtered = filtered.filter(r => {
-        const hay = this.normalize([r.item, r.sku, r.bin, r.warehouse].filter(Boolean).join(' | '));
+        const hay = this.normalize([
+          r.item, r.sku, r.bin, r.warehouse, r.supplierName
+        ].filter(Boolean).join(' | '));
         return tokens.every(t => hay.includes(t));
       });
     }
@@ -277,12 +295,12 @@ export class StackOverviewComponent implements OnInit {
 
   isIndeterminate(): boolean {
     if (!this.filteredRows?.length) return false;
+    const total = this.filteredRows.length;
     let sel = 0;
     for (const r of this.filteredRows) {
       if (this.selectedKeys.has(this.keyOf(r))) sel++;
-      if (sel && sel < this.filteredRows.length) return true;
     }
-    return false;
+    return sel > 0 && sel < total;
   }
 
   toggleAll(ev: Event): void {
@@ -405,8 +423,9 @@ export class StackOverviewComponent implements OnInit {
     const row = this.adjust.row;
     const payload = {
       itemId: row.apiRow?.id,
-      warehouseId: row.apiRow?.warehouseId,
-      binId: row.apiRow?.binId,
+      warehouseId: row.warehouseId,
+      binId: row.binId,
+       supplierId: row.supplierId ?? null,
       newOnHand: Number(this.adjust.newInHand),
       stockIssueId: this.adjust.stockIssueId ?? null
     };
@@ -452,8 +471,8 @@ export class StackOverviewComponent implements OnInit {
     this.stockIssueService.getAllStockissue().subscribe(res => {
       const raw = Array.isArray(res?.data) ? res.data : [];
       this.stockIssueOptions = raw
-        .filter(item => item.isActive)
-        .map(item => ({ id: item.id, name: item.stockIssuesNames }));
+        .filter((item: any) => item?.isActive)
+        .map((item: any) => ({ id: item.id, name: item.stockIssuesNames }));
       setTimeout(() => (window as any).feather?.replace?.(), 0);
     });
   }
@@ -502,8 +521,8 @@ export class StackOverviewComponent implements OnInit {
       Sku: r.sku ?? '',
       BinId: r.binId ?? null,
       BinName: r.bin ?? '',
-      remarks:'',
-      transferQty:0
+      remarks: '',
+      transferQty: 0
     }));
 
     this.stockService.insertStock(payload).subscribe({
@@ -551,7 +570,6 @@ export class StackOverviewComponent implements OnInit {
 
   // ===== Export =====
   openExportModal(tpl: any) {
-    // refresh the timestamp each time user opens the modal
     this.exportFileName = this.safeFile(this.buildFixedFileBase()); // e.g. stock-overview-20251022070730
     this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
   }
@@ -563,6 +581,8 @@ export class StackOverviewComponent implements OnInit {
       Item: r.item ?? '',
       SKU: r.sku ?? '',
       Bin: r.bin ?? '',
+      Supplier: r.supplierName ?? '',
+      Qty: r.qty ?? 0,
       OnHand: r.onHand ?? 0,
       Reserved: r.reserved ?? 0,
       Min: r.min ?? 0,
@@ -576,7 +596,8 @@ export class StackOverviewComponent implements OnInit {
     const ws = XLSX.utils.json_to_sheet(data);
     (ws as any)['!cols'] = [
       { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 12 },
+      { wch: 18 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 }, { wch: 10 }, { wch: 12 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Stock Overview');
@@ -587,8 +608,8 @@ export class StackOverviewComponent implements OnInit {
 
   exportAsPdf(): void {
     const data = this.buildExportRows();
-    const headers = [['Warehouse', 'Item', 'SKU', 'Bin', 'On Hand', 'Reserved', 'Min', 'Available', 'Expiry']];
-    const body = data.map(r => [r.Warehouse, r.Item, r.SKU, r.Bin, r.OnHand, r.Reserved, r.Min, r.Available, r.Expiry]);
+    const headers = [['Warehouse', 'Item', 'SKU', 'Bin', 'Supplier', 'Qty', 'On Hand', 'Reserved', 'Min', 'Available', 'Expiry']];
+    const body = data.map(r => [r.Warehouse, r.Item, r.SKU, r.Bin, r.Supplier, r.Qty, r.OnHand, r.Reserved, r.Min, r.Available, r.Expiry]);
 
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(12);
@@ -617,7 +638,7 @@ export class StackOverviewComponent implements OnInit {
     if (id == null || id === '') return null;
     const w = this.warehouses.find(w => String(w.id) === String(id));
     return w ? w.name : null;
-  }
+    }
 
   private startOfDay(d: Date): Date {
     const x = new Date(d);
