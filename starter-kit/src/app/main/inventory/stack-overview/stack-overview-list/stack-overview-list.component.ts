@@ -24,7 +24,7 @@ interface ApiStockRow {
   expiryDate?: string;       // ISO string
 }
 
-/** Location inside a (item, warehouse) group — i.e., a bin line */
+/** Location line (bin row for any warehouse) */
 interface ItemLocation {
   warehouseId?: number;
   warehouseName?: string;
@@ -38,24 +38,21 @@ interface ItemLocation {
   expiryDate?: string | null;
 }
 
-/** Grid row: one row per (itemId, warehouseId) */
+/** Grid row: one row per itemId (aggregated across all warehouses) */
 export interface ItemWarehouseRow {
-  gridKey: string;           // `${itemId}|${warehouseId ?? 0}` for uniqueness
+  gridKey: string;           // `${itemId}`
   id: number;                // itemId
   sku: string;
   name: string;
   category?: string;
   uom?: string;
 
-  warehouseId?: number | null;
-  warehouseName?: string | null;
-
-  // aggregated totals *within that warehouse only*
+  // totals across ALL warehouses
   totalOnHand?: number;
   totalReserved?: number;
   totalAvailable?: number;
 
-  // details for modal (bins for this (item, warehouse) only)
+  // all bin lines (for modal)
   locations: ItemLocation[];
 }
 
@@ -101,34 +98,30 @@ export class StackOverviewListComponent implements OnInit {
       next: (res: any) => {
         const raw: ApiStockRow[] = Array.isArray(res?.data) ? res.data : [];
 
-        // Group by (itemId, warehouseId)
-        const map = new Map<string, ItemWarehouseRow>();
+        // Group by itemId ONLY (aggregate across all warehouses)
+        const map = new Map<number, ItemWarehouseRow>();
 
         for (const r of raw) {
           const itemId = r.id;
-          const whId = r.warehouseId ?? 0;
-          const key = `${itemId}|${whId}`;
 
-          if (!map.has(key)) {
-            map.set(key, {
-              gridKey: key,
+          if (!map.has(itemId)) {
+            map.set(itemId, {
+              gridKey: String(itemId),
               id: itemId,
               sku: r.sku,
               name: r.name,
               category: r.category,
               uom: r.uom,
 
-              warehouseId: r.warehouseId ?? null,
-              warehouseName: r.warehouseName ?? null,
-
               totalOnHand: 0,
               totalReserved: 0,
               totalAvailable: 0,
+
               locations: []
             });
           }
 
-          const row = map.get(key)!;
+          const row = map.get(itemId)!;
 
           const onHand = r.onHand ?? 0;
           const reserved = r.reserved ?? 0;
@@ -138,6 +131,7 @@ export class StackOverviewListComponent implements OnInit {
           row.totalReserved = (row.totalReserved ?? 0) + reserved;
           row.totalAvailable = (row.totalAvailable ?? 0) + available;
 
+          // Keep every bin line (for modal)
           row.locations.push({
             warehouseId: r.warehouseId,
             warehouseName: r.warehouseName,
@@ -166,7 +160,7 @@ export class StackOverviewListComponent implements OnInit {
     });
   }
 
-  /** Search across item fields + warehouse + bins */
+  /** Search across item fields + any warehouse/bin name via locations */
   applyFilter(): void {
     const q = (this.searchValue || '').toLowerCase().trim();
     if (!q) {
@@ -180,8 +174,7 @@ export class StackOverviewListComponent implements OnInit {
         (r.sku ?? '').toLowerCase().includes(q) ||
         (r.name ?? '').toLowerCase().includes(q) ||
         (r.category ?? '').toLowerCase().includes(q) ||
-        (r.uom ?? '').toLowerCase().includes(q) ||
-        (r.warehouseName ?? '').toLowerCase().includes(q);
+        (r.uom ?? '').toLowerCase().includes(q);
 
       if (baseHit) return true;
 
@@ -192,13 +185,13 @@ export class StackOverviewListComponent implements OnInit {
     });
   }
 
-  /** Open modal with only this warehouse’s bins for the item */
+  /** Open modal with ALL warehouses/bins for the item */
   openViewModal(row: ItemWarehouseRow, tpl: any): void {
     this.selectedItem = row;
     this.modal.open(tpl, { centered: true, size: 'xl', backdrop: 'static' });
   }
 
-  /** Create */
+  /** Navigate to create page */
   goToCreateItem(): void {
     this.router.navigate(['/Inventory/create-stackoverview']);
   }
