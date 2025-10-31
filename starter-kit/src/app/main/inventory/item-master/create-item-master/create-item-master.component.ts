@@ -36,6 +36,7 @@ type PriceRow = {
   SupplierId: number | string | null;
   supplierName?: string | null;
   supplierSearch?: string | null;
+  warehouseId?: number | string | null;  
 };
 
 interface Warehouse { id: number | string; name: string; }
@@ -280,10 +281,13 @@ export class CreateItemMasterComponent implements OnInit {
 
   /* Edit loader */
   private loadForEdit(id: number): void {
+    debugger
     forkJoin({
       header: this.itemsSvc.getItemMasterById(id),
       stocks: this.itemsSvc.getWarehouseStock(id),
       prices: this.itemsSvc.getSupplierPrices(id),
+   
+      
     } as { header: Observable<any>; stocks: Observable<any>; prices: Observable<any>; })
     .subscribe({
       next: ({ header, stocks, prices }) => {
@@ -335,7 +339,7 @@ export class CreateItemMasterComponent implements OnInit {
         const priceArr: any[] = Array.isArray(prices)
           ? prices
           : (prices && 'data' in prices ? (prices as any).data : []) || [];
-
+   console.log(this.prices);
         this.prices = priceArr.map((p: any) => ({
           price: p.price ?? null,
           qty: (p.qty != null ? Number(p.qty)
@@ -343,7 +347,8 @@ export class CreateItemMasterComponent implements OnInit {
           barcode: p.barcode ?? null,
           SupplierId: p.supplierId ?? p.SupplierId ?? null,
           supplierName: p.supplierName ?? p.name ?? null,
-          supplierSearch: p.supplierName ?? p.name ?? ''
+          supplierSearch: p.supplierName ?? p.name ?? '',
+          warehouseId: p.warehouseId ?? p.WarehouseId ?? null,
         }));
 
         this.modalLine.itemSearch = this.item.name || '';
@@ -400,6 +405,7 @@ export class CreateItemMasterComponent implements OnInit {
       .filter(p => p.price != null && p.SupplierId != null)
       .map(p => ({
         supplierId: p.SupplierId,
+        warehouseId: p.warehouseId, 
         price: Number(p.price),
         qty: p.qty == null || p.qty === ('' as any) ? 0 : Number(p.qty),
         barcode: p.barcode ?? null
@@ -646,7 +652,7 @@ export class CreateItemMasterComponent implements OnInit {
   addPriceLine(): void {
     this.prices = [
       ...this.prices,
-      { price: null, qty: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' }
+      { price: null, qty: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' , warehouseId: null   }
     ];
     this.activePriceIndex = null;
     this.filteredSuppliers = [];

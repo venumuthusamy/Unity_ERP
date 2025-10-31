@@ -9,7 +9,7 @@ type ReasonCode = 'Damage' | 'Shrinkage' | 'Correction';
 
 interface AdjustmentHeader {
   type: AdjType;
-  reason: ReasonCode | null;
+  reason: ReasonCode | number | null;       // header reason (if you use it later)
   threshold: number | null;
 }
 
@@ -27,10 +27,10 @@ interface AdjustmentLine {
   supplierName?: string | null;
   price?: number | null;
 
-  qty: number | null;
+  qty: number | null;            // current on-hand shown in the row (e.g., 1600)
 
-  // 👉 Reason and Remarks now only used in modal
-  reason?: ReasonCode | null;
+  // used only in modal
+  reason?: ReasonCode | number | null; // bind to lookup id
   remarks?: string;
   type?: AdjType | null;
   faultyQty?: number | null;
@@ -74,8 +74,12 @@ export class StockAdjustmentComponent implements OnInit {
   gridLoading = false;
   stockIssueOptions: { id: number; name: string }[] = [];
 
-  // 👇 Modal state
+  // Modal state
   selectedRow: AdjustmentLine | null = null;
+  adjustError: string | null = null;
+  newQtyPreview: number | null = null;
+  faultyTouched: boolean;
+  previewVisible: boolean;
 
   constructor(
     private itemMasterService: ItemMasterService,
@@ -88,30 +92,13 @@ export class StockAdjustmentComponent implements OnInit {
     this.loadStockissue();
   }
 
-  // 🔹 Open modal and bind selected row
-  openAdjustModal(modalTpl: TemplateRef<any>, row: AdjustmentLine) {
-    this.selectedRow = { ...row }; // clone the row
-    this.modalService.open(modalTpl, { centered: true, size: 'md', backdrop: 'static' });
+  // ---------- Helpers ----------
+  private toNum(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
   }
 
-  // 🔹 Submit adjustment from modal
-  submitAdjustment() {
-    if (!this.selectedRow) return;
-
-    const index = this.adjLines.findIndex(l => l.itemId === this.selectedRow?.itemId);
-    if (index > -1) {
-      this.adjLines[index] = { ...this.selectedRow };
-    }
-
-    console.log('Adjusted row:', this.selectedRow);
-    this.modalService.dismissAll();
-  }
-
-  cancelModal() {
-    this.modalService.dismissAll();
-  }
-
-  // 🔹 Load items for dropdown
+  // ---------- Item dropdown ----------
   private loadItems(): void {
     this.itemsLoading = true;
     this.itemMasterService.getAllItemMaster().subscribe({
@@ -142,12 +129,12 @@ export class StockAdjustmentComponent implements OnInit {
   onItemPicked(val: any): void {
     const itemId = (val && typeof val === 'object') ? Number(val.id) : Number(val);
     if (!itemId) return;
-
     this.selectedItemId = itemId;
     this.loadGridData(itemId);
     this.itemSelect?.filter('');
   }
 
+  // ---------- Grid data ----------
   loadGridData(itemId: number): void {
     this.gridLoading = true;
 
@@ -170,8 +157,9 @@ export class StockAdjustmentComponent implements OnInit {
           supplierId: r.supplierId != null ? Number(r.supplierId) : null,
           supplierName: String(r.supplierName ?? ''),
           price: r.price != null ? Number(r.price) : null,
-          qty: r.qty != null ? Number(r.qty) : 0,
-          // Reason, remarks, type handled only in modal
+          // Treat qty as current on-hand for that row (what your screenshot shows)
+          qty: r.qty != null ? Number(r.qty) : Number(r.available ?? r.availableQty ?? 0),
+
           reason: null,
           remarks: '',
           type: null,
@@ -191,7 +179,7 @@ export class StockAdjustmentComponent implements OnInit {
             supplierId: null,
             supplierName: null,
             price: null,
-            qty: 0,
+            qty: picked.availableQty ?? 0,
             reason: null,
             remarks: '',
             type: null,
@@ -199,12 +187,8 @@ export class StockAdjustmentComponent implements OnInit {
           }];
         }
       },
-      error: (err) => {
-        console.error('GetItemDetailsByItemId error', err);
-      },
-      complete: () => {
-        this.gridLoading = false;
-      }
+      error: (err) => console.error('GetItemDetailsByItemId error', err),
+      complete: () => (this.gridLoading = false)
     });
   }
 
@@ -216,6 +200,89 @@ export class StockAdjustmentComponent implements OnInit {
     if (l.qty !== null && !Number.isFinite(Number(l.qty))) l.qty = 0;
   }
 
+  // ---------- Modal open/validate/submit ----------
+openAdjustModal(modalTpl: TemplateRef<any>, row: AdjustmentLine) {
+  this.selectedRow = { ...row, type: row.type ?? 'Decrease' };
+  this.adjustError = null;
+  this.newQtyPreview = null;
+  this.faultyTouched = false;     // reset
+  this.previewVisible = false;    // reset
+  this.modalService.open(modalTpl, { centered: true, size: 'md', backdrop: 'static' });
+}
+
+  cancelModal() {
+    this.modalService.dismissAll();
+  }
+
+ validateAdjustment(): void {
+  const row = this.selectedRow;
+  if (!row) { this.adjustError = 'No row selected.'; return; }
+
+  const qty = this.toNum(row.qty);
+  const faulty = this.toNum(row.faultyQty);
+  const type = (row.type ?? '').toString();
+
+  this.adjustError = null;
+  this.newQtyPreview = null;
+
+  if (!type) { this.adjustError = 'Select a type (Increase or Decrease).'; return; }
+  if (faulty <= 0) { this.adjustError = 'Enter a positive faulty quantity.'; return; }
+
+  if (type === 'Decrease') {
+    if (faulty > qty) { this.adjustError = 'Cannot decrease more than current quantity.'; return; }
+    this.newQtyPreview = qty - faulty;
+  } else if (type === 'Increase') {
+    this.newQtyPreview = qty + faulty;
+  } else {
+    this.adjustError = 'Invalid type.'; return;
+  }
+}
+onFaultyQtyChange(v: any) {
+  this.faultyTouched = true;
+  if (this.selectedRow) this.selectedRow.faultyQty = this.toNum(v);
+  this.validateAdjustment();
+  this.previewVisible = this.faultyTouched && !this.adjustError && this.newQtyPreview !== null;
+}
+
+// NEW: when type changes, only show if user already touched faulty qty
+onTypeChange() {
+  this.validateAdjustment();
+  this.previewVisible = this.faultyTouched && !this.adjustError && this.newQtyPreview !== null;
+}
+
+  submitAdjustment() {
+    this.validateAdjustment();
+    if (this.adjustError || !this.selectedRow) return;
+
+    // push modal values back to the grid row (by itemId + location tuple)
+    const keyMatch = (l: AdjustmentLine) =>
+      l.itemId === this.selectedRow!.itemId &&
+      (l.warehouseId ?? null) === (this.selectedRow!.warehouseId ?? null) &&
+      (l.binId ?? null) === (this.selectedRow!.binId ?? null) &&
+      (l.supplierId ?? null) === (this.selectedRow!.supplierId ?? null);
+
+    const idx = this.adjLines.findIndex(keyMatch);
+    if (idx > -1) {
+      // persist user-specified fields
+      this.adjLines[idx] = {
+        ...this.adjLines[idx],
+        type: this.selectedRow.type,
+        faultyQty: this.selectedRow.faultyQty,
+        reason: this.selectedRow.reason,
+        remarks: this.selectedRow.remarks
+      };
+
+      // Optionally show the preview result in the grid qty (comment out if not desired)
+      if (this.newQtyPreview !== null) {
+        this.adjLines[idx].qty = this.newQtyPreview;
+      }
+    }
+
+    console.log('Adjusted row:', this.selectedRow);
+    this.modalService.dismissAll();
+  }
+
+  // ---------- Header actions ----------
   saveDraft(): void {
     const dto = this.buildDto();
     console.log('Saving draft (DTO):', dto);
@@ -223,15 +290,10 @@ export class StockAdjustmentComponent implements OnInit {
   }
 
   submitForApproval(): void {
-    if (!this.adjHdr.reason) {
-      alert('Please select a header reason.');
-      return;
-    }
     if (this.adjLines.length === 0) {
       alert('Please select an item to load rows.');
       return;
     }
-
     const dto = this.buildDto();
     console.log('Submitting (DTO):', dto);
     alert('Submitted (dummy). Check console for payload.');
@@ -247,8 +309,8 @@ export class StockAdjustmentComponent implements OnInit {
       lines: this.adjLines.map(l => ({
         itemId: Number(l.itemId),
         sku: l.sku ?? null,
-        qty: Number(l.qty ?? 0),
-        reason: l.reason ?? null,
+        qty: Number(l.qty ?? 0),             // current qty after any preview
+        reason: l.reason ?? null,            // id or code
         remarks: l.remarks ?? '',
         supplierId: l.supplierId ?? null,
         warehouseId: l.warehouseId ?? null,
@@ -260,6 +322,7 @@ export class StockAdjustmentComponent implements OnInit {
     };
   }
 
+  // ---------- Lookups ----------
   loadStockissue() {
     this.stockIssueService.getAllStockissue().subscribe(res => {
       const raw = Array.isArray(res?.data) ? res.data : [];
@@ -272,12 +335,13 @@ export class StockAdjustmentComponent implements OnInit {
     });
   }
 
+  // ---------- UI helpers ----------
   badgeToneClasses(tone: 'blue' | 'green' | 'amber' | 'red' = 'blue') {
     const map: Record<string, { bg: string; text: string; border: string }> = {
       blue:  { bg: 'bg-blue-50',  text: 'text-blue-700',  border: 'border-blue-100'  },
-      green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
-      amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
-      red:   { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-100'   },
+      green:{ bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
+      amber:{ bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
+      red:  { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-100'   },
     };
     const t = map[tone] ?? map.blue;
     return `${t.bg} ${t.text} ${t.border}`;

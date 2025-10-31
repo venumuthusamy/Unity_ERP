@@ -22,7 +22,8 @@
         <!-- Search + Create -->
         <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
           <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
-            <label class="d-flex align-items-center ml-1 ml-md-0">Search:
+            <label class="d-flex align-items-center ml-1 ml-md-0">
+              Search:
               <input
                 [(ngModel)]="searchValue"
                 type="search"
@@ -46,7 +47,7 @@
       <div *ngIf="loading" class="px-3 pb-2 small text-muted">Loading items…</div>
       <div *ngIf="errorMsg" class="alert alert-danger mx-3 my-2">{{ errorMsg }}</div>
 
-      <!-- NGX DATATABLE -->
+      <!-- NGX DATATABLE (one row per Item) -->
       <ngx-datatable
         class="bootstrap core-bootstrap item-table"
         [rows]="filteredRows"
@@ -70,38 +71,30 @@
           <ng-template ngx-datatable-cell-template let-row="row">
             <span
               (click)="openViewModal(row, viewModal)"
-              title="View stock by warehouse/bin"
+              title="View stock by warehouses/bins"
               style="cursor:pointer; font-size:18px; color:#2E5F73;">
               <i class="fas fa-eye"></i>
             </span>
           </ng-template>
         </ngx-datatable-column>
 
-        <!-- Grid columns -->
+        <!-- Grid columns (NO warehouse column here) -->
         <ngx-datatable-column name="SKU" prop="sku" [width]="140"></ngx-datatable-column>
-        <ngx-datatable-column name="Item Name" prop="name" [width]="180"></ngx-datatable-column>
-        <ngx-datatable-column name="Warehouse" prop="warehouseName" [width]="180"></ngx-datatable-column>
+        <ngx-datatable-column name="Item Name" prop="name" [width]="220"></ngx-datatable-column>
         <ngx-datatable-column name="Category" prop="category" [width]="160"></ngx-datatable-column>
         <ngx-datatable-column name="UOM" prop="uom" [width]="120"></ngx-datatable-column>
 
-        <ngx-datatable-column name="On Hand (WH)" [width]="140">
+        <ngx-datatable-column name="On Hand (All WH)" [width]="160">
           <ng-template let-row="row" ngx-datatable-cell-template>
             {{ row.totalOnHand ?? 0 }}
           </ng-template>
         </ngx-datatable-column>
 
-        <!-- <ngx-datatable-column name="Reserved (WH)" [width]="150">
-          <ng-template let-row="row" ngx-datatable-cell-template>
-            {{ row.totalReserved ?? 0 }}
-          </ng-template>
-        </ngx-datatable-column> -->
-
-        <ngx-datatable-column name="Available (WH)" [width]="150">
+        <ngx-datatable-column name="Available (All WH)" [width]="170">
           <ng-template let-row="row" ngx-datatable-cell-template>
             {{ row.totalAvailable ?? 0 }}
           </ng-template>
         </ngx-datatable-column>
-
       </ngx-datatable>
     </div>
   </section>
@@ -111,7 +104,7 @@
 <ng-template #viewModal let-close="close" let-dismiss="dismiss">
   <div class="modal-header">
     <h5 class="modal-title">
-      {{ selectedItem?.name }} ({{ selectedItem?.sku }}) – {{ selectedItem?.warehouseName || 'Warehouse' }}
+      {{ selectedItem?.name }} ({{ selectedItem?.sku }})
     </h5>
     <button type="button" class="close" aria-label="Close" (click)="dismiss('x')">
       <span aria-hidden="true">&times;</span>
@@ -151,11 +144,10 @@
   </div>
 
   <div class="modal-footer">
-    <!-- <button type="button" class="btn btn-outline-secondary" >Close</button> -->
-      <button (click)="close('ok')"
-              style="background:#2E5F73; color:#fff; border:0; border-radius:12px; padding:10px 18px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
-        <i class="fas fa-times-circle"></i>
-        <span>Close</span>
-      </button>
+    <button (click)="close('ok')"
+            style="background:#2E5F73; color:#fff; border:0; border-radius:12px; padding:10px 18px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-times-circle"></i>
+      <span>Close</span>
+    </button>
   </div>
 </ng-template>

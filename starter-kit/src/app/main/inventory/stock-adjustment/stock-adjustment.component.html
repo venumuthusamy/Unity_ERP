@@ -85,85 +85,110 @@
   </div>
 
   <!-- Adjustment Modal -->
-  <ng-template #adjustModal let-modal>
-    <div class="modal-header flex-column align-items-start">
-      <h5 class="modal-title fw-semibold text-dark mb-1">Adjust Stock</h5>
-      <div class="text-muted small">
-        <span class="fw-semibold">{{ selectedRow?.item }}</span>
-        <span class="ms-2">-</span>
-        <span class="ms-2">{{ selectedRow?.sku }}</span>
+<ng-template #adjustModal let-modal>
+  <div class="modal-header flex-column align-items-start">
+    <h5 class="modal-title fw-semibold text-dark mb-1">Adjust Stock</h5>
+    <div class="text-muted small">
+      <span class="fw-semibold">{{ selectedRow?.item }}</span>
+      <span class="ms-2">-</span>
+      <span class="ms-2">{{ selectedRow?.sku }}</span>
+    </div>
+    <button type="button" class="btn-close position-absolute end-0 top-0 mt-2 me-2"
+            aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body">
+    <div class="row g-2">
+      <!-- Warehouse -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Warehouse</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.warehouseName" readonly>
       </div>
-      <button type="button" class="btn-close position-absolute end-0 top-0 mt-2 me-2"
-              aria-label="Close" (click)="modal.dismiss()"></button>
-    </div>
 
-    <div class="modal-body">
-      <div class="row g-2">
-        <!-- Warehouse -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Warehouse</label>
-          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.warehouseName" readonly>
-        </div>
-
-        <!-- Bin -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Bin</label>
-          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.binName" readonly>
-        </div>
-
-        <!-- Supplier -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Supplier</label>
-          <input type="text" class="form-control form-control-sm" [value]="selectedRow?.supplierName" readonly>
-        </div>
-
-        <!-- Qty -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Qty</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="selectedRow.qty">
-        </div>
-
-        <!-- Faulty Qty -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Faulty Qty</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="selectedRow.faultyQty">
-        </div>
-
-        <!-- Type -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Type</label>
-          <ng-select class="ngs ngs-sm w-100 sa-ngs"
-                     [items]="['Increase', 'Decrease']"
-                     placeholder="Select type"
-                     [(ngModel)]="selectedRow.type">
-          </ng-select>
-        </div>
-
-        <!-- Reason -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Reason</label>
-          <ng-select class="ngs ngs-sm w-100 sa-ngs"
-                     [items]="stockIssueOptions"
-                     bindLabel="name"
-                     bindValue="id"
-                     placeholder="Select reason"
-                     [(ngModel)]="selectedRow.reason">
-          </ng-select>
-        </div>
-
-        <!-- Remarks (moved here) -->
-        <div class="col-12 col-md-6">
-          <label class="form-label small text-muted mb-1">Remarks</label>
-          <textarea class="form-control form-control-sm" rows="2"
-                    [(ngModel)]="selectedRow.remarks"
-                    placeholder="Enter remarks"></textarea>
-        </div>
+      <!-- Bin -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Bin</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.binName" readonly>
       </div>
-    </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary btn-sm" (click)="modal.dismiss()">Cancel</button>
-      <button type="button" class="btn btn-primary btn-sm" (click)="submitAdjustment()">Submit</button>
+      <!-- Supplier -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Supplier</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.supplierName" readonly>
+      </div>
+
+      <!-- Qty (current on-hand) -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Qty</label>
+        <input type="number" class="form-control form-control-sm"
+               [ngModel]="selectedRow?.qty" readonly>
+      </div>
+
+            <!-- Type -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Type</label>
+      <ng-select class="ngs ngs-sm w-100 sa-ngs"
+           [items]="adjTypes"
+           bindLabel="label"
+           bindValue="value"
+           [(ngModel)]="selectedRow!.type"
+           (change)="onTypeChange()"
+           placeholder="Select type">
+</ng-select>
+      </div>
+
+      <!-- Faulty Qty -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Faulty Qty</label>
+       <input type="number"
+       class="form-control form-control-sm"
+       [(ngModel)]="selectedRow!.faultyQty"
+       (ngModelChange)="onFaultyQtyChange($event)"
+       min="1" step="1" placeholder="Enter qty">
+      </div>
+
+
+
+      <!-- Reason -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Reason</label>
+        <ng-select class="ngs ngs-sm w-100 sa-ngs"
+                   [items]="stockIssueOptions"
+                   bindLabel="name"
+                   bindValue="id"
+                   [(ngModel)]="selectedRow!.reason"
+                   placeholder="Select reason">
+        </ng-select>
+      </div>
+
+      <!-- Remarks -->
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Remarks</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  [(ngModel)]="selectedRow!.remarks"
+                  placeholder="Enter remarks"></textarea>
+      </div>
+
+      <!-- Error + Preview -->
+   <div class="col-12" *ngIf="adjustError">
+  <div class="text-danger small mt-1">{{ adjustError }}</div>
+</div>
+
+<!-- Preview: ONLY after faulty qty edited -->
+<div class="col-12" *ngIf="previewVisible">
+  <div class="text-muted small mt-1">
+    New on-hand after {{ selectedRow?.type?.toLowerCase() }}: <b>{{ newQtyPreview }}</b>
+  </div>
+</div>
     </div>
-  </ng-template>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="cancelModal()">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm"
+            (click)="submitAdjustment()" [disabled]="!!adjustError || !selectedRow?.type || !selectedRow?.faultyQty">
+      Submit
+    </button>
+  </div>
+</ng-template>
 </div>
