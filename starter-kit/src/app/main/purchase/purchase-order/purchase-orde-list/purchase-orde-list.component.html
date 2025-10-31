@@ -299,3 +299,70 @@
     </div>
   </div>
 </div>
+
+<!-- Reorder Modal -->
+<div *ngIf="showReorderModal" (click)="closeReorderModal()"
+     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:860px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <!-- Header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
+      <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">Reorder Purchase Requests</h3>
+
+      <!-- local search inside modal -->
+      <input [(ngModel)]="reorderSearch" type="search" (input)="filterReorders()"
+             placeholder="Search PR No / Requester / Dept"
+             class="form-control" style="max-width:320px;">
+    </div>
+
+    <!-- Body -->
+    <div style="padding:16px 20px;">
+      <div style="max-height:60vh; overflow:auto;">
+        <table class="table" style="width:100%; border-collapse:separate; border-spacing:0 6px;">
+          <thead>
+            <tr style="color:#6b7280; font-size:13px;">
+              <th style="padding:8px 10px;">PR No</th>
+              <th style="padding:8px 10px;">Requester</th>
+              <th style="padding:8px 10px;">Department</th>
+              <th style="padding:8px 10px;">Delivery Date</th>
+              <th style="padding:8px 10px;">By Reorder</th>
+              <th style="padding:8px 10px; width:160px; text-align:center;">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let r of reorderRows" style="background:#f9fafb;">
+              <td style="padding:10px 12px;">{{ r.purchaseRequestNo || r.prNo || '-' }}</td>
+              <td style="padding:10px 12px;">{{ r.requester || '-' }}</td>
+              <td style="padding:10px 12px;">{{ r.department || r.departmentName || '-' }}</td>
+              <td style="padding:10px 12px;">{{ r.deliveryDate | date:'dd-MM-yyyy' }}</td>
+              <td style="padding:10px 12px;">Yes</td>
+
+              <td style="padding:10px 12px; text-align:center;">
+                <button class="btn btn-sm"
+                        (click)="createFromReorder(r)"
+                        style="background:#2E5F73; color:#fff; border:none; border-radius:8px; padding:6px 10px;">
+                  Create
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="!reorderRows?.length">
+              <td colspan="6" style="padding:14px 12px; text-align:center; color:#6b7280;">
+                No reorder PRs
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+      <button (click)="closeReorderModal()"
+              style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

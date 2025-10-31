@@ -79,7 +79,7 @@
           [reorderable]="true">
 
           <!-- View lines -->
-          <ngx-datatable-column [width]="60" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+          <ngx-datatable-column [width]="50" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
             <ng-template ngx-datatable-cell-template let-row="row">
               <span (click)="openLinesModal(row)" title="View Details" style="cursor:pointer;font-size:18px;color:#2E5F73;">
                 <i class="fas fa-eye"></i>
@@ -97,14 +97,14 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Description" prop="description" [width]="200">
+          <!-- <ngx-datatable-column name="Description" prop="description" [width]="200">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.description || '-' }}
             </ng-template>
-          </ngx-datatable-column>
-           <ngx-datatable-column name="By Reorder" prop="description" [width]="150">
+          </ngx-datatable-column> -->
+           <ngx-datatable-column name="By Reorder" prop="isReorder" [width]="150">
             <ng-template let-row="row" ngx-datatable-cell-template>
-             {{ row?.isReorder === 'true' ? 'Yes' : 'No' }}
+             {{ row?.isReorder == true ? 'Yes' : 'No' }}
             </ng-template>
           </ngx-datatable-column>
 
@@ -132,7 +132,7 @@
 </ngx-datatable-column>
 
 
-          <ngx-datatable-column name="Action" [width]="150">
+          <ngx-datatable-column name="Action" [width]="170">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <div style="display:flex;justify-content:center;align-items:center;gap:10px;">
                 <ng-container *ngIf="+row.status === 2 || +row.status === 3 || +row.status === 4; else actionsEnabled">

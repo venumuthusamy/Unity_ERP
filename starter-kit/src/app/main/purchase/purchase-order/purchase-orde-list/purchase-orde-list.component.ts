@@ -7,6 +7,8 @@ import { POService } from '../purchase-order.service';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
 import { POTempService } from '../purchase-order-temp.service';
+import { PurchaseService } from '../../purchase.service';
+import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-purchase-orde-list',
   templateUrl: './purchase-orde-list.component.html',
@@ -33,13 +35,18 @@ export class PurchaseOrdeListComponent implements OnInit {
   showDraftsModal = false;
   drafts: any[] = [];
 
+  showReorderModal = false;
+  reorderAll: any[] = [];     // unfiltered master list (isReorder only)
+  reorderRows: any[] = [];    // filtered by search
+  reorderSearch = '';
+
   constructor(private poService: POService, private router: Router,
     private _coreSidebarService: CoreSidebarService, private datePipe: DatePipe,
-    private poTempService: POTempService,
+    private poTempService: POTempService, private purchaseService: PurchaseService,
   ) { }
   ngOnInit(): void {
     this.loadRequests();
-     this.loadDrafts();  
+    this.loadDrafts();
   }
   filterUpdate(event) {
 
@@ -180,7 +187,7 @@ export class PurchaseOrdeListComponent implements OnInit {
     feather.replace();
   }
 
-   openDraftsModal() {
+  openDraftsModal() {
     this.showDraftsModal = true;
     this.loadDrafts();
   }
@@ -224,8 +231,119 @@ export class PurchaseOrdeListComponent implements OnInit {
       }
     });
   }
-  openReorderDetails(){
-    
+
+  // open/close
+  openReorderDetails() {
+    this.showReorderModal = true;
+    // Load fresh each time so it reflects latest PRs
+    this.loadReorders();
+  }
+  closeReorderModal() {
+    this.showReorderModal = false;
+    this.reorderSearch = '';
+  }
+
+  // fetch only PRs where isReorder = true
+  // loadReorders() {
+
+  //   this.purchaseService.getAll().subscribe({
+  //     next: (res: any) => {
+  //       const list = (res?.data || []).map((req: any) => ({
+  //         ...req,
+  //         prLines: Array.isArray(req.prLines) ? req.prLines : this.safeParse(req.prLines),
+  //       }));
+
+  //       this.reorderAll = list.filter(r =>
+  //         r.isReorder === true 
+  //       );
+
+  //       this.reorderRows = [...this.reorderAll];
+  //       this.filterReorders(); // apply any current search text
+  //     },
+  //     error: (err) => console.error('Error loading reorder PRs', err),
+  //   });
+  // }
+
+  private safeParseReorder<T = any>(v: any, fallback: T | null = null): T | null {
+    if (Array.isArray(v)) return v as any;
+    try { return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  }
+
+  loadReorders() {
+    forkJoin({
+      prs: this.purchaseService.getAll(), // { data: [...] }
+      pos: this.poService.getPO()         // { data: [...] }
+    }).subscribe((results: any) => {
+      const prsRes = results?.prs;
+      const posRes = results?.pos;
+
+      // 1) collect PR numbers already used by any PO
+      const usedPrNos = new Set<string>();
+      (posRes?.data || []).forEach((po: any) => {
+        const lines = Array.isArray(po.poLines)
+          ? po.poLines
+          : this.safeParseReorder(po.poLines, []);
+        (lines || []).forEach((ln: any) => {
+          const prNo = (ln?.prNo ?? ln?.PRNo ?? ln?.prno ?? ln?.pr_no ?? '')
+            .toString()
+            .trim();
+          if (prNo) usedPrNos.add(prNo);
+        });
+      });
+
+      // 2) PRs that are reorder AND not used in any PO
+      const list = (prsRes?.data || []).map((req: any) => ({
+        ...req,
+        prLines: Array.isArray(req.prLines)
+          ? req.prLines
+          : this.safeParseReorder(req.prLines, []),
+      }));
+
+      this.reorderAll = list.filter(
+        (r: any) =>
+          r.isReorder === true &&
+          !usedPrNos.has((r.purchaseRequestNo || '').toString().trim())
+      );
+
+      this.reorderRows = [...this.reorderAll];
+      this.filterReorders();
+    }, err => console.error('Error loading reorder PRs/POs', err));
+  }
+
+
+  // simple client-side search inside modal
+  filterReorders() {
+    const q = (this.reorderSearch || '').trim().toLowerCase();
+    if (!q) {
+      this.reorderRows = [...this.reorderAll];
+      return;
+    }
+    this.reorderRows = this.reorderAll.filter(r => {
+      const prNo = (r.purchaseRequestNo || r.prNo || '').toLowerCase();
+      const req = (r.requester || '').toLowerCase();
+      const dep = (r.department || r.departmentName || '').toLowerCase();
+      const dd = this.datePipe.transform(r.deliveryDate, 'dd-MM-yyyy')?.toLowerCase() || '';
+      return prNo.includes(q) || req.includes(q) || dep.includes(q) || dd.includes(q);
+    });
+  }
+
+  // when user clicks "Create" on a reorder PR
+  createFromReorder(pr: any) {
+    // Option A: navigate to create-PO screen with the PR id so the page can prefill lines.
+    this.router.navigate(
+      ['/purchase/create-purchaseorder'],
+      { queryParams: { fromReorderPrId: pr.id } }
+    );
+    this.closeReorderModal();
+
+    // Option B: if you already have an API that converts a PR -> PO directly,
+    // call it here and then route to edit page after the backend returns the new PO id.
+    // this.poService.createPOFromPR(pr.id).subscribe({...})
+  }
+
+  // tiny helper used above
+  private safeParse(v: any) {
+    try { return JSON.parse(v || '[]'); } catch { return []; }
   }
 }
 

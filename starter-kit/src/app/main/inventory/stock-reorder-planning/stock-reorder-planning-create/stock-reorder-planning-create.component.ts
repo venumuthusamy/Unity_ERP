@@ -383,7 +383,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
 
   // one PR per (supplierId + warehouseId)
   onSuggestPO() {
-    this.saveDraft(1)
+    
     debugger
     const selectedRows = this.rows.filter(r => this.selectedIds.has(r.itemId));
     if (!selectedRows.length) {
@@ -440,7 +440,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     // ✅ Wrap in object and include user fields
     const body = {
       groups,
-      note: 'Auto-created from Reorder Planning',
+      note: 'Suggest Reorder',
       userId: Number(this.userId),
       userName: this.userName ?? null,
       departmentId: 1
@@ -469,6 +469,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     });
   }
   toNum(v: any): number { return Number(v) || 0; }
+  
   saveDraft(status) {
     debugger
     this.status = status;
@@ -532,49 +533,54 @@ export class StockReorderPlanningCreateComponent implements OnInit {
       })
     };
 
+    //only insert and below update code not posted in db
 
-    if (this.stockReorderId) {
-      this.reorderPlanningService.updateStockReorder(payload).subscribe({
-        next: (res: any) => {
-          if (res?.isSuccess) {
-            Swal.fire({
-              icon: 'success',
-              title: 'Stock Rorder updated',
-              text: res.message || 'Lines saved.',
-              confirmButtonColor: '#2E5F73'
-            });
-            this.router.navigateByUrl('/Inventory/list-stockreorderplanning');
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Failed',
-              text: res?.message || 'Unable to save review.',
-              confirmButtonColor: '#2E5F73'
-            });
-          }
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Something went wrong while saving review.',
-            confirmButtonColor: '#2E5F73'
-          });
-        }
+     this.reorderPlanningService.insertStockReorder(payload).subscribe((res) => {
+      console.log(res)
+        // if (res.isSuccess) {
+        //   Swal.fire({
+        //     title: "Hi",
+        //     text: res.message,
+        //     icon: "success",
+        //     allowOutsideClick: false,
+        //   });
+        //   this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
+        // }
       });
-    } else {
-      this.reorderPlanningService.insertStockReorder(payload).subscribe((res) => {
-        if (res.isSuccess) {
-          Swal.fire({
-            title: "Hi",
-            text: res.message,
-            icon: "success",
-            allowOutsideClick: false,
-          });
-          this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
-        }
-      });
-    }
+
+
+    // if (this.stockReorderId) {
+    //   this.reorderPlanningService.updateStockReorder(payload).subscribe({
+    //     next: (res: any) => {
+    //       if (res?.isSuccess) {
+    //         Swal.fire({
+    //           icon: 'success',
+    //           title: 'Stock Rorder updated',
+    //           text: res.message || 'Lines saved.',
+    //           confirmButtonColor: '#2E5F73'
+    //         });
+    //         this.router.navigateByUrl('/Inventory/list-stockreorderplanning');
+    //       } else {
+    //         Swal.fire({
+    //           icon: 'error',
+    //           title: 'Failed',
+    //           text: res?.message || 'Unable to save review.',
+    //           confirmButtonColor: '#2E5F73'
+    //         });
+    //       }
+    //     },
+    //     error: () => {
+    //       Swal.fire({
+    //         icon: 'error',
+    //         title: 'Error',
+    //         text: 'Something went wrong while saving review.',
+    //         confirmButtonColor: '#2E5F73'
+    //       });
+    //     }
+    //   });
+    // } else {
+     
+    // }
   }
   onCancel() {
     this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
@@ -589,6 +595,10 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     }
     // if user turned the only one OFF, we allow “none selected” (no-op)
   }
+  runSuggestAndDraft() {
+  this.saveDraft(1);
+  this.onSuggestPO();
+}
 }
 
 function toNum(v: any, d = 0) { return Number.isFinite(+v) ? +v : d; }
