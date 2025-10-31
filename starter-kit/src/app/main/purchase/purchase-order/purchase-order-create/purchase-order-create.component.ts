@@ -127,6 +127,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     return this.computeHash() !== this.cleanHash;
   }
 
+  private fromReorderPrId: number | null = null;
+
   ///// for temp data------////
 
 
@@ -147,6 +149,9 @@ export class PurchaseOrderCreateComponent implements OnInit {
     this.route.queryParamMap.subscribe(q => {
       const dId = Number(q.get('draftId'));
       this.draftId = Number.isFinite(dId) && dId > 0 ? dId : null;
+
+      const rId = Number(q.get('fromReorderPrId'));
+      this.fromReorderPrId = Number.isFinite(rId) && rId > 0 ? rId : null;
     });
     this.route.paramMap.subscribe((params: any) => {
       this.purchaseOrderId = parseInt(params.get('id'));
@@ -250,7 +255,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
           this.paymentTerms = results.paymentTerms.data;
           this.currencies = results.currency.data;
           this.incoterms = results.incoterms.data;
-          this.allPrNos = results.prlist.data;
+          //this.allPrNos = results.prlist.data;
           this.allItems = results.items.data;
           this.accounthead = results.accounthead.data
           this.allBudgets = this.accounthead.map((head: any) => ({
@@ -272,6 +277,44 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
           if (this.draftId) {
             this.loadDraftIntoCreate(this.draftId);
+          }
+
+          const list = results.prlist.data || [];
+
+          const isYes = (v: any) =>
+            v === true || v === 1 || v === '1' ||
+            (typeof v === 'string' && ['true', 'yes', 'y', '1'].includes(v.trim().toLowerCase()));
+
+          // 1) Launched from Reorder popup → lock to that PR (which is a reorder PR)
+          if (this.fromReorderPrId) {
+            debugger
+            const pr = list.find(x => Number(x.id) === Number(this.fromReorderPrId));
+            this.allPrNos = pr ? [pr] : [];
+
+            const lines = this.safeParsePrLines(pr.prLines);
+            const supplierIds = Array.from(
+              new Set(
+                lines.map((l: any) => Number(l?.supplierId)).filter((n) => Number.isFinite(n) && n > 0)
+              )
+            );
+
+            if (supplierIds.length === 1) {
+              const sid = supplierIds[0];
+              const supplier = (this.suppliers || []).find((s: any) => s.id === sid);
+
+              if (supplier) {
+                // Reuse your existing selection logic so currency/GST are set correctly
+                this.searchTexts['supplier'] = supplier.name;
+                this.select('supplier', supplier); // sets poHdr.supplierId, currencyId/Name, fxRate, tax, etc.
+              } else {
+                // Fallback: set id only if master isn’t loaded yet
+                this.poHdr.supplierId = sid;
+              }
+            }
+          }
+          // 2) Normal PO create → show NON-reorder PRs only
+          else {
+            this.allPrNos = list.filter(p => !isYes(p.isReorder));
           }
         });
       }
@@ -749,7 +792,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   poRemoveLine(i: number) {
     // this.poLines = this.poLines.filter((_, idx) => idx !== i); 
     this.poLines.splice(i, 1);
-     this.recalculateTotals();
+    this.recalculateTotals();
   }
 
   poChange(i: number, key: string, val: any) {
@@ -847,40 +890,40 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
     if (this.draftId) {
 
-    this.submitted = true;
-    if (!this.poHdr.deliveryDate) {
-      this.iserrorDelivery = true
-    } else {
-      this.iserrorDelivery = false;
-    }
+      this.submitted = true;
+      if (!this.poHdr.deliveryDate) {
+        this.iserrorDelivery = true
+      } else {
+        this.iserrorDelivery = false;
+      }
 
-    const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
-    if (missing.length || this.iserrorDelivery) {
+      const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
+      if (missing.length || this.iserrorDelivery) {
 
-      Swal.fire({
-        icon: 'warning',
-        title: 'Required',
-        text: 'Please fill required Fields',
-        confirmButtonColor: '#0e3a4c'
+        Swal.fire({
+          icon: 'warning',
+          title: 'Required',
+          text: 'Please fill required Fields',
+          confirmButtonColor: '#0e3a4c'
+        });
+        return;
+      }
+
+
+      if (!this.validatePO()) return;
+      const draftPayload = this.buildPayloadForSaveDraft();
+
+      this.poTempService.updatePODraft(this.draftId, draftPayload).pipe(
+        // 2) Only after save succeeds, promote
+        switchMap(() => this.poTempService.promotePODraft(this.draftId, this.userId))
+      ).subscribe({
+        next: (res) => {
+          const newPoId = res?.data?.id;
+          Swal.fire({ icon: 'success', title: 'Converted', text: 'Draft converted to PO' });
+          this.router.navigate(['/purchase/list-purchaseorder']);
+        },
+        error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to convert draft' })
       });
-      return;
-    }
-
-
-    if (!this.validatePO()) return;
-     const draftPayload = this.buildPayloadForSaveDraft();
-
-       this.poTempService.updatePODraft(this.draftId, draftPayload).pipe(
-      // 2) Only after save succeeds, promote
-      switchMap(() => this.poTempService.promotePODraft(this.draftId, this.userId))
-    ).subscribe({
-      next: (res) => {
-        const newPoId = res?.data?.id;
-        Swal.fire({ icon: 'success', title: 'Converted', text: 'Draft converted to PO' });
-        this.router.navigate(['/purchase/list-purchaseorder']);
-      },
-      error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to convert draft' })
-    });
       return;
     }
 
@@ -1061,7 +1104,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       discount: this.poHdr.discount || 0,
       subTotal: Number(this.poTotals.subTotal.toFixed(2)),
       netTotal: Number(this.poTotals.netTotal.toFixed(2)),
-      approvalStatus:this.poHdr.approvalStatus === '' || this.poHdr.approvalStatus == null ? 0: this.poHdr.approvalStatus,
+      approvalStatus: this.poHdr.approvalStatus === '' || this.poHdr.approvalStatus == null ? 0 : this.poHdr.approvalStatus,
       poLines: JSON.stringify(this.poLines || [])
     };
   }
