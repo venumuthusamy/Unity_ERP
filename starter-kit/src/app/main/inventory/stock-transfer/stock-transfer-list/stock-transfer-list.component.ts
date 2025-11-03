@@ -77,6 +77,7 @@ interface UiRow extends ApiRow {
   isTransferedBool: boolean;
   isApprovedBool: boolean;
   transferStatus: TransferStatus;
+   isPartialTransferBool?: boolean;
 }
 
 @Component({
@@ -145,29 +146,42 @@ export class StockTransferListComponent
     return v === true || v === 'true' || v === 'Y' || v === 1 || v === '1';
   }
 
-  private computeStatus(isTransfered: boolean, isApproved: boolean): TransferStatus {
-    if (!isTransfered) return 'Draft';
-    return isApproved ? 'Transferred' : 'Pending';
-  }
+private computeStatus(
+  isTransfered: boolean,
+  isApproved: boolean,
+  isPartialTransfer: boolean
+): TransferStatus {
+  // 🔹 Priority: if partial transfer → Transferred
+  if (isPartialTransfer) return 'Transferred';
 
-  private toUiRow(api: ApiRow): UiRow {
-    const isTransferedBool = this.normalizeBool(api.isTransfered);
-    const isApprovedBool   = this.normalizeBool(api.isApproved);
+  // 🔹 Next: if not yet transferred → Draft
+  if (!isTransfered) return 'Draft';
 
-    const stockIdNum     = this.toNum((api as any).stockId ?? (api as any).StockId);
-    const itemIdNum      = this.toNum((api as any).itemId  ?? (api as any).ItemId  ?? (api as any).id);
-    const warehouseIdNum = this.toNum((api as any).warehouseId ?? (api as any).WarehouseId);
+  // 🔹 Otherwise: approved or pending
+  return isApproved ? 'Transferred' : 'Pending';
+}
 
-    return {
-      ...api,
-      stockIdNum,
-      itemIdNum,
-      warehouseIdNum,
-      isTransferedBool,
-      isApprovedBool,
-      transferStatus: this.computeStatus(isTransferedBool, isApprovedBool)
-    };
-  }
+
+private toUiRow(api: ApiRow): UiRow {
+  const isTransferedBool = this.normalizeBool(api.isTransfered);
+  const isApprovedBool   = this.normalizeBool(api.isApproved);
+  const isPartialTransferBool = this.normalizeBool((api as any).isPartialTransfer);
+
+  const stockIdNum     = this.toNum((api as any).stockId ?? (api as any).StockId);
+  const itemIdNum      = this.toNum((api as any).itemId  ?? (api as any).ItemId  ?? (api as any).id);
+  const warehouseIdNum = this.toNum((api as any).warehouseId ?? (api as any).WarehouseId);
+
+  return {
+    ...api,
+    stockIdNum,
+    itemIdNum,
+    warehouseIdNum,
+    isTransferedBool,
+    isApprovedBool,
+    isPartialTransferBool,
+    transferStatus: this.computeStatus(isTransferedBool, isApprovedBool, isPartialTransferBool)
+  };
+}
 
   // ------------ Data load ------------
 

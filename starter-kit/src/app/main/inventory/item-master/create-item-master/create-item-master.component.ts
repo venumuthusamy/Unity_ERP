@@ -31,12 +31,13 @@ type SimpleItem = {
 
 type PriceRow = {
   price: number | null;
-  qty: number | null;            // <-- NEW
+  qty: number | null;
   barcode: string | null;
   SupplierId: number | string | null;
   supplierName?: string | null;
   supplierSearch?: string | null;
-  warehouseId?: number | string | null;  
+  warehouseId?: number | string | null;
+  isTransfered: boolean; // <-- correct, lowercase i
 };
 
 interface Warehouse { id: number | string; name: string; }
@@ -79,10 +80,10 @@ interface ItemStockRow {
   stockIssueID: number;
   isFullTransfer: boolean;
   isPartialTransfer: boolean;
+  approvedBy:number;
 }
 
 /* ----------------- BOM contracts ----------------- */
-// If your API already returns { latest, history }, these are used:
 export interface BomLatestRow {
   supplierId: number;
   supplierName: string;
@@ -102,8 +103,6 @@ export interface BomSnapshot {
   latest: BomLatestRow[];
   history: BomHistoryPoint[];
 }
-
-// If your API returns a flat ItemBom[] from the DB (like your screenshot)
 export interface ItemBomRow {
   id: number;
   itemId: number;
@@ -115,7 +114,6 @@ export interface ItemBomRow {
   updatedBy?: number;
   updatedDate?: string;
 }
-
 interface BomInlineRow {
   supplierId: number | string | null;
   supplierName: string | null;
@@ -199,10 +197,6 @@ export class CreateItemMasterComponent implements OnInit {
   bomRows: BomInlineRow[] = [];
   bomTotals: BomTotals = { rollup: 0, count: 0 };
 
-  /**
-   * Map used by the UI helper to show “last 3” chips.
-   * Key = supplierId, Value = array of history points (unsorted).
-   */
   bomHistoryBySupplier = new Map<number, BomHistoryPoint[]>();
 
   brand = '#2E5F73';
@@ -281,13 +275,10 @@ export class CreateItemMasterComponent implements OnInit {
 
   /* Edit loader */
   private loadForEdit(id: number): void {
-    debugger
     forkJoin({
       header: this.itemsSvc.getItemMasterById(id),
       stocks: this.itemsSvc.getWarehouseStock(id),
       prices: this.itemsSvc.getSupplierPrices(id),
-   
-      
     } as { header: Observable<any>; stocks: Observable<any>; prices: Observable<any>; })
     .subscribe({
       next: ({ header, stocks, prices }) => {
@@ -332,14 +323,16 @@ export class CreateItemMasterComponent implements OnInit {
           isApproved: !!r.isApproved,
           isTransfered: !!r.isTransfered,
           stockIssueID: r.stockIssueID ?? 0,
-          isFullTransfer:r.isFullTransfer,
-          isPartialTransfer:r.isPartialTransfer
+          isFullTransfer: !!r.isFullTransfer,
+          isPartialTransfer: !!r.isPartialTransfer,
+         approvedBy: Number(r.approvedBy ?? 0)
+
         }));
 
         const priceArr: any[] = Array.isArray(prices)
           ? prices
           : (prices && 'data' in prices ? (prices as any).data : []) || [];
-   console.log(this.prices);
+
         this.prices = priceArr.map((p: any) => ({
           price: p.price ?? null,
           qty: (p.qty != null ? Number(p.qty)
@@ -347,8 +340,9 @@ export class CreateItemMasterComponent implements OnInit {
           barcode: p.barcode ?? null,
           SupplierId: p.supplierId ?? p.SupplierId ?? null,
           supplierName: p.supplierName ?? p.name ?? null,
-          supplierSearch: p.supplierName ?? p.name ?? '',
+          supplierSearch: (p.supplierName ?? p.name ?? '') as string,
           warehouseId: p.warehouseId ?? p.WarehouseId ?? null,
+          isTransfered: !!(p.isTransfered ?? p.IsTransfered ?? false) // <-- normalized
         }));
 
         this.modalLine.itemSearch = this.item.name || '';
@@ -389,8 +383,10 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
       stockIssueID: r.stockIssueID ?? 0,
-      isFullTransfer:r.isFullTransfer,
-      isPartialTransfer:r.isPartialTransfer
+      isFullTransfer: !!r.isFullTransfer,
+      isPartialTransfer: !!r.isPartialTransfer,
+      approvedBy: Number(r.approvedBy ?? 0)
+
     }));
 
     const bomPayload = (this.bomRows || []).map(r => ({
@@ -400,15 +396,15 @@ export class CreateItemMasterComponent implements OnInit {
       unitCost: Number(((r.unitCost ?? r.existingCost) || 0))
     }));
 
-    // normalize prices, include qty as number
     const pricesPayload = (this.prices ?? [])
       .filter(p => p.price != null && p.SupplierId != null)
       .map(p => ({
         supplierId: p.SupplierId,
-        warehouseId: p.warehouseId, 
+        warehouseId: p.warehouseId,
         price: Number(p.price),
         qty: p.qty == null || p.qty === ('' as any) ? 0 : Number(p.qty),
-        barcode: p.barcode ?? null
+        barcode: p.barcode ?? null,
+        isTransfered: !!p.isTransfered
       }));
 
     const payload: any = {
@@ -431,8 +427,7 @@ export class CreateItemMasterComponent implements OnInit {
           confirmButtonColor: '#0e3a4c'
         });
 
-        if (creating) { this.onGoToItemList();
-          this.onGoToItemList(); return; }
+        if (creating) { this.onGoToItemList(); return; }
         this.loadItems();
         if (this.item?.id) this.loadBomSnapshotOrFallback();
       } else {
@@ -501,8 +496,10 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!r.isApproved,
       isTransfered: !!r.isTransfered,
       stockIssueID: r.stockIssueID ?? 0,
-      isFullTransfer:r.isFullTransfer,
-      isPartialTransfer:r.isPartialTransfer
+      isFullTransfer: !!r.isFullTransfer,
+      isPartialTransfer: !!r.isPartialTransfer,
+      approvedBy: Number(r.approvedBy ?? 0)
+
     };
     this.getBinsForWarehouse(this.whDraft.warehouseId);
     this.showWhModal = true;
@@ -539,8 +536,10 @@ export class CreateItemMasterComponent implements OnInit {
       isApproved: !!this.whDraft.isApproved,
       isTransfered: !!this.whDraft.isTransfered,
       stockIssueID: this.whDraft.stockIssueID ?? 0,
-      isFullTransfer:this.whDraft.isFullTransfer,
-      isPartialTransfer:this.whDraft.isPartialTransfer
+      isFullTransfer: !!this.whDraft.isFullTransfer,
+      isPartialTransfer: !!this.whDraft.isPartialTransfer,
+      approvedBy: this.whDraft.approvedBy ?? 0
+
     };
 
     if (this.isEditMode && this.editingIndex > -1) {
@@ -566,6 +565,7 @@ export class CreateItemMasterComponent implements OnInit {
       else this.whDraft = this.makeEmptyStockDraft();
     }
   }
+  
   removeWarehouseRow(i: number): void {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
   }
@@ -653,7 +653,16 @@ export class CreateItemMasterComponent implements OnInit {
   addPriceLine(): void {
     this.prices = [
       ...this.prices,
-      { price: null, qty: null, barcode: null, SupplierId: null, supplierName: null, supplierSearch: '' , warehouseId: null   }
+      {
+        price: null,
+        qty: null,
+        barcode: null,
+        SupplierId: null,
+        supplierName: null,
+        supplierSearch: '',
+        warehouseId: null,
+        isTransfered: false // <-- correct property
+      }
     ];
     this.activePriceIndex = null;
     this.filteredSuppliers = [];
@@ -777,7 +786,8 @@ export class CreateItemMasterComponent implements OnInit {
       isTransfered: false,
       stockIssueID: 0,
       isFullTransfer:false,
-      isPartialTransfer:false
+      isPartialTransfer:false,
+      approvedBy:0
     };
   }
   recalcDraft(): void {
@@ -923,99 +933,85 @@ export class CreateItemMasterComponent implements OnInit {
 
   /* ----------------- BOM logic ----------------- */
 
-  /** First try backend; if absent, build BOM from supplier prices */
   private loadBomSnapshotOrFallback(): void {
     const id = Number(this.item?.id || 0);
     if (!this.isEdit || !id) { this.syncBomFromPrices(); return; }
     this.loadBomSnapshot(id, true);
   }
 
-  /** Normalize any API response into { latest, history } */
-private normalizeSnapshot(payload: any): BomSnapshot {
-  const root = payload?.data ?? payload ?? {};
-  const latest = Array.isArray(root.latest) ? root.latest : [];
-  const history = Array.isArray(root.history) ? root.history : [];
-  return { latest, history } as BomSnapshot;
-}
+  private normalizeSnapshot(payload: any): BomSnapshot {
+    const root = payload?.data ?? payload ?? {};
+    const latest = Array.isArray(root.latest) ? root.latest : [];
+    const history = Array.isArray(root.history) ? root.history : [];
+    return { latest, history } as BomSnapshot;
+  }
 
-/** If the flat endpoint returns an envelope, unwrap it; else return array */
-private normalizeFlat(payload: any): ItemBomRow[] | BomSnapshot {
-  const root = payload?.data ?? payload ?? [];
-  return root;
-}
+  private normalizeFlat(payload: any): ItemBomRow[] | BomSnapshot {
+    const root = payload?.data ?? payload ?? [];
+    return root;
+  }
 
-  /**
-   * Calls API and **normalizes** to a snapshot.
-   * Supports:
-   *  - `getBom(itemId)` → `ItemBomRow[]`
-   *  - or `getBomSnapshot(itemId)` → `{ latest, history }`
-   */
-private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
-  const apiSnap$ = (this.itemsSvc as any).getBomSnapshot?.(itemId) as Observable<any> | undefined;
-  const apiFlat$ = this.itemsSvc.getBom(itemId) as Observable<any>;
+  private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
+    const apiSnap$ = (this.itemsSvc as any).getBomSnapshot?.(itemId) as Observable<any> | undefined;
+    const apiFlat$ = this.itemsSvc.getBom(itemId) as Observable<any>;
 
-  const useFlat = () => apiFlat$.subscribe({
-    next: (raw: any) => {
-      const normalized = this.normalizeFlat(raw);
-      if (Array.isArray(normalized)) {
-        this.populateHistoryFromFlatRows(normalized);
-        this.deriveLatestFromFlatRows(normalized);
-      } else {
-        this.populateFromSnapshot(this.normalizeSnapshot(normalized));
-      }
-    },
-    error: () => { if (fallbackToPrices) this.syncBomFromPrices(); }
-  });
-
-  if (apiSnap$) {
-    apiSnap$.subscribe({
-      next: (snap: any) => this.populateFromSnapshot(this.normalizeSnapshot(snap)),
-      error: () => useFlat()
+    const useFlat = () => apiFlat$.subscribe({
+      next: (raw: any) => {
+        const normalized = this.normalizeFlat(raw);
+        if (Array.isArray(normalized)) {
+          this.populateHistoryFromFlatRows(normalized);
+          this.deriveLatestFromFlatRows(normalized);
+        } else {
+          this.populateFromSnapshot(this.normalizeSnapshot(normalized));
+        }
+      },
+      error: () => { if (fallbackToPrices) this.syncBomFromPrices(); }
     });
-  } else {
-    useFlat();
-  }
-}
 
-
- private populateFromSnapshot(snap: BomSnapshot) {
-  const latest = Array.isArray(snap?.latest) ? snap.latest : [];
-  const history = Array.isArray(snap?.history) ? snap.history : [];
-
-  // history → map
-  this.bomHistoryBySupplier.clear();
-  for (const h of history) {
-    const sid = Number((h as any).supplierId ?? 0);
-    if (!sid) continue;
-    const point: BomHistoryPoint = {
-      supplierId: sid,
-      supplierName: (h as any).supplierName ?? '',
-      existingCost: Number((h as any).existingCost ?? 0),
-      unitCost: Number((h as any).unitCost ?? (h as any).existingCost ?? 0),
-      createdDate: (h as any).createdDate,
-      rn: (h as any).rn
-    };
-    const arr = this.bomHistoryBySupplier.get(sid) ?? [];
-    arr.push(point);
-    this.bomHistoryBySupplier.set(sid, arr);
+    if (apiSnap$) {
+      apiSnap$.subscribe({
+        next: (snap: any) => this.populateFromSnapshot(this.normalizeSnapshot(snap)),
+        error: () => useFlat()
+      });
+    } else {
+      useFlat();
+    }
   }
 
-  // latest → grid rows
-  if (latest.length) {
-    this.bomRows = latest.map((r: any) => ({
-      supplierId: Number(r.supplierId ?? 0) || null,
-      supplierName: r.supplierName || '—',
-      existingCost: Number(r.existingCost ?? 0),
-      unitCost: Number(r.unitCost ?? r.existingCost ?? 0)
-    }));
-    this.recomputeBomTotalsInline();
-  } else {
-    this.syncBomFromPrices();
+  private populateFromSnapshot(snap: BomSnapshot) {
+    const latest = Array.isArray(snap?.latest) ? snap.latest : [];
+    const history = Array.isArray(snap?.history) ? snap.history : [];
+
+    this.bomHistoryBySupplier.clear();
+    for (const h of history) {
+      const sid = Number((h as any).supplierId ?? 0);
+      if (!sid) continue;
+      const point: BomHistoryPoint = {
+        supplierId: sid,
+        supplierName: (h as any).supplierName ?? '',
+        existingCost: Number((h as any).existingCost ?? 0),
+        unitCost: Number((h as any).unitCost ?? (h as any).existingCost ?? 0),
+        createdDate: (h as any).createdDate,
+        rn: (h as any).rn
+      };
+      const arr = this.bomHistoryBySupplier.get(sid) ?? [];
+      arr.push(point);
+      this.bomHistoryBySupplier.set(sid, arr);
+    }
+
+    if (latest.length) {
+      this.bomRows = latest.map((r: any) => ({
+        supplierId: Number(r.supplierId ?? 0) || null,
+        supplierName: r.supplierName || '—',
+        existingCost: Number(r.existingCost ?? 0),
+        unitCost: Number(r.unitCost ?? r.existingCost ?? 0)
+      }));
+      this.recomputeBomTotalsInline();
+    } else {
+      this.syncBomFromPrices();
+    }
   }
-}
 
-
-  /** Fill history map from flat ItemBom rows (DB table) */
   private populateHistoryFromFlatRows(rows: ItemBomRow[]) {
     this.bomHistoryBySupplier.clear();
     const toPoint = (r: ItemBomRow): BomHistoryPoint => ({
@@ -1035,7 +1031,6 @@ private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
     }
   }
 
-  /** Derive one “latest” line per supplier for the grid from flat rows */
   private deriveLatestFromFlatRows(rows: ItemBomRow[]) {
     const bySup = new Map<number, ItemBomRow>();
     for (const r of rows) {
@@ -1053,7 +1048,6 @@ private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
     this.recomputeBomTotalsInline();
   }
 
-  /* Build from Supplier Prices if no backend history */
   syncBomFromPrices(opts: { preserveUnitCost?: boolean } = { preserveUnitCost: true }): void {
     const preserve = opts.preserveUnitCost !== false;
     const norm = (s: any) => String(s ?? '').trim().toLowerCase();
@@ -1139,54 +1133,52 @@ private loadBomSnapshot(itemId: number, fallbackToPrices = false): void {
   }
 
   getLast3CostsForSupplier(supplierId: number | string | null): Array<{ value: number; when: Date }> {
-  const sid = Number(supplierId ?? 0);
-  if (!sid) return [];
-  const hist = this.bomHistoryBySupplier.get(sid) ?? [];
-  if (!hist.length) return [];
-  const sorted = [...hist].sort(
-    (a,b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
-  );
-  const seen = new Set<string>();
-  const out: Array<{ value: number; when: Date }> = [];
-  for (const h of sorted) {
-    const val = Number((h.unitCost ?? h.existingCost) ?? 0);
-    const key = val.toFixed(4);
-    if (!seen.has(key)) {
-      out.push({ value: val, when: new Date(h.createdDate) });
-      seen.add(key);
+    const sid = Number(supplierId ?? 0);
+    if (!sid) return [];
+    const hist = this.bomHistoryBySupplier.get(sid) ?? [];
+    if (!hist.length) return [];
+    const sorted = [...hist].sort(
+      (a,b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+    );
+    const seen = new Set<string>();
+    const out: Array<{ value: number; when: Date }> = [];
+    for (const h of sorted) {
+      const val = Number((h.unitCost ?? h.existingCost) ?? 0);
+      const key = val.toFixed(4);
+      if (!seen.has(key)) {
+        out.push({ value: val, when: new Date(h.createdDate) });
+        seen.add(key);
+      }
+      if (out.length >= 3) break;
     }
-    if (out.length >= 3) break;
+    return out;
   }
-  return out;
-}
-isCurrentCost(curr: number | null | undefined, val: number | null | undefined): boolean {
-  const a = Number(curr ?? 0);
-  const b = Number(val ?? 0);
-  return a.toFixed(4) === b.toFixed(4);
-}
+  isCurrentCost(curr: number | null | undefined, val: number | null | undefined): boolean {
+    const a = Number(curr ?? 0);
+    const b = Number(val ?? 0);
+    return a.toFixed(4) === b.toFixed(4);
+  }
 
-deltaVsPrev(supplierId: number | string | null, current: number | null | undefined) {
-  const arr = this.getLast3CostsForSupplier(supplierId) || [];
-  const prev = arr.length > 1 ? Number(arr[1].value ?? 0) : Number(arr[0]?.value ?? 0);
-  const curr = Number(current ?? 0);
-  const abs  = curr - prev;
-  const pct  = prev !== 0 ? (abs / prev) * 100 : 0;
-  const dir  = abs > 0 ? 'up' : abs < 0 ? 'down' : 'flat';
-  return {
-    abs: Math.abs(abs),
-    pct: Math.abs(pct),
-    dir,
-    tooltip: dir === 'flat' ? 'No change vs previous' :
-             dir === 'up'   ? 'Increased vs previous' :
-                              'Decreased vs previous'
-  };
-}
+  deltaVsPrev(supplierId: number | string | null, current: number | null | undefined) {
+    const arr = this.getLast3CostsForSupplier(supplierId) || [];
+    const prev = arr.length > 1 ? Number(arr[1].value ?? 0) : Number(arr[0]?.value ?? 0);
+    const curr = Number(current ?? 0);
+    const abs  = curr - prev;
+    const pct  = prev !== 0 ? (abs / prev) * 100 : 0;
+    const dir  = abs > 0 ? 'up' : abs < 0 ? 'down' : 'flat';
+    return {
+      abs: Math.abs(abs),
+      pct: Math.abs(pct),
+      dir,
+      tooltip: dir === 'flat' ? 'No change vs previous' :
+               dir === 'up'   ? 'Increased vs previous' :
+                                'Decreased vs previous'
+    };
+  }
 
-deltaColorStyle(delta: {dir:'up'|'down'|'flat'}): any {
-  if (delta.dir === 'up')   return {'border-color':'#fecaca','background':'#fff1f2','color':'#991b1b'};
-  if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
-  return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
-}
-
-
+  deltaColorStyle(delta: {dir:'up'|'down'|'flat'}): any {
+    if (delta.dir === 'up')   return {'border-color':'#fecaca','background':'#fff1f2','color':'#991b1b'};
+    if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
+    return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
+  }
 }

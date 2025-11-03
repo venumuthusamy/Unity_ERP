@@ -111,37 +111,36 @@
     </button>
   </div>
 
-  <div class="modal-body">
-    <div class="table-responsive border rounded">
-      <table class="table table-sm mb-0">
-        <thead class="bg-light">
-          <tr>
-            <th style="background-color:#2E5F73;color:white;">Warehouse</th>
-            <th style="background-color:#2E5F73;color:white;">Bin / Location</th>
-            <th style="background-color:#2E5F73;color:white;" class="text-right">On Hand</th>
-            <th style="background-color:#2E5F73;color:white;" class="text-right">Reserved</th>
-            <th style="background-color:#2E5F73;color:white;" class="text-right">Available</th>
-            <th style="background-color:#2E5F73;color:white;" class="text-right">Min</th>
-            <th style="background-color:#2E5F73;color:white;" class="text-right">Max</th>
-            <th style="background-color:#2E5F73;color:white;">Expiry</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let l of selectedItem?.locations; let i = index"
-              [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'">
-            <td>{{ l.warehouseName || '-' }}</td>
-            <td>{{ l.binName || '-' }}</td>
-            <td class="text-right">{{ l.onHand ?? 0 }}</td>
-            <td class="text-right">{{ l.reserved ?? 0 }}</td>
-            <td class="text-right">{{ l.available ?? 0 }}</td>
-            <td class="text-right">{{ l.minQty ?? 0 }}</td>
-            <td class="text-right">{{ l.maxQty ?? 0 }}</td>
-            <td>{{ l.expiryDate ? (l.expiryDate | date:'yyyy-MM-dd') : '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+ <div class="modal-body">
+  <div class="table-responsive border rounded">
+    <table class="table table-sm mb-0">
+      <thead class="bg-light">
+        <tr>
+          <th style="background-color:#2E5F73;color:white;">Warehouse</th>
+          <th style="background-color:#2E5F73;color:white;">Bin / Location</th>
+          <th style="background-color:#2E5F73;color:white;">Supplier</th>
+          <th style="background-color:#2E5F73;color:white;" class="text-right">On Hand</th>
+          <th style="background-color:#2E5F73;color:white;" class="text-right">Reserved</th>
+          <th style="background-color:#2E5F73;color:white;" class="text-right">Available</th>
+          <th style="background-color:#2E5F73;color:white;">Expiry</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of selectedItem?.locations; let i = index"
+            [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'">
+          <td>{{ l.warehouseName || '-' }}</td>
+          <td>{{ l.binName || '-' }}</td>
+          <td>{{ l.supplierName || '-' }}</td>
+          <td class="text-right">{{ l.onHand ?? 0 }}</td>
+        <td class="text-right">{{ l.reserved ?? '' }}</td>
+          <td class="text-right">{{ l.available ?? 0 }}</td>
+          <td>{{ l.expiryDate ? (l.expiryDate | date:'yyyy-MM-dd') : '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
+</div>
+
 
   <div class="modal-footer">
     <button (click)="close('ok')"

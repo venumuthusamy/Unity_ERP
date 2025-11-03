@@ -2,11 +2,10 @@
   <!-- Header -->
   <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
     <h4 class="card-title mb-0" style="color:#2E5F73">Stock Transfer</h4>
-    <span
-      class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
-      [ngClass]="badgeToneClasses('blue')"
-      >Flow: Draft → Approve → Post</span
-    >
+    <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border"
+          [ngClass]="badgeToneClasses('blue')">
+      Flow: Draft → Approve → Post
+    </span>
   </div>
 
   <!-- Body -->
@@ -17,21 +16,18 @@
         <thead>
           <tr>
             <!-- Select All -->
-            <th style="width:44px; background-color:#2E5F73;color:white;" class="text-center">
-              <input
-                type="checkbox"
-                [checked]="allVisibleChecked"
-                (change)="toggleSelectAll($event)"
-              />
+            <th style="width:44px;background:#2E5F73;color:#fff" class="text-center">
+              <input type="checkbox" [checked]="allVisibleChecked" (change)="toggleSelectAll($event)"/>
             </th>
 
-            <th style="background-color:#2E5F73;color:white;">Warehouse</th>
-            <th style="background-color:#2E5F73;color:white;">Item</th>
-            <th style="background-color:#2E5F73;color:white;">SKU</th>
-            <th style="background-color:#2E5F73;color:white;">Bin</th>
-            <th style="background-color:#2E5F73;color:white;">Qty</th>
-            <th style="background-color:#2E5F73;color:white;">Transfer Qty</th>
-            <th style="background-color:#2E5F73;color:white;">Expiry</th>
+            <th style="background:#2E5F73;color:#fff;">WAREHOUSE</th>
+            <th style="background:#2E5F73;color:#fff;">SUPPLIER</th>
+            <th style="background:#2E5F73;color:#fff;">ITEM</th>
+            <th style="background:#2E5F73;color:#fff;">SKU</th>
+            <th style="background:#2E5F73;color:#fff;">BIN</th>
+            <th style="background:#2E5F73;color:#fff;">QTY</th>
+            <th style="background:#2E5F73;color:#fff;">TRANSFER QTY</th>
+            <th style="background:#2E5F73;color:#fff;">EXPIRY</th>
           </tr>
         </thead>
 
@@ -39,41 +35,42 @@
           <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
             <!-- Row checkbox -->
             <td class="text-center">
-              <input
-                type="checkbox"
-                [ngModel]="r._sel"
-                (ngModelChange)="onToggleRow($event, r)"
-                [disabled]="isRowDisabled(r) || !r._qtyValid"
-              />
+              <input type="checkbox"
+                     [ngModel]="r._sel"
+                     (ngModelChange)="onToggleRow($event, r)"
+                     [disabled]="isRowDisabled(r) || !r._qtyValid"/>
             </td>
 
             <td>{{ r.warehouse }}</td>
+            <td>{{ r.supplierName || '-' }}</td>
             <td>{{ r.item }}</td>
             <td>{{ r.sku }}</td>
             <td>{{ r.bin }}</td>
             <td>{{ r.available }}</td>
 
             <!-- Transferred Qty input with inline validation -->
-            <td style="min-width:140px;">
-            <input
-  type="number"
-  class="form-control form-control-sm rounded-12"
-  [ngModel]="r.transferQty"
-  (ngModelChange)="onQtyChange(r, $event)"
-  (keydown)="digitsOnly($event)"
-  [min]="0"
-  [max]="(r.available ?? 0)"   
-  [readonly]="isRowDisabled(r)"
-  placeholder="0"
-/>
+            <td style="min-width:160px;">
+              <input type="number"
+                     class="form-control form-control-sm rounded-12"
+                     [ngModel]="r.transferQty"
+                     (ngModelChange)="onQtyChange(r, $event)"
+                     (keydown)="digitsOnly($event)"
+                     [min]="0"
+                    
+                     placeholder="0"/>
 
-<small *ngIf="r._qtyErr === 'exceeds'" class="text-danger">
-  Must be ≤ available ({{ r.available ?? 0 }})
-</small>
+              <!-- per-row & group messages -->
+              <small *ngIf="r._qtyErr === 'exceeds'" class="text-danger d-block">
+                Cannot exceed group remaining: {{ groupRemainingForRow(r) }}
+              </small>
+              <small *ngIf="r._qtyErr === 'decimal'" class="text-danger d-block">Whole numbers only.</small>
+              <small *ngIf="r._qtyErr === 'negative'" class="text-danger d-block">Cannot be negative.</small>
+          
 
+            
             </td>
 
-            <td>{{ r.expiry ? (r.expiry | date: 'yyyy-MM-dd') : '-' }}</td>
+            <td>{{ r.expiry ? (r.expiry | date:'yyyy-MM-dd') : '-' }}</td>
           </tr>
 
           <tr *ngIf="!filteredRows?.length">
@@ -92,30 +89,26 @@
         <small *ngIf="hasInvalidSelected()" class="text-danger mb-2">
           Fix transfer quantities for selected rows before submitting.
         </small>
-<button
-  type="button"
-  class="btn btn-brand rounded-12 btn-eq d-inline-flex align-items-center gap-2"
-  style="background:#2E5F73;color:#fff"
-  [disabled]="selectedCount === 0 || !sameWarehouseSelected || hasInvalidSelected()"
-  (click)="openSubmitModal(submitModal)"
->
-  <!-- v5: fas fa-paper-plane | v6: fa-solid fa-paper-plane -->
-  <i class="fas fa-paper-plane" aria-hidden="true"></i>
-  <span>Submit for approval</span>
-  <span class="count-pill" *ngIf="selectedCount"> ({{ selectedCount }}) </span>
-</button>
 
+        <button type="button"
+                class="btn btn-brand rounded-12 btn-eq d-inline-flex align-items-center gap-2"
+                style="background:#2E5F73;color:#fff"
+                [disabled]="selectedCount === 0 || !sameWarehouseSelected || hasInvalidSelected()"
+                (click)="openSubmitModal(submitModal)">
+          <i class="fas fa-paper-plane" aria-hidden="true"></i>
+          <span>Submit for approval</span>
+          <span class="count-pill" *ngIf="selectedCount"> ({{ selectedCount }}) </span>
+        </button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Submit Modal -->
 <ng-template #submitModal let-close="close" let-dismiss="dismiss">
   <div class="modal-content uxv2 rounded-4">
-    <!-- Ribbon -->
     <div class="uxv2__ribbon"></div>
 
-    <!-- Header -->
     <div class="modal-header uxv2__header">
       <div class="d-flex align-items-center gap-2">
         <i class="me-1" style="font-size:18px; color:#2E5F73" class="fas fa-paper-plane"></i>
@@ -124,10 +117,8 @@
       <button type="button" class="btn-close" aria-label="Close" (click)="dismiss('x')"></button>
     </div>
 
-    <!-- Body -->
     <div class="modal-body uxv2__body">
       <div class="row g-4">
-        <!-- From -->
         <div class="col-12 col-md-6">
           <label class="uxv2__label">FROM WAREHOUSE <span class="text-danger">*</span></label>
           <div class="uxv2__chip" [class.is-invalid]="modalTouched && !modal.fromWarehouseId">
@@ -137,53 +128,59 @@
           <small *ngIf="modalTouched && !modal.fromWarehouseId" class="text-danger d-block mt-1">Required</small>
         </div>
 
-        <!-- To -->
         <div class="col-12 col-md-6">
           <label class="uxv2__label">TO WAREHOUSE <span class="text-danger">*</span></label>
-          <ng-select
-            class="uxv2__select"
-            [items]="toWarehouseList"
-            bindLabel="name"
-            bindValue="id"
-            placeholder="Select warehouse"
-            [(ngModel)]="modal.toWarehouseId"
-            [ngClass]="{'is-invalid': modalTouched && (!modal.toWarehouseId || sameWarehouse())}">
+          <ng-select class="uxv2__select"
+                     [items]="toWarehouseList"
+                     bindLabel="name"
+                     bindValue="id"
+                     placeholder="Select warehouse"
+                     [(ngModel)]="modal.toWarehouseId"
+                     (change)="onToWarehouseChange(modal.toWarehouseId)"
+                     [ngClass]="{'is-invalid': modalTouched && (!modal.toWarehouseId || sameWarehouse())}">
           </ng-select>
           <small *ngIf="modalTouched && !modal.toWarehouseId" class="text-danger d-block mt-1">Required</small>
           <small *ngIf="modalTouched && sameWarehouse()" class="text-danger d-block mt-1">From/To cannot be the same</small>
         </div>
 
-        <!-- Remarks -->
-        <div class="col-12">
+        <div class="col-12 col-md-6">
+          <label class="uxv2__label">TO BIN LOCATION <span class="text-danger">*</span></label>
+          <ng-select class="uxv2__select"
+                     [items]="toBinList"
+                     bindLabel="binName"
+                     bindValue="id"
+                     placeholder="Select bin"
+                     [(ngModel)]="modal.toBinId"
+                     [disabled]="!modal.toWarehouseId || toBinLoading"
+                     [loading]="toBinLoading"
+                     [notFoundText]="modal.toWarehouseId ? 'No bins found' : 'Select a warehouse first'"
+                     [ngClass]="{'is-invalid': modalTouched && !modal.toBinId}">
+            <ng-template ng-option-tmp let-item="item">
+              <div class="d-flex justify-content-between">
+                <span class="text-truncate">{{ item.binName }}</span>
+                <small class="text-muted ms-2">#{{ item.code || item.id }}</small>
+              </div>
+            </ng-template>
+          </ng-select>
+          <small *ngIf="modalTouched && !modal.toBinId" class="text-danger d-block mt-1">Required</small>
+        </div>
+
+        <div class="col-12 col-md-6">
           <label class="uxv2__label">REMARKS</label>
-          <textarea
-            rows="3"
-            class="form-control uxv2__textarea"
-            [(ngModel)]="modal.remarks"
-            placeholder="Optional notes"></textarea>
+          <textarea rows="3" class="form-control uxv2__textarea"
+                    [(ngModel)]="modal.remarks" placeholder="Optional notes"></textarea>
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
-<div class="modal-footer uxv2__footer">
-  <button
-    class="btn btn-cancel btn-pill d-inline-flex align-items-center"
-    (click)="dismiss('cancel')">
-    <i class="fa-solid fa-circle-xmark me-2" aria-hidden="true"></i>
-    <span>Cancel</span>
-  </button>
+    <div class="modal-footer uxv2__footer">
+      <button class="btn btn-cancel btn-pill d-inline-flex align-items-center" (click)="dismiss('cancel')">
+        <i class="fa-solid fa-circle-xmark me-2" aria-hidden="true"></i><span>Cancel</span>
+      </button>
 
-  <button
-    class="btn btn-submit btn-pill d-inline-flex align-items-center"
-    (click)="submitFromModal(close)">
-    <i class="fa-solid fa-paper-plane me-2" aria-hidden="true"></i>
-    <span>Submit</span>
-  </button>
-</div>
-
-
+      <button class="btn btn-submit btn-pill d-inline-flex align-items-center" (click)="submitFromModal(close)">
+        <i class="fa-solid fa-paper-plane me-2" aria-hidden="true"></i><span>Submit</span>
+      </button>
+    </div>
   </div>
 </ng-template>
-
-

@@ -16,11 +16,12 @@ interface ApiStockRow {
   binId?: number | null;
   binName?: string | null;
 
+  qty?: number;
   onHand?: number;
   reserved?: number;
   available?: number;
-  minQty?: number;
-  maxQty?: number;
+  supplierId?: number;
+  supplierName?: string;
   expiryDate?: string;       // ISO string
 }
 
@@ -30,11 +31,11 @@ interface ItemLocation {
   warehouseName?: string;
   binId?: number | null;
   binName?: string | null;
+  supplierId?: number | null;
+  supplierName?: string | null;
   onHand?: number;
   reserved?: number;
   available?: number;
-  minQty?: number;
-  maxQty?: number;
   expiryDate?: string | null;
 }
 
@@ -90,77 +91,107 @@ export class StackOverviewListComponent implements OnInit {
   /** Stable identity for ngx-datatable */
   rowIdentity = (row: ItemWarehouseRow) => row.gridKey;
 
-  loadMasterItem(): void {
-    this.loading = true;
-    this.errorMsg = null;
+loadMasterItem(): void {
+  this.loading = true;
+  this.errorMsg = null;
 
-    this.stockService.GetAllStockList().subscribe({
-      next: (res: any) => {
-        const raw: ApiStockRow[] = Array.isArray(res?.data) ? res.data : [];
+  this.stockService.GetAllStockList().subscribe({
+    next: (res: any) => {
+      const raw: ApiStockRow[] = Array.isArray(res?.data) ? res.data : [];
 
-        // Group by itemId ONLY (aggregate across all warehouses)
-        const map = new Map<number, ItemWarehouseRow>();
+      // Group by itemId (aggregate across warehouses)
+      const map = new Map<number, ItemWarehouseRow>();
 
-        for (const r of raw) {
-          const itemId = r.id;
+      for (const r of raw) {
+        const itemId = r.id;
 
-          if (!map.has(itemId)) {
-            map.set(itemId, {
-              gridKey: String(itemId),
-              id: itemId,
-              sku: r.sku,
-              name: r.name,
-              category: r.category,
-              uom: r.uom,
+        if (!map.has(itemId)) {
+          map.set(itemId, {
+            gridKey: String(itemId),
+            id: itemId,
+            sku: r.sku,
+            name: r.name,
+            category: r.category,
+            uom: r.uom,
 
-              totalOnHand: 0,
-              totalReserved: 0,
-              totalAvailable: 0,
+            totalOnHand: 0,
+            totalReserved: 0,
+            totalAvailable: 0,
 
-              locations: []
-            });
-          }
-
-          const row = map.get(itemId)!;
-
-          const onHand = r.onHand ?? 0;
-          const reserved = r.reserved ?? 0;
-          const available = r.available ?? (onHand - reserved);
-
-          row.totalOnHand = (row.totalOnHand ?? 0) + onHand;
-          row.totalReserved = (row.totalReserved ?? 0) + reserved;
-          row.totalAvailable = (row.totalAvailable ?? 0) + available;
-
-          // Keep every bin line (for modal)
-          row.locations.push({
-            warehouseId: r.warehouseId,
-            warehouseName: r.warehouseName,
-            binId: r.binId ?? null,
-            binName: r.binName ?? null,
-            onHand,
-            reserved,
-            available,
-            minQty: r.minQty ?? 0,
-            maxQty: r.maxQty ?? 0,
-            expiryDate: r.expiryDate ?? null
+            locations: []
           });
         }
 
-        const list = Array.from(map.values());
+        const row = map.get(itemId)!;
 
-        this.rows = list;
-        this.filteredRows = [...list];
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        this.errorMsg = 'Failed to load stock list.';
-        console.error('Stock list load error', err);
+        // ✅ Always use qty for onHand, and available = qty - reserved
+        const totalQty = Number(r.qty) || 0;
+        const reserved = Number(r.reserved) || 0;
+        const onHand = totalQty;
+        const available = totalQty - reserved;
+
+        // Add to totals (all rows count here)
+        row.totalOnHand += onHand;
+        row.totalReserved += reserved;
+        row.totalAvailable += available;
+
+        row.locations.push({
+          warehouseId: r.warehouseId,
+          warehouseName: r.warehouseName,
+          binId: r.binId ?? null,
+          binName: r.binName ?? null,
+          supplierId: r.supplierId ?? null,
+          supplierName: r.supplierName ?? null,
+          onHand,
+          reserved,
+          available,
+          expiryDate: r.expiryDate ?? null
+        });
       }
-    });
-  }
 
-  /** Search across item fields + any warehouse/bin name via locations */
+      // ✅ Handle reserved display per warehouse (show once)
+      const finalList: ItemWarehouseRow[] = [];
+
+      for (const item of map.values()) {
+        const processed = item.locations.map(l => ({ ...l }));
+
+        const shownWarehouse = new Set<number>();
+
+        for (const loc of processed) {
+          if (loc.warehouseId == null) continue;
+
+          if (shownWarehouse.has(loc.warehouseId)) {
+            // Hide reserved visually (don't affect totals)
+            loc.reserved = null;
+          } else {
+            shownWarehouse.add(loc.warehouseId);
+            // keep the actual reserved value for this warehouse
+          }
+
+          // ✅ Recalculate available (for display) correctly
+          const baseQty = Number(loc.onHand) || 0;
+          const resv = Number(loc.reserved ?? 0);
+          loc.available = baseQty - resv;
+        }
+
+        finalList.push({ ...item, locations: processed });
+      }
+
+      this.rows = finalList;
+      this.filteredRows = [...finalList];
+      this.loading = false;
+    },
+    error: (err) => {
+      this.loading = false;
+      this.errorMsg = 'Failed to load stock list.';
+      console.error('Stock list load error', err);
+    }
+  });
+}
+
+
+
+  /** Search across item fields + any warehouse/bin/supplier name via locations */
   applyFilter(): void {
     const q = (this.searchValue || '').toLowerCase().trim();
     if (!q) {
@@ -180,16 +211,40 @@ export class StackOverviewListComponent implements OnInit {
 
       return r.locations?.some(loc =>
         (loc.warehouseName ?? '').toLowerCase().includes(q) ||
-        (loc.binName ?? '').toLowerCase().includes(q)
+        (loc.binName ?? '').toLowerCase().includes(q) ||
+        (loc.supplierName ?? '').toLowerCase().includes(q)
       );
     });
   }
 
   /** Open modal with ALL warehouses/bins for the item */
-  openViewModal(row: ItemWarehouseRow, tpl: any): void {
-    this.selectedItem = row;
-    this.modal.open(tpl, { centered: true, size: 'xl', backdrop: 'static' });
+openViewModal(row: ItemWarehouseRow, tpl: any): void {
+  if (!row?.locations) return;
+
+  // Make a copy so original data stays clean
+  const processed = [...row.locations.map(l => ({ ...l }))];
+
+  // Track warehouses we already displayed reserved for
+  const shownWarehouse = new Set<number>();
+
+  for (const loc of processed) {
+    if (loc.warehouseId == null) continue;
+
+    // If this warehouse already shown once, hide reserved in subsequent rows
+    if (shownWarehouse.has(loc.warehouseId)) {
+      loc.reserved = null; // hide reserved
+    } else {
+      shownWarehouse.add(loc.warehouseId); // mark as shown
+      // Keep the original reserved value (don't sum)
+    }
   }
+
+  // Assign and open modal
+  this.selectedItem = { ...row, locations: processed };
+  this.modal.open(tpl, { centered: true, size: 'xl', backdrop: 'static' });
+}
+
+
 
   /** Navigate to create page */
   goToCreateItem(): void {

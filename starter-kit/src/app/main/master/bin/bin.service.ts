@@ -32,4 +32,8 @@ export class BinService {
     getByIdBin(id: number): Observable<any> {
       return this.http.get(`${this.url + BinAPIUrls.GetBinById}${id}`);
     }
+
+     GetNameByBinAsync(name: any): Observable<any[]> {
+            return this.http.get<any[]>(this.url + BinAPIUrls.GetNameByBinAsync + name);
+        }
 }

@@ -6,14 +6,12 @@
 
     <div class="d-flex align-items-center flex-wrap gap-2">
       <!-- OPEN EXPORT MODAL -->
-<button type="button"
-        class="btn btn-outline-secondary d-inline-flex align-items-center"
-        (click)="openExportModal(exportModal)">
-  <i class="fa-solid fa-file-export me-2" aria-hidden="true"></i>
-  <span>Export</span>
-</button>
-
-
+      <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center"
+              (click)="openExportModal(exportModal)">
+        <i class="fa-solid fa-file-export me-2" aria-hidden="true"></i>
+        <span>Export</span>
+      </button>
     </div>
   </div>
 
@@ -60,7 +58,7 @@
         <label class="form-label">Search</label>
         <input type="text"
                class="form-control rounded-12"
-               placeholder="Item / SKU / Bin"
+               placeholder="Item / SKU / Bin / Supplier"
                [(ngModel)]="searchText"
                (input)="applyFilters()">
       </div>
@@ -71,61 +69,56 @@
     <div *ngIf="!loading && errorMsg" class="mt-3 text-danger">{{ errorMsg }}</div>
 
     <!-- Table -->
-    <div class="table-responsive mt-4">
-      <table class="table table-bordered mb-0 table-soft">
-        <thead>
-          <tr>
-            <th style="width:44px; text-align:center; background-color:#2E5F73; color:white;">
-              <input type="checkbox"
-                     [checked]="isAllSelected()"
-                     [indeterminate]="isIndeterminate()"
-                     (change)="toggleAll($event)">
-            </th>
-             <th style="background-color:#2E5F73;color:white;">Supplier Name</th>
-            <th style="background-color:#2E5F73;color:white;">Warehouse</th>
-            <th style="background-color:#2E5F73;color:white;">Item</th>
-            <th style="background-color:#2E5F73;color:white;">SKU</th>
-            <th style="background-color:#2E5F73;color:white;">Bin</th>
-            <th style="background-color:#2E5F73;color:white;">On Hand</th>
-            <th style="background-color:#2E5F73;color:white;">Reserved</th>
-            <th style="background-color:#2E5F73;color:white;">Min</th>
-            <th style="background-color:#2E5F73;color:white;">Available</th>
-            <th style="background-color:#2E5F73;color:white;">Expiry</th>
-            <th style="background-color:#2E5F73;color:white; width:120px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
-            <td class="text-center">
-              <input type="checkbox"
-                     [checked]="isSelected(r)"
-                     (change)="toggleRow(r, $event)">
-            </td>
-             <td>{{ r.supplierName }}</td>
-            <td>{{ r.warehouse }}</td>
-            <td>{{ r.item }}</td>
-            <td>{{ r.sku }}</td>
-            <td>{{ r.bin }}</td>
-            <td>{{ r.qty }}</td>
-            <td>{{ r.reserved }}</td>
-            <td>{{ r.min }}</td>
-            <td>{{ r.available }}</td>
-            <td>{{ r.expiry ? (r.expiry | date:'yyyy-MM-dd') : '-' }}</td>
-            <td class="text-center">
-              <button type="button"
-                      class="btn btn-sm"
-                      (click)="openAdjustModal(modalDefault, r)"
-                      style="border:1px solid #2E5F73; color:#2E5F73; background:white;">
-                Adjust
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="!filteredRows?.length">
-            <td colspan="11" class="text-center text-muted">No rows match the filters.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+<!-- Table -->
+<div class="table-responsive mt-4">
+  <table class="table table-bordered mb-0 table-soft">
+    <thead>
+      <tr>
+        <th style="width:44px; text-align:center; background-color:#2E5F73; color:white;">
+          <input type="checkbox"
+                 [checked]="isAllSelected()"
+                 [indeterminate]="isIndeterminate()"
+                 (change)="toggleAll($event)">
+        </th>
+        <th style="background-color:#2E5F73;color:white;">Supplier Name</th>
+        <th style="background-color:#2E5F73;color:white;">Warehouse</th>
+        <th style="background-color:#2E5F73;color:white;">Item</th>
+        <th style="background-color:#2E5F73;color:white;">SKU</th>
+        <th style="background-color:#2E5F73;color:white;">Bin</th>
+        <th style="background-color:#2E5F73;color:white;">On Hand</th>
+        <!-- Removed: Reserved, Min, Available, Expiry -->
+        <th style="background-color:#2E5F73;color:white; width:120px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
+        <td class="text-center">
+          <input type="checkbox"
+                 [checked]="isSelected(r)"
+                 (change)="toggleRow(r, $event)">
+        </td>
+        <td>{{ r.supplierName }}</td>
+        <td>{{ r.warehouse }}</td>
+        <td>{{ r.item }}</td>
+        <td>{{ r.sku }}</td>
+        <td>{{ r.bin }}</td>
+        <td>{{ r.qty }}</td>
+        <td class="text-center">
+          <button type="button"
+                  class="btn btn-sm"
+                  (click)="openAdjustModal(modalDefault, r)"
+                  style="border:1px solid #2E5F73; color:#2E5F73; background:white;">
+            Adjust
+          </button>
+        </td>
+      </tr>
+      <tr *ngIf="!filteredRows?.length">
+        <td colspan="8" class="text-center text-muted">No rows match the filters.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
 
     <!-- Bottom actions -->
     <div class="stock-actions-bottom d-flex justify-content-between align-items-center mt-3 pt-2">
@@ -138,104 +131,145 @@
 
       <button type="button"
               class="btn"
-              [disabled]="selectedKeys.size === 0 || !sameWarehouseSelected"
+              [disabled]="selectedKeys.size === 0 || !sameWarehouseSelected || !sameSupplierSelected"
               (click)="submitTransfer()"
               style="background-color:#2E5F73;color:white;">
-                <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>
+        <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>
         Transfer <span *ngIf="selectedKeys.size">({{ selectedKeys.size }})</span>
       </button>
 
       <div class="small text-danger mt-1"
-           *ngIf="selectedKeys.size > 0 && !sameWarehouseSelected">
-        Select items from a single warehouse to enable Transfer.
+           *ngIf="selectedKeys.size > 0 && (!sameWarehouseSelected || !sameSupplierSelected)">
+        Select items from a single <b>warehouse</b> and a single <b>supplier</b> to enable Transfer.
       </div>
     </div>
   </div>
 </div>
 
 <!-- Adjust Stock Modal -->
-<div class="modal-size-default d-inline-block">
-  <ng-template #modalDefault let-modal>
-    <div class="modal-header">
-      <h5 class="modal-title">
-        Adjust Stock — <span class="text-uppercase">{{ adjust?.row?.item }}</span>
-      </h5>
-      <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
+<!-- Adjust Stock Modal -->
+<ng-template #modalDefault let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">
+      Adjust Stock — <span class="text-uppercase">{{ adjust?.row?.item }}</span>
+    </h5>
+    <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
 
-    <div class="modal-body" tabindex="0" ngbAutofocus>
-      <form #adjustForm="ngForm" (ngSubmit)="submitAdjust(modal)" novalidate>
-        <div class="mb-3 small text-muted">
-          {{ adjust?.row?.warehouse }}/{{ adjust?.row?.bin }}
-        </div>
+  <div class="modal-body" tabindex="0" ngbAutofocus>
+    <form #adjustForm="ngForm" (ngSubmit)="submitAdjust(modal)" novalidate>
+      <div class="mb-3 small text-muted">
+        {{ adjust?.row?.warehouse }}/{{ adjust?.row?.bin }}
+      </div>
 
-        <div class="row g-3">
-          <div class="col-12 col-md-6">
-            <label class="form-label">Stock Issue <span class="text-danger">*</span></label>
-            <ng-select
-              name="stockIssueId"
-              [items]="stockIssueOptions"
-              bindLabel="name"
-              bindValue="id"
-              placeholder="Select a stock issue"
-              [(ngModel)]="adjust.stockIssueId"
-              (ngModelChange)="onStockIssueChange($event)"
-              [clearable]="false">
-            </ng-select>
-            <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.stockIssueId">
-              Please select a stock issue.
-            </div>
-            <div class="form-text" *ngIf="adjust.stockIssueName">
-              Selected: {{ adjust.stockIssueName }}
-            </div>
+      <div class="row g-3">
+        <!-- Stock Issue -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Stock Issue <span class="text-danger">*</span></label>
+          <ng-select
+            name="stockIssueId"
+            [items]="stockIssueOptions"
+            bindLabel="name"
+            bindValue="id"
+            placeholder="Select a stock issue"
+            [(ngModel)]="adjust.stockIssueId"
+            (ngModelChange)="onStockIssueChange($event)"
+            [clearable]="false">
+          </ng-select>
+          <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.stockIssueId">
+            Please select a stock issue.
           </div>
-
-          <div class="col-12 col-md-3">
-            <label class="form-label">In-hand <span class="text-danger">*</span></label>
-            <input type="number"
-                   class="form-control"
-                   name="newInHand"
-                   [(ngModel)]="adjust.newInHand"
-                   (input)="validateNewInHand()"
-                   [min]="adjust.minAllowed"
-                   [max]="adjust.maxAllowed"
-                   required>
-            <div class="invalid-feedback d-block"
-                 *ngIf="adjustForm.submitted && (adjust.newInHand == null || adjust.newInHand === undefined)">
-              Please enter a value.
-            </div>
-            <div class="text-danger small" *ngIf="adjust.qtyError">{{ adjust.qtyError }}</div>
-          </div>
-
-           <div class="col-12 col-md-3">
-            <label class="form-label">Reserved</label>
-            <input class="form-control" [value]="adjust.reserved" readonly>
-            <div class="form-text">Fixed</div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <label class="form-label">Available</label>
-            <input class="form-control" [value]="adjust.available" readonly>
-            <div class="form-text">Fixed</div>
+          <div class="form-text" *ngIf="adjust.stockIssueName">
+            Selected: {{ adjust.stockIssueName }}
           </div>
         </div>
-      </form>
-    </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('cancel')">Cancel</button>
-      <button type="button" class="btn"
-              [disabled]="!canSubmitAdjust()"
-              (click)="submitAdjust(modal)"
-              style="background-color:#2E5F73; color:white;">
-        Submit
-      </button>
-    </div>
-  </ng-template>
-</div>
+        <!-- Qty (In-hand replacement) -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Qty <span class="text-danger">*</span></label>
+          <input type="number"
+                 class="form-control"
+                 name="newInHand"
+                 [(ngModel)]="adjust.newInHand"
+                 (input)="validateNewInHand()"
+                 (blur)="onInHandBlur()"
+                 min="0"
+                 [disabled]="true"
+                 required>
+          <div class="invalid-feedback d-block"
+               *ngIf="adjustForm.submitted && (adjust.newInHand == null || adjust.newInHand === undefined)">
+            Please enter a value.
+          </div>
+          <div class="text-danger small" *ngIf="adjust.qtyError">{{ adjust.qtyError }}</div>
+        </div>
 
+        <!-- Approved By (NEW) -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Approved By <span class="text-danger">*</span></label>
+          <ng-select
+            name="approvedById"
+            [items]="approvedByOptions"
+            bindLabel="name"
+            bindValue="id"
+            placeholder="Select approver"
+            [(ngModel)]="adjust.approvedById"
+            (change)="onApprovedByChange($event)"
+            [clearable]="false">
+          </ng-select>
+          <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.approvedById">
+            Please select an approver.
+          </div>
+          <div class="form-text" *ngIf="adjust.approvedByName">
+            Selected: {{ adjust.approvedByName }}
+          </div>
+        </div>
+
+        <!-- Fault Qty (NEW) -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Fault Qty</label>
+          <input type="number"
+                 class="form-control"
+                 name="faultQty"
+                 [(ngModel)]="adjust.faultQty"
+                 (input)="validateFaultQty()"
+                 min="0"
+                 [max]="adjust?.newInHand || 0"
+                 placeholder="0">
+          <div class="text-danger small" *ngIf="adjust.faultQtyError">{{ adjust.faultQtyError }}</div>
+          <div class="form-text" *ngIf="adjust?.newInHand != null">
+            Max allowed: {{ adjust.newInHand }}
+          </div>
+        </div>
+
+        <!-- (Optional) Note -->
+        <!--
+        <div class="col-12">
+          <label class="form-label">Note</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="adjust.note" name="note" placeholder="Optional"></textarea>
+        </div>
+        -->
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('cancel')">
+      Cancel
+    </button>
+    <button type="button"
+            class="btn"
+            [disabled]="!canSubmitAdjust()"
+            (click)="submitAdjust(modal)"
+            style="background-color:#2E5F73; color:white;">
+      Submit
+    </button>
+  </div>
+</ng-template>
+
+
+<!-- Export Modal -->
 <ng-template #exportModal let-modal>
   <div class="prl-export-modal modal-content shadow-lg">
     <!-- Header -->
@@ -260,7 +294,7 @@
         <span class="d-block small mt-1">Tip: exports exactly what you see (current filters applied).</span>
       </p>
 
-      <!-- Filename (display-only, NOT editable) -->
+      <!-- Filename (display-only) -->
       <div class="form-group mb-3">
         <label class="form-label mb-1">Filename</label>
         <div class="input-group">
@@ -275,7 +309,7 @@
         </div>
       </div>
 
-      <!-- Buttons (two big tiles) -->
+      <!-- Buttons -->
       <div class="export-grid">
         <button type="button" class="btn btn-export btn-export-excel"
                 (click)="exportAsExcel(); modal.close('excel')">
@@ -294,4 +328,3 @@
     </div>
   </div>
 </ng-template>
-
