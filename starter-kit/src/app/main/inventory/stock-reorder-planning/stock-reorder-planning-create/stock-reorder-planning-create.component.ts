@@ -1,31 +1,28 @@
 import { Component, OnInit } from '@angular/core';
 import Swal from 'sweetalert2';
 import { forkJoin, of } from 'rxjs';
-import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { ActivatedRoute, Router } from '@angular/router';
+
+import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { ReorderPlanningService } from '../stock-reorder-planning.service';
-import { map, switchMap, take } from 'rxjs/operators';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { ItemsService } from 'app/main/master/items/items.service';
+import { LocationService } from 'app/main/master/location/location.service';
 
 const METHOD = { MinMax: 1, ROP: 2, MRP: 3 } as const;
 type MethodId = typeof METHOD[keyof typeof METHOD];
 
-
-// add to your interface
 interface SupplierBreakdown {
   id?: number;
   supplierId: number;
   name: string;
   price: number;
-  qty: number;         // user editable (10, 15, …)
-  selected?: boolean;  // optional: if you want a checkbox
+  qty: number;
+  selected?: boolean;
 }
 
-
-
 interface ReorderRow {
-  id: 0,
+  id: number;
   itemId: number;
   itemName: string;
   sku?: string;
@@ -34,32 +31,47 @@ interface ReorderRow {
 
   onHand: number;
   reserved: number;
-  min: number;
+  min: number | null;
   reorderQty?: number | null;
   max?: number | null;
   leadDays: number;
   usageHorizon: number;
   safetyStock?: number | null;
 
-  binId?: number | null;
-  binName?: string | null;
+  // plain-text fields
+  location?: string | null;
+  deliveryDate?: string | null; // YYYY-MM-DD
 
   suggested?: number;
-  selected: boolean
+  selected: boolean;
 
-  // NEW: “tree” children
   supplierBreakdown?: SupplierBreakdown[];
-  _loadedChildren?: boolean;  // cache flag so we don’t reload every expand
+  _loadedChildren?: boolean;
 }
+
 type SuggestLine = {
   supplierId: number;
   warehouseId: number;
   itemId: number;
+  itemName: string;
   qty: number;
   price: number;
+  location?: string | null;
+  deliveryDate?: string | null;
 };
-type Line = { itemId: number; qty: number; price: number };
-type Group = { supplierId: number; warehouseId: number; lines: Line[] };
+
+type Group = {
+  supplierId: number;
+  warehouseId: number;
+  lines: Array<{
+    itemId: number;
+    itemName: string;
+    qty: number;
+    price: number;
+    location?: string | null;
+    deliveryDate?: string | null;
+  }>;
+};
 
 @Component({
   selector: 'app-stock-reorder-planning-create',
@@ -67,386 +79,455 @@ type Group = { supplierId: number; warehouseId: number; lines: Line[] };
   styleUrls: ['./stock-reorder-planning-create.component.scss']
 })
 export class StockReorderPlanningCreateComponent implements OnInit {
-
   warehouses: Array<{ id: number; name: string }> = [];
   warehouseTypeId: number | null = null;
 
-  methodId: MethodId | null = null;
-  horizonDays: number = 30;
-  includeLeadTime: boolean = true;
-  status: any;
+  // items for selected warehouse
+  warehouseItems: any[] = [];
+  availableItems: Array<{ id: number; itemName: string; sku?: string; onHand?: number; warehouseId: number }> = [];
+  loadingItems = false;
 
+  // locations (names only)
+  locationList: Array<{ name: string }> = [];
+
+  methodId: MethodId | null = METHOD.MinMax;
+  horizonDays = 30;
+  includeLeadTime = true;
+  status: number | null = 0;
+
+  private allRows: ReorderRow[] = [];
   rows: ReorderRow[] = [];
   loading = false;
   isBusy = false;
 
+  selectedItemId: number | null = null;
+  minDate = '';
+
+  suppliers: any[] = [];
+  itemlist: any[] = [];
   methodOptions = [
     { id: METHOD.MinMax, label: 'Min/Max' },
     { id: METHOD.ROP, label: 'Reorder Point' },
     { id: METHOD.MRP, label: 'MRP (usage & lead)' }
   ];
-  stockReorderId: number = 0;
+
+  stockReorderId = 0;
   selectedIds = new Set<number>();
   expandedIds = new Set<number>();
-  userId: any;
-  userName: any;
-  suppliers: any
-  itemlist: any;
 
-
+  userId: number | null = null;
+  userName: string | null = null;
 
   constructor(
     private reorderPlanningService: ReorderPlanningService,
     private warehouseService: WarehouseService,
     private route: ActivatedRoute,
     private router: Router,
-    private _SupplierService: SupplierService,
-    private itemsService: ItemsService
+    private supplierService: SupplierService,
+    private itemsService: ItemsService,
+    private locationService: LocationService
   ) {
-    this.userId = localStorage.getItem('id'),
-      this.userName = localStorage.getItem('username')
+    const uid = localStorage.getItem('id');
+    this.userId = uid ? Number(uid) : null;
+    this.userName = localStorage.getItem('username');
   }
 
   ngOnInit(): void {
+    this.setMinDate();
+
     forkJoin({
       warehouse: this.warehouseService.getWarehouse(),
-      supplier: this._SupplierService.GetAllSupplier(),
+      supplier: this.supplierService.GetAllSupplier(),
       items: this.itemsService.getAllItem()
-    }).subscribe((results: any) => {
-      this.warehouses = results.warehouse.data;
-      this.suppliers = results.supplier?.data
-      this.itemlist = results.items?.data
+    }).subscribe((res: any) => {
+      this.warehouses = res?.warehouse?.data || [];
+      this.suppliers = res?.supplier?.data || [];
+      this.itemlist = res?.items?.data || [];
     });
-
 
     this.route.paramMap.subscribe(pm => {
       const id = Number(pm.get('id') || 0);
       this.stockReorderId = id;
+      if (!id) { this.resetRows(); return; }
 
-      if (!id) { this.rows = []; return; }
+      this.reorderPlanningService.getStockReorderById(id).subscribe((r: any) => {
+        const h = r?.data || {};
+        this.warehouseTypeId = h.warehouseTypeId ?? null;
+        this.methodId = h.methodId ?? METHOD.MinMax;
+        this.horizonDays = h.horizonDays ?? 30;
+        this.includeLeadTime = !!h.includeLeadTime;
+        this.status = h.status ?? 0;
 
-      this.reorderPlanningService.getStockReorderById(id)
-        .subscribe((res: any) => {
-          const h = res.data;
+        this.allRows = (h.lineItems || []).map((l: any): ReorderRow => ({
+          id: n(l.id),
+          itemId: n(l.itemId),
+          itemName: this.getItemName(l.itemId),
+          sku: l.sku ?? '',
+          warehouseTypeId: n(l.warehouseTypeId ?? h.warehouseTypeId ?? 0),
+          warehouseName: l.warehouseName ?? '',
 
-          // header fields (also bound via ngModel)
-          this.warehouseTypeId = h.warehouseTypeId ?? null;
-          this.methodId = h.methodId ?? 1;
-          this.horizonDays = h.horizonDays ?? 30;
-          this.includeLeadTime = !!h.includeLeadTime;
-          this.status = h.status ?? 0;
+          onHand: n(l.onHand),
+          reserved: n(l.reserved),
+          min: l.min == null ? null : n(l.min),
+          max: l.max == null ? null : n(l.max),
+          reorderQty: l.reorderQty == null ? null : n(l.reorderQty),
+          leadDays: n(l.leadDays),
+          usageHorizon: n(l.usageHorizon ?? h.horizonDays ?? 0),
+          safetyStock: l.safetyStock == null ? (l.min == null ? null : n(l.min)) : n(l.safetyStock),
 
-          // LINES: make sure selected exists and is boolean,
-          // and suppliers array is mapped with all fields you bind to.
-          this.rows = (h.lineItems || []).map((l: any) => ({
-            id: l.id,
-            itemId: l.itemId,
-            itemName: this.getItemName(l.itemId),
-            binId: l.binId ?? null,
-            warehouseTypeId: l.warehouseTypeId ?? h.warehouseTypeId,
-            onHand: Number(l.onHand ?? 0),
-            min: l.min == null ? null : Number(l.min),
-            max: l.max == null ? null : Number(l.max),
-            reorderQty: l.reorderQty == null ? null : Number(l.reorderQty),
-            leadDays: Number(l.leadDays ?? 0),
-            usageHorizon: Number(l.usageHorizon ?? h.horizonDays ?? 0),
-            suggested: Number(l.suggested ?? 0),
-            status: l.status ?? h.status ?? 0,
-            selected: !!l.selected,
+          location: l.location ?? null,
+          deliveryDate: l.deliveryDate ?? null,
 
+          suggested: n(l.suggested),
+          selected: !!l.selected,
 
-            supplierBreakdown: (l.supplierBreakdown || []).map((s: any) => ({
-              id: s.id || 0,
-              supplierId: s.supplierId,
-              name: this.getSupplierName(s.supplierId),
-              price: Number(s.price ?? 0),
-              qty: Number(s.qty ?? 0),
-              selected: !!s.selected
-            }))
-          }));
-          this.selectedIds = new Set(this.rows.filter(r => r.selected).map(r => r.itemId));
-        });
+          supplierBreakdown: (l.supplierBreakdown || []).map((s: any) => ({
+            id: s.id || 0,
+            supplierId: n(s.supplierId),
+            name: this.getSupplierName(s.supplierId),
+            price: n(s.price),
+            qty: n(s.qty),
+            selected: !!s.selected
+          }))
+        }));
+
+        this.selectedIds = new Set(this.allRows.filter(x => x.selected).map(x => x.itemId));
+        this.rows = [...this.allRows];
+      });
+    });
+
+    this.locationService.getLocation().subscribe((res: any) => {
+      this.locationList = res?.data ?? [];
     });
   }
+
+  // Lookups
   getSupplierName(id: number | string | null) {
-    const x = this.suppliers?.find(i => i.id === id);
+    const x = this.suppliers?.find((i: any) => n(i.id) === n(id));
     return x?.name ?? String(id ?? '');
   }
-   getItemName(id: number | string | null) {
-    debugger
-    const x = this.itemlist?.find(i => i.id === id);
+  getItemName(id: number | string | null) {
+    const x = this.itemlist?.find((i: any) => n(i.id) === n(id));
     return x?.itemName ?? String(id ?? '');
   }
 
-  // New explicit load trigger
-  onLoadClick() {
-    if (!this.warehouseTypeId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Select a warehouse',
-        text: 'Please choose a warehouse before loading.',
-        confirmButtonColor: '#2E5F73'
-      });
-      return;
-    }
-    this.reloadRows();
+  onCancel(): void {
+    this.router.navigateByUrl('/Inventory/list-stockreorderplanning');
   }
 
-  reloadRows() {
-    if (!this.warehouseTypeId) { this.rows = []; return; }
+  private pick<T = any>(o: any, keys: string[], d?: T): T {
+    for (const k of keys) if (o && o[k] != null) return o[k];
+    return d as T;
+  }
 
-    this.loading = true;
+  onWarehouseChange(): void {
+    this.selectedItemId = null;
+    this.availableItems = [];
     this.rows = [];
+    this.allRows = [];
+    this.selectedIds.clear();
+    this.expandedIds.clear();
 
-    this.reorderPlanningService.getWarehouseItems(this.warehouseTypeId)
-      .subscribe({
-        next: (res: any) => {
-          debugger
-          if (res.data.length == 0) {
-            Swal.fire({
-              icon: 'warning',
-              title: 'No Item in Warehouse',
-              confirmButtonColor: '#2E5F73'
-            });
-            return;
-          }
-          this.rows = (res.data || []).map((x: any) => ({
-            itemId: x.itemId,
-            itemName: x.itemName,
-            sku: x.sku,
-            warehouseTypeId: x.warehouseId,
-            warehouseName: x.warehouseName,
+    if (!this.warehouseTypeId) return;
+    this.loadingItems = true;
 
-            onHand: x.onHand ?? 0,
-            reserved: x.reserved ?? 0,
-            min: x.minQty ?? 0,
-            reorderQty: x.reorderQty,
-            max: x.maxQty,
-            leadDays: x.leadDays ?? 0,
-            usageHorizon: x.usageHorizon ?? x.usage30d ?? 0,
-            safetyStock: x.safetyStock ?? x.minQty ?? 0,
-
-            binId: x.binId ?? null,
-            binName: x.binName ?? null,
-
-            suggested: 0,
-
-            supplierBreakdown: (x.suppliers || []).map((s: any) => ({
-              supplierId: s.supplierId,
-              name: s.supplierName,
-              price: s.price,
-              qty: s.qty ?? 0,
-              selected: false
-            }))
+    this.reorderPlanningService.getWarehouseItems(this.warehouseTypeId).subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        if (list.length) {
+          this.warehouseItems = list;
+          this.availableItems = list.map((x: any) => ({
+            id: n(this.pick(x, ['itemId', 'id'])),
+            itemName: this.pick<string>(x, ['itemName', 'name'], `#${this.pick(x, ['itemId','id'])}`),
+            sku: this.pick<string>(x, ['sku', 'SKU']),
+            onHand: n(this.pick(x, ['onHand', 'qtyOnHand', 'quantityOnHand']), 0),
+            warehouseId: n(this.pick(x, ['warehouseId', 'WarehouseId', 'warehouseTypeId']))
           }));
-        },
-        error: (err) => {
-          const msg = err?.error?.message || err?.message || 'Failed to load warehouse items.';
-          Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
-        },
-        complete: () => this.loading = false
-      });
-  }
-
-  // Only recalculates suggestions when header fields change
-  reloadCalculationsOnly() {
-    if (!this.rows.length) { return; }
-    // recompute suggestion for each row with the new parameters
-    this.rows = this.rows.map(r => {
-      this.recalcRow(r);
-      return r;
+        } else {
+          this.fallbackLoadFromItemMaster();
+        }
+      },
+      error: () => this.fallbackLoadFromItemMaster(),
+      complete: () => { this.loadingItems = false; }
     });
   }
+
+  private fallbackLoadFromItemMaster(): void {
+    const ensureItems$ = (this.itemlist?.length)
+      ? of({ data: this.itemlist })
+      : this.itemsService.getAllItem();
+
+    ensureItems$.subscribe({
+      next: (r: any) => {
+        const all = Array.isArray(r?.data) ? r.data : [];
+        const wh = n(this.warehouseTypeId);
+
+        const filtered = all.filter((it: any) => {
+          const wId = n(this.pick(it, ['warehouseId', 'WarehouseId', 'warehouseTypeId']), NaN);
+          return Number.isFinite(wId) ? wId === wh : true;
+        });
+
+        this.warehouseItems = filtered;
+        this.availableItems = filtered.map((x: any) => ({
+          id: n(this.pick(x, ['itemId', 'id'])),
+          itemName: this.pick<string>(x, ['itemName', 'name'], `#${this.pick(x, ['itemId','id'])}`),
+          sku: this.pick<string>(x, ['sku', 'SKU']),
+          onHand: n(this.pick(x, ['onHand', 'qtyOnHand', 'quantityOnHand']), 0),
+          warehouseId: n(this.pick(x, ['warehouseId', 'WarehouseId', 'warehouseTypeId']), wh)
+        }));
+      }
+    });
+  }
+
+  addItemToWarehouse(): void {
+    if (!this.warehouseTypeId || !this.selectedItemId) return;
+
+    const id = n(this.selectedItemId);
+    const src = this.warehouseItems.find(x => n(this.pick(x, ['itemId','id'])) === id);
+    if (!src) return;
+
+    if (this.allRows.some(r => r.itemId === id)) {
+      Swal.fire({ icon: 'info', title: 'Item already in the list', confirmButtonColor: '#2E5F73' });
+      return;
+    }
+
+    const newRow: ReorderRow = {
+      id: 0,
+      itemId: id,
+      itemName: this.pick<string>(src, ['itemName','name'], `#${id}`),
+      sku: this.pick<string>(src, ['sku','SKU'], ''),
+      warehouseTypeId: n(this.pick(src, ['warehouseId','WarehouseId','warehouseTypeId'], this.warehouseTypeId)),
+      warehouseName: this.warehouses.find(w => n(w.id) === n(this.warehouseTypeId))?.name || '',
+
+      onHand: n(this.pick(src, ['onHand','qtyOnHand','quantityOnHand']), 0),
+      reserved: n(this.pick(src, ['reserved','qtyReserved']), 0),
+      min: this.pick(src, ['min','minQty']) != null ? n(this.pick(src, ['min','minQty'])) : null,
+      max: this.pick(src, ['max','maxQty']) != null ? n(this.pick(src, ['max','maxQty'])) : null,
+      reorderQty: this.pick(src, ['reorderQty']) != null ? n(this.pick(src, ['reorderQty'])) : null,
+      leadDays: n(this.pick(src, ['leadDays','leadTimeDays']), 0),
+      usageHorizon: n(this.pick(src, ['usageHorizon','usage30d','usage_30d']), 0),
+      safetyStock: this.pick(src, ['safetyStock']) != null
+        ? n(this.pick(src, ['safetyStock']))
+        : (this.pick(src, ['min','minQty']) != null ? n(this.pick(src, ['min','minQty'])) : null),
+
+      location: this.pick<string | null>(src, ['location','binName'], null),
+      deliveryDate: null,
+
+      suggested: 0,
+      selected: false,
+
+      supplierBreakdown: (this.pick<any[]>(src, ['suppliers'], []) || []).map((s: any) => ({
+        supplierId: n(this.pick(s, ['supplierId','id'])),
+        name: this.pick<string>(s, ['supplierName','name'], `#${this.pick(s,['supplierId','id'])}`),
+        price: n(this.pick(s, ['price','unitPrice']), 0),
+        qty: n(this.pick(s, ['qty','quantity']), 0),
+        selected: false
+      }))
+    };
+
+    this.allRows = [...this.allRows, newRow];
+    this.rows = [...this.allRows];
+  }
+
+  onLocationChange(_r: ReorderRow) {}
+  onDeliveryDateChange(r: ReorderRow, dateStr: string) { r.deliveryDate = dateStr || null; }
 
   runSuggestion(): void {
     if (!this.methodId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Select a Method',
-        confirmButtonColor: '#2E5F73'
-      });
+      Swal.fire({ icon: 'warning', title: 'Select a Method', confirmButtonColor: '#2E5F73' });
       return;
     }
-    debugger
-    const selected = this.methodId ?? METHOD.MinMax;
-    const horizon = Math.max(1, toNum(this.horizonDays, 30));
 
-    this.rows = this.rows.map(r => {
-      const onHand = toNum(r.onHand);
-      const min = toNum(r.min);
-      const maxLvl = toNum(r.max);
-      const reorderT = toNum(r.reorderQty);
-      const daily = toNum(r.usageHorizon) / horizon;
-      const lead = this.includeLeadTime ? Math.max(0, toNum(r.leadDays)) : 0;
-      const safety = toNum(r.safetyStock ?? min);
+    const selectedMethod = this.methodId ?? METHOD.MinMax;
+    const horizon = Math.max(1, n(this.horizonDays, 30));
 
-      const targetForROPandMRP = reorderT > 0 ? reorderT : (maxLvl > 0 ? maxLvl : onHand);
+    this.allRows = this.allRows.map(r => {
+      const onHand = n(r.onHand);
+      const min = n(r.min);
+      const maxLvl = n(r.max);
+      const reorderT = n(r.reorderQty);
+      const daily = n(r.usageHorizon) / horizon;
+      const lead = this.includeLeadTime ? Math.max(0, n(r.leadDays)) : 0;
+      const safety = n(r.safetyStock ?? min);
+      const target = reorderT > 0 ? reorderT : (maxLvl > 0 ? maxLvl : onHand);
 
       let suggested = 0;
-
-      if (selected === METHOD.MinMax) {
+      if (selectedMethod === METHOD.MinMax) {
         const projected = onHand - daily * lead;
-        if (projected <= min) {
-          suggested = Math.ceil(Math.max(0, maxLvl - projected));
-        }
-      } else if (selected === METHOD.ROP) {
+        if (projected <= min) suggested = Math.ceil(Math.max(0, maxLvl - projected));
+      } else if (selectedMethod === METHOD.ROP) {
         const rop = daily * lead + safety;
         if (onHand <= rop) {
           const projectedAtArrival = onHand - daily * lead;
-          suggested = Math.ceil(Math.max(0, targetForROPandMRP - projectedAtArrival));
+          suggested = Math.ceil(Math.max(0, target - projectedAtArrival));
         }
-      } else if (selected === METHOD.MRP) {
+      } else if (selectedMethod === METHOD.MRP) {
         const projectedFuture = onHand - daily * (lead + horizon);
         if (projectedFuture < min) {
-          suggested = Math.ceil(Math.max(0, targetForROPandMRP - projectedFuture));
+          suggested = Math.ceil(Math.max(0, target - projectedFuture));
         }
       }
-
       if (!Number.isFinite(suggested) || suggested < 0) suggested = 0;
       return { ...r, suggested };
     });
+
+    this.rows = [...this.allRows];
+  }
+
+  reloadCalculationsOnly(): void {
+    if (!this.allRows.length) return;
+    this.runSuggestion();
   }
 
   recalcRow(row: ReorderRow): void {
-    const selected = this.methodId ?? METHOD.MinMax;
-    const horizon = Math.max(1, toNum(this.horizonDays, 30));
+    const selectedMethod = this.methodId ?? METHOD.MinMax;
+    const horizon = Math.max(1, n(this.horizonDays, 30));
 
-    const onHand = toNum(row.onHand);
-    const min = toNum(row.min);
-    const maxLvl = toNum(row.max);
-    const reorderT = toNum(row.reorderQty);
-
-    const usage = toNum(row.usageHorizon);
+    const onHand = n(row.onHand);
+    const min = n(row.min);
+    const maxLvl = n(row.max);
+    const reorderT = n(row.reorderQty);
+    const usage = n(row.usageHorizon);
     const daily = usage / horizon;
-    const lead = this.includeLeadTime ? Math.max(0, toNum(row.leadDays)) : 0;
-    const safety = toNum(row.safetyStock ?? min);
-
-    const targetForROPandMRP = reorderT > 0 ? reorderT : (maxLvl > 0 ? maxLvl : onHand);
+    const lead = this.includeLeadTime ? Math.max(0, n(row.leadDays)) : 0;
+    const safety = n(row.safetyStock ?? min);
+    const target = reorderT > 0 ? reorderT : (maxLvl > 0 ? maxLvl : onHand);
 
     let suggested = 0;
-
-    if (selected === METHOD.MinMax) {
+    if (selectedMethod === METHOD.MinMax) {
       const projectedAtArrival = onHand - daily * lead;
-      if (projectedAtArrival <= min) {
-        suggested = Math.ceil(Math.max(0, maxLvl - projectedAtArrival));
-      }
-    } else if (selected === METHOD.ROP) {
+      if (projectedAtArrival <= min) suggested = Math.ceil(Math.max(0, maxLvl - projectedAtArrival));
+    } else if (selectedMethod === METHOD.ROP) {
       const rop = daily * lead + safety;
       if (onHand <= rop) {
         const projectedAtArrival = onHand - daily * lead;
-        suggested = Math.ceil(Math.max(0, targetForROPandMRP - projectedAtArrival));
+        suggested = Math.ceil(Math.max(0, target - projectedAtArrival));
       }
-    } else if (selected === METHOD.MRP) {
+    } else if (selectedMethod === METHOD.MRP) {
       const projectedFuture = onHand - daily * (lead + horizon);
       if (projectedFuture < min) {
-        suggested = Math.ceil(Math.max(0, targetForROPandMRP - projectedFuture));
+        suggested = Math.ceil(Math.max(0, target - projectedFuture));
       }
     }
-
-    if (!Number.isFinite(suggested) || suggested < 0) suggested = 0;
-    row.suggested = suggested;
+    row.suggested = Math.max(0, Math.ceil(suggested || 0));
   }
 
-
+  // Selection
   isSelected(id: number) { return this.selectedIds.has(id); }
-  isAllSelected() { return this.rows.length > 0 && this.selectedIds.size === this.rows.length; }
-
-  toggleRowSelection(id: number, ev: Event) {
+  isAllSelected() { return this.rows.length > 0 && this.rows.every(r => this.selectedIds.has(r.itemId)); }
+  toggleRowSelection(id: number, ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
     checked ? this.selectedIds.add(id) : this.selectedIds.delete(id);
-    this.rows = this.rows.map(r =>
-      r.itemId === id ? { ...r, selected: checked } : r
-    );
+    const src = this.allRows.find(x => x.itemId === id);
+    if (src) src.selected = checked;
   }
-
-  toggleSelectAll(ev: Event) {
+  toggleSelectAll(ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
-    this.selectedIds.clear();
-    if (checked) this.rows.forEach(r => this.selectedIds.add(r.itemId));
+    this.rows.forEach(r => {
+      r.selected = checked;
+      if (checked) this.selectedIds.add(r.itemId); else this.selectedIds.delete(r.itemId);
+      const src = this.allRows.find(x => x.itemId === r.itemId);
+      if (src) src.selected = checked;
+    });
   }
 
+  // Expand / Suppliers
   isExpanded(r: ReorderRow) { return this.expandedIds.has(r.itemId); }
+  toggleExpand(r: ReorderRow): void {
+    if (this.isExpanded(r)) { this.expandedIds.delete(r.itemId); return; }
+    this.expandedIds.add(r.itemId);
+    if (!r._loadedChildren) r._loadedChildren = true;
+  }
+  selectSupplier(row: { supplierBreakdown?: any[] }, clicked: any) {
+    if (!row?.supplierBreakdown) return;
+    row.supplierBreakdown.forEach(s => s.selected = (s === clicked));
+  }
 
-  toggleExpand(r: ReorderRow) {
-    debugger
-    if (this.isExpanded(r)) {
-      this.expandedIds.delete(r.itemId);
+  // Create PR suggestions (includes itemName, location, per-line and header deliveryDate)
+  async onSuggestPO(): Promise<void> {
+    const selectedRows = this.allRows.filter(r => this.selectedIds.has(r.itemId));
+    if (!selectedRows.length) {
+      await Swal.fire({ icon: 'warning', title: 'Select items', confirmButtonColor: '#2E5F73' });
       return;
     }
-    this.expandedIds.add(r.itemId);
-
-    // Lazy-load children once (call your API if available)
-    if (!r._loadedChildren) {
-      r._loadedChildren = true;
-    }
-  }
-
-  // one PR per (supplierId + warehouseId)
-  onSuggestPO() {
-    
-    debugger
-    const selectedRows = this.rows.filter(r => this.selectedIds.has(r.itemId));
-    if (!selectedRows.length) {
-      return Swal.fire({ icon: 'warning', title: 'Select items', confirmButtonColor: '#2E5F73' });
-    }
-
-    // validate: each selected item must have at least one supplier checked
     for (const r of selectedRows) {
       const anySup = (r.supplierBreakdown || []).some(s => s.selected);
       if (!anySup) {
-        return Swal.fire({
-          icon: 'warning',
-          title: 'Select supplier',
-          html: `Choose a supplier for selected Item <b>${r.itemName}</b>.`,
-          confirmButtonColor: '#2E5F73'
-        });
+        await Swal.fire({ icon: 'warning', title: 'Select supplier', html: `Choose a supplier for item <b>${r.itemName}</b>.`, confirmButtonColor: '#2E5F73' });
+        return;
       }
     }
 
-    const flat: SuggestLine[] = selectedRows.reduce<SuggestLine[]>((acc, r) => {
-      const items = (r.supplierBreakdown ?? [])
-        .filter(s => s.selected)
-        .map(s => ({
-          supplierId: s.supplierId,
-          warehouseId: r.warehouseTypeId,
-          itemId: r.itemId,
-          qty: Number(r.suggested) || 0,   // suggested drives quantity
-          price: Number(s.price) || 0      // supplier price
-        }))
-        .filter(x => x.qty > 0);
+    // ensure we have a StockReorderId (draft) before creating PR
+    if (!this.stockReorderId || this.stockReorderId <= 0) {
+      try {
+        const id = await this.saveDraft(1);
+        this.stockReorderId = id;
+      } catch {
+        return; // saveDraft already showed the error
+      }
+    }
 
-      acc.push(...items);
+    const lines: SuggestLine[] = selectedRows.reduce<SuggestLine[]>((acc, r) => {
+      (r.supplierBreakdown || [])
+        .filter(s => s.selected)
+        .forEach(s => {
+          const qty = n(r.reorderQty) > 0 ? n(r.reorderQty) : n(r.suggested);
+          if (qty > 0) {
+            acc.push({
+              supplierId: s.supplierId,
+              warehouseId: r.warehouseTypeId,
+              itemId: r.itemId,
+              itemName: r.itemName,
+              qty,
+              price: n(s.price),
+              location: r.location ?? null,
+              deliveryDate: r.deliveryDate ?? null
+            });
+          }
+        });
       return acc;
     }, []);
 
-    if (!flat.length) {
-      return Swal.fire({
-        icon: 'warning', title: 'Nothing to suggest',
-        text: 'No positive suggested quantities.', confirmButtonColor: '#2E5F73'
-      });
+    if (!lines.length) {
+      await Swal.fire({ icon: 'warning', title: 'Nothing to suggest', text: 'Quantities are zero.', confirmButtonColor: '#2E5F73' });
+      return;
     }
 
-    // group by supplier+warehouse → one PR per group
+    // Header delivery date = earliest non-null line date
+    const selectedDates = selectedRows
+      .map(r => r.deliveryDate)
+      .filter((d: string | null | undefined): d is string => !!d);
+    const headerDeliveryDate = selectedDates.length ? [...selectedDates].sort()[0] : null;
 
+    // Group by (supplierId|warehouseId)
     const map = new Map<string, Group>();
-    for (const ln of flat) {
+    for (const ln of lines) {
       const key = `${ln.supplierId}|${ln.warehouseId}`;
       if (!map.has(key)) map.set(key, { supplierId: ln.supplierId, warehouseId: ln.warehouseId, lines: [] });
-      map.get(key)!.lines.push({ itemId: ln.itemId, qty: ln.qty, price: ln.price });
+      map.get(key)!.lines.push({
+        itemId: ln.itemId,
+        itemName: ln.itemName,
+        qty: ln.qty,
+        price: ln.price,
+        location: ln.location ?? null,
+        deliveryDate: ln.deliveryDate ?? null
+      });
     }
+    const groups = Array.from(map.values());
 
-    const groups: Group[] = Array.from(map.values());
-
-    // ✅ Wrap in object and include user fields
-    const body = {
+    const body: any = {
       groups,
       note: 'Suggest Reorder',
-      userId: Number(this.userId),
+      userId: this.userId ?? 0,
       userName: this.userName ?? null,
-      departmentId: 1
+      departmentId: 1,
+      deliveryDate: headerDeliveryDate ?? null
     };
+    if (this.stockReorderId && this.stockReorderId > 0) {
+      body.stockReorderId = this.stockReorderId;
+    }
 
-    // POST
     this.isBusy = true;
     this.reorderPlanningService.createPoSuggestions(body).subscribe({
       next: (res: { created: { id: number; purchaseRequestNo: string }[] }) => {
@@ -454,10 +535,9 @@ export class StockReorderPlanningCreateComponent implements OnInit {
         Swal.fire({
           icon: 'success',
           title: `Created ${count} PR${count === 1 ? '' : 's'}`,
-          text: 'PR(s) Created for Suggested POs.Please Click Reorder Button and Proceed further',
+          text: 'PR(s) created from Reorder.',
           confirmButtonColor: '#2E5F73'
         }).then(() => {
-          // navigate to PR list and optionally filter/highlight
           this.router.navigate(['/purchase/list-purchaseorder'], { queryParams: { recent: 'reorder' } });
         });
       },
@@ -468,28 +548,11 @@ export class StockReorderPlanningCreateComponent implements OnInit {
       complete: () => this.isBusy = false
     });
   }
-  toNum(v: any): number { return Number(v) || 0; }
-  
-  saveDraft(status) {
-    debugger
+
+  // Save draft (also store location and deliveryDate per line)
+  // returns Promise<number> with the id (new or existing)
+  saveDraft(status: number): Promise<number> {
     this.status = status;
-
-    // Optional helpers
-    const toNum = (v: any) => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    const pickDefaultSupplierIndex = (suppliers: any[]): number => {
-      // choose cheapest non-null, >0 price; fallback to first
-      if (!suppliers || suppliers.length === 0) return -1;
-      let idx = -1, best = Number.POSITIVE_INFINITY;
-      suppliers.forEach((s, i) => {
-        const p = Number(s?.price);
-        if (Number.isFinite(p) && p > 0 && p < best) { best = p; idx = i; }
-      });
-      return idx >= 0 ? idx : 0;
-    };
 
     const payload = {
       id: this.stockReorderId ?? 0,
@@ -498,107 +561,74 @@ export class StockReorderPlanningCreateComponent implements OnInit {
       horizonDays: this.horizonDays,
       includeLeadTime: this.includeLeadTime ?? false,
       status: this.status,
-      lineItems: (this.rows || []).map(r => {
-        const suppliers = Array.isArray(r.supplierBreakdown) ? r.supplierBreakdown : [];
-
-        // If your UI already sets s.selected on each supplier, we’ll use that.
-        // Otherwise, pick a default (cheapest) supplier to mark as selected = true.
-        // const hasExplicitSelection = suppliers.some(s => !!s?.selected);
-        // const defaultIdx = hasExplicitSelection ? -1 : pickDefaultSupplierIndex(suppliers);
-
-        return {
-          id: r.id ?? 0,                               // only if your API supports updating existing lines
-          itemId: r.itemId,
-          binId: r.binId ?? null,                      // your API ignores this if not needed
-          WarehouseTypeId: this.warehouseTypeId,       // matches your C# `l.WarehouseTypeId`
-          status: this.status,
-          onHand: toNum(r.onHand),
-          min: toNum(r.min),
-          max: toNum(r.max),
-          reorderQty: toNum(r.reorderQty),
-          leadDays: toNum(r.leadDays),
-          usageHorizon: toNum(r.usageHorizon),
-          suggested: toNum(r.suggested),
-          selected: !!r.selected,                      // row-level checkbox, if you have one
-
-          // IMPORTANT: only send fields your table accepts
-          supplierBreakdown: suppliers.map((s, i) => ({
-
-            supplierId: s.supplierId,          // normalize your source
-            price: toNum(s.price),
-            qty: toNum(s.qty ?? 0),
-            selected: s.selected
-          }))
-        };
-      })
+      lineItems: (this.allRows || []).map(r => ({
+        id: r.id ?? 0,
+        itemId: r.itemId,
+        location: r.location ?? null,
+        deliveryDate: r.deliveryDate ?? null,
+        WarehouseTypeId: this.warehouseTypeId,
+        status: this.status,
+        onHand: n(r.onHand),
+        min: n(r.min),
+        max: n(r.max),
+        reorderQty: n(r.reorderQty),
+        leadDays: n(r.leadDays),
+        usageHorizon: n(r.usageHorizon),
+        suggested: n(r.suggested),
+        selected: !!r.selected,
+        supplierBreakdown: (r.supplierBreakdown || []).map(s => ({
+          supplierId: s.supplierId,
+          price: n(s.price),
+          qty: n(s.qty),
+          selected: !!s.selected
+        }))
+      }))
     };
 
-    //only insert and below update code not posted in db
-
-     this.reorderPlanningService.insertStockReorder(payload).subscribe((res) => {
-      console.log(res)
-        // if (res.isSuccess) {
-        //   Swal.fire({
-        //     title: "Hi",
-        //     text: res.message,
-        //     icon: "success",
-        //     allowOutsideClick: false,
-        //   });
-        //   this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
-        // }
+    return new Promise<number>((resolve, reject) => {
+      this.reorderPlanningService.insertStockReorder(payload).subscribe({
+        next: (res: any) => {
+          const id = res?.data;
+          this.stockReorderId = id;
+          resolve(id);
+        },
+        error: (err) => {
+          const msg = err?.error?.message || err?.message || 'Failed to save.';
+          Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+          reject(err);
+        }
       });
-
-
-    // if (this.stockReorderId) {
-    //   this.reorderPlanningService.updateStockReorder(payload).subscribe({
-    //     next: (res: any) => {
-    //       if (res?.isSuccess) {
-    //         Swal.fire({
-    //           icon: 'success',
-    //           title: 'Stock Rorder updated',
-    //           text: res.message || 'Lines saved.',
-    //           confirmButtonColor: '#2E5F73'
-    //         });
-    //         this.router.navigateByUrl('/Inventory/list-stockreorderplanning');
-    //       } else {
-    //         Swal.fire({
-    //           icon: 'error',
-    //           title: 'Failed',
-    //           text: res?.message || 'Unable to save review.',
-    //           confirmButtonColor: '#2E5F73'
-    //         });
-    //       }
-    //     },
-    //     error: () => {
-    //       Swal.fire({
-    //         icon: 'error',
-    //         title: 'Error',
-    //         text: 'Something went wrong while saving review.',
-    //         confirmButtonColor: '#2E5F73'
-    //       });
-    //     }
-    //   });
-    // } else {
-     
-    // }
-  }
-  onCancel() {
-    this.router.navigateByUrl('/Inventory/list-stockreorderplanning')
+    });
   }
 
-  onSupplierToggle(row: { supplierBreakdown }, clicked) {
-    // if user turned one ON, force all others OFF
-    if (clicked.selected) {
-      (row.supplierBreakdown ?? []).forEach(s => {
-        if (s !== clicked) s.selected = false;
-      });
+  async runSuggestAndDraft(): Promise<void> {
+    try {
+      const id = await this.saveDraft(1);
+      this.stockReorderId = id;
+      await this.onSuggestPO();
+    } catch {
+      // errors already shown inside saveDraft/onSuggestPO
     }
-    // if user turned the only one OFF, we allow “none selected” (no-op)
   }
-  runSuggestAndDraft() {
-  this.saveDraft(1);
-  this.onSuggestPO();
-}
+
+  setMinDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    this.minDate = `${yyyy}-${mm}-${dd}`;
+  }
+
+  private resetRows(): void {
+    this.allRows = [];
+    this.rows = [];
+    this.selectedIds.clear();
+    this.expandedIds.clear();
+  }
 }
 
-function toNum(v: any, d = 0) { return Number.isFinite(+v) ? +v : d; }
+// number helper
+function n(v: any, d = 0) {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : d;
+}

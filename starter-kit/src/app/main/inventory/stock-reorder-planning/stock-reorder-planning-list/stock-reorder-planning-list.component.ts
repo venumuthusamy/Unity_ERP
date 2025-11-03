@@ -1,12 +1,31 @@
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+// stock-reorder-planning-list.component.ts
+import {
+  Component, OnInit, ViewChild, ViewEncapsulation, AfterViewInit, AfterViewChecked
+} from '@angular/core';
 import { Router } from '@angular/router';
-import Swal from 'sweetalert2';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
 import { ReorderPlanningService } from '../stock-reorder-planning.service';
 
 const METHOD_NAME: Record<number, string> = { 1: 'MinMax', 2: 'ROP', 3: 'MRP' };
+
+type PreviewRow = {
+  prNo: string;
+  itemId: number;
+  itemCode: string;
+  itemName: string;
+  requestedQty: number;
+  supplierId?: number | null;
+  warehouseId?: number | null;
+  location?: string | null;
+  deliveryDate?: string | null;
+  onHand: number;
+  min: number;
+  max: number;
+  reorderQty: number;
+  status:number;
+};
 
 @Component({
   selector: 'app-stock-reorder-planning-list',
@@ -15,137 +34,102 @@ const METHOD_NAME: Record<number, string> = { 1: 'MinMax', 2: 'ROP', 3: 'MRP' };
   encapsulation: ViewEncapsulation.None,
   providers: [DatePipe]
 })
-export class StockReorderPlanningListComponent implements OnInit {
+export class StockReorderPlanningListComponent implements OnInit, AfterViewInit, AfterViewChecked {
 
+  @ViewChild(DatatableComponent) table!: DatatableComponent;
 
-  @ViewChild(DatatableComponent) table: DatatableComponent;
-  @ViewChild('tableRowDetails') tableRowDetails: any;
-  @ViewChild('SweetAlertFadeIn') SweetAlertFadeIn: any;
-  colors = ['bg-light-primary', 'bg-light-success', 'bg-light-danger', 'bg-light-warning', 'bg-light-info'];
-  rows: any[] = [];
-  tempData: any[] = [];
-  public searchValue = '';
   public ColumnMode = ColumnMode;
   public selectedOption = 10;
-  hover = false;
-  passData: any;
+  public searchValue = '';
+
+  rows: any[] = [];
+  tempData: any[] = [];
+  userId: any = localStorage.getItem('id');
+
+  // Modal
   showLinesModal = false;
-  modalLines: any[] = [];
-  userId: any;
-  modalTotal: any;
- 
+  modalLines: PreviewRow[] = [];
 
-  constructor(   private reorderPlanningService: ReorderPlanningService, private router: Router,
-    private datePipe: DatePipe, 
-  ) { this.userId = localStorage.getItem('id'); }
-  ngOnInit(): void {
-    this.loadRequests();
-  
-  }
-  filterUpdate(event) {
+  constructor(
+    private reorderPlanningService: ReorderPlanningService,
+    private router: Router,
+    private datePipe: DatePipe
+  ) {}
 
-    const val = event.target.value.toLowerCase();
-    const temp = this.tempData.filter((d) => {
+  ngOnInit(): void { this.loadRequests(); }
+  ngAfterViewInit(): void { feather.replace(); }
+  ngAfterViewChecked(): void { feather.replace(); }
 
-      if (d.warehouseName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.warehouseName.toLowerCase().indexOf(val) !== -1 || !val;
-      }
-      if (d.methodName.toLowerCase().indexOf(val) !== -1 || !val) {
-        return d.methodName.toLowerCase().indexOf(val) !== -1 || !val;
-      }
-
-    });
-    this.rows = temp;
-    this.table.offset = 0;
+  private N(v: any, d = 0): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
   }
 
-
-  loadRequests() {
-  
+  loadRequests(): void {
     this.reorderPlanningService.getStockReorder().subscribe({
       next: (res: any) => {
-        this.rows = res.data.map((req: any) => {
-          return {
-            ...req,
-             methodname: METHOD_NAME[+req.methodId] || '-'
-          };
-        });
-        this.tempData = this.rows
+        const list = Array.isArray(res?.data) ? res.data : [];
+        this.rows = list.map((req: any) => ({
+          ...req,
+          warehouseName: req?.warehouseName ?? req?.warehouse ?? '-',
+          methodName: METHOD_NAME[this.N(req?.methodId)] || '-',
+        }));
+        this.tempData = [...this.rows];
       },
-      error: (err: any) => console.error('Error loading list', err)
+      error: (err: any) => console.error('Error loading list', err),
     });
   }
 
+  filterUpdate(event: any): void {
+    const val = (event?.target?.value ?? '').toString().toLowerCase();
+    const has = (s: any) => (s ?? '').toString().toLowerCase().includes(val);
+    this.rows = this.tempData.filter(d => !val || has(d?.warehouseName) || has(d?.methodName));
+    if (this.table) this.table.offset = 0;
+  }
 
-  openCreate() {
-    this.passData = {};
+  openCreate(): void {
     this.router.navigate(['/Inventory/create-stockreorderplanning']);
-
-  }
-  openLinesModal(row: any) {
-    debugger
-    // 1) get array safely
-    const raw = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
-
-    // 2) normalize to numbers + safe strings
-    const N = (v: any) => Number.isFinite(Number(v)) ? Number(v) : 0;
-
-    const lines = raw.map((l: any) => ({
-      barcode: (l?.barcode ?? '-') as string,
-      binId: (l?.binId),
-      itemId: (l?.itemId),
-      itemName: (l?.itemName ?? l?.name ?? '-') as string,
-      onHand: N(l?.onHand ?? l?.available),
-      countedQty: N(l?.countedQty),
-      badCountedQty: N(l?.badCountedQty),
-      totalQty: N(l?.countedQty) + N(l?.badCountedQty),
-      variance: (l.countedQty + l.badCountedQty) - N(l.onHand),
-      reason: (l?.reason ?? '-') as string,
-      remarks: (l?.remarks ?? '-') as string
-    }));
-
-    // 3) compute totals
-    this.modalTotal = {
-      available: lines.reduce((s, x) => s + x.onHand, 0),
-      counted: lines.reduce((s, x) => s + x.countedQty, 0),
-      variance: lines.reduce((s, x) => s + x.varianceQty, 0)
-    };
-
-    this.modalLines = lines;
-    this.showLinesModal = true;
   }
 
-
-  closeLinesModal() {
-    this.showLinesModal = false;
+  editStockReorder(row: any): void {
+    if (!row?.id) return;
+    this.router.navigateByUrl(`/Inventory/edit-stockreorderplanning/${row.id}`);
   }
 
-  ngAfterViewChecked(): void {
-    feather.replace();  // remove the guard so icons refresh every cycle
-  }
-  ngAfterViewInit(): void {
-    feather.replace();
-  }
+ openLinesModal(row: any): void {
+  const id = Number(row?.id ?? row?.Id);
+  if (!Number.isFinite(id) || id <= 0) return;
 
-   editStockReorder(row: any) {
-    this.router.navigateByUrl(`/Inventory/edit-stockreorderplanning/${row.id}`)
-  }
-  deleteStockReorder(){
+  this.reorderPlanningService.getReorderPreview(id).subscribe({
+    next: (res: any) => {
+      // handle both {isSuccess,message,data:[...]} and {data:{...}}
+      const payload = Array.isArray(res?.data) ? res.data
+                    : Array.isArray(res?.data?.data) ? res.data.data
+                    : [];
 
-  }
+      const list: PreviewRow[] = payload.map((x: any) => ({
+        prNo: String(x?.prNo ?? ''),
+        itemId: this.N(x?.itemId),
+        itemCode: String(x?.itemCode ?? ''),
+        itemName: String(x?.itemName ?? ''),
+        requestedQty: this.N(x?.requestedQty),
+        supplierId: x?.supplierId ?? null,
+        warehouseId: x?.warehouseId ?? null,
+        location: String(x?.location ?? '-'),
+        deliveryDate: x?.deliveryDate ? String(x.deliveryDate).substring(0, 10) : '-',
+        onHand: this.N(x?.onHand),
+        min: this.N(x?.minQty),
+        max: this.N(x?.maxQty),
+        reorderQty: this.N(x?.reorderQty),
+        status: this.N(x?.status)
+      }));
 
+      this.modalLines = list;          // <-- two rows will show
+      this.showLinesModal = true;
+    },
+    error: (err) => console.error('Preview load failed', err)
+  });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  closeLinesModal(): void { this.showLinesModal = false; }
+}

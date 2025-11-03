@@ -431,7 +431,8 @@ export class CreateItemMasterComponent implements OnInit {
           confirmButtonColor: '#0e3a4c'
         });
 
-        if (creating) { this.onGoToItemList(); return; }
+        if (creating) { this.onGoToItemList();
+          this.onGoToItemList(); return; }
         this.loadItems();
         if (this.item?.id) this.loadBomSnapshotOrFallback();
       } else {

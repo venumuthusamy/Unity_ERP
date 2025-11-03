@@ -120,35 +120,7 @@
             </div>
 
 
-            <!-- Delivery Location -->
-            <!-- <div class="relative dropdown-input">
-
-                <label class="text-xs font-medium text-gray-600">Delivery To (WH)</label>
-                <div class="relative">
-                    <input type="text" [(ngModel)]="searchTexts['delivery']" (input)="filter('delivery')"
-                        (focus)="toggleDropdown('delivery', true)" placeholder="Search Delivery..."
-                        class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-                        style="border-color: #0e3a4c" />
-                    <button *ngIf="searchTexts['delivery']" type="button" (click)="onClearSearch('delivery')"
-                        class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">
-                        ✕
-                    </button>
-                   
-                    <button type="button" (click)="toggleDropdown('delivery')"
-                        class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">
-                        ▼
-                    </button>
-                </div>
-
-             
-                <ul *ngIf="dropdownOpen['delivery']"
-                    class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
-                    <li *ngFor="let item of filteredLists['delivery']" (click)="select('delivery', item)"
-                        class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm">
-                        {{ item.name }}
-                    </li>
-                </ul>
-            </div> -->
+            <!-- Delivery Location (commented by you) -->
 
 
             <!-- Incoterms (show only if overseas) -->
@@ -185,13 +157,6 @@
 
         <!-- More Header Info -->
         <div [ngClass]="gridColsClass(4)">
-            <!-- <div>
-                <label class="text-xs font-medium text-gray-600">Contact Number</label>
-                <input class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
-                    style="border-color: #0e3a4c" placeholder="Contact Number" [(ngModel)]="poHdr.contactNumber" />
-            </div> -->
-
-
             <!-- PO Date (system-generated, disabled) -->
             <div>
                 <label class="text-xs font-medium text-gray-600">PO Date</label>
@@ -211,25 +176,13 @@
                 </p>
             </div>
 
-
             <!-- Remarks -->
             <div>
                 <label class="text-xs font-medium text-gray-600">Remarks</label>
                 <textarea rows="2" class="w-full rounded-xl border focus:outline-none focus:ring-2 px-3 py-2 text-sm"
                     style="border-color: #0e3a4c" [(ngModel)]="poHdr.remarks"></textarea>
             </div>
-            <!-- Recurring Checkbox -->
-            <!-- <div class="flex items-center gap-2 mt-2">
-        <input
-          id="recurringPO"
-          type="checkbox"
-          class="h-4 w-4 rounded border-gray-300 text-[#0e3a4c] focus:ring-[#0e3a4c]"
-          [(ngModel)]="poHdr.recurring"
-        />
-        <label for="recurringPO" class="text-xs font-medium text-gray-600">Recurring PO</label>
-      </div> -->
         </div>
-
 
         <!-- Line Items -->
         <div class="mt-4 overflow-auto border border-gray-200 ">
@@ -239,7 +192,6 @@
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">PR Number</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Item Code</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Description</th>
-                        <!-- <th class="text-left px-3 py-2 font-medium">CapEx / OpEx</th> -->
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Budget</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Recurring</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Tax Code</th>
@@ -459,16 +411,6 @@
                     Level is required.</p>
             </div>
 
-            <!-- Approval Status Badge -->
-
-            <!-- <span class="px-3 py-1 rounded-full text-xs font-medium" [ngClass]="{
-            'bg-yellow-100 text-yellow-700': poHdr.approvalStatus === 'Pending',
-            'bg-green-100 text-green-700': poHdr.approvalStatus === 'Approved',
-            'bg-red-100 text-red-700': poHdr.approvalStatus === 'Rejected'
-          }">
-                    {{ poHdr.approvalStatus || 'Pending' }}
-                </span> -->
-
             <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50"
                 (mouseenter)="hover = true" (mouseleave)="hover = false" type="button" (click)="setApprovalStatus(1)">
                 Pending
@@ -493,11 +435,6 @@
                 (click)="notify('PO PDF generated & sent')" type="button">
                 Send (PDF/Email/WA)
             </button>
-            <!-- <button type="cancel" class="btn btn-danger mr-1" (click)="cancel()"
-                style="padding: 6px 18px; font-size: 0.9rem; border-radius: 4px;">
-                <i data-feather="check-circle" class="w-4 h-4"></i>
-                Cancel
-            </button> -->
             <button (click)="cancel()" class="btn btn-danger m-1 d-inline-flex align-items-center"
                  style="padding: 6px 18px; font-size: 0.9rem; border-radius: 4px;">
                  <i data-feather="x-circle" class="w-4 h-4 mr-0.5"></i>
