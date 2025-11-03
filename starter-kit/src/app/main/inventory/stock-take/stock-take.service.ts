@@ -65,5 +65,8 @@ export class StockTakeService {
         return this.http.post<any>(this.url + `/stocktake/${stockTakeId}/post`, body);
     }
 
+    GetSupplierByWarehouseId(id): Observable<any[]> {
+        return this.http.get<any[]>(this.url + StockTakeApiUrls.GetSuppliersStockTake + id);
+    }
 
 }

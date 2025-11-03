@@ -7,6 +7,7 @@ import * as feather from 'feather-icons';
 import { StockTakeService } from '../stock-take.service'
 import { ItemMasterService } from '../../item-master/item-master.service';
 import { BinService } from '../../../master/bin/bin.service'
+import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 
 @Component({
   selector: 'app-stock-take-list',
@@ -41,8 +42,9 @@ export class StockTakeListComponent implements OnInit {
 
   takeTypeMap: Record<number, string> = {};
   binList: any;
+  reasonList: any
 
-  constructor(private stockTakeService: StockTakeService, private router: Router,
+  constructor(private stockTakeService: StockTakeService, private router: Router,private StockissueService: StockIssueService,
     private datePipe: DatePipe, private itemMasterService: ItemMasterService,private BinService: BinService,
   ) { this.userId = localStorage.getItem('id'); }
   ngOnInit(): void {
@@ -52,6 +54,9 @@ export class StockTakeListComponent implements OnInit {
     })
     this.BinService.getAllBin().subscribe((res: any) => {
       this.binList = res.data;
+    })
+    this.StockissueService.getAllStockissue().subscribe((res: any) => {
+      this.reasonList = res.data;
     })
   }
   filterUpdate(event) {
@@ -143,7 +148,7 @@ export class StockTakeListComponent implements OnInit {
       badCountedQty:N(l?.badCountedQty),
       totalQty: N(l?.countedQty)+N(l?.badCountedQty), 
       variance: (l.countedQty + l.badCountedQty) - N(l.onHand),  
-      reason: (l?.reason ?? '-') as string ,
+      reasonId: (l?.reasonId ?? '-') as string ,
       remarks: (l?.remarks ?? '-') as string
     }));
 
@@ -241,6 +246,11 @@ export class StockTakeListComponent implements OnInit {
         }
       });
     });
+  }
+   getReason(id: number | string | null) {
+    debugger
+    const x = this.reasonList.find(i => i.id === id);
+    return x?.stockIssuesNames ?? String(id ?? '');
   }
    
 }

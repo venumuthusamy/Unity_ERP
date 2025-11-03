@@ -5,4 +5,5 @@ export class StockTakeApiUrls {
   public static readonly GetStockTakeById = "/StockTake/get/"; 
   public static readonly UpdateStockTake = "/StockTake/update";
   public static readonly DeleteStockTake = "/StockTake/Delete/";
+  public static readonly GetSuppliersStockTake = "/StockTake/GetAllSupplierByWarehouseId/";
 }

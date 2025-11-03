@@ -304,9 +304,9 @@
     </td>
 
     <!-- Extra columns (empty or future data placeholders) -->
-    <td></td>
-    <td></td>
-    <td></td>
+    <td><span class="text-gray-800">{{ p.countedQty || '-' }}</span></td>
+    <td><span class="text-gray-800">{{ p.badCountedQty || '-' }}</span></td>
+    <td><span class="text-gray-800">{{ getReason(p.reasonId)  || '-' }}</span></td>
 
     <!-- Delete button -->
     <td class="px-3 py-2 text-right">
