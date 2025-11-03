@@ -5,14 +5,15 @@ import Swal from 'sweetalert2';
 
 import { StackOverviewService } from '../../stack-overview/stack-overview.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
+import { BinService } from 'app/main/master/bin/bin.service';
+import { StockAdjustmentService } from '../../stock-adjustment/stock-adjustment.service';
 
 /** ---- API & UI Types ---------------------------------------------------- */
 
 interface ApiItemRow {
-  /** Item identifiers coming from API (support both shapes) */
-  itemId?: number | string;       // preferred
-  id?: number | string;           // legacy fallback
-  stockId?: number | string;      // Stock table Id (required for submit)
+  itemId?: number | string;
+  id?: number | string;
+  stockId?: number | string;
 
   sku?: string;
   name?: string;
@@ -35,17 +36,20 @@ interface ApiItemRow {
   isFullTransfer?: boolean;
   isPartialTransfer?: boolean;
 
-  /** may come as "400.000" */
   transferQty?: number | string;
 
-  /** Optional: if API sets it when a row has already been targeted */
   toWarehouseName?: string | null;
+
+  supplierId?: number | string | null;
+  supplierName?: string | null;
 }
 
 type QtyErr = null | 'required' | 'negative' | 'decimal' | 'exceeds';
 
 interface StockRow {
   idKey: string;
+  itemId?: number;                 // NEW
+  warehouseId?: number;            // already present in your code
   sku: string | null;
   item: string;
   warehouse: string;
@@ -55,8 +59,11 @@ interface StockRow {
   min: number;
   available: number;
   expiry: Date | null;
-  warehouseId?: number;
   binId?: number;
+
+  supplierId?: number | null;
+  supplierName?: string | null;
+
   apiRow?: ApiItemRow;
   isApproved?: boolean;
   isTransfered?: boolean;
@@ -72,10 +79,12 @@ interface StockRow {
 }
 
 interface WarehouseOpt { id: number | string; name: string; }
+interface BinOpt { id: number | string; binName: string; code?: string; }
 
 interface SubmitModalState {
   fromWarehouseId: number | string | null;
   toWarehouseId: number | string | null;
+  toBinId: number | string | null;
   remarks: string | null;
 }
 
@@ -94,15 +103,21 @@ export class StockTransferCreateComponent implements OnInit {
   lockedWarehouse: string | null = null;
   fromWarehouseName = '';
 
-  modal: SubmitModalState = { fromWarehouseId: null, toWarehouseId: null, remarks: null };
+  modal: SubmitModalState = { fromWarehouseId: null, toWarehouseId: null, toBinId: null, remarks: null };
   modalTouched = false;
 
   toWarehouseList: WarehouseOpt[] = [];
+  toBinList: BinOpt[] = [];
+  toBinLoading = false;
+
+  /** Group meta (recomputed after each edit) */
+  groupMeta = new Map<string, { totalOnHand: number; reserved: number; maxTransfer: number; used: number; remaining: number }>();
 
   constructor(
     private router: Router,
     private stockService: StackOverviewService,
     private warehouseService: WarehouseService,
+    private stockAdjustmentService: StockAdjustmentService,
     private modalSvc: NgbModal
   ) {}
 
@@ -124,7 +139,12 @@ export class StockTransferCreateComponent implements OnInit {
   isRowDisabled(r: StockRow): boolean {
     const crossWarehouse = !!this.lockedWarehouse && r.warehouse !== this.lockedWarehouse && !r._sel;
     const noStock = (r.available ?? 0) <= 0;
-    return crossWarehouse || noStock;
+
+    // if group fully allocated, block new selection unless this row is already selected with qty
+    const g = this.groupMeta.get(this.groupKey(r));
+    const groupFull = g ? (g.remaining <= 0 && !(r._sel && (r.transferQty ?? 0) > 0)) : false;
+
+    return crossWarehouse || noStock || groupFull;
   }
 
   onToggleRow(nextValue: boolean, row: StockRow): void {
@@ -170,9 +190,7 @@ export class StockTransferCreateComponent implements OnInit {
     this.fromWarehouseName = this.lockedWarehouse ?? '';
   }
 
-  /* ---------------
-   * Page actions
-   * --------------*/
+  /* --------------- */
   get sameWarehouseSelected(): boolean {
     const sel = this.selectedRows;
     if (sel.length === 0) return false;
@@ -188,13 +206,15 @@ export class StockTransferCreateComponent implements OnInit {
 
     this.modalTouched = false;
     this.modal = {
-      fromWarehouseId: firstRow.warehouseId,
+      fromWarehouseId: firstRow.warehouseId!,
       toWarehouseId: null,
+      toBinId: null,
       remarks: null
     };
     this.fromWarehouseName = whName;
 
     this.loadToWareHouse(whName, () => {
+      this.toBinList = [];
       this.modalSvc.open(tpl, { centered: true, size: 'lg', backdrop: 'static' });
     });
   }
@@ -209,18 +229,19 @@ export class StockTransferCreateComponent implements OnInit {
   submitFromModal(close: (reason?: any) => void): void {
     this.modalTouched = true;
     if (!this.modal.fromWarehouseId || !this.modal.toWarehouseId || this.sameWarehouse()) return;
+    if (!this.modal.toBinId) return;
     if (this.hasInvalidSelected()) return;
 
     const toId = Number(this.modal.toWarehouseId);
+    const toBinId = Number(this.modal.toBinId);
     const remarks = (this.modal.remarks ?? '').trim() || null;
 
     const keys = this.selectedRows.map(r => {
       const { isFullTransfer, isPartialTransfer } = this.calcTransferFlags(r);
 
-      // derive StockId & ItemId robustly
       const stockIdRaw =
         (r.apiRow as any)?.stockId ??
-        (r.apiRow as any)?.StockId;         // backend might send PascalCase
+        (r.apiRow as any)?.StockId;
 
       const itemIdRaw =
         (r.apiRow as any)?.itemId ??
@@ -230,27 +251,24 @@ export class StockTransferCreateComponent implements OnInit {
       const stockId = Number(stockIdRaw);
       const itemId  = Number(itemIdRaw);
 
-      if (!Number.isFinite(stockId) || stockId <= 0) {
-        throw new Error(`Missing/invalid StockId for row ${r.idKey}`);
-      }
-      if (!Number.isFinite(itemId) || itemId <= 0) {
-        throw new Error(`Missing/invalid ItemId for row ${r.idKey}`);
-      }
+      if (!Number.isFinite(stockId) || stockId <= 0) throw new Error(`Missing/invalid StockId for row ${r.idKey}`);
+      if (!Number.isFinite(itemId) || itemId <= 0) throw new Error(`Missing/invalid ItemId for row ${r.idKey}`);
 
-      // reflect flags in UI immediately (optional)
       r.isFullTransfer = isFullTransfer;
       r.isPartialTransfer = isPartialTransfer;
 
       return {
-        stockId,                                        // 👈 Stock.Id for Stock table update
-        itemId,                                         // useful for IWS update
-        warehouseId: Number(r.warehouseId),             // FROM
+        stockId,
+        itemId,
+        warehouseId: Number(r.warehouseId),         // FROM
         binId: (r.binId == null ? null : Number(r.binId)),
-        toWarehouseId: toId,                            // TO
+        toWarehouseId: toId,                         // TO
+        toBinId,
         transferQty: Number(r.transferQty),
         remarks,
         isFullTransfer,
-        isPartialTransfer
+        isPartialTransfer,
+        supplierId: (r.supplierId == null ? null : Number(r.supplierId))
       };
     });
 
@@ -284,37 +302,34 @@ export class StockTransferCreateComponent implements OnInit {
     this.router.navigate(['/inventory/stock-transfer']);
   }
 
-  /* ---------------
-   * Data loading
-   * --------------*/
+  /* --------------- Data loading --------------- */
   loadMasterItem(): void {
     this.stockService.GetAllStockTransferedList().subscribe({
       next: (res: any) => {
         const list: ApiItemRow[] = res?.isSuccess && Array.isArray(res.data) ? res.data : [];
         this.rows = list.map(item => this.primeRow(this.toStockRow(item)));
 
-        // filter candidates for NEW transfer
+        // show items not yet transferred and without preset transfer qty
         this.filteredRows = this.rows.filter(r =>
-          r.isTransfered === true &&
-          r.isPartialTransfer === false &&
+          (r.isTransfered === false || r.isTransfered == null) &&
+          (r.isPartialTransfer === false || r.isPartialTransfer == null) &&
           (r.transferQty == null || Number(r.transferQty) === 0)
         );
 
-        // de-dupe by composite key
+        // de-dup by composite key (includes supplierId)
         const byKey = new Map<string, StockRow>();
         for (const r of this.filteredRows) {
           const k = r.idKey;
           const curr = byKey.get(k);
-          if (!curr || Number(r.transferQty ?? 0) < Number(curr.transferQty ?? 0)) {
-            byKey.set(k, r);
-          }
+          if (!curr || Number(r.transferQty ?? 0) < Number(curr.transferQty ?? 0)) byKey.set(k, r);
         }
         this.filteredRows = Array.from(byKey.values());
 
-        // reset selection/lock
+        // reset selection/lock and compute group meta
         this.filteredRows.forEach(r => (r._sel = false));
         this.lockedWarehouse = null;
         this.fromWarehouseName = '';
+        this.groupMeta = this.computeGroupMeta();
       },
       error: (err) => {
         console.error('Load stock transfer list failed', err);
@@ -322,6 +337,7 @@ export class StockTransferCreateComponent implements OnInit {
         this.filteredRows = [];
         this.lockedWarehouse = null;
         this.fromWarehouseName = '';
+        this.groupMeta = new Map();
       }
     });
   }
@@ -333,9 +349,33 @@ export class StockTransferCreateComponent implements OnInit {
     });
   }
 
-  /* ---------------
-   * Mapping helpers
-   * --------------*/
+  onToWarehouseChange(warehouseId: number | string | null | undefined): void {
+    this.modal.toBinId = null;
+    this.toBinList = [];
+    if (!warehouseId) return;
+    this.loadToBinLocation(Number(warehouseId));
+  }
+
+  loadToBinLocation(warehouseId: number, done?: () => void): void {
+    this.toBinLoading = true;
+    this.stockAdjustmentService.GetBinDetailsbywarehouseID(warehouseId).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res ?? [];
+        this.toBinList = data.map((b: any) => ({
+          id: b.id ?? b.Id,
+          binName: b.binName ?? b.BinName ?? b.name ?? b.Name,
+          code: b.code ?? b.Code ?? undefined,
+        }));
+        this.toBinLoading = false; done?.();
+      },
+      error: (err: any) => {
+        console.error('Load To Bin Location failed', err);
+        this.toBinLoading = false; this.toBinList = []; done?.();
+      }
+    });
+  }
+
+  /* --------------- Mapping helpers --------------- */
   private parseExpiry(src?: string): Date | null {
     if (!src) return null;
     if (src.startsWith('0001-01-01')) return null;
@@ -355,24 +395,20 @@ export class StockTransferCreateComponent implements OnInit {
     const available = Number(api.available != null ? api.available : (onHand - reserved));
     const expiry = this.parseExpiry(api.expiryDate);
 
-    // preserve transferQty if present
     const apiTransfer = (api.transferQty as any);
     const preservedTransfer = (apiTransfer === null || apiTransfer === undefined) ? 0 : Number(apiTransfer);
 
-    // choose item id (ItemId or legacy id)
-    const itemIdRaw = (api.itemId ?? api.id) as any;
-    const itemId = Number(itemIdRaw);
-
-    const stockIdRaw = (api.stockId as any);
-    const stockId = Number(stockIdRaw);
+    const itemId = Number((api.itemId ?? api.id) as any);
+    const stockId = Number((api.stockId as any));
+    const supplierId = (api.supplierId == null ? null : Number(api.supplierId as any));
+    const supplierName = (api.supplierName ?? null);
 
     return {
-      // include stockId and itemId in idKey to avoid collisions
-      idKey: [stockId || '', itemId || '', warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
-
+      idKey: [stockId || '', itemId || '', (supplierId ?? ''), warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
+      itemId,
       warehouse,
-      item,
       sku,
+      item,
       bin,
       onHand,
       reserved,
@@ -381,15 +417,14 @@ export class StockTransferCreateComponent implements OnInit {
       expiry,
       warehouseId: Number(api.warehouseId as any),
       binId: api.binId == null ? undefined : Number(api.binId as any),
-
+      supplierId,
+      supplierName,
       apiRow: api,
       isApproved: !!api.isApproved,
       isTransfered: !!api.isTransfered,
       isFullTransfer: !!api.isFullTransfer,
       isPartialTransfer: !!api.isPartialTransfer,
-
       transferQty: Number.isFinite(preservedTransfer) ? preservedTransfer : 0,
-
       _qtyValid: false,
       _qtyErr: 'required',
       _sel: false
@@ -402,14 +437,52 @@ export class StockTransferCreateComponent implements OnInit {
     return { ...row, transferQty: Number.isFinite(n) ? n : 0, _qtyValid: valid.ok, _qtyErr: valid.err };
   }
 
-  /* ---------------
-   * Quantity validation
-   * --------------*/
-  private validateQty(n: number, available: number): { ok: boolean; err: QtyErr } {
+  /* --------------- Group logic --------------- */
+  /** same item + same warehouse → one group */
+  groupKey(r: StockRow) {
+    return `${r.warehouseId || 0}|${r.itemId || 0}`;
+  }
+
+  /** compute per-group caps */
+  private computeGroupMeta() {
+    const meta = new Map<string, { totalOnHand: number; reserved: number; maxTransfer: number; used: number; remaining: number }>();
+
+    for (const r of this.filteredRows) {
+      const k = this.groupKey(r);
+      const m = meta.get(k) || { totalOnHand: 0, reserved: 0, maxTransfer: 0, used: 0, remaining: 0 };
+
+      m.totalOnHand += Math.max(0, Number(r.onHand ?? 0));
+
+      // reserved is common inside group – take max (avoids double count)
+      const rsv = Math.max(0, Number(r.reserved ?? 0));
+      m.reserved = Math.max(m.reserved, rsv);
+
+      m.used += Math.max(0, Number(r.transferQty ?? 0));
+
+      meta.set(k, m);
+    }
+
+    for (const [k, m] of meta) {
+      m.maxTransfer = Math.max(0, m.totalOnHand - m.reserved);
+      m.remaining = Math.max(0, m.maxTransfer - m.used);
+    }
+    return meta;
+  }
+
+  /** remaining available for a row considering its previous qty */
+  groupRemainingForRow(r: StockRow): number {
+    const k = this.groupKey(r);
+    const g = this.groupMeta.get(k);
+    if (!g) return Math.max(0, Number(r.available ?? r.onHand ?? 0));
+    const prevThis = Math.max(0, Number(r.transferQty ?? 0));
+    return Math.max(0, (g.remaining ?? 0) + prevThis);
+  }
+
+  /* --------------- Quantity validation --------------- */
+  private validateQty(n: number, _available: number): { ok: boolean; err: QtyErr } {
     if (n == null || Number.isNaN(n) || n === 0) return { ok: false, err: 'required' };
     if (!Number.isInteger(n)) return { ok: false, err: 'decimal' };
     if (n < 0) return { ok: false, err: 'negative' };
-    if (n > Math.max(0, available ?? 0)) return { ok: false, err: 'exceeds' }; // allow <= available
     return { ok: true, err: null };
   }
 
@@ -417,25 +490,32 @@ export class StockTransferCreateComponent implements OnInit {
     let n = Number(value);
 
     if (value === '' || value === null || Number.isNaN(n)) {
-      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'required'; this.recomputeSelectionMeta(); return;
+      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'required'; this.recomputeMeta(); return;
     }
     if (!Number.isInteger(n)) {
       n = Math.floor(n);
-      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'decimal'; this.recomputeSelectionMeta(); return;
+      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'decimal'; this.recomputeMeta(); return;
     }
     if (n < 0) {
-      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'negative'; this.recomputeSelectionMeta(); return;
+      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'negative'; this.recomputeMeta(); return;
     }
 
-    const available = Math.max(0, Number(row.available ?? 0));
-    if (n > available) {
-      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'exceeds'; this.recomputeSelectionMeta(); return;
+    // group cap logic
+    const prevThis = Math.max(0, Number(row.transferQty ?? 0));
+    // recompute meta first to get latest numbers excluding this edit
+    this.groupMeta = this.computeGroupMeta();
+    const groupRemaining = this.groupRemainingForRow(row); // includes prevThis
+    const rowCap = Math.max(0, Number(row.available ?? row.onHand ?? 0));
+    const finalCap = Math.min(groupRemaining, rowCap);
+
+    if (n > finalCap) {
+      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'exceeds'; this.recomputeMeta(); return;
     }
 
     row.transferQty = n;
     row._qtyValid = n > 0;
     row._qtyErr = row._qtyValid ? null : 'required';
-    this.recomputeSelectionMeta();
+    this.recomputeMeta();
   }
 
   digitsOnly(e: KeyboardEvent) {
@@ -447,7 +527,6 @@ export class StockTransferCreateComponent implements OnInit {
   hasInvalidSelected(): boolean {
     return this.filteredRows?.some(r => {
       if (!r._sel) return false;
-      // stockId guard
       const stockId =
         (r.apiRow as any)?.stockId ??
         (r.apiRow as any)?.StockId;
@@ -456,13 +535,11 @@ export class StockTransferCreateComponent implements OnInit {
     }) ?? false;
   }
 
-  private recomputeSelectionMeta() {
-    // reserved for side-effects if needed
+  private recomputeMeta() {
+    this.groupMeta = this.computeGroupMeta();
   }
 
-  /* ---------------
-   * Template helpers
-   * --------------*/
+  /* --------------- Template helpers --------------- */
   trackByRow = (_: number, r: StockRow) => r.idKey;
 
   badgeToneClasses(tone: 'blue' | 'green' | 'amber' | 'red' = 'blue') {
@@ -483,5 +560,6 @@ export class StockTransferCreateComponent implements OnInit {
     this.filteredRows.forEach(r => (r._sel = false));
     this.lockedWarehouse = null;
     this.fromWarehouseName = '';
+    this.groupMeta = this.computeGroupMeta();
   }
 }
