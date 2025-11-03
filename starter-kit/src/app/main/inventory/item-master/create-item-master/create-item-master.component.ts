@@ -19,6 +19,7 @@ import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
 import { CoastingMethodService } from 'app/main/master/coasting-method/coasting-method.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { StrategyService } from 'app/main/master/strategies/strategy.service';
+import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 
 /* ----------------- Lightweight view models ----------------- */
 type SimpleItem = {
@@ -203,6 +204,7 @@ export class CreateItemMasterComponent implements OnInit {
   minDate = '';
   userId: any;
   showRaw: Record<string | number, boolean> = {};
+  reasonList: any;
   @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchBox', { static: false }) itemSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
@@ -221,6 +223,7 @@ export class CreateItemMasterComponent implements OnInit {
     private strategyService: StrategyService,
     private router: Router,
     private route: ActivatedRoute,
+    private StockissueService: StockIssueService,
   ) {
     this.userId = localStorage.getItem('id');
   }
@@ -243,6 +246,9 @@ export class CreateItemMasterComponent implements OnInit {
     } else {
       this.loadItems();
     }
+     this.StockissueService.getAllStockissue().subscribe((res:any)=>{
+       this.reasonList = res.data
+    })
   }
 
   /* Derived totals */

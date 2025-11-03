@@ -26,7 +26,7 @@ interface StockTakeLine {
   countedQty: number | null;
   badCountedQty: number | null;
   barcode?: string | null;
-  reason: number | string | null;
+  reasonId: number | string | null;
   remarks?: string | null;
   _error?: string | null; // UI-only
   selected: any
@@ -90,14 +90,14 @@ export class StockTakeComponent implements OnInit {
       strategy: this.strategyService.getStrategy(),
       item: this.itemMasterService.getAllItemMaster(),
       reason: this.StockissueService.getAllStockissue(),
-      supplier:  this.supplierService.GetAllSupplier()
+      //supplier:  this.supplierService.GetAllSupplier(),
     }).subscribe((results: any) => {
       this.warehouseTypes = results.warehouse.data;
       this.LocationTypes = results.bin.data;
       this.strategies = results.strategy.data;
       this.itemList = results.item.data;
       this.reasonList = results.reason.data;
-      this.supplierList = results.supplier.data;
+      // this.supplierList = results.supplier.data;
     });
     this.route.paramMap.subscribe((params: any) => {
       const idStr = params.get('id');
@@ -116,6 +116,7 @@ export class StockTakeComponent implements OnInit {
         ...l,
         selected: l.selected ?? false,   // ← default unchecked rows to false
       }));
+      this.getSuppliersByWarehouse(this.warehouseTypeId)
           if (this.takeTypeId == 1) {
             this.strategyCheck = true;
           } else {
@@ -248,11 +249,11 @@ export class StockTakeComponent implements OnInit {
                 err?.error?.message ||
                 err?.message 
               Swal.fire({
-                icon: 'error',
-                title: 'Error',
+                icon: 'warning',
+                title: 'warning',
                 text: msg,
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#d33'
+                confirmButtonColor: '#2E5F73'
               });
       }
     });
@@ -278,7 +279,7 @@ export class StockTakeComponent implements OnInit {
       countedQty: 0,
       badCountedQty: 0,
       // barcode: dto.barcode ?? '',
-      reason: dto.reason ?? '',
+      reasonId: dto.reasonId ?? 0,
       remarks: dto.remarks ?? '',
     };
   }
@@ -360,7 +361,7 @@ export class StockTakeComponent implements OnInit {
           VarianceQty: total - this.toNum(L.onHand),
 
           // If you require a reason only when there’s bad qty:
-          reason: bad > 0 ? L.reason : null,
+          reasonId: bad > 0 ? L.reasonId : 0,
 
           barcode: (L.barcode ?? '').trim() || null,
           remarks: (L.remarks ?? '').trim() || null,
@@ -485,7 +486,7 @@ export class StockTakeComponent implements OnInit {
         countedQty: this.toNum(r.countedQty),
         badCountedQty: this.toNum(r.badCountedQty),
         varianceQty: (this.toNum(r.countedQty) + this.toNum(r.badCountedQty)) - this.toNum(r.onHand),
-        reason: r.reason ?? null,
+        reasonId: r.reasonId ?? 0,
         remarks: r.remarks ?? null,
         barcode: r.barcode ?? null,
         selected: !!r.selected,   // ← keep the flag so backend knows which were approved
@@ -549,6 +550,12 @@ export class StockTakeComponent implements OnInit {
 
   onCheckReview(){
     this.showStockReview = false
+  }
+  getSuppliersByWarehouse(event){
+    debugger
+    this.stockTakeService.GetSupplierByWarehouseId(event).subscribe((res:any)=>{
+      this.supplierList = res.data
+    })
   }
 }
 

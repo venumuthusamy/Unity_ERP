@@ -24,7 +24,7 @@
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Warehouse<span style="color:red">*</span></label>
                 <ng-select [items]="warehouseTypes" bindLabel="name" bindValue="id" [(ngModel)]="warehouseTypeId"
-                    placeholder="Select warehouse" class="w-100">
+                    placeholder="Select warehouse" (ngModelChange)="getSuppliersByWarehouse($event)" class="w-100">
                 </ng-select>
             </div>
             <div class="col-sm-6 col-md-3">
@@ -80,7 +80,8 @@
                         </th>
                         <th style="background-color:#2E5F73; color:white;width:250px;white-space: nowrap;">Reason For
                             Faulty Qty</th>
-                        <th class="remarks-col" style="background-color:#2E5F73; color:white;width:300px;white-space: nowrap;">Remarks</th>
+                        <th class="remarks-col"
+                            style="background-color:#2E5F73; color:white;width:300px;white-space: nowrap;">Remarks</th>
                         <!-- <th style="background-color:#2E5F73; color:white; width:200px;">Action</th> -->
                     </tr>
                 </thead>
@@ -95,7 +96,7 @@
                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
                         <td style="min-width: 200px;"><input type="text" class="form-control" [(ngModel)]="r.barcode"
-                          (ngModelChange)="onCheckReview()"     placeholder="Enter barcode" /></td>
+                                (ngModelChange)="onCheckReview()" placeholder="Enter barcode" /></td>
 
                         <!-- <td class="text-muted">{{ r.onHand ?? 0 }}</td> -->
                         <td>
@@ -113,8 +114,10 @@
                         </td> -->
                         <!-- stock-take-list.component.html OR stock-take.component.html -->
                         <td>
-                            <textarea class="form-control" autosize rows="1" [(ngModel)]="r.reason"
-                                placeholder="Reason" (ngModelChange)="onCheckReview()"></textarea>
+                            <ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reasonId"
+                                 placeholder="Item" class="w-100">
+                            </ng-select>
+
                         </td>
                         <td class="remarks-col">
                             <textarea class="form-control" autosize rows="1" [(ngModel)]="r.remarks"
@@ -212,7 +215,8 @@
                                  placeholder="Item" class="w-100"></ng-select></td> -->
                             <td class="reason-cell">
                                 <!-- remove the long-line issue, preserve user line breaks, and show full text on hover -->
-                                <span class="reason-text" [title]="r.reason">{{ r.reason || '-' }}</span>
+                               <ng-select [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id" [(ngModel)]="r.reasonId"
+                                 placeholder="Item" class="w-100"></ng-select>
                             </td>
                             <td class="remarks-col">
                                 <textarea class="form-control" autosize rows="1" [(ngModel)]="r.remarks"
