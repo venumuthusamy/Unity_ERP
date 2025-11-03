@@ -386,7 +386,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       userId: this.userId,
       CreatedBy: this.userId,
       UpdatedBy: this.userId,
-      DepartmentName: this.searchText || null
+      DepartmentName: this.searchText || null,
+      StockReorderId:0
     };
 
     const goList = () => this.router.navigate(['/purchase/list-PurchaseRequest']);

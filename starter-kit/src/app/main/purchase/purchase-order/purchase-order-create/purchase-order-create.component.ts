@@ -45,6 +45,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     subTotal: 0,
     netTotal: 0,
     approvalStatus: '',
+    StockReorderId:0
   };
   purchaseOrderId: any;
   approvalLevel: any;
@@ -91,7 +92,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
     currency: false,
     incoterms: false
   };
-
 
   filteredLists: { [key: string]: any[] } = {
     approval: [],
@@ -227,8 +227,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
             this.searchTexts['incoterms'] = selectedIncoterms.incotermsName;
           }
 
-
-
           this.poLines = JSON.parse(results.poHdr.data.poLines);
           this.calculateFxTotal()
         });
@@ -291,7 +289,9 @@ export class PurchaseOrderCreateComponent implements OnInit {
             const pr = list.find(x => Number(x.id) === Number(this.fromReorderPrId));
             this.allPrNos = pr ? [pr] : [];
 
-            const lines = this.safeParsePrLines(pr.prLines);
+            const lines = this.safeParsePrLines(pr?.prLines);
+
+            // auto-pick supplier if unique
             const supplierIds = Array.from(
               new Set(
                 lines.map((l: any) => Number(l?.supplierId)).filter((n) => Number.isFinite(n) && n > 0)
@@ -303,14 +303,18 @@ export class PurchaseOrderCreateComponent implements OnInit {
               const supplier = (this.suppliers || []).find((s: any) => s.id === sid);
 
               if (supplier) {
-                // Reuse your existing selection logic so currency/GST are set correctly
                 this.searchTexts['supplier'] = supplier.name;
-                this.select('supplier', supplier); // sets poHdr.supplierId, currencyId/Name, fxRate, tax, etc.
+                this.select('supplier', supplier); // sets header + currency/GST
               } else {
-                // Fallback: set id only if master isn’t loaded yet
                 this.poHdr.supplierId = sid;
               }
             }
+
+            // ✅ Map PR lines into PO lines immediately
+            this.poLines = lines.map((l: any) => this.mapPRLineToPOLine(pr.purchaseRequestNo, l));
+            // cleanup totals
+            this.poLines.forEach(x => this.calculateLineTotal(x));
+            this.recalculateTotals();
           }
           // 2) Normal PO create → show NON-reorder PRs only
           else {
@@ -562,7 +566,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   openDropdown(index: number, field: string) {
     debugger
     this.poLines[index].dropdownOpen = field;
-    // this.filterOptions(index, field); // show all initially
+    // show all initially
     if (field === 'prNo') {
       this.poLines[index].filteredOptions = [...this.allPrNos];
     }
@@ -589,34 +593,34 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
     if (field === 'prNo') {
       this.poLines[index].filteredOptions = this.allPrNos
-        .filter(x => x.purchaseRequestNo.toLowerCase().includes(searchValue));
+        .filter((x: any) => (x?.purchaseRequestNo || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'item') {
       this.poLines[index].filteredOptions = this.allItems
-        .filter(x =>
-          x.itemCode.toLowerCase().includes(searchValue) ||
-          x.itemName.toLowerCase().includes(searchValue)
+        .filter((x: any) =>
+          (x?.itemCode || '').toLowerCase().includes(searchValue) ||
+          (x?.itemName || '').toLowerCase().includes(searchValue)
         );
     }
 
     if (field === 'budget') {
       this.poLines[index].filteredOptions = this.allBudgets
-        .filter(x => x.toLowerCase().includes(searchValue));
+        .filter((x: any) => (x?.label || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'recurring') {
       this.poLines[index].filteredOptions = this.allRecurring
-        .filter(x => x.toLowerCase().includes(searchValue));
+        .filter((x: any) => (x?.recurringName || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'taxCode') {
       this.poLines[index].filteredOptions = this.allTaxCodes
-        .filter(x => x.toLowerCase().includes(searchValue));
+        .filter((x: any) => (x?.name || '').toLowerCase().includes(searchValue));
     }
     if (field === 'location') {
       this.poLines[index].filteredOptions = this.deliveries
-        .filter(x => x.toLowerCase().includes(searchValue));
+        .filter((x: any) => (x?.name || '').toLowerCase().includes(searchValue));
     }
   }
 
@@ -683,6 +687,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
         // this.poLines[dupIdx].qty = (Number(this.poLines[dupIdx].qty) || 0) + (Number(nl.qty) || 0);
       }
     }
+
+    // refresh totals
+    this.poLines.forEach(x => this.calculateLineTotal(x));
+    this.recalculateTotals();
   }
 
   private safeParsePrLines(raw: any): any[] {
@@ -708,8 +716,17 @@ export class PurchaseOrderCreateComponent implements OnInit {
     po.description = line.remarks ?? '';
     po.budget = line.budget ?? '';
     po.location = line.location ?? line.locationSearch ?? '';
-    const contactNumber = this.deliveries.find(x => x.name == line.location).contactNumber
-    po.contactNumber = contactNumber ?? '';
+
+    // Safe lookup for contact number from deliveries list
+    try {
+      const loc = (this.deliveries || []).find((x: any) =>
+        (x?.name || '').toLowerCase() === (po.location || '').toLowerCase()
+      );
+      po.contactNumber = loc?.contactNumber || '';
+    } catch {
+      po.contactNumber = '';
+    }
+
     po.qty = Number(line.qty) || 0;
 
     return po;
@@ -769,7 +786,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
 
   poAddLine() {
-    // this.poLines = [...this.poLines, { tax: 'STD' }]; 
     this.poLines.push({
       prNo: '',
       item: '',
@@ -790,7 +806,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
 
   poRemoveLine(i: number) {
-    // this.poLines = this.poLines.filter((_, idx) => idx !== i); 
     this.poLines.splice(i, 1);
     this.recalculateTotals();
   }
@@ -967,7 +982,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       subTotal: Number(this.poTotals.subTotal.toFixed(2)),
       netTotal: Number(this.poTotals.netTotal.toFixed(2)),
       approvalStatus: this.poHdr.approvalStatus,
-      poLines: JSON.stringify(this.poLines)
+      poLines: JSON.stringify(this.poLines),
+      StockReorderId:this.poHdr.stockReorderId
     };
 
     if (this.poHdr.id && this.poHdr.id > 0) {
@@ -1144,10 +1160,3 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
 
 }
-
-
-
-
-
-
-

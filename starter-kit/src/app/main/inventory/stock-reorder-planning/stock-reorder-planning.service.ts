@@ -64,5 +64,7 @@ export class ReorderPlanningService {
         );
     }
 
-
+ getReorderPreview(stockReorderId: number): Observable<any[]> {
+        return this.http.get<any[]>(this.url + StockReorderApiUrls.getPreviewStockReorder + stockReorderId);
+    }
 }
