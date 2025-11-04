@@ -137,15 +137,11 @@ export class StockTransferCreateComponent implements OnInit {
   }
 
   isRowDisabled(r: StockRow): boolean {
-    const crossWarehouse = !!this.lockedWarehouse && r.warehouse !== this.lockedWarehouse && !r._sel;
-    const noStock = (r.available ?? 0) <= 0;
+  const crossWarehouse = !!this.lockedWarehouse && r.warehouse !== this.lockedWarehouse && !r._sel;
+  const noStock = (r.available ?? 0) <= 0;
+  return crossWarehouse || noStock;
+}
 
-    // if group fully allocated, block new selection unless this row is already selected with qty
-    const g = this.groupMeta.get(this.groupKey(r));
-    const groupFull = g ? (g.remaining <= 0 && !(r._sel && (r.transferQty ?? 0) > 0)) : false;
-
-    return crossWarehouse || noStock || groupFull;
-  }
 
   onToggleRow(nextValue: boolean, row: StockRow): void {
     if (nextValue) {
@@ -304,7 +300,7 @@ export class StockTransferCreateComponent implements OnInit {
 
   /* --------------- Data loading --------------- */
   loadMasterItem(): void {
-    this.stockService.GetAllStockTransferedList().subscribe({
+    this.stockService.GetStockTransferedList().subscribe({
       next: (res: any) => {
         const list: ApiItemRow[] = res?.isSuccess && Array.isArray(res.data) ? res.data : [];
         this.rows = list.map(item => this.primeRow(this.toStockRow(item)));
@@ -513,7 +509,7 @@ export class StockTransferCreateComponent implements OnInit {
     }
 
     row.transferQty = n;
-    row._qtyValid = n > 0;
+    row._qtyValid = n >= 0;
     row._qtyErr = row._qtyValid ? null : 'required';
     this.recomputeMeta();
   }

@@ -348,7 +348,10 @@ export class CreateItemMasterComponent implements OnInit {
           supplierName: p.supplierName ?? p.name ?? null,
           supplierSearch: (p.supplierName ?? p.name ?? '') as string,
           warehouseId: p.warehouseId ?? p.WarehouseId ?? null,
-          isTransfered: !!(p.isTransfered ?? p.IsTransfered ?? false) // <-- normalized
+          isTransfered: !!(p.isTransfered ?? p.IsTransfered ?? false),
+          countedQty: p.countedQty,
+          badCountedQty: p.badCountedQty,
+          reasonId: p.reasonId ? p.reasonId : '-'
         }));
 
         this.modalLine.itemSearch = this.item.name || '';
@@ -356,6 +359,10 @@ export class CreateItemMasterComponent implements OnInit {
       },
       error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
     });
+  }
+  getReason(id: number | string | null) {
+    const x = this.reasonList.find(i => i.id === id);
+    return x?.stockIssuesNames ?? String(id ?? '');
   }
 
   private toDateOnly(d: any): string | null {

@@ -11,5 +11,6 @@ export class StockAPIUrls {
   public static readonly GetAllItemStockList = "/Stock/GetAllItemStockList";
   public static readonly ApproveTransfersBulk = "/Stock/ApproveTransfersBulk";
    public static readonly GetByIdStockHistory = "/Stock/GetByIdStockHistory/"; 
+     public static readonly GetStockTransferedList = "/Stock/GetStockTransferedList";
 }
  

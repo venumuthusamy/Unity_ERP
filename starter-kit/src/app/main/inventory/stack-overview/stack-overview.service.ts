@@ -58,4 +58,9 @@ export class StackOverviewService {
     GetByIdStockHistory(id: any): Observable<any[]> {
         return this.http.get<any[]>(this.url + StockAPIUrls.GetByIdStockHistory + id);
     }
+
+
+      GetStockTransferedList(): Observable<any[]> {
+        return this.http.get<any[]>(this.url + StockAPIUrls.GetStockTransferedList);
+    }
 }
