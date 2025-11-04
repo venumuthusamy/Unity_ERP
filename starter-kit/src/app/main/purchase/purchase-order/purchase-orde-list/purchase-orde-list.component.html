@@ -39,10 +39,21 @@
       <i data-feather="plus-circle" class="w-4 h-4"></i><span>Add</span>
     </button>
 
-    <button (click)="openReorderDetails()" class="btn d-inline-flex align-items-center flex-shrink-0"
-            style="border:1px solid #2E5F73; color:#2E5F73; gap:4px; background:white;">
-      <span>Reorder</span>
-    </button>
+   <button
+  (click)="openReorderDetails()"
+  class="btn d-inline-flex align-items-center position-relative flex-shrink-0"
+  style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;"
+>
+  <span>Reorder</span>
+  <span
+    *ngIf="reorderCount > 0"
+    class="badge badge-pill badge-warning"
+    style="position:absolute; top:-6px; right:-6px;"
+  >
+    {{ displayReorderCount }}
+  </span>
+</button>
+
 
     <div class="position-relative d-inline-block flex-shrink-0">
       <button (click)="openDraftsModal()" class="btn d-inline-flex align-items-center"

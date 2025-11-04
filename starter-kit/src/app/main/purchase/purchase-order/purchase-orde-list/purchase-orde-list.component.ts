@@ -39,6 +39,7 @@ export class PurchaseOrdeListComponent implements OnInit {
   reorderAll: any[] = [];     // unfiltered master list (isReorder only)
   reorderRows: any[] = [];    // filtered by search
   reorderSearch = '';
+reorderCount = 0;          // available reorder PRs (not used in any PO)
 
   constructor(private poService: POService, private router: Router,
     private _coreSidebarService: CoreSidebarService, private datePipe: DatePipe,
@@ -47,7 +48,11 @@ export class PurchaseOrdeListComponent implements OnInit {
   ngOnInit(): void {
     this.loadRequests();
     this.loadDrafts();
+    this.loadReorderCount();
   }
+  get displayReorderCount() {
+  return this.reorderCount > 99 ? '99+' : this.reorderCount;
+}
   filterUpdate(event) {
 
     const val = event.target.value.toLowerCase();
@@ -264,10 +269,14 @@ export class PurchaseOrdeListComponent implements OnInit {
   //   });
   // }
 
-  private safeParseReorder<T = any>(v: any, fallback: T | null = null): T | null {
-    if (Array.isArray(v)) return v as any;
-    try { return v ? JSON.parse(v) : fallback; } catch { return fallback; }
-  }
+ private safeParseReorder(raw: any, fallback: any[] = []) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(String(raw));
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch { return fallback; }
+}
 
   loadReorders() {
     forkJoin({
@@ -309,6 +318,56 @@ export class PurchaseOrdeListComponent implements OnInit {
       this.filterReorders();
     }, err => console.error('Error loading reorder PRs/POs', err));
   }
+loadReorderCount() {
+  forkJoin({
+    prs: this.purchaseService.getAll(), // PRs
+    pos: this.poService.getPO()         // POs
+  }).subscribe({
+    next: (results: any) => {
+      const prs = results?.prs?.data || [];
+      const pos = results?.pos?.data || [];
+
+      // 1) PR numbers already used in any PO (search in poLines)
+      const usedPrNos = new Set<string>();
+      pos.forEach((po: any) => {
+        const lines = Array.isArray(po?.poLines)
+          ? po.poLines
+          : this.safeParseReorder(po?.poLines, []);
+        lines.forEach((ln: any) => {
+          const prNo = (ln?.prNo ?? ln?.PRNo ?? ln?.prno ?? ln?.pr_no ?? '')
+            .toString()
+            .trim();
+          if (prNo) usedPrNos.add(prNo);
+        });
+      });
+
+      // 2) Normalize PRs, keep reorder ones
+      const reorderPRs = prs
+        .map((r: any) => ({
+          ...r,
+          purchaseRequestNo: (r?.purchaseRequestNo || '').toString().trim(),
+          prLines: Array.isArray(r?.prLines) ? r.prLines : this.safeParseReorder(r?.prLines, []),
+          isReorder:
+            r?.isReorder === true ||
+            r?.isReorder === 1 ||
+            String(r?.isReorder).toLowerCase() === 'true'
+        }))
+        .filter((r: any) => r.isReorder);
+
+      // 3) Available PRs (not used by any PO)
+      const available = reorderPRs.filter((r: any) => !usedPrNos.has(r.purchaseRequestNo));
+
+      // expose for UI (modal uses these when opened)
+      this.reorderAll = reorderPRs;
+      this.reorderRows = [...available];
+
+      // 4) set badge count
+      this.reorderCount = available.length;
+    },
+    error: (err) => console.error('Error computing reorder count', err)
+  });
+}
+
 
 
   // simple client-side search inside modal
