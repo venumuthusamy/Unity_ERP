@@ -499,17 +499,14 @@ validateFaultQty() {
 
   
 submitAdjust(modalRef: any) {
-  // --- Step 1: Validate user input
   this.validateNewInHand();
   this.validateFaultQty();
   if (!this.canSubmitAdjust() || !this.adjust.row) return;
 
   const row = this.adjust.row;
-
-  // --- Step 2: Calculate final quantity (newOnHand - faultQty)
   const enteredQty = Number(this.adjust.newInHand ?? 0);
   const faultQty = Number(this.adjust.faultQty ?? 0);
-  const finalQty = enteredQty - faultQty;   // ✅ subtract fault qty
+  const finalQty = enteredQty - faultQty;
 
   if (finalQty < 0) {
     Swal.fire({
@@ -521,32 +518,29 @@ submitAdjust(modalRef: any) {
     return;
   }
 
-  // --- Step 3: Build payload for API
+  // 🔹 Build payload
   const payload = {
     itemId: Number(row.apiRow?.id ?? 0),
     warehouseId: Number(row.warehouseId ?? 0),
     binId: row.binId ?? null,
     supplierId: Number(row.supplierId ?? 0),
-    newOnHand: finalQty, // ✅ adjusted quantity
+    faultQty: faultQty,       // 🔹 subtract this in IWS
+    finalOnHand: finalQty,    // 🔹 full final qty for ItemPrice
     stockIssueId: Number(this.adjust.stockIssueId ?? 0),
-    approvedBy: this.adjust.approvedById, // ✅ approver dropdown value
-    updatedBy: 'system' // or current user name
+    approvedBy: this.adjust.approvedById,
+    updatedBy: 'system'
   };
 
-  // --- Step 4: Call API
   this.loading = true;
   this.stockService.AdjustOnHand(payload).subscribe({
     next: (res: any) => {
       this.loading = false;
 
-      // --- Step 5: Update UI row
-      const newOnHand = Number(payload.newOnHand);
-      row.onHand = newOnHand;
-      row.qty = newOnHand;
-
+      // 🔹 Update UI
+      row.onHand = finalQty;
+      row.qty = finalQty;
       this.applyFilters();
 
-      // --- Step 6: Success alert
       Swal.fire({
         icon: 'success',
         title: 'Adjustment Successful',
@@ -569,6 +563,7 @@ submitAdjust(modalRef: any) {
     }
   });
 }
+
 
 
 
