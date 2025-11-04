@@ -106,7 +106,7 @@ export class StockTakeComponent implements OnInit {
         this.stockTakeService.getStockTakeById(this.stockTakeId).subscribe((res: any) => {
           console.log(res)
           this.warehouseTypeId = res.data.warehouseTypeId,
-          this.supplierId = res.data.supplierId,
+          //this.supplierId = res.data.supplierId,
           this.takeTypeId = res.data.takeTypeId,
           this.strategyId = res.data.strategyId,
           this.freeze = res.data.freeze
@@ -117,6 +117,7 @@ export class StockTakeComponent implements OnInit {
         selected: l.selected ?? false,   // ← default unchecked rows to false
       }));
       this.getSuppliersByWarehouse(this.warehouseTypeId)
+       this.supplierId = res.data.supplierId
           if (this.takeTypeId == 1) {
             this.strategyCheck = true;
           } else {
