@@ -149,18 +149,18 @@ export class StockTransferListComponent
 private computeStatus(
   isTransfered: boolean,
   isApproved: boolean,
-  isPartialTransfer: boolean
+  _isPartialTransfer: boolean,
+  transferQty?: number
 ): TransferStatus {
-  // 🔹 Priority: if partial transfer → Transferred
-  if (isPartialTransfer) return 'Transferred';
+  // If approved, show as Transferred (your requirement)
+  if (isApproved) return 'Transferred';
 
-  // 🔹 Next: if not yet transferred → Draft
-  if (!isTransfered) return 'Draft';
+  // Otherwise, a posted/flagged transfer also counts as Transferred
+  if (isTransfered) return 'Transferred';
 
-  // 🔹 Otherwise: approved or pending
-  return isApproved ? 'Transferred' : 'Pending';
+  // Not approved/posted yet → Pending if qty entered, else Draft
+  return (transferQty ?? 0) > 0 ? 'Pending' : 'Draft';
 }
-
 
 private toUiRow(api: ApiRow): UiRow {
   const isTransferedBool = this.normalizeBool(api.isTransfered);
