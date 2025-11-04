@@ -553,6 +553,7 @@ export class StockTakeComponent implements OnInit {
   }
   getSuppliersByWarehouse(event){
     debugger
+    this.supplierId = null
     this.stockTakeService.GetSupplierByWarehouseId(event).subscribe((res:any)=>{
       this.supplierList = res.data
     })
