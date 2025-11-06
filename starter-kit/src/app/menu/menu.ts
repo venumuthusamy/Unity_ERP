@@ -77,9 +77,28 @@ export const menu: CoreMenu[] = [
       { id: 'StackTransfer', title: 'Stock-Transfer', translate: 'MENU.INVENTORY.STACKTRANSFER', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer' },
       { id: 'StockTake', title: 'Stock-Take', translate: 'MENU.INVENTORY.STOCKTAKE', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake' },
       // { id: 'StockAdjustment', title: 'Stock-Adjustment', translate: 'MENU.INVENTORY.STOCKADJUSTMENT', type: 'item', icon: 'circle', url: '/Inventory/list-stockadjustment' },
-       { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/list-stockreorderplanning' },
+      { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/list-stockreorderplanning' },
 
 
+    ]
+  },
+  {
+    id: 'sales',
+    title: 'Sales',
+    translate: 'MENU.SALES.TITLE',
+    type: 'collapsible',
+    icon: 'shopping-cart',
+    children: [
+      { id: 'CustomerMaster', title: 'Customer Master', translate: 'MENU.SALES.CUSTOMERMASTER', type: 'item', icon: 'circle', url: '/Sales/Create-customer-master' },
+      { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-create' },
+      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-create' },
+      { id: 'Picking', title: 'Picking-Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-create' },
+      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-create' },
+      { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-create' },
+      { id: 'ReturnCredit', title: 'Return Credit', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-create' },
+      { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
+      { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create' },
+      { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create' }
     ]
   },
   {
