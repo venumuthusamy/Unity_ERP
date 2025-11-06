@@ -36,6 +36,20 @@ export const locale = {
       BUSINESSPARTNERS: {
         TITLE: 'Business Partners',
         SUPPLIER: 'Supplier'
+      },
+         SALES: {
+        TITLE: 'Sales',
+        COLLECTIONS: 'Collections',
+        CUSTOMERMASTER:'CustomerMaster',
+        DELIVERYORDER:'DeliveryOrder',
+        PERMISSIONS:'Permissions',
+        PICKING:'Picking',
+        QUOTATION:'Quotation',
+        REPORTS:'Reports',
+        RETURNCREDIT:'ReturnCredit',
+        SALESINVOICE:'SalesInvoice',
+        SALESORDER:'SalesOrder',
+        SHARED:'Shared'
       }
     }
   }

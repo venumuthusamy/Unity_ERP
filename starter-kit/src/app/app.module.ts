@@ -21,6 +21,7 @@ import { SampleModule } from 'app/main/sample/sample.module';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { ChartofaccountComponent } from './main/financial/chartofaccount/chartofaccount-list/chartofaccount.component';
 import { SupplierComponent } from './main/businessPartners/supplier/supplier.component';
+
 const appRoutes: Routes = [
   {
     path: 'pages',
@@ -48,6 +49,10 @@ const appRoutes: Routes = [
      {
     path: 'Businesspartners',
     loadChildren: () => import('./main/businessPartners/businesspartners.module').then(m => m.BusinesspartnersModule)
+  },
+    {
+    path: 'Sales',
+    loadChildren: () => import('./main/sales/sales.module').then(m => m.SalesModule)
   },
   {
     path: '',
