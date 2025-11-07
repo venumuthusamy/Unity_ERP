@@ -1,0 +1,105 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <!-- Stock Transfer List -->
+    <section class="users-list-wrapper">
+      <div class="card">
+        <div class="row">
+          <div class="col-md-6 col-12">
+            <h4 class="card-text"
+                style="margin-left:0.85rem;margin-top:0.75rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+Customer Master List
+            </h4>
+
+            <div class="d-flex justify-content-between align-items-center m-1">
+              <label class="d-flex align-items-center">Show
+                <select class="form-control mx-25" [(ngModel)]="selectedOption">
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                  <option [ngValue]="100">100</option>
+                </select>
+                entries
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+              <label class="d-flex align-items-center ml-1 ml-md-0">
+                Search:
+                <input [(ngModel)]="searchValue"
+                       name="searchValue"
+                       type="search"
+                       class="form-control ml-25"
+                       (keyup)="filterUpdate($event)"
+                       (search)="filterUpdate($event)" />
+              </label>
+
+                     <button class="btn btn-primary m-1" (click)="Add()">
+          <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
+          <span class="d-none d-sm-inline-block">Add</span>
+        </button>
+            </div>
+          </div>
+        </div>
+
+        <ngx-datatable class="bootstrap core-bootstrap"
+                      
+                       [rowHeight]="50"
+                       [headerHeight]="50"
+                       [footerHeight]="50"
+                       [limit]="selectedOption"
+                       [columnMode]="'force'"
+                       [scrollbarH]="true"
+                       [reorderable]="true">
+
+          <!-- Removed the eye/lines column -->
+
+          <!-- SKU column with hyperlink -->
+          <ngx-datatable-column name="SKU" prop="sku" [width]="140" [sortable]="true">
+            <ng-template ngx-datatable-cell-template let-row="row">
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Item Name" prop="name" [width]="160"></ngx-datatable-column>
+          <ngx-datatable-column name="From Warehouse" prop="fromWarehouseName" [width]="180"></ngx-datatable-column>
+
+          <!-- To Warehouse -->
+          <ngx-datatable-column name="To Warehouse" [width]="180">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <!-- {{ row?.toWarehouseName && row.toWarehouseName.trim() ? row.toWarehouseName : '—' }} -->
+            </ng-template>
+          </ngx-datatable-column>
+
+          <!-- Transfer Qty -->
+          <ngx-datatable-column name="Transfer Qty" [width]="140">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <!-- {{ row?.transferQty === null || row?.transferQty === undefined ? '—' : row.transferQty }} -->
+            </ng-template>
+          </ngx-datatable-column>
+
+          <!-- Reason / Remarks -->
+          <ngx-datatable-column name="Reason" [width]="140">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <!-- {{ row?.remarks && row.remarks.trim() ? row.remarks : '—' }} -->
+            </ng-template>
+          </ngx-datatable-column>
+
+          <!-- Status -->
+          <ngx-datatable-column name="Status" [width]="140">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <span class="badge rounded-pill"
+                    [ngClass]="row.transferStatus === 'Transferred' ? 'bg-primary'
+                              : row.transferStatus === 'Pending' ? 'bg-warning'
+                              : 'bg-secondary'">
+                <!-- {{ row.transferStatus }} -->
+              </span>
+            </ng-template>
+          </ngx-datatable-column>
+        </ngx-datatable>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Removed the Lines Modal entirely -->

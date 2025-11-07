@@ -35,7 +35,8 @@ export const locale = {
 
       BUSINESSPARTNERS: {
         TITLE: 'Business Partners',
-        SUPPLIER: 'Supplier'
+        SUPPLIER: 'Supplier',
+         CUSTOMER: 'customermaster'
       },
          SALES: {
         TITLE: 'Sales',
