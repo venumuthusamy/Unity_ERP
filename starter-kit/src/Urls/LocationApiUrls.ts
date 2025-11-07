@@ -5,4 +5,5 @@ export class LocationApiUrls {
   public static readonly GetLocationbyID = "/Location/getLocationbyId/"; 
   public static readonly UpdateLocation = "/Location/updateLocation/";
   public static readonly DeleteLocation = "/Location/deleteLocation/";
+   public static readonly getLocationByCountryId = "/Location/getLocationByCountryId/"; 
 }

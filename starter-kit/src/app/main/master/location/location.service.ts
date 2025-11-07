@@ -34,4 +34,8 @@ export class LocationService {
   deleteLocation(id: any) {
     return this.http.delete<any>(this.url + LocationApiUrls.DeleteLocation + id);
   }
+
+  getLocationByCountryId(Countryid: any): Observable<any[]> {
+    return this.http.get<any[]>(this.url + LocationApiUrls.getLocationByCountryId + Countryid);
+  }
 }

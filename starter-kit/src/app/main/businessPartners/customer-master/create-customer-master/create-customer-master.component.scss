@@ -1,0 +1,66 @@
+@import '@core/scss/angular/libs/form-wizard.component.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
+
+.wizard-actions{padding-top:1rem}
+.btn-wiz{display:inline-flex;align-items:center;gap:.5rem;height:48px;padding:0 22px;border-radius:12px;font-weight:600;border:1px solid transparent;box-shadow:0 8px 20px rgba(2,8,23,.06)}
+.btn-prev-wiz{background:#fff;color:#8A94A6;border-color:#D6DBE1}
+.btn-prev-wiz:disabled{color:#B4BCC7;background:#fff;border-color:#E2E8F0;box-shadow:none}
+.btn-next-wiz{background:#2E5F73;color:#fff}
+.btn-submit-wiz{background:#16A34A;color:#fff}
+/* Tidy the header dots like your mock (optional) */
+.bs-stepper .bs-stepper-box {
+  background: #2E5F73;  /* your brand */
+  color: #fff;
+  border: none;
+}
+.bs-stepper .step:not(.active) .bs-stepper-box {
+  background: #EDF2F7;
+  color: #94A3B8;
+}
+.bs-stepper .line {
+  color: #CBD5E1;
+}
+
+
+
+.upload-card {
+  margin-bottom: 20px;
+}
+
+.upload-label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.upload-box {
+  border: 2px dashed #6c757d;
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+  cursor: pointer;
+  transition: .3s;
+  background: #f8f9fa;
+  position: relative;
+}
+
+.upload-box:hover {
+  border-color: #007bff;
+  background-color: #eef6ff;
+}
+
+.upload-icon {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 6px;
+  color: #6c757d;
+}
+
+.preview-img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 6px;
+}
