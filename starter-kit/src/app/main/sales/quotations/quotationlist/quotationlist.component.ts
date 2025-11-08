@@ -8,7 +8,7 @@ import { CustomerMasterService } from 'app/main/businessPartners/customer-master
 import { CurrencyService } from 'app/main/master/currency/currency.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { UomService } from 'app/main/master/uom/uom.service';
-
+import * as feather from 'feather-icons';
 type QuotationRow = {
   id: number;
   number: string;
@@ -299,4 +299,11 @@ export class QuotationlistComponent implements OnInit {
       });
     });
   }
+   ngAfterViewInit(): void {
+      feather.replace();
+    }
+  
+    ngAfterViewChecked(): void {
+      feather.replace();
+    }
 }
