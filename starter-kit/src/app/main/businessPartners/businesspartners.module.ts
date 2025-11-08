@@ -19,7 +19,9 @@ const routes: Routes = [
   { path: 'supplier/create', component: CreatesuppliersComponent },
   { path: 'supplier/edit/:id', component: CreatesuppliersComponent },
   { path: 'customermaster', component: CustomerMasterListComponent },
-   { path: 'customermaster/create', component: CreateCustomerMasterComponent },
+  { path: 'customermaster/create', component: CreateCustomerMasterComponent },
+  { path: 'customermaster/edit/:id', component: CreateCustomerMasterComponent },
+  
   
 ];
 @NgModule({
