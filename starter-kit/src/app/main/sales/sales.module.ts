@@ -6,7 +6,7 @@ import { CustomermastercreateComponent } from './customermastercreate/customerma
 import { DeliveryordercreateComponent } from './deliveryordercreate/deliveryordercreate.component';
 import { PermissionscreateComponent } from './permissionscreate/permissionscreate.component';
 import { PickingPackingcreateComponent } from './picking-packingcreate/picking-packingcreate.component';
-import { QuotationscreateComponent } from './quotationscreate/quotationscreate.component';
+import { QuotationscreateComponent } from './quotations/quotationscreate/quotationscreate.component';
 import { ReportscreateComponent } from './reportscreate/reportscreate.component';
 import { ReturnCreditcreateComponent } from './return-creditcreate/return-creditcreate.component';
 import { SalesInvoicecreateComponent } from './sales-invoicecreate/sales-invoicecreate.component';
@@ -17,6 +17,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { QuotationlistComponent } from './quotations/quotationlist/quotationlist.component';
 
 const routes = [
   {
@@ -48,6 +49,16 @@ const routes = [
     path: 'Quotation-create',
     component: QuotationscreateComponent,
     data: { animation: 'QuotationscreateComponent' }
+  },
+   {
+      path: 'Edit-quotation/:id',
+      component: QuotationscreateComponent,
+      
+    },
+     {
+    path: 'Quotation-list',
+    component: QuotationlistComponent,
+    data: { animation: 'QuotationlistComponent' }
   },
     {
     path: 'Reports-create',
@@ -88,7 +99,8 @@ const routes = [
     ReturnCreditcreateComponent,
     SalesInvoicecreateComponent,
     SalesOrderCreateComponent,
-    SharedcreateComponent
+    SharedcreateComponent,
+    QuotationlistComponent
   ],
   imports: [
     CommonModule,

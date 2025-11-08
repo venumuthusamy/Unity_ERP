@@ -33,5 +33,7 @@ updateCustomer(data: FormData): Observable<any> {
     const finalUrl = (kycId ? `${base}/${kycId}` : base);
     return this.http.delete<any>(finalUrl);
   }
-
+ getAllCustomerMaster(): Observable<any[]> {
+      return this.http.get<any>(this.url + CustomerMasterApiUrls.GetAllCustomerMaster)
+    }
 }
