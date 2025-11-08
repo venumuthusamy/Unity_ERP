@@ -233,3 +233,8 @@ body.prl-modal-open {
   overflow: auto;
   border-radius: 20px;
 }
+/* Smaller header text for the quotation table */
+.qt-table thead th {
+  font-size: -31px;         /* change to 11px/.75rem as you like */
+  
+}
