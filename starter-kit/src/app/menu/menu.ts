@@ -91,7 +91,7 @@ export const menu: CoreMenu[] = [
     children: [
       // { id: 'CustomerMaster', title: 'Customer Master', translate: 'MENU.SALES.CUSTOMERMASTER', type: 'item', icon: 'circle', url: '/Sales/Create-customer-master' },
       { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list' },
-      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-create' },
+      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-list' },
       { id: 'Picking', title: 'Picking-Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-create' },
       { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-create' },
       { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-create' },
