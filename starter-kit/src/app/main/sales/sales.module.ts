@@ -10,7 +10,6 @@ import { QuotationscreateComponent } from './quotations/quotationscreate/quotati
 import { ReportscreateComponent } from './reportscreate/reportscreate.component';
 import { ReturnCreditcreateComponent } from './return-creditcreate/return-creditcreate.component';
 import { SalesInvoicecreateComponent } from './sales-invoicecreate/sales-invoicecreate.component';
-import { SalesOrderCreateComponent } from './sales-order-create/sales-order-create.component';
 import { SharedcreateComponent } from './sharedcreate/sharedcreate.component';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -18,6 +17,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { QuotationlistComponent } from './quotations/quotationlist/quotationlist.component';
+import { SalesOrderCreateComponent } from './sales-order/sales-order-create/sales-order-create.component';
+import { SalesOrderListComponent } from './sales-order/sales-order-list/sales-order-list.component';
 
 const routes = [
   {
@@ -75,6 +76,11 @@ const routes = [
     component: SalesInvoicecreateComponent,
     data: { animation: 'SalesInvoicecreateComponent' }
   },
+   {
+    path: 'Sales-Order-list',
+    component: SalesOrderListComponent,
+    data: { animation: 'SalesOrderListComponent' }
+  },
     {
     path: 'Sales-Order-create',
     component: SalesOrderCreateComponent,
@@ -100,7 +106,8 @@ const routes = [
     SalesInvoicecreateComponent,
     SalesOrderCreateComponent,
     SharedcreateComponent,
-    QuotationlistComponent
+    QuotationlistComponent,
+    SalesOrderListComponent
   ],
   imports: [
     CommonModule,
