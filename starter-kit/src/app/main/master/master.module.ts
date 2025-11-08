@@ -40,6 +40,8 @@ import { StrategyComponent } from './strategies/strategy/strategy.component';
 import { StockIssueComponent } from './stock-issue/stock-issue.component';
 import { BinComponent } from './bin/bin.component';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { DriverComponent } from './driver/driver.component';
+import { VehicleComponent } from './vehicle/vehicle.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -69,13 +71,15 @@ const routes: Routes = [
   { path: 'strategy', component: StrategyComponent },
   { path: 'stockIssue', component: StockIssueComponent },
   { path: 'bin', component: BinComponent },
+    { path: 'driver', component: DriverComponent },
+    { path: 'vehicle', component: VehicleComponent },
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent, CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
     RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent, ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent, WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent, StrategyComponent,
-    StockIssueComponent, BinComponent
+    StockIssueComponent, BinComponent, DriverComponent,VehicleComponent
   ],
   imports: [
     CommonModule,
