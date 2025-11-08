@@ -1,12 +1,17 @@
 import { Component, AfterViewInit, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { CitiesService } from 'app/main/master/cities/cities.service';
-import { CountriesService } from 'app/main/master/countries/countries.service';
-import { CustomerGroupsService } from 'app/main/master/customer-groups/customer-groups.service';
-import { LocationService } from 'app/main/master/location/location.service';
-import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
 import Stepper from 'bs-stepper';
 import * as feather from 'feather-icons';
+import Swal from 'sweetalert2';
+import { Router, ActivatedRoute } from '@angular/router';
+
+import { CustomerGroupsService } from 'app/main/master/customer-groups/customer-groups.service';
+import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
+import { LocationService } from 'app/main/master/location/location.service';
+import { CountriesService } from 'app/main/master/countries/countries.service';
+import { ApprovallevelService } from 'app/main/master/approval-level/approvallevel.service';
+import { CustomerMasterService } from '../customer-master.service';
+import { environment } from 'environments/environment';
 
 @Component({
   selector: 'app-create-customer-master',
@@ -17,118 +22,149 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
 
   @ViewChild('stepper1', { static: true }) stepperEl!: ElementRef<HTMLDivElement>;
   private stepper!: Stepper;
-preview: any = {
-  drivingLicence: null,
-  utilityBill: null,
-  bankStatement: null,
-  acra: null
-};
-selectedCountryId: number | null = null;
-selectedLocationId: number | null = null;
 
-  currentIndex = 0;
-  totalSteps = 3;
+  // --- Edit mode ---
+  editMode = false;
+  editingId: number | null = null;
 
-  CustomerGroupList: any;
-  PaymenttermsList: any;
-  CityList: any;
-  CountryList: any;
-  LocationList: any;
+  // --- Files & previews ---
+  files: any = { drivingLicence: null, utilityBill: null, bankStatement: null, acra: null };
+  preview: any = { drivingLicence: null, utilityBill: null, bankStatement: null, acra: null };
 
-  get isFirstStep() { return this.currentIndex === 0; }
-  get isLastStep() { return this.currentIndex === this.totalSteps - 1; }
+  // --- Dropdown data ---
+  ApproverList: Array<{id:number; name:string}> = [];
+  CustomerGroupList: any[] = [];
+  PaymenttermsList: any[] = [];
+  CountryList: any[] = [];
+  LocationList: any[] = [];
 
-  // Models
+  // --- Selected values ---
+  selectedCountryId: number | null = null;
+  selectedLocationId: number | null = null;
+  selectedGroupId: number | null = null;
+  selectedTermId: number | null = null;
+  selectedApprovedById: number | null = null;
+
+  // --- Form fields ---
   TDNameVar = '';
-  TDLocationNameVar = '';
   TDContactPersonVar = '';
   TDEmailVar = '';
   TDContactNumberVar = '';
-TDCreditAmountVar: number | null = null;
+  TDCreditAmountVar: number | null = null;
 
-  kycDocs: any = {
-    aadhar: null,
-    pan: null,
-    gst: null
-  };
+  // --- Wizard ---
+  currentIndex = 0;
+  totalSteps = 3;
+  editingKycId: any;
+  get isFirstStep() { return this.currentIndex === 0; }
+  get isLastStep()  { return this.currentIndex === this.totalSteps - 1; }
+
+  // --- Lock KYC when already approved ---
+  isKycLocked = false;
 
   constructor(
-    private _customerGroupservice: CustomerGroupsService,
+    private _customerGroupService: CustomerGroupsService,
     private _paymentTermsService: PaymentTermsService,
-    private _locationService:LocationService,
-    private _countryService: CountriesService
-  ) { }
+    private _locationService: LocationService,
+    private _countryService: CountriesService,
+    private _approvalLevelService: ApprovallevelService,
+    private _customerService: CustomerMasterService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
 
+  // ---------------- INIT ----------------
   ngOnInit(): void {
-    this.loadcustomerGroup();
-    this.loadpaymentTerms();
-    this.loadcountry();
-  }
+    this.loadCustomerGroups();
+    this.loadPaymentTerms();
+    this.loadCountries();
+    this.loadApprovalLevel();
 
-  loadcustomerGroup() {
-    this._customerGroupservice.getCustomer().subscribe((res: any) => {
-      if (res?.isSuccess && Array.isArray(res.data)) {
-        this.CustomerGroupList = res.data;
+    // Detect edit mode by :id
+    this.route.paramMap.subscribe(pm => {
+      const id = Number(pm.get('id'));
+      if (id) {
+        this.editMode = true;
+        this.editingId = id;
+        this.loadForEdit(id);
       }
     });
   }
 
-  loadpaymentTerms() {
+  ngAfterViewInit(): void {
+    this.stepper = new Stepper(this.stepperEl.nativeElement, { linear: true, animation: true });
+    const update = () => {
+      // @ts-ignore (private field on Stepper)
+      this.currentIndex = this.stepper?._currentIndex ?? 0;
+      feather.replace();
+    };
+    this.stepperEl.nativeElement.addEventListener('shown.bs.stepper', update);
+    update();
+  }
+
+  // ------------- LOAD MASTER DATA -------------
+  loadCustomerGroups() {
+    this._customerGroupService.getCustomer().subscribe((res: any) => {
+      if (res?.isSuccess && Array.isArray(res.data)) this.CustomerGroupList = res.data;
+    });
+  }
+
+  loadPaymentTerms() {
     this._paymentTermsService.getAllPaymentTerms().subscribe((res: any) => {
-      if (res?.isSuccess && Array.isArray(res.data)) {
-        this.PaymenttermsList = res.data;
-      }
+      if (res?.isSuccess && Array.isArray(res.data)) this.PaymenttermsList = res.data;
     });
   }
 
-   loadLocationbyCountryId(Countryid) {
-    this._locationService.getLocationByCountryId(Countryid).subscribe((res: any) => {
-      if (res?.isSuccess && Array.isArray(res.data)) {
-        this.LocationList = res.data;
-      }
+  loadCountries() {
+    this._countryService.getCountry().subscribe((res: any) => {
+      if (res?.isSuccess && Array.isArray(res.data)) this.CountryList = res.data;
     });
   }
-   loadcountry() {
-    this._countryService.getCountry().subscribe((res: any) => {
+
+  loadLocationByCountryId(countryId: number) {
+    this._locationService.getLocationByCountryId(countryId).subscribe((res: any) => {
+      if (res?.isSuccess && Array.isArray(res.data)) this.LocationList = res.data;
+    });
+  }
+
+  loadApprovalLevel() {
+    this._approvalLevelService.getAllApprovalLevel().subscribe((res: any) => {
       if (res?.isSuccess && Array.isArray(res.data)) {
-        this.CountryList = res.data;
+        // Ensure items expose {id:number, name:string}
+        this.ApproverList = res.data.map((u: any) => ({
+          id: Number(u.id ?? u.Id),
+          name: String(u.name ?? u.Name ?? u.userName ?? 'User')
+        }));
       }
     });
   }
 
   onCountryChange(event: any) {
-  this.selectedCountryId = event?.id; // ng-select returns selected object
-  this.loadLocationbyCountryId(this.selectedCountryId);
-  this.selectedLocationId = null; // Reset location on change
-}
+    this.selectedCountryId = event?.id || null;
+    if (this.selectedCountryId) this.loadLocationByCountryId(this.selectedCountryId);
+    this.selectedLocationId = null;
+  }
+
+  // ------------- VALIDATION -------------
   onContactNumberInput() {
     if (this.TDContactNumberVar) {
       this.TDContactNumberVar = this.TDContactNumberVar.replace(/[^0-9]/g, '').slice(0, 10);
     }
   }
-onFileChange(event: any, type: string) {
-  const file = event.target.files[0];
-  if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    this.preview[type] = reader.result;
-  };
-  reader.readAsDataURL(file);
-}
-  ngAfterViewInit(): void {
-    this.stepper = new Stepper(this.stepperEl.nativeElement, { linear: true, animation: true });
+  // ------------- FILES -------------
+  onFileChange(event: any, type: 'drivingLicence'|'utilityBill'|'bankStatement'|'acra') {
+    if (this.isKycLocked) return; // guard when locked
+    const file = event.target.files?.[0];
+    if (!file) return;
+    this.files[type] = file;
 
-    const update = () => {
-      // @ts-ignore
-      this.currentIndex = this.stepper?._currentIndex ?? 0;
-      feather.replace();
-    };
-
-    this.stepperEl.nativeElement.addEventListener('shown.bs.stepper', update);
-    update();
+    const reader = new FileReader();
+    reader.onload = () => this.preview[type] = reader.result;
+    reader.readAsDataURL(file);
   }
 
+  // ------------- WIZARD -------------
   next(form?: NgForm) {
     if (form && !form.valid) {
       form.control.markAllAsTouched();
@@ -137,25 +173,124 @@ onFileChange(event: any, type: string) {
     this.stepper.next();
   }
 
-  prev() {
-    this.stepper.previous();
-  }
+  prev() { this.stepper.previous(); }
 
-  onSubmit() {
-    console.log({
-      account: {
-        customerName: this.TDNameVar,
-        countryId: this.selectedCountryId, // ✅ Store Selected Country
-        locationId: this.selectedLocationId, 
-        contactPerson: this.TDContactPersonVar,
-        email: this.TDEmailVar,
-        contactNumber: this.TDContactNumberVar,
-         creditAmount: this.TDCreditAmountVar
+  // ------------- EDIT: LOAD BY ID -------------
+  loadForEdit(id: number) {
+    this._customerService.EditLoadforCustomerbyId(id).subscribe({
+      next: (res: any) => {
+        if (!res?.isSuccess || !res.data) {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Record not found.' });
+          return;
+        }
+        const d = res.data;
+        // this.editingId = d.customerId
+ this.editingKycId = d.kycId; 
+        // Fields
+        this.TDNameVar            = d.customerName || '';
+        this.TDContactPersonVar   = d.pointOfContactPerson || '';
+        this.TDEmailVar           = d.email || '';
+        this.TDContactNumberVar   = d.contactNumber?.toString() || '';
+        this.TDCreditAmountVar    = d.creditAmount ?? null;
+
+        this.selectedCountryId    = d.countryId ?? null;
+        this.selectedLocationId   = d.locationId ?? null;
+        this.selectedGroupId      = d.customerGroupId ?? null;
+        this.selectedTermId       = d.paymentTermId ?? null;
+
+        // FIX: API returns "approvedBy": "1" (string)
+        this.selectedApprovedById = this.toNumOrNull(d.approvedBy);
+
+        // Lock KYC when already approved
+        this.isKycLocked = !!d.isApproved;
+
+        // Previews
+        const base = environment.apiUrl?.replace(/\/api$/,'') || '';
+        this.preview.drivingLicence = d.dlImage ? (base + d.dlImage) : null;
+        this.preview.utilityBill    = d.utilityBillImage ? (base + d.utilityBillImage) : null;
+        this.preview.bankStatement  = d.bsImage ? (base + d.bsImage) : null;
+        this.preview.acra           = d.acraImage ? (base + d.acraImage) : null;
+
+        if (this.selectedCountryId) this.loadLocationByCountryId(this.selectedCountryId);
       },
-      kyc: this.kycDocs
+      error: (err) => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.error?.message || err.message });
+      }
     });
-
-    alert('✅ Customer Created Successfully');
   }
 
+  // tiny helper (handles null/undefined/"")
+  private toNumOrNull(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // ------------- SUBMIT (CREATE / UPDATE) -------------
+  onSubmit() {
+    const formData = new FormData();
+  if (this.editingKycId) {
+    formData.append('KycId', this.editingKycId.toString());
+  }
+
+   if (this.editingId) {
+    formData.append('CustomerId', this.editingId.toString());
+  }
+    // Customer fields
+    formData.append('CustomerName', this.TDNameVar || '');
+    formData.append('CountryId', (this.selectedCountryId ?? '').toString());
+    formData.append('LocationId', (this.selectedLocationId ?? '').toString());
+    formData.append('ContactNumber', this.TDContactNumberVar || '');
+    formData.append('PointOfContactPerson', this.TDContactPersonVar || '');
+    formData.append('Email', this.TDEmailVar || '');
+    formData.append('CustomerGroupId', (this.selectedGroupId ?? '').toString());
+    formData.append('PaymentTermId', (this.selectedTermId ?? '').toString());
+    formData.append('CreditAmount', (this.TDCreditAmountVar ?? 0).toString());
+    formData.append('CreatedBy', '1'); // TODO: current user
+
+    // Approval state:
+    const approvedId = Number(this.selectedApprovedById || 0);
+    // If record is already approved, keep it approved.
+    const isApproved = this.isKycLocked || approvedId > 0;
+    formData.append('IsApproved', String(isApproved));
+      if (approvedId > 0) {
+      formData.append('ApprovedBy', String(approvedId));
+      formData.append('IsApproved', 'true');
+    } else {
+      formData.append('IsApproved', 'false');
+    }
+
+    // Files (allow upload only when not locked)
+    if (!this.isKycLocked) {
+      if (this.files.drivingLicence) formData.append('DrivingLicence', this.files.drivingLicence);
+      if (this.files.utilityBill)    formData.append('UtilityBill', this.files.utilityBill);
+      if (this.files.bankStatement)  formData.append('BankStatement', this.files.bankStatement);
+      if (this.files.acra)           formData.append('Acra', this.files.acra);
+    }
+
+    const req$ = this.editMode && this.editingId
+      ? this._customerService.updateCustomer(formData)
+      : this._customerService.insertCustomer(formData);
+
+    req$.subscribe({
+      next: (res: any) => {
+        if (res?.isSuccess) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: this.editMode ? 'Customer updated!' : 'Customer + KYC created!'
+          });
+          this.goToCustomerList();
+        } else {
+          Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Something went wrong.' });
+        }
+      },
+      error: (err) => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.error?.message || err.message || 'Unexpected error.' });
+      }
+    });
+  }
+
+  goToCustomerList() {
+    this.router.navigate(['/Businesspartners/customermaster']);
+  }
 }
