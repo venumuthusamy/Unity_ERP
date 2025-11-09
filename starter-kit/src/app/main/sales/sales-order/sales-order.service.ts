@@ -32,4 +32,8 @@ export class SalesOrderService {
   deleteSO(id: any) {
     return this.http.delete<any>(this.url + SalesOrderApiUrls.DeleteSO + id);
   }
+
+   GetByQuatitonDetails(id: any): Observable<any[]> {
+    return this.http.get<any[]>(this.url + SalesOrderApiUrls.GetByQuatitonDetails + id);
+  }
 }
