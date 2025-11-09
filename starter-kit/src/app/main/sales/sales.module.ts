@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { CollectionscreateComponent } from './collectionscreate/collectionscreate.component';
 import { RouterModule } from '@angular/router';
 import { CustomermastercreateComponent } from './customermastercreate/customermastercreate.component';
-import { DeliveryordercreateComponent } from './deliveryordercreate/deliveryordercreate.component';
+import { DeliveryordercreateComponent } from './deliveryorder/deliveryordercreate/deliveryordercreate.component';
 import { PermissionscreateComponent } from './permissionscreate/permissionscreate.component';
 import { PickingPackingcreateComponent } from './picking-packingcreate/picing-packing-create/picking-packingcreate.component';
 import { QuotationscreateComponent } from './quotations/quotationscreate/quotationscreate.component';
@@ -20,6 +20,7 @@ import { QuotationlistComponent } from './quotations/quotationlist/quotationlist
 import { SalesOrderCreateComponent } from './sales-order/sales-order-create/sales-order-create.component';
 import { SalesOrderListComponent } from './sales-order/sales-order-list/sales-order-list.component';
 import { PickingPackingListComponent } from './picking-packingcreate/picking-packing-list/picking-packing-list.component';
+import { DeliveryorderlistComponent } from './deliveryorder/deliveryorderlist/deliveryorderlist.component';
 
 const routes = [
   {
@@ -36,6 +37,16 @@ const routes = [
     path: 'Delivery-order-create',
     component: DeliveryordercreateComponent,
     data: { animation: 'deliveryordercreateComponent' }
+  },
+    {
+      path: 'Delivery-order-edit/:id',
+      component: DeliveryordercreateComponent,
+      
+    },
+   {
+    path: 'Delivery-order-list',
+    component: DeliveryorderlistComponent,
+    data: { animation: 'deliveryorderlistComponent' }
   },
    {
     path: 'Permission-create',

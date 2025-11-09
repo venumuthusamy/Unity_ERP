@@ -43,7 +43,7 @@ export const menu: CoreMenu[] = [
       { id: 'strategy', title: 'Strategy', type: 'item', icon: 'circle', url: '/master/strategy' },
       { id: 'stockissue', title: 'StockIssue', type: 'item', icon: 'circle', url: '/master/stockIssue' },
       { id: 'bin', title: 'BIN', type: 'item', icon: 'circle', url: '/master/bin' },
-             { id: 'driver', title: 'DRIVER', type: 'item', icon: 'circle', url: '/master/driver' },
+      { id: 'driver', title: 'DRIVER', type: 'item', icon: 'circle', url: '/master/driver' },
        { id: 'Vehicle', title: 'Vechicle', type: 'item', icon: 'circle', url: '/master/vehicle' },
     ]
   },
@@ -95,7 +95,7 @@ export const menu: CoreMenu[] = [
       { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list' },
       { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-create' },
       { id: 'Picking', title: 'Picking-Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-create' },
-      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-create' },
+      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list' },
       { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-create' },
       { id: 'ReturnCredit', title: 'Return Credit', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-create' },
       { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
