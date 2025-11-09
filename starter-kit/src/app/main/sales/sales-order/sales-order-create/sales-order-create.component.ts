@@ -1,21 +1,27 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
+import { QuotationsService } from '../../quotations/quotations.service';
+import { CountriesService } from 'app/main/master/countries/countries.service';
+import { SalesOrderService } from '../sales-order.service';
 
 /** Types (adapt or import your own) */
 type SoLine = {
   item?: string;      // "CODE - NAME" display
   itemId?: number;
   uom?: string;
-  qty?: number | string;
+  quantity?: number | string;
   unitPrice?: number | string;
-  discountPct?: number | string;
-  taxCode?: string;
-  amount?: number;
+  discount?: number | string;
+  tax?: 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT';
+  lineNet?: number;
+  lineTax?: number;
+  total?: number;
 
   // dropdown helpers per-row
-  dropdownOpen?: '' | 'item' | 'taxCode';
+  dropdownOpen?: '' | 'item' | 'tax';
   filteredOptions?: any[];
 };
 
@@ -30,7 +36,6 @@ export class SalesOrderCreateComponent implements OnInit {
     id: 0,
     quotationNo: '',
     customerId: 0,
-    warehouseId: 0,
     requestedDate: '',
     deliveryDate: '',
     shipping: 0,
@@ -42,7 +47,6 @@ export class SalesOrderCreateComponent implements OnInit {
 
   /** -------- Masters (bind from API) ---------- */
   customers: any[] = [];
-  warehouses: any[] = [];
   quotationList: any[] = [];
   items: any[] = [];
   taxCodes: any[] = [];
@@ -55,110 +59,166 @@ export class SalesOrderCreateComponent implements OnInit {
 
   // visible text in inputs
   searchTexts: { [k: string]: string } = {
+    quotationNo: '',
     customer: '',
-    warehouse: ''
   };
 
   // dropdown open/close
   dropdownOpen: { [k: string]: boolean } = {
+    quotationNo: false,
     customer: false,
-    warehouse: false
   };
 
   // filtered lists to render
   filteredLists: { [k: string]: any[] } = {
+    quotationNo: [],
     customer: [],
-    warehouse: []
   };
 
   // which header fields are required (by searchText)
-  requiredKeys = ['customer', 'warehouse'];
+  requiredKeys = ['quotationNo', 'customer',];
 
   /** -------- Allocation (optional UI) ---------- */
   allocation = { reservedPct: 0 };
+  countries: any;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    // inject your real services here (CustomersService, ItemsService, etc.)
-  ) {}
+    private _customerMasterService: CustomerMasterService,
+    private quotationSvc: QuotationsService,
+    private countriesService: CountriesService,
+    private salesOrderService: SalesOrderService
+  ) { }
 
   ngOnInit(): void {
-    // Load masters (replace with your real calls)
-    forkJoin({
-      quoations: this.mock([{ id: 10, name: 'Main DC (SG)' }]),
-      customers: this.mock([{ id: 1, name: 'FB Holdings HQ' }]),
-      warehouses: this.mock([{ id: 10, name: 'Main DC (SG)' }]),
-      items: this.mock([
-        { id: 1001, itemCode: 'BTL500', itemName: 'Black Tea Leaves 500g', defaultUom: 'PKT', price: 2.5 }
-      ]),
-      taxCodes: this.mock([{ code: 'GST7', name: 'GST7 (7%)', pct: 7 }])
-    }).subscribe((res: any) => {
-      this.quotationList = res.quoations;
-      this.customers = res.customers;
-      this.warehouses = res.warehouses;
-      this.items = res.items;
-      this.taxCodes = res.taxCodes;
+   debugger
+    this.countriesService.getCountry().subscribe((res: any) => {
+         this.countries = (res?.data ?? []).map((c: any) => ({
+        id: Number(c.id ?? c.Id),
+        countryName: String(c.countryName ?? c.CountryName ?? '').trim(),
+        gstPercentage: Number(c.gstPercentage ?? c.GSTPercentage ?? 0)
+      }));})
 
-      // init header dropdown source
-      this.filteredLists.quotation = [...this.quotationList];
-      this.filteredLists.customer = [...this.customers];
-      this.filteredLists.warehouse = [...this.warehouses];
+      forkJoin({
+        quotations: this.quotationSvc.getAll(),
+        customers: this._customerMasterService.GetAllCustomerDetails(),
 
-      // starter row
-      if (this.soLines.length === 0) this.addLine();
-    });
+      }).subscribe((res: any) => {
+        this.quotationList = res.quotations.data;
+        this.customers = res.customers.data;
+        // this.items = res.items;
+        // this.taxCodes = res.taxCodes;
 
-    // if edit mode, grab id and hydrate header+lines here...
-  }
+        // init header dropdown source
+        this.filteredLists.quotationNo = [...this.quotationList];
+        this.filteredLists.customer = [...this.customers];
+
+
+        // starter row
+        // if (this.soLines.length === 0) this.addLine();
+      });
+
+      // if edit mode, grab id and hydrate header+lines here...
+    }
 
   /** quick mock helper — replace with real observables */
   private mock<T>(data: T) {
-    return { subscribe: (cb: (x: T) => void) => cb(data) } as any;
-  }
+      return { subscribe: (cb: (x: T) => void) => cb(data) } as any;
+    }
 
   /** ======= Header dropdown helpers (SearchText style) ======= */
 
   isEmpty(v: any): boolean {
-    return (v ?? '').toString().trim() === '';
+      return(v ?? '').toString().trim() === '';
   }
 
-  toggleDropdown(field: 'quotationNo' |'customer' | 'warehouse', open?: boolean) {
+  toggleDropdown(field: 'quotationNo' | 'customer', open?: boolean) {
+    debugger
     this.dropdownOpen[field] = open !== undefined ? open : !this.dropdownOpen[field];
     if (field === 'quotationNo') {
       this.filteredLists[field] = [...this.quotationList];
     } else if (field === 'customer') {
       this.filteredLists[field] = [...this.customers];
-    } else if (field === 'warehouse') {
-      this.filteredLists[field] = [...this.warehouses];
     }
   }
 
-  filter(field: 'quotationNo' |'customer' | 'warehouse') {
+  filter(field: 'quotationNo' | 'customer') {
+    debugger
     const q = (this.searchTexts[field] || '').toLowerCase();
-     if(field === 'quotationNo'){
-     this.filteredLists[field] = this.quotationList.filter(x => (x.name || '').toLowerCase().includes(q));
+    if (field === 'quotationNo') {
+      this.filteredLists[field] = this.quotationList.filter(x => (x.number || '').toLowerCase().includes(q));
     } else if (field === 'customer') {
-      this.filteredLists[field] = this.customers.filter(x => (x.name || '').toLowerCase().includes(q));
-    } else if(field === 'warehouse') {
-      this.filteredLists[field] = this.warehouses.filter(x => (x.name || '').toLowerCase().includes(q));
+      this.filteredLists[field] = this.customers.filter(x => (x.customerName || '').toLowerCase().includes(q));
     }
   }
 
-  select(field: 'quotationNo' | 'customer' | 'warehouse', item: any) {
-    this.searchTexts[field] = item.name;
-    if (field === 'quotationNo') this.soHdr.quotationNo = item.id;
-    if (field === 'customer') this.soHdr.customerId = item.id;
-    if (field === 'warehouse') this.soHdr.warehouseId = item.id;
-    this.dropdownOpen[field] = false;
+  select(field: 'quotationNo' | 'customer', item: any) {
+    debugger
+    if (field === 'quotationNo') {
+      // 1) set quotation
+      this.soHdr.quotationNo = item.id;
+      this.searchTexts['quotationNo'] = item.number ?? '';
+
+      // 2) bind customer name from quotation
+      this.searchTexts['customer'] = item.customerName ?? '';
+
+      // 3) try to resolve customerId by name (if quotation doesn’t carry customerId)
+      const match = (this.customers ?? []).find((c: any) =>
+        (c.customerName ?? c.name ?? '').toLowerCase() === (item.customerName ?? '').toLowerCase()
+      );
+      this.soHdr.customerId = match?.customerId ?? this.soHdr.customerId ?? 0;
+
+
+      const cust = this.customers.find(x => x.customerId === this.soHdr.customerId) || null;
+      
+
+      const country = this.countries.find(c => c.id === (cust?.countryId ?? -1)) || null;
+     
+
+      this.soHdr.gstPct = country?.gstPercentage ?? 0;
+
+      // load table
+      this.quotationSvc.getById(this.soHdr.quotationNo).subscribe((res: any) => {
+        this.soLines = (res.data.lines || []).map((l: any) => ({
+          item: l.itemName,                    // your template binds to `soLines[i].item`
+          itemId: l.itemId,
+          uom: l.uomName ?? '',                // template uses `uom`
+          quantity: Number(l.qty) || 0,             // template uses `qty`
+          unitPrice: Number(l.unitPrice) || 0, // template uses `unitPrice`
+          discount: Number(l.discountPct) || 0, // template uses `discountPct`
+          tax: l.taxMode as any,            // EXCLUSIVE | INCLUSIVE | EXEMPT
+          lineNet: Number(l.lineNet) || 0,
+          lineTax: Number(l.lineTax) || 0,         // template uses `tax` (string)
+          total: Number(l.lineTotal) || 0,     // template displays `total`
+          dropdownOpen: '',
+          filteredOptions: []
+        }));
+        this.recalcTotals();
+      })
+
+      // optionally: close both dropdowns
+      this.dropdownOpen['quotationNo'] = false;
+      this.dropdownOpen['customer'] = false;
+      return;
+    }
+
+    if (field === 'customer') {
+      this.soHdr.customerId = item.id;
+      this.searchTexts['customer'] = item.customerName ?? item.name ?? '';
+      this.dropdownOpen['customer'] = false;
+      return;
+    }
   }
 
-  onClearSearch(field: 'quotationNo' | 'customer' | 'warehouse') {
+
+  onClearSearch(field: 'quotationNo' | 'customer') {
+    debugger
     this.searchTexts[field] = '';
     this.dropdownOpen[field] = false;
-    if (field === 'quotationNo') this.soHdr.quotationNo = 0; 
+    if (field === 'quotationNo') this.soHdr.quotationNo = 0;
     if (field === 'customer') this.soHdr.customerId = 0;
-    if (field === 'warehouse') this.soHdr.warehouseId = 0;
+
   }
 
   /** Close any open dropdowns if clicking outside */
@@ -178,20 +238,20 @@ export class SalesOrderCreateComponent implements OnInit {
 
   /** ======= Lines with SearchText-like dropdowns ======= */
 
-  addLine() {
-    this.soLines.push({
-      item: '',
-      itemId: 0,
-      uom: '',
-      qty: 0,
-      unitPrice: 0,
-      discountPct: 0,
-      taxCode: '',
-      amount: 0,
-      dropdownOpen: '',
-      filteredOptions: []
-    });
-  }
+  // addLine() {
+  //   this.soLines.push({
+  //     itemName: '',
+  //     itemId: 0,
+  //     uom: '',
+  //     quantity: 0,
+  //     unitPrice: 0,
+  //     discount: 0,
+  //     tax: '',
+  //     total: 0,
+  //     dropdownOpen: '',
+  //     filteredOptions: []
+  //   });
+  // }
 
   removeLine(i: number) {
     this.soLines.splice(i, 1);
@@ -201,7 +261,7 @@ export class SalesOrderCreateComponent implements OnInit {
   trackByIndex = (i: number) => i;
 
   /** open the mini dropdown in a cell */
-  openDropdown(i: number, field: 'item' | 'taxCode') {
+  openDropdown(i: number, field: 'item' | 'tax') {
     this.soLines[i].dropdownOpen = field;
     if (field === 'item') {
       this.soLines[i].filteredOptions = [...this.items];
@@ -211,7 +271,7 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 
   /** filter options for that row/field */
-  filterOptions(i: number, field: 'item' | 'taxCode') {
+  filterOptions(i: number, field: 'item' | 'tax') {
     const q = ((this.soLines[i] as any)[field] || '').toString().toLowerCase();
 
     if (field === 'item') {
@@ -228,7 +288,7 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 
   /** when clicking an option */
-  selectOption(i: number, field: 'item' | 'taxCode', opt: any) {
+  selectOption(i: number, field: 'item' | 'tax', opt: any) {
     if (field === 'item') {
       // display "CODE - NAME", keep id for saving
       this.soLines[i].item = `${opt.itemCode} - ${opt.itemName}`;
@@ -237,7 +297,7 @@ export class SalesOrderCreateComponent implements OnInit {
       if (!this.soLines[i].unitPrice) this.soLines[i].unitPrice = Number(opt.price || 0);
       this.recalcLine(i);
     } else {
-      this.soLines[i].taxCode = opt.code;
+      this.soLines[i].tax = opt.code;
       this.recalcLine(i);
     }
 
@@ -247,33 +307,57 @@ export class SalesOrderCreateComponent implements OnInit {
 
   /** ======= Calculations ======= */
 
+  private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+
   recalcLine(i: number) {
+    debugger
     const L = this.soLines[i];
-    const qty = Number(L.qty) || 0;
+    const qty = Number(L.quantity) || 0;
     const price = Number(L.unitPrice) || 0;
-    const disc = Number(L.discountPct) || 0;
+    const disc = Number(L.discount) || 0;
+    const rate = (Number(this.soHdr.gstPct) || 0) / 100;   // use header GST%
 
     const sub = qty * price;
-    const afterDisc = sub - (sub * disc) / 100;
+    const afterDisc = sub - (sub * disc / 100);
 
-    const taxPct = (this.taxCodes.find(t => t.code === L.taxCode)?.pct ?? 0);
-    const taxAmt = afterDisc * (taxPct / 100);
+    let net = afterDisc, tax = 0, tot = afterDisc;
 
-    L.amount = this.round(afterDisc + taxAmt);
+    switch (L.tax ?? 'EXCLUSIVE') {
+      case 'EXCLUSIVE': // add GST
+        net = afterDisc;
+        tax = net * rate;
+        tot = net + tax;
+        break;
+      case 'INCLUSIVE': // price includes GST
+        tot = afterDisc;
+        net = rate > 0 ? (tot / (1 + rate)) : tot;
+        tax = tot - net;
+        break;
+      case 'EXEMPT':    // 0%
+      default:
+        net = afterDisc;
+        tax = 0;
+        tot = afterDisc;
+        break;
+    }
+
+    L.lineNet = this.round2(net);
+    L.lineTax = this.round2(tax);
+    L.total = this.round2(tot);
+
     this.recalcTotals();
   }
 
   get totals() {
-    const subTotal = this.soLines.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-    const withShip = subTotal + Number(this.soHdr.shipping || 0);
-    const afterDisc = withShip - Number(this.soHdr.discount || 0);
-    const gstAmt = afterDisc * (Number(this.soHdr.gstPct || 0) / 100);
-    const net = afterDisc + gstAmt;
+    const net = this.soLines.reduce((s, x) => s + (x.lineNet || 0), 0);
+    const tax = this.soLines.reduce((s, x) => s + (x.lineTax || 0), 0);
+    const ship = Number(this.soHdr.shipping || 0);
+    const hdrDc = Number(this.soHdr.discount || 0); // absolute
 
     return {
-      subTotal: this.round(subTotal),
-      gstAmount: this.round(gstAmt),
-      netTotal: this.round(net)
+      subTotal: this.round2(net),
+      gstAmount: this.round2(tax),
+      netTotal: this.round2(net + tax + ship - hdrDc)
     };
   }
 
@@ -306,7 +390,7 @@ export class SalesOrderCreateComponent implements OnInit {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line.' });
       return false;
     }
-    const bad = this.soLines.find(l => !l.itemId || !(Number(l.qty) > 0) || !(Number(l.unitPrice) > 0));
+    const bad = this.soLines.find(l => !l.itemId || !(Number(l.quantity) > 0) || !(Number(l.unitPrice) > 0));
     if (bad) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Each line needs Item, Qty > 0, Unit Price > 0.' });
       return false;
@@ -320,30 +404,51 @@ export class SalesOrderCreateComponent implements OnInit {
     const payload = {
       ...this.soHdr,
       customerName: this.searchTexts.customer,
-      warehouseName: this.searchTexts.warehouse,
-      lines: this.soLines.map(l => ({
+      LineItems: this.soLines.map(l => ({
         itemId: l.itemId,
         uom: l.uom,
-        qty: Number(l.qty) || 0,
+        quantity: Number(l.quantity) || 0,
         unitPrice: Number(l.unitPrice) || 0,
-        discountPct: Number(l.discountPct) || 0,
-        taxCode: l.taxCode || null,
-        amount: Number(l.amount) || 0
+        discount: Number(l.discount) || 0,
+        tax: l.tax || null,
+        total: Number(l.total) || 0
       })),
       totals: this.totals
     };
 
-    // call your service here
-    Swal.fire({ icon: 'success', title: 'Posted', text: 'Sales Order created' });
-    this.router.navigate(['/sales/list-salesorder']);
+     this.salesOrderService.insertSO(payload).subscribe({
+    
+            next: () => {
+              Swal.fire({
+                icon: 'success',
+                title: 'Created!',
+                text: 'Sales Order created successfully',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#0e3a4c'
+              });
+         
+           this.router.navigate(['/Sales/Sales-Order-list']);
+    
+            },
+            error: () => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to created Sales Order ',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#d33'
+              });
+            }
+          });
+    
   }
 
-  
-  cancel()  { this.router.navigate(['/Sales/Sales-Order-list']); }
+
+  cancel() { this.router.navigate(['/Sales/Sales-Order-list']); }
 
   /** ======= UI helpers ======= */
-  reserveStock(){ this.allocation.reservedPct = 60; }
-  releaseToPicking(){ Swal.fire({ icon: 'success', title: 'Released', text: 'Released to picking' }); }
+  reserveStock() { this.allocation.reservedPct = 60; }
+  releaseToPicking() { Swal.fire({ icon: 'success', title: 'Released', text: 'Released to picking' }); }
 
   gridColsClass(cols: number) {
     return {
