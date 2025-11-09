@@ -20,24 +20,28 @@
       <!-- Sales Order (ng-select) -->
       <div class="col-lg-3 col-md-6">
         <label class="form-label">Sales Order</label>
-        <ng-select
-          [items]="soList"
-          bindLabel="number"
-          bindValue="id"
-          [(ngModel)]="selectedSoId"
-          name="soId"
-          [searchable]="true"
-          [clearable]="true"
-          placeholder="Select SO…"
-          (change)="onSoChanged(selectedSoId)">
-          <!-- richer labels (number — customer) -->
-          <ng-template ng-label-tmp let-item="item">
-            {{ item.number }} — {{ item.customerName }}
-          </ng-template>
-          <ng-template ng-option-tmp let-item="item">
-            {{ item.number }} — {{ item.customerName }}
-          </ng-template>
-        </ng-select>
+       <ng-select
+  [items]="soList"
+  bindLabel="salesOrderNo"
+  bindValue="id"
+  [(ngModel)]="selectedSoId"
+  name="soId"
+  [searchable]="true"
+  [clearable]="true"
+  placeholder="Select SO…"
+  (change)="onSoChanged(selectedSoId)">
+
+  <!-- Selected chip -->
+  <ng-template ng-label-tmp let-item="item">
+    {{ item.salesOrderNo }} — {{ item.customerName }}
+  </ng-template>
+
+  <!-- Dropdown rows -->
+  <ng-template ng-option-tmp let-item="item">
+    {{ item.salesOrderNo }} — {{ item.customerName }}
+  </ng-template>
+</ng-select>
+
       </div>
 
       <!-- Driver (ng-select) -->
