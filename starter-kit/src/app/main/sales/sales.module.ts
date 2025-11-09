@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { CustomermastercreateComponent } from './customermastercreate/customermastercreate.component';
 import { DeliveryordercreateComponent } from './deliveryordercreate/deliveryordercreate.component';
 import { PermissionscreateComponent } from './permissionscreate/permissionscreate.component';
-import { PickingPackingcreateComponent } from './picking-packingcreate/picking-packingcreate.component';
+import { PickingPackingcreateComponent } from './picking-packingcreate/picing-packing-create/picking-packingcreate.component';
 import { QuotationscreateComponent } from './quotations/quotationscreate/quotationscreate.component';
 import { ReportscreateComponent } from './reportscreate/reportscreate.component';
 import { ReturnCreditcreateComponent } from './return-creditcreate/return-creditcreate.component';
@@ -19,6 +19,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
 import { QuotationlistComponent } from './quotations/quotationlist/quotationlist.component';
 import { SalesOrderCreateComponent } from './sales-order/sales-order-create/sales-order-create.component';
 import { SalesOrderListComponent } from './sales-order/sales-order-list/sales-order-list.component';
+import { PickingPackingListComponent } from './picking-packingcreate/picking-packing-list/picking-packing-list.component';
 
 const routes = [
   {
@@ -107,7 +108,8 @@ const routes = [
     SalesOrderCreateComponent,
     SharedcreateComponent,
     QuotationlistComponent,
-    SalesOrderListComponent
+    SalesOrderListComponent,
+    PickingPackingListComponent
   ],
   imports: [
     CommonModule,
