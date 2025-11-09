@@ -120,7 +120,8 @@ const routes = [
     SharedcreateComponent,
     QuotationlistComponent,
     SalesOrderListComponent,
-    PickingPackingListComponent
+    PickingPackingListComponent,
+    DeliveryorderlistComponent
   ],
   imports: [
     CommonModule,
