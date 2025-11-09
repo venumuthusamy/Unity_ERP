@@ -1,102 +1,95 @@
-<!-- Keep bottom space small (no sticky) -->
+<!-- Sales Order Create -->
 <div class="so-page ui-compact pr-typography">
-
   <div class="bg-white rounded-2xl shadow px-2 pt-2 pb-6 border border-gray-100 so-card">
     <div class="flex items-center justify-between mb-2">
       <h2 class="text-lg font-semibold text-gray-800">Sales Order</h2>
       <div class="pill" [ngClass]="soHdr.statusClass">{{ soHdr.statusText }}</div>
     </div>
 
-    <!-- Header: searchText pattern -->
+    <!-- Header -->
     <div [ngClass]="gridColsClass(4)">
-
       <!-- Quotation -->
       <div class="so-header-dd dropdown-input">
         <label class="text-xs font-medium text-gray-600">Quotation No</label>
         <div class="relative">
           <input type="text" [(ngModel)]="searchTexts['quotationNo']" (input)="filter('quotationNo')"
-            (focus)="toggleDropdown('quotationNo', true)" placeholder="Search Quotation No..."
-            class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-            style="border-color:#0e3a4c" />
+                 (focus)="toggleDropdown('quotationNo', true)" placeholder="Search Quotation No..."
+                 class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm" style="border-color:#0e3a4c" />
           <button *ngIf="searchTexts['quotationNo']" type="button" (click)="onClearSearch('quotationNo')"
-            class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">✕</button>
+                  class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">✕</button>
           <button type="button" (click)="toggleDropdown('quotationNo')"
-            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">▼</button>
+                  class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">▼</button>
         </div>
-        <p *ngIf="submitted && isEmpty(searchTexts['quotationNo'])" class="text-xs text-red-600 mt-1">
-          Quotation No is required.
-        </p>
+        <p *ngIf="submitted && isEmpty(searchTexts['quotationNo'])" class="text-xs text-red-600 mt-1">Quotation No is required.</p>
 
         <ul *ngIf="dropdownOpen['quotationNo']"
-          class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
+            class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
           <li *ngFor="let c of filteredLists['quotationNo']" (click)="select('quotationNo', c)"
-            class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm">
-            {{ c.number }}
-          </li>
+              class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm">{{ c.number }}</li>
         </ul>
       </div>
-      <!-- Customer -->
+
+      <!-- Customer (auto) -->
       <div class="so-header-dd dropdown-input">
         <label class="text-xs font-medium text-gray-600">Customer</label>
         <div class="relative">
-          <input type="text" disabled [(ngModel)]="searchTexts['customer']" (input)="filter('customer')"
-            (focus)="toggleDropdown('customer', true)" placeholder="Search Customer..."
-            class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
-            style="border-color:#0e3a4c" />
-          <button *ngIf="searchTexts['customer']" type="button" disabled (click)="onClearSearch('customer')"
-            class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">✕</button>
-          <button type="button" (click)="toggleDropdown('customer')"
-            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret" disabled>▼</button>
+          <input type="text" disabled [(ngModel)]="searchTexts['customer']"
+                 class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm" style="border-color:#0e3a4c" />
         </div>
-        <p *ngIf="submitted && isEmpty(searchTexts['customer'])" class="text-xs text-red-600 mt-1">
-          Customer is required.
-        </p>
+        <p *ngIf="submitted && isEmpty(searchTexts['customer'])" class="text-xs text-red-600 mt-1">Customer is required.</p>
+      </div>
 
-        <ul *ngIf="dropdownOpen['customer']"
-          class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
-          <li *ngFor="let c of filteredLists['customer']" (click)="select('customer', c)"
-            class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm">
-            {{ c.customerName }}
+      <!-- Warehouse (header, optional) -->
+      <!-- <div class="so-header-dd dropdown-input">
+        <label class="text-xs font-medium text-gray-600">Warehouse</label>
+        <div class="relative">
+          <input type="text" [(ngModel)]="searchTexts['warehouse']" (focus)="toggleDropdown('warehouse', true)"
+                 (input)="filter('warehouse')" placeholder="Search Warehouse..."
+                 class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm" style="border-color:#0e3a4c" />
+          <button *ngIf="searchTexts['warehouse']" type="button" (click)="onClearWarehouse()"
+                  class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">✕</button>
+          <button type="button" (click)="toggleDropdown('warehouse')"
+                  class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">▼</button>
+        </div>
+        <ul *ngIf="dropdownOpen['warehouse']"
+            class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
+          <li *ngFor="let w of filteredLists['warehouse']" (click)="selectWarehouse(w)"
+              class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between">
+            <span>{{ w.warehouseName }}</span><span class="text-gray-500">#{{ w.id }}</span>
           </li>
         </ul>
-      </div>
+        <p class="text-[11px] text-gray-500 mt-1" *ngIf="selectedWarehouseId">
+          Selected: {{ selectedWarehouseName }} (ID: {{ selectedWarehouseId }})
+        </p>
+      </div> -->
 
-        <!-- GST -->
+      <!-- GST -->
       <div>
         <label class="text-xs font-medium text-gray-600">Gst</label>
-        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="text" disabled
-          [(ngModel)]="soHdr.gstPct" />
+        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="text" disabled [(ngModel)]="soHdr.gstPct" />
       </div>
 
-
-      <!-- Requested Date -->
+      <!-- Dates -->
       <div>
         <label class="text-xs font-medium text-gray-600">Requested Date</label>
-        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="date"
-          [(ngModel)]="soHdr.requestedDate" />
+        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="date" [(ngModel)]="soHdr.requestedDate" />
       </div>
-
-      <!-- Promised Date -->
       <div>
         <label class="text-xs font-medium text-gray-600">Delivery Date</label>
-        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="date"
-          [(ngModel)]="soHdr.deliveryDate" />
+        <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="date" [(ngModel)]="soHdr.deliveryDate" />
       </div>
     </div>
 
-    <!-- Reserve / Release -->
+    <!-- Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-      <!-- <div class="text-sm text-gray-600">
-        Allocation Status:
-        <span class="badge" [class.badge-ok]="allocation.reservedPct>0">Reserved {{ allocation.reservedPct }}%</span>
-      </div> -->
-      <div class="flex gap-2 md:justify-end md:col-start-2 md:justify-self-end">
+      <div></div>
+      <div class="flex gap-2 md:justify-end">
         <button type="button" class="btn-outline" (click)="reserveStock()">Reserve Stock</button>
         <button type="button" class="btn-dark" (click)="releaseToPicking()">Release to Picking</button>
       </div>
     </div>
 
-    <!-- Lines table -->
+    <!-- Lines -->
     <div class="mt-4 overflow-auto border border-gray-200 rounded-lg">
       <table class="min-w-full text-sm">
         <thead class="text-white" style="background-color:#2E5F73">
@@ -107,125 +100,79 @@
             <th class="th">Unit Price</th>
             <th class="th">Discount %</th>
             <th class="th">Tax</th>
+            <th class="th">Warehouses</th>
             <th class="th">Total</th>
             <th class="th text-right">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="soLines.length===0">
-            <td [attr.colspan]="8" class="px-3 py-6 text-center text-gray-400">No lines yet.</td>
+            <td [attr.colspan]="9" class="px-3 py-6 text-center text-gray-400">No lines yet.</td>
           </tr>
 
           <tr *ngFor="let ln of soLines; let i=index; trackBy: trackByIndex" class="border-t">
-            <!-- Item (searchText style) -->
+            <!-- Item (search) -->
             <td class="td relative so-line-dd dropdown-input">
               <input type="text" class="w-52 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
-                [(ngModel)]="soLines[i].item" (focus)="openDropdown(i,'item')" (input)="filterOptions(i,'item')"
-                placeholder="Search Item...">
+                     [(ngModel)]="soLines[i].item" (focus)="openDropdown(i,'item')" (input)="filterOptions(i,'item')" placeholder="Search Item...">
               <div *ngIf="soLines[i].dropdownOpen==='item'"
-                class="absolute left-0 top-full mt-1 w-64 bg-white border rounded-xl shadow-lg max-h-56 overflow-y-auto z-50">
+                   class="absolute left-0 top-full mt-1 w-64 bg-white border rounded-xl shadow-lg max-h-56 overflow-y-auto z-50">
                 <div *ngFor="let it of soLines[i].filteredOptions" (click)="selectOption(i,'item', it)"
-                  class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
-                  <span>{{ it.itemCode }}</span>
-                  <span class="text-gray-500">{{ it.itemName }}</span>
+                     class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
+                  <span>{{ it.itemCode }}</span><span class="text-gray-500">{{ it.itemName }}</span>
                 </div>
               </div>
             </td>
 
-            <!-- UOM -->
-            <td class="td">
-              <input class="w-24 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
-                [(ngModel)]="soLines[i].uom" placeholder="UOM">
-            </td>
+            <td class="td"><input class="w-24 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" [(ngModel)]="soLines[i].uom" placeholder="UOM"></td>
 
-            <!-- Qty -->
-            <td class="td">
-              <input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
-                style="border-color:#0e3a4c" [(ngModel)]="soLines[i].quantity" (input)="recalcLine(i)">
-            </td>
+            <td class="td"><input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
+                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].quantity" (input)="recalcLine(i)"></td>
 
-            <!-- Unit Price -->
-            <td class="td">
-              <input type="number" class="w-28 rounded-xl border px-3 py-2 text-sm text-right"
-                style="border-color:#0e3a4c" [(ngModel)]="soLines[i].unitPrice" (input)="recalcLine(i)">
-            </td>
+            <td class="td"><input type="number" class="w-28 rounded-xl border px-3 py-2 text-sm text-right"
+                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].unitPrice" (input)="recalcLine(i)"></td>
 
-            <!-- Discount % -->
-            <td class="td">
-              <input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
-                style="border-color:#0e3a4c" [(ngModel)]="soLines[i].discount" (input)="recalcLine(i)">
-            </td>
-
-            <!-- Tax (searchText style minimal) -->
+            <td class="td"><input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
+                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].discount" (input)="recalcLine(i)"></td>
 
             <td class="td">
               <div class="text-xs text-gray-500 mb-1">
-                {{ soLines[i].tax === 'EXCLUSIVE' ? 'Exclusive (add GST)' :
-                soLines[i].tax === 'INCLUSIVE' ? 'Inclusive (includes GST)' : 'Exempt (0%)' }}
+                {{ soLines[i].tax === 'EXCLUSIVE' ? 'Exclusive (add GST)' : soLines[i].tax === 'INCLUSIVE' ? 'Inclusive (includes GST)' : 'Exempt (0%)' }}
               </div>
               <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
             </td>
 
-            <!-- <td class="td relative so-line-dd dropdown-input">
-              <input type="text" class="w-28 rounded-xl border px-3 py-2 text-sm"
-                     style="border-color:#0e3a4c"
-                     [(ngModel)]="soLines[i].tax"
-                     (focus)="openDropdown(i,'tax')"
-                     (input)="filterOptions(i,'tax')"
-                     placeholder="Search Tax...">
-              <div *ngIf="soLines[i].dropdownOpen==='tax'"
-                   class="absolute left-0 top-full mt-1 w-40 bg-white border rounded-xl shadow-lg max-h-56 overflow-y-auto z-50">
-                <div *ngFor="let t of soLines[i].filteredOptions"
-                     (click)="selectOption(i,'tax', t)"
-                     class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
-                  <span>{{ t.code }}</span>
-                  <span class="text-gray-500">{{ t.name }}</span>
-                </div>
+            <!-- Warehouse select -->
+            <td class="td">
+              <select class="w-48 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
+                      [(ngModel)]="soLines[i].selectedWarehouseId" (ngModelChange)="onWarehouseChange(i)">
+                <option [ngValue]="null">-- Select Warehouse --</option>
+                <option *ngFor="let w of soLines[i].warehouses" [ngValue]="w.warehouseId">{{ w.warehouseName }}</option>
+              </select>
+              <div *ngIf="soLines[i].selectedWh" class="text-[11px] text-gray-500 mt-1">
+                Avl: {{ soLines[i].selectedWh?.available }}
               </div>
-            </td> -->
-
-            <!-- Total -->
-            <td class="td text-right">{{ (soLines[i].total || 0) | number:'1.2-2' }}</td>
-
-            <!-- Action -->
-            <td class="td text-right">
-              <button class="btn-link" (click)="removeLine(i)">Remove</button>
             </td>
+
+            <td class="td text-right">{{ (soLines[i].total || 0) | number:'1.2-2' }}</td>
+            <td class="td text-right"><button class="btn-link" (click)="removeLine(i)">Remove</button></td>
           </tr>
         </tbody>
       </table>
-
-      <!-- <div class="p-2 border-t bg-gray-50">
-        <button class="btn-add" type="button" (click)="addLine()">+ Add line</button>
-      </div> -->
     </div>
 
     <!-- Totals -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
       <div class="md:col-span-2"></div>
       <div class="so-totals">
-        <div class="so-row">
-          <span>Sub Total</span>
-          <span class="so-num">{{ totals.subTotal | number:'1.2-2' }}</span>
-        </div>
-        <div class="so-row">
-          <span>Shipping</span>
-          <input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.shipping" (input)="recalcTotals()">
-        </div>
-        <div class="so-row">
-          <span>Discount (absolute)</span>
-          <input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.discount" (input)="recalcTotals()">
-        </div>
-        <div class="so-row">
-          <span>GST (%)</span>
-          <input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.gstPct" (input)="recalcTotals()">
-        </div>
-        <div class="so-row so-total">
-          <span>Net Total</span>
-          <span class="so-num">{{ totals.netTotal | number:'1.2-2' }}</span>
-        </div>
+        <div class="so-row"><span>Sub Total</span><span class="so-num">{{ totals.subTotal | number:'1.2-2' }}</span></div>
+        <div class="so-row"><span>Shipping</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.shipping" (input)="recalcTotals()"></div>
+        <div class="so-row"><span>Discount (absolute)</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.discount" (input)="recalcTotals()"></div>
+        <div class="so-row"><span>GST (%)</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.gstPct" (input)="recalcTotals()"></div>
+        <div class="so-row so-total"><span>Net Total</span><span class="so-num">{{ totals.netTotal | number:'1.2-2' }}</span></div>
       </div>
     </div>
+
     <div class="mt-4 pt-3 border-t flex flex-wrap gap-2 justify-end so-actions">
       <button class="so-btn so-btn-primary" (click)="post()">Save</button>
       <button class="so-btn so-btn-danger" (click)="cancel()">Cancel</button>

@@ -1088,8 +1088,8 @@ selectModalItem(item: any) {
       multiLoc: this.prHeader.multiLoc,
       oversea: this.prHeader.oversea,
       PurchaseRequestNo: '',
-      CreatedBy: this.userId,
-      UpdatedBy: this.userId,
+      CreatedBy: '1',
+      UpdatedBy: '1',
       IsActive: true,
       Status: 1,
       prLines: JSON.stringify(strippedLines)

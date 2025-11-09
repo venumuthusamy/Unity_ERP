@@ -1,15 +1,26 @@
 import { Component, HostListener, OnInit } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
+
+import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { QuotationsService } from '../../quotations/quotations.service';
 import { CountriesService } from 'app/main/master/countries/countries.service';
 import { SalesOrderService } from '../sales-order.service';
 
-/** Types (adapt or import your own) */
+/** ===== Types ===== */
+type WarehouseInfo = {
+  warehouseId: number;
+  warehouseName: string;
+  onHand: number;
+  reserved: number;
+  available: number;
+};
+
+type WarehouseMaster = { id: number; warehouseName: string };
+
 type SoLine = {
-  item?: string;      // "CODE - NAME" display
+  item?: string;      // display "CODE - NAME" or name only
   itemId?: number;
   uom?: string;
   quantity?: number | string;
@@ -20,7 +31,12 @@ type SoLine = {
   lineTax?: number;
   total?: number;
 
-  // dropdown helpers per-row
+  // Per-line warehouses & selection
+  warehouses?: WarehouseInfo[];
+  selectedWarehouseId?: number | null;
+  selectedWh?: WarehouseInfo | null;
+
+  // row dropdowns for item/tax
   dropdownOpen?: '' | 'item' | 'tax';
   filteredOptions?: any[];
 };
@@ -31,6 +47,7 @@ type SoLine = {
   styleUrls: ['./sales-order-create.component.scss']
 })
 export class SalesOrderCreateComponent implements OnInit {
+
   /** -------- Header Model ---------- */
   soHdr: any = {
     id: 0,
@@ -45,159 +62,170 @@ export class SalesOrderCreateComponent implements OnInit {
     statusText: 'Pending'
   };
 
-  /** -------- Masters (bind from API) ---------- */
+  /** -------- Masters ---------- */
   customers: any[] = [];
   quotationList: any[] = [];
-  items: any[] = [];
-  taxCodes: any[] = [];
+  items: any[] = [];     // optional, if you open the line item selector
+  taxCodes: any[] = [];  // optional, if you use tax dropdown
+
+  /** Header warehouse dropdown (optional, informational) */
+  warehousesMaster: WarehouseMaster[] = [];
+  selectedWarehouseId: number | null = null;
+  selectedWarehouseName = '';
 
   /** -------- Lines ---------- */
   soLines: SoLine[] = [];
 
-  /** -------- DropDowns (Header) ---------- */
+  /** -------- SearchText style dropdowns (Header) ---------- */
   submitted = false;
 
-  // visible text in inputs
   searchTexts: { [k: string]: string } = {
     quotationNo: '',
     customer: '',
+    warehouse: '' // header search for warehouses
   };
 
-  // dropdown open/close
   dropdownOpen: { [k: string]: boolean } = {
     quotationNo: false,
     customer: false,
+    warehouse: false
   };
 
-  // filtered lists to render
   filteredLists: { [k: string]: any[] } = {
     quotationNo: [],
     customer: [],
+    warehouse: []
   };
 
-  // which header fields are required (by searchText)
-  requiredKeys = ['quotationNo', 'customer',];
+  /** Which header fields are required */
+  requiredKeys = ['quotationNo', 'customer'];
 
-  /** -------- Allocation (optional UI) ---------- */
+  /** Optional UI bits */
   allocation = { reservedPct: 0 };
-  countries: any;
+  countries: any[] = [];
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute,
-    private _customerMasterService: CustomerMasterService,
+    private customerSvc: CustomerMasterService,
     private quotationSvc: QuotationsService,
-    private countriesService: CountriesService,
+    private countriesSvc: CountriesService,
     private salesOrderService: SalesOrderService
-  ) { }
+  ) {}
 
+  /** ======= Init ======= */
   ngOnInit(): void {
-   debugger
-    this.countriesService.getCountry().subscribe((res: any) => {
-         this.countries = (res?.data ?? []).map((c: any) => ({
+    // Countries (for GST%)
+    this.countriesSvc.getCountry().subscribe((res: any) => {
+      this.countries = (res?.data ?? []).map((c: any) => ({
         id: Number(c.id ?? c.Id),
         countryName: String(c.countryName ?? c.CountryName ?? '').trim(),
         gstPercentage: Number(c.gstPercentage ?? c.GSTPercentage ?? 0)
-      }));})
+      }));
+    });
 
-      forkJoin({
-        quotations: this.quotationSvc.getAll(),
-        customers: this._customerMasterService.GetAllCustomerDetails(),
+    // Quotation list + Customer list
+    forkJoin({
+      quotations: this.quotationSvc.getAll(),
+      customers: this.customerSvc.GetAllCustomerDetails(),
+    }).subscribe((res: any) => {
+      this.quotationList = res.quotations?.data ?? [];
+      this.customers = res.customers?.data ?? [];
 
-      }).subscribe((res: any) => {
-        this.quotationList = res.quotations.data;
-        this.customers = res.customers.data;
-        // this.items = res.items;
-        // this.taxCodes = res.taxCodes;
-
-        // init header dropdown source
-        this.filteredLists.quotationNo = [...this.quotationList];
-        this.filteredLists.customer = [...this.customers];
-
-
-        // starter row
-        // if (this.soLines.length === 0) this.addLine();
-      });
-
-      // if edit mode, grab id and hydrate header+lines here...
-    }
-
-  /** quick mock helper — replace with real observables */
-  private mock<T>(data: T) {
-      return { subscribe: (cb: (x: T) => void) => cb(data) } as any;
-    }
-
-  /** ======= Header dropdown helpers (SearchText style) ======= */
-
-  isEmpty(v: any): boolean {
-      return(v ?? '').toString().trim() === '';
+      this.filteredLists.quotationNo = [...this.quotationList];
+      this.filteredLists.customer = [...this.customers];
+      this.filteredLists.warehouse = [...this.warehousesMaster]; // empty initially
+    });
   }
 
-  toggleDropdown(field: 'quotationNo' | 'customer', open?: boolean) {
-    debugger
+  /** ======= Header dropdown helpers ======= */
+isEmpty(v: any): boolean {
+  return (v ?? '').toString().trim() === '';
+}
+  toggleDropdown(field: 'quotationNo' | 'customer' | 'warehouse', open?: boolean) {
     this.dropdownOpen[field] = open !== undefined ? open : !this.dropdownOpen[field];
     if (field === 'quotationNo') {
       this.filteredLists[field] = [...this.quotationList];
     } else if (field === 'customer') {
       this.filteredLists[field] = [...this.customers];
+    } else {
+      this.filteredLists[field] = [...this.warehousesMaster];
     }
   }
 
-  filter(field: 'quotationNo' | 'customer') {
-    debugger
+  filter(field: 'quotationNo' | 'customer' | 'warehouse') {
     const q = (this.searchTexts[field] || '').toLowerCase();
     if (field === 'quotationNo') {
       this.filteredLists[field] = this.quotationList.filter(x => (x.number || '').toLowerCase().includes(q));
     } else if (field === 'customer') {
       this.filteredLists[field] = this.customers.filter(x => (x.customerName || '').toLowerCase().includes(q));
+    } else {
+      this.filteredLists[field] = this.warehousesMaster.filter(x =>
+        (x.warehouseName || '').toLowerCase().includes(q) || String(x.id).includes(q));
     }
   }
 
+  /** Select from header dropdowns */
   select(field: 'quotationNo' | 'customer', item: any) {
-    debugger
     if (field === 'quotationNo') {
-      // 1) set quotation
+      // 1) set quotation on header
       this.soHdr.quotationNo = item.id;
       this.searchTexts['quotationNo'] = item.number ?? '';
 
-      // 2) bind customer name from quotation
+      // 2) set customer name display
       this.searchTexts['customer'] = item.customerName ?? '';
 
-      // 3) try to resolve customerId by name (if quotation doesn’t carry customerId)
+      // 3) find customerId
       const match = (this.customers ?? []).find((c: any) =>
         (c.customerName ?? c.name ?? '').toLowerCase() === (item.customerName ?? '').toLowerCase()
       );
       this.soHdr.customerId = match?.customerId ?? this.soHdr.customerId ?? 0;
 
-
+      // 4) GST by customer's country
       const cust = this.customers.find(x => x.customerId === this.soHdr.customerId) || null;
-      
-
-      const country = this.countries.find(c => c.id === (cust?.countryId ?? -1)) || null;
-     
-
+      const country = this.countries?.find((c: any) => c.id === (cust?.countryId ?? -1)) || null;
       this.soHdr.gstPct = country?.gstPercentage ?? 0;
 
-      // load table
-      this.quotationSvc.getById(this.soHdr.quotationNo).subscribe((res: any) => {
-        this.soLines = (res.data.lines || []).map((l: any) => ({
-          item: l.itemName,                    // your template binds to `soLines[i].item`
-          itemId: l.itemId,
-          uom: l.uomName ?? '',                // template uses `uom`
-          quantity: Number(l.qty) || 0,             // template uses `qty`
-          unitPrice: Number(l.unitPrice) || 0, // template uses `unitPrice`
-          discount: Number(l.discountPct) || 0, // template uses `discountPct`
-          tax: l.taxMode as any,            // EXCLUSIVE | INCLUSIVE | EXEMPT
-          lineNet: Number(l.lineNet) || 0,
-          lineTax: Number(l.lineTax) || 0,         // template uses `tax` (string)
-          total: Number(l.lineTotal) || 0,     // template displays `total`
-          dropdownOpen: '',
-          filteredOptions: []
-        }));
-        this.recalcTotals();
-      })
+      // 5) Load quotation detail (lines + per-line warehouses)
+      this.salesOrderService.GetByQuatitonDetails(this.soHdr.quotationNo).subscribe((res: any) => {
+        const lines = (res?.data?.lines ?? []) as any[];
 
-      // optionally: close both dropdowns
+        this.soLines = lines.map(l => {
+          const wh: WarehouseInfo[] = Array.isArray(l.warehouses)
+            ? l.warehouses
+            : (l.warehousesJson ? safeJsonParse<WarehouseInfo[]>(l.warehousesJson, []) : []);
+
+          const line: SoLine = {
+            item: l.itemName,
+            itemId: l.itemId,
+            uom: l.uomName ?? '',
+            quantity: Number(l.qty) || 0,
+            unitPrice: Number(l.unitPrice) || 0,
+            discount: Number(l.discountPct) || 0,
+            tax: (l.taxMode || 'EXCLUSIVE') as any,
+            lineNet: Number(l.lineNet) || 0,
+            lineTax: Number(l.lineTax) || 0,
+            total: Number(l.lineTotal) || 0,
+
+            warehouses: wh,
+            selectedWarehouseId: wh?.length === 1 ? wh[0].warehouseId : null, // auto-pick if only one
+            selectedWh: wh?.length === 1 ? { ...wh[0] } : null,
+
+            dropdownOpen: '',
+            filteredOptions: []
+          };
+          return line;
+        });
+
+        // Build header warehouse master = union of all line warehouses
+        const seen = new Map<number, string>();
+        this.soLines.forEach(l => (l.warehouses || []).forEach(w => seen.set(w.warehouseId, w.warehouseName)));
+        this.warehousesMaster = Array.from(seen.entries()).map(([id, warehouseName]) => ({ id, warehouseName }));
+        this.filteredLists.warehouse = [...this.warehousesMaster];
+
+        this.recalcTotals();
+      });
+
+      // close dropdowns
       this.dropdownOpen['quotationNo'] = false;
       this.dropdownOpen['customer'] = false;
       return;
@@ -211,86 +239,61 @@ export class SalesOrderCreateComponent implements OnInit {
     }
   }
 
+  /** Header warehouse dropdown select (optional, informational) */
+  selectWarehouse(w: WarehouseMaster) {
+    this.selectedWarehouseId = w.id;
+    this.selectedWarehouseName = w.warehouseName;
+    this.searchTexts['warehouse'] = w.warehouseName;
+    this.dropdownOpen['warehouse'] = false;
+  }
+
+  onClearWarehouse() {
+    this.searchTexts['warehouse'] = '';
+    this.selectedWarehouseId = null;
+    this.selectedWarehouseName = '';
+    this.dropdownOpen['warehouse'] = false;
+  }
 
   onClearSearch(field: 'quotationNo' | 'customer') {
-    debugger
     this.searchTexts[field] = '';
     this.dropdownOpen[field] = false;
     if (field === 'quotationNo') this.soHdr.quotationNo = 0;
     if (field === 'customer') this.soHdr.customerId = 0;
-
   }
 
   /** Close any open dropdowns if clicking outside */
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event) {
     const el = e.target as HTMLElement;
-
-    // header dropdowns
     if (!el.closest('.so-header-dd')) {
       Object.keys(this.dropdownOpen).forEach(k => (this.dropdownOpen[k] = false));
     }
-    // line dropdowns
     this.soLines.forEach(l => {
       if (!el.closest('.so-line-dd')) l.dropdownOpen = '';
     });
   }
 
-  /** ======= Lines with SearchText-like dropdowns ======= */
-
-  // addLine() {
-  //   this.soLines.push({
-  //     itemName: '',
-  //     itemId: 0,
-  //     uom: '',
-  //     quantity: 0,
-  //     unitPrice: 0,
-  //     discount: 0,
-  //     tax: '',
-  //     total: 0,
-  //     dropdownOpen: '',
-  //     filteredOptions: []
-  //   });
-  // }
-
-  removeLine(i: number) {
-    this.soLines.splice(i, 1);
-    this.recalcTotals();
-  }
-
-  trackByIndex = (i: number) => i;
-
-  /** open the mini dropdown in a cell */
+  /** ======= Line mini-dropdowns (item/tax) ======= */
   openDropdown(i: number, field: 'item' | 'tax') {
     this.soLines[i].dropdownOpen = field;
-    if (field === 'item') {
-      this.soLines[i].filteredOptions = [...this.items];
-    } else {
-      this.soLines[i].filteredOptions = [...this.taxCodes];
-    }
+    this.soLines[i].filteredOptions = field === 'item' ? [...this.items] : [...this.taxCodes];
   }
 
-  /** filter options for that row/field */
   filterOptions(i: number, field: 'item' | 'tax') {
     const q = ((this.soLines[i] as any)[field] || '').toString().toLowerCase();
-
     if (field === 'item') {
       this.soLines[i].filteredOptions = this.items.filter(x =>
         (x.itemCode || '').toLowerCase().includes(q) ||
-        (x.itemName || '').toLowerCase().includes(q)
-      );
+        (x.itemName || '').toLowerCase().includes(q));
     } else {
       this.soLines[i].filteredOptions = this.taxCodes.filter(x =>
         (x.name || '').toLowerCase().includes(q) ||
-        (x.code || '').toLowerCase().includes(q)
-      );
+        (x.code || '').toLowerCase().includes(q));
     }
   }
 
-  /** when clicking an option */
   selectOption(i: number, field: 'item' | 'tax', opt: any) {
     if (field === 'item') {
-      // display "CODE - NAME", keep id for saving
       this.soLines[i].item = `${opt.itemCode} - ${opt.itemName}`;
       this.soLines[i].itemId = opt.id;
       this.soLines[i].uom = opt.defaultUom || this.soLines[i].uom || '';
@@ -300,51 +303,45 @@ export class SalesOrderCreateComponent implements OnInit {
       this.soLines[i].tax = opt.code;
       this.recalcLine(i);
     }
-
     this.soLines[i].dropdownOpen = '';
     this.soLines[i].filteredOptions = [];
   }
 
-  /** ======= Calculations ======= */
+  /** ======= Per-line Warehouse change ======= */
+  onWarehouseChange(i: number) {
+    const L = this.soLines[i];
+    const id = L.selectedWarehouseId ?? null;
+    if (!id) { L.selectedWh = null; return; }
+    const found = (L.warehouses || []).find(w => w.warehouseId === id) || null;
+    L.selectedWh = found ? { ...found } : null;
+  }
 
+  /** ======= Calculations ======= */
   private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
   recalcLine(i: number) {
-    debugger
     const L = this.soLines[i];
     const qty = Number(L.quantity) || 0;
     const price = Number(L.unitPrice) || 0;
     const disc = Number(L.discount) || 0;
-    const rate = (Number(this.soHdr.gstPct) || 0) / 100;   // use header GST%
+    const rate = (Number(this.soHdr.gstPct) || 0) / 100;
 
     const sub = qty * price;
     const afterDisc = sub - (sub * disc / 100);
 
     let net = afterDisc, tax = 0, tot = afterDisc;
-
     switch (L.tax ?? 'EXCLUSIVE') {
-      case 'EXCLUSIVE': // add GST
-        net = afterDisc;
-        tax = net * rate;
-        tot = net + tax;
-        break;
-      case 'INCLUSIVE': // price includes GST
-        tot = afterDisc;
-        net = rate > 0 ? (tot / (1 + rate)) : tot;
-        tax = tot - net;
-        break;
-      case 'EXEMPT':    // 0%
+      case 'EXCLUSIVE':
+        net = afterDisc; tax = net * rate; tot = net + tax; break;
+      case 'INCLUSIVE':
+        tot = afterDisc; net = rate > 0 ? (tot / (1 + rate)) : tot; tax = tot - net; break;
       default:
-        net = afterDisc;
-        tax = 0;
-        tot = afterDisc;
-        break;
+        net = afterDisc; tax = 0; tot = afterDisc; break;
     }
 
     L.lineNet = this.round2(net);
     L.lineTax = this.round2(tax);
     L.total = this.round2(tot);
-
     this.recalcTotals();
   }
 
@@ -352,8 +349,7 @@ export class SalesOrderCreateComponent implements OnInit {
     const net = this.soLines.reduce((s, x) => s + (x.lineNet || 0), 0);
     const tax = this.soLines.reduce((s, x) => s + (x.lineTax || 0), 0);
     const ship = Number(this.soHdr.shipping || 0);
-    const hdrDc = Number(this.soHdr.discount || 0); // absolute
-
+    const hdrDc = Number(this.soHdr.discount || 0);
     return {
       subTotal: this.round2(net),
       gstAmount: this.round2(tax),
@@ -361,35 +357,23 @@ export class SalesOrderCreateComponent implements OnInit {
     };
   }
 
-  recalcTotals() {
-    this.soHdr = { ...this.soHdr }; // trigger CD
-  }
+  recalcTotals() { this.soHdr = { ...this.soHdr }; }
 
-  round(v: number) {
-    return Math.round((v + Number.EPSILON) * 100) / 100;
-  }
-
-  /** ======= Actions ======= */
-
-  setStatus(n: 1 | 2 | 3 | 'Pending' | 'Approved' | 'Rejected') {
-    let s = typeof n === 'number' ? n : (n === 'Approved' ? 2 : n === 'Rejected' ? 3 : 1);
-    this.soHdr.status = s;
-    this.soHdr.statusText = s === 2 ? 'Approved' : s === 3 ? 'Rejected' : 'Pending';
-  }
-
-  validateSO(): boolean {
-    // header required by searchtexts
+  /** ======= Validate & Save ======= */
+  private validateSO(): boolean {
+    // header required
     const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
     if (missing.length) {
       this.submitted = true;
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please fill required header fields.' });
       return false;
     }
-    // lines
+    // lines present
     if (this.soLines.length === 0) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line.' });
       return false;
     }
+    // each line valid
     const bad = this.soLines.find(l => !l.itemId || !(Number(l.quantity) > 0) || !(Number(l.unitPrice) > 0));
     if (bad) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Each line needs Item, Qty > 0, Unit Price > 0.' });
@@ -398,55 +382,76 @@ export class SalesOrderCreateComponent implements OnInit {
     return true;
   }
 
-  post() {
+  post(): void {
     if (!this.validateSO()) return;
 
     const payload = {
-      ...this.soHdr,
+      // header
+      id: this.soHdr.id,
+      quotationNo: this.soHdr.quotationNo,
+      customerId: this.soHdr.customerId,
+      requestedDate: this.soHdr.requestedDate,
+      deliveryDate: this.soHdr.deliveryDate,
+      shipping: Number(this.soHdr.shipping || 0),
+      discount: Number(this.soHdr.discount || 0),
+      gstPct: Number(this.soHdr.gstPct || 0),
+      status: this.soHdr.status,
       customerName: this.searchTexts.customer,
-      LineItems: this.soLines.map(l => ({
-        itemId: l.itemId,
-        uom: l.uom,
+
+      // optional header selection
+      headerWarehouseId: this.selectedWarehouseId ?? null,
+      headerWarehouseName: this.selectedWarehouseName || null,
+
+      // lines
+      lineItems: this.soLines.map(l => ({
+        id: 0, // if edit, put existing id
+        itemId: l.itemId!,
+        itemName: (l.item || '').toString(),
+        uom: l.uom || '',
         quantity: Number(l.quantity) || 0,
         unitPrice: Number(l.unitPrice) || 0,
         discount: Number(l.discount) || 0,
         tax: l.tax || null,
-        total: Number(l.total) || 0
+        total: Number(l.total) || 0,
+        // persist the user's per-line selection (not shown in UI beyond dropdown)
+        selectedWarehouseId: l.selectedWarehouseId ?? null,
+        selectedWarehouseAvailable: l.selectedWh?.available ?? null
       })),
+
       totals: this.totals
     };
 
-     this.salesOrderService.insertSO(payload).subscribe({
-    
-            next: () => {
-              Swal.fire({
-                icon: 'success',
-                title: 'Created!',
-                text: 'Sales Order created successfully',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#0e3a4c'
-              });
-         
-           this.router.navigate(['/Sales/Sales-Order-list']);
-    
-            },
-            error: () => {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to created Sales Order ',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#d33'
-              });
-            }
-          });
-    
+    this.salesOrderService.insertSO(payload).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Created!',
+          text: 'Sales Order created successfully',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#0e3a4c'
+        });
+        this.router.navigate(['/Sales/Sales-Order-list']);
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to create Sales Order',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
   }
 
+  /** ======= Misc UI ======= */
+  removeLine(i: number) {
+    this.soLines.splice(i, 1);
+    this.recalcTotals();
+  }
 
-  cancel() { this.router.navigate(['/Sales/Sales-Order-list']); }
+  trackByIndex = (i: number) => i;
 
-  /** ======= UI helpers ======= */
   reserveStock() { this.allocation.reservedPct = 60; }
   releaseToPicking() { Swal.fire({ icon: 'success', title: 'Released', text: 'Released to picking' }); }
 
@@ -461,4 +466,13 @@ export class SalesOrderCreateComponent implements OnInit {
       'md:grid-cols-6': cols === 6
     };
   }
+
+  cancel() {
+    this.router.navigate(['/Sales/Sales-Order-list']);
+  }
+}
+
+/** safe JSON parse helper */
+function safeJsonParse<T>(txt: string, fallback: T): T {
+  try { return JSON.parse(txt) as T; } catch { return fallback; }
 }
