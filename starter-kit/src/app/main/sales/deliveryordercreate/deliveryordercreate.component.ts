@@ -66,7 +66,7 @@ export class DeliveryordercreateComponent implements OnInit {
       const arr = res?.data ?? res ?? [];
       this.soList = arr.map((r: any) => ({
         id: Number(r.id ?? r.Id),
-        number: String(r.number ?? r.Number ?? r.soNumber ?? ''),
+        salesOrderNo: String(r.salesOrderNo ?? r.soNumber ?? r.number ?? r.Number ?? ''),
         customerName: String(r.customerName ?? r.CustomerName ?? '')
       }));
     });
@@ -98,37 +98,37 @@ export class DeliveryordercreateComponent implements OnInit {
     ];
   }
 
-  // ---------------- SO change ----------------
-  onSoChanged(soId: number | null) {
-    this.soLines = [];
-    this.totalDeliverQty = 0;
-    if (!soId) return;
+ onSoChanged(soId: number | null) {
+  this.soLines = [];
+  this.totalDeliverQty = 0;
+  if (!soId) return;
 
-    this.soSrv.getSOById(soId).subscribe((res: any) => {
-      const dto = res?.data ?? res ?? {};
-      const lines = dto.lines ?? dto.Items ?? dto.items ?? [];
+  this.soSrv.getSOById(soId).subscribe((res: any) => {
+    const dto   = res?.data ?? res ?? {};
+    const lines = dto.lineItemsList ?? dto.lineItems ?? dto.lines ?? dto.items ?? [];
 
-      this.soLines = lines.map((l: any) => {
-        // normalize incoming field names
-        const ordered = Number(l.orderedQty ?? l.qty ?? l.quantity ?? 0);
-        const alreadyDelivered = Number(l.deliveredQty ?? l.shippedQty ?? 0);
-        const pending = Math.max(ordered - alreadyDelivered, 0);
+    this.soLines = lines.map((l: any) => {
+      const ordered = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
+      const delivered = Number(l.deliveredQty ?? l.shippedQty ?? 0); // often 0 for now
+      const pending = Math.max(ordered - delivered, 0);
 
-        return {
-          soLineId: Number(l.id ?? l.soLineId ?? l.SoLineId ?? 0),
-          itemId: Number(l.itemId ?? l.ItemId ?? 0),
-          itemName: String(l.itemName ?? l.ItemName ?? ''),
-          uom: String(l.uom ?? l.uomName ?? l.Uom ?? ''),
-          orderedQty: ordered,
-          pendingQty: pending,
-          deliverQty: pending,     // default to full pending
-          notes: ''
-        } as UiSoLine;
-      });
-
-      this.recalcTotals();
+      return {
+        soLineId: Number(l.id ?? l.soLineId ?? 0),
+        itemId: Number(l.itemId ?? 0),
+        itemName: String(l.itemName ?? ''),
+        uomId: Number(l.uom ?? l.uomId ?? 0) || null,
+        uom: String(l.uomName ?? l.uom ?? ''),   // 👈 friendly UOM name from API
+        orderedQty: ordered,
+        pendingQty: pending || ordered,
+        deliverQty: pending || ordered,
+        notes: ''
+      } as UiSoLine;
     });
-  }
+
+    this.recalcTotals();
+  });
+}
+
 
   // ---------------- Calculations ----------------
   recalcTotals() {
