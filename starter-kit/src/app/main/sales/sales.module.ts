@@ -54,10 +54,20 @@ const routes = [
     data: { animation: 'permissioncreateComponent' }
   },
    {
+    path: 'Picking-packing-list',
+    component: PickingPackingListComponent,
+    data: { animation: 'PickingPackinglistComponent' }
+  },
+  {
     path: 'Picking-packing-create',
     component: PickingPackingcreateComponent,
     data: { animation: 'PickingPackingcreateComponent' }
   },
+  {
+      path: 'Picking-packing-edit/:id',
+      component: PickingPackingcreateComponent,
+      
+    },
     {
     path: 'Quotation-create',
     component: QuotationscreateComponent,
