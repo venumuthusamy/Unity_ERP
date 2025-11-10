@@ -4,16 +4,13 @@
     <h5 class="m-0">Picking &amp; Packing</h5>
 
     <div class="d-flex gap-2">
-      <button class="btn btn-outline-secondary" (click)="resetForm()">Clear</button>
-      <button class="btn btn-primary" (click)="saveDo()"
-              [disabled]="!selectedSoId || !hasAnyDeliverQty()">
-        Generate DO
-      </button>
+      <button class="btn btn-outline-secondary" (click)="cancelForm()">Cancel</button>
+      <button class="btn btn-primary" (click)="DownloadPickingList()">Download Pick List</button>
     </div>
   </div>
 
   <div class="pp-body">
-    <!-- Top row (ONLY Sales Order) -->
+    <!-- Top row (Sales Order + Codes) -->
     <div class="row g-3 mb-2">
       <div class="col-lg-4 col-md-6">
         <label class="form-label">Sales Order</label>
@@ -28,22 +25,43 @@
           placeholder="Select SO…"
           (change)="onSoChanged(selectedSoId)">
           <ng-template ng-label-tmp let-item="item">
-            {{ item.number }} — {{ item.customerName }}
+            {{ item.salesOrderNo }} — {{ item.customerName }}
           </ng-template>
           <ng-template ng-option-tmp let-item="item">
-            {{ item.number }} — {{ item.customerName }}
+            {{ item.salesOrderNo }} — {{ item.customerName }}
           </ng-template>
         </ng-select>
       </div>
 
-      <!-- (Optional) read-only SO info -->
-      <div class="col-lg-4 col-md-6" *ngIf="soHdr?.customerName">
-        <label class="form-label">Customer</label>
-        <input class="form-control" [value]="soHdr.customerName" readonly />
-      </div>
-      <div class="col-lg-4 col-md-6" *ngIf="soHdr?.soDate">
+      <div class="col-lg-4 col-md-6">
         <label class="form-label">SO Date</label>
-        <input class="form-control" [value]="soHdr.soDate | date:'mediumDate'" readonly />
+        <input class="form-control" [value]="soHdr?.soDate ? (soHdr?.soDate | date:'mediumDate') : ''" readonly />
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label">Bar Code</label>
+        <div class="code-box">
+          <img *ngIf="barCodeSrc; else noBar"
+               [src]="barCodeSrc"
+               alt="Bar Code"
+               class="barcode-img" />
+          <ng-template #noBar>
+            <div class="placeholder">No barcode</div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label">QR Code</label>
+        <div class="code-box">
+          <img *ngIf="qrCodeSrc; else noQr"
+               [src]="qrCodeSrc"
+               alt="QR Code"
+               class="qrcode-img" />
+          <ng-template #noQr>
+            <div class="placeholder">No QR</div>
+          </ng-template>
+        </div>
       </div>
     </div>
 
@@ -53,7 +71,9 @@
         <thead>
           <tr>
             <th>Item</th>
-            <th style="width:170px">Pick From Bin</th>
+            <th style="width:170px">Warehouse</th>
+            <th style="width:170px">Supplier</th>
+            <th style="width:170px">Bin</th>
             <th class="text-end" style="width:140px">Qty</th>
             <th style="width:220px">Pack to Carton</th>
           </tr>
@@ -65,22 +85,18 @@
               <div class="fw-semibold">{{ r.itemName }}</div>
               <div class="text-muted small">
                 {{ r.sku }}&nbsp;•&nbsp;{{ r.uom }}
-                <span class="ms-1" *ngIf="r.pendingQty !== null">
-                  (Pending: {{ r.pendingQty | number:'1.0-2' }})
-                </span>
               </div>
             </td>
 
-            <td>
-              <input class="form-control" [(ngModel)]="r.pickBin" name="bin{{r.id}}" placeholder="A-01-01" />
-            </td>
+            <td>{{ r.warehouseName }}</td>
+            <td>{{ r.supplierName }}</td>
+            <td>{{ r.pickBin }}</td>
 
             <td class="text-end">
               <input type="number"
                      class="form-control text-end"
-                     [(ngModel)]="r.deliverQty"
+                     [(ngModel)]="r.quantity"
                      [min]="0"
-                     [max]="r.pendingQty ?? null"
                      (ngModelChange)="recalcTotals()">
             </td>
 
@@ -96,16 +112,16 @@
           </tr>
 
           <tr *ngIf="!selectedSoId">
-            <td colspan="4" class="text-center text-muted">Choose a Sales Order to view items</td>
+            <td colspan="6" class="text-center text-muted">Choose a Sales Order to view items</td>
           </tr>
           <tr *ngIf="selectedSoId && !rows?.length">
-            <td colspan="4" class="text-center text-muted">No pickable lines for this Sales Order</td>
+            <td colspan="6" class="text-center text-muted">No pickable lines for this Sales Order</td>
           </tr>
         </tbody>
 
         <tfoot *ngIf="rows?.length">
           <tr class="table-light">
-            <th colspan="2" class="text-end">Total Qty</th>
+            <th colspan="4" class="text-end">Total Qty</th>
             <th class="text-end">{{ totalDeliverQty | number:'1.0-2' }}</th>
             <th></th>
           </tr>
@@ -113,9 +129,9 @@
       </table>
     </div>
 
-    <!-- Bottom right CTA (visual match to your screenshot) -->
+    <!-- Bottom right CTA -->
     <div class="d-flex justify-content-end mt-3">
-      <button class="btn btn-dark pp-primary"
+      <button class="btn btn-primary"
               (click)="saveDo()"
               [disabled]="!selectedSoId || !hasAnyDeliverQty()">
         <i class="fa fa-truck me-2" aria-hidden="true"></i>

@@ -1,20 +1,59 @@
 import { Component, OnInit } from '@angular/core';
-import { Observable, of } from 'rxjs';
-
-type SoLite = { id: number; number: string; customerName: string; soDate?: string };
-type Carton = { id: number; name: string };
+import { Router } from '@angular/router';
+import { forkJoin, Observable } from 'rxjs';
+import { PackingService } from '../picking-packing.service';
+import { SalesOrderService } from '../../sales-order/sales-order.service';
 
 type Row = {
-  id: number;           // SO line id
+  id: number;
+  pickId: number;
+  soLineId: number;
   itemId: number;
   sku: string;
   itemName: string;
-  uom: string;
-  pendingQty: number | null;
+  warehouseId: number;
+  warehousName?: string;
+  supplierId: number;
+  supplierName: string;
+  binId: number;
+  bin?: string | null;
   deliverQty: number;
-  pickBin?: string | null;
   cartonId?: number | null;
 };
+
+type SoLite = {
+  id: number;
+  number?: string;
+  QuotationNumber?: string;
+  customerName: string;
+  soDate?: string;
+  lineItems?: Row[];
+};
+
+type Carton = { id: number; name: string };
+
+type SoHdr = {
+  id?: number;
+  QuotationNumber?: string;
+  customerName?: string;
+  soDate?: string;
+  lineItems?: Row[];
+
+  // codes (unchanged names)
+  barCode?: string | null;
+  qrCode?: string | null;
+  barCodeSrc?: string | null;  // base64 or data-url if API ever sends here
+  qrCodeSrc?: string | null;   // base64 or data-url if API ever sends here
+};
+
+type CodesResp = {
+  barCode?: string | null;
+  qrCode?: string | null;
+  qrText?: string | null;
+  barCodeSrcBase64?: string | null;
+  qrCodeSrcBase64?: string | null;
+};
+
 
 @Component({
   selector: 'app-picking-packingcreate',
@@ -25,13 +64,17 @@ export class PickingPackingcreateComponent implements OnInit {
   // -------- Header / dropdown ----------
   soList: SoLite[] = [];
   selectedSoId: number | null = null;
-  soHdr?: { customerName?: string; soDate?: string };
+  soHdr: SoHdr | null = null;
 
   // -------- Grid ----------
   rows: Row[] = [];
   totalDeliverQty = 0;
 
-  // Cartons (replace with API data)
+  // Code images
+  barCodeSrc: string = '';
+  qrCodeSrc: string = '';
+
+  // Cartons
   cartonOptions: Carton[] = [
     { id: 1, name: 'Carton 1' },
     { id: 2, name: 'Carton 2' },
@@ -39,58 +82,83 @@ export class PickingPackingcreateComponent implements OnInit {
   ];
 
   constructor(
-    // TODO: inject your services here
-    // private soService: SalesOrdersService,
-    // private pickService: PickingService,
-    // private toast: ToastrService
-  ) {}
+    private salesOrderService: SalesOrderService,
+    private packingService: PackingService,
+    private router: Router,
+  ) { }
 
   ngOnInit(): void {
-    this.loadSoList().subscribe(list => (this.soList = list));
-  }
-
-  // ===================== Data loads (replace with real API) =====================
-  loadSoList(): Observable<SoLite[]> {
-    // return this.soService.getLite(); // example
-    return of([
-      { id: 101, number: 'SO-000101', customerName: 'Alpha Foods', soDate: '2025-11-06' },
-      { id: 102, number: 'SO-000102', customerName: 'Bravo Retail', soDate: '2025-11-07' }
-    ]);
-  }
-
-  loadSoLines(soId: number): Observable<Row[]> {
-    // return this.pickService.getSoLines(soId);
-    const mock: Record<number, Row[]> = {
-      101: [
-        { id: 1, itemId: 11, sku: 'UHT-1L', itemName: 'UHT Milk 1L', uom: 'EA', pendingQty: 50, deliverQty: 50, pickBin: 'A-01-01', cartonId: 1 },
-        { id: 2, itemId: 12, sku: 'CRM-500', itemName: 'Cream 500ml', uom: 'EA', pendingQty: 20, deliverQty: 0,  pickBin: 'A-01-02', cartonId: null }
-      ],
-      102: [
-        { id: 3, itemId: 21, sku: 'JUI-200', itemName: 'Juice 200ml', uom: 'EA', pendingQty: 100, deliverQty: 0, pickBin: 'B-02-05', cartonId: 2 }
-      ]
-    };
-    return of(mock[soId] ?? []);
-  }
-  // ============================================================================
-
-  // Dropdown change -> load header + lines
-  onSoChanged(soId: number | null) {
-    this.rows = [];
-    this.totalDeliverQty = 0;
-    this.soHdr = undefined;
-
-    if (!soId) return;
-
-    const so = this.soList.find(s => s.id === soId);
-    if (so) this.soHdr = { customerName: so.customerName, soDate: so.soDate };
-
-    this.loadSoLines(soId).subscribe(lines => {
-      this.rows = (lines ?? []).map(l => ({ ...l, deliverQty: +(+l.deliverQty || 0).toFixed(2) }));
-      this.recalcTotals();
+    this.salesOrderService.getSO().subscribe({
+      next: (res: any) => {
+        const items = res?.data ?? [];   // <-- use data from the wrapper
+        this.soList = items.map((s: any) => ({
+          ...s,
+          number: s.number ?? s.QuotationNumber
+        }));
+      },
+      error: err => {
+        console.error('Failed to load SO list', err);
+        this.soList = [];
+      }
     });
   }
 
-  // Totals / helpers
+  // ------- helpers -------
+  private normalizeHdr(hdr: any): any {
+    // Some APIs return array; convert to object safely
+    if (Array.isArray(hdr)) return hdr[0] ?? {};
+    return hdr ?? {};
+  }
+
+  private pickLines(hdr: any): Row[] {
+    const obj = this.normalizeHdr(hdr);
+    const lines: Row[] = (obj?.lines ?? obj?.lineItems ?? []) as Row[];
+
+    // Normalize only what template expects
+    return lines.map((m: any) => ({
+      ...m,
+      warehouseName: m.warehouseName ?? m.warehousName,
+      pickBin: m.pickBin ?? m.bin ?? null
+    }));
+  }
+  // ------- UI events -------
+  onSoChanged(soId: number | null) {
+    debugger
+    this.rows = [];
+    this.totalDeliverQty = 0;
+    this.soHdr = null;
+    this.barCodeSrc = '';
+    this.qrCodeSrc = '';
+    if (!soId) return;
+
+    // make the streams explicit and typed
+    const hdr$: Observable<any> = this.salesOrderService.getSOById(soId) as unknown as Observable<any>;
+    const codes$: Observable<CodesResp> = this.packingService.getPackingCodes(soId) as unknown as Observable<CodesResp>;
+
+    forkJoin({ hdr: hdr$, codes: codes$ }).subscribe({
+      next: ({ hdr, codes }) => {
+        const hdrPayload = (hdr as any)?.data ?? hdr;
+        const H: any = Array.isArray(hdrPayload) ? (hdrPayload[0] ?? {}) : (hdrPayload ?? {});
+        const lines = this.pickLines(H);
+
+        this.soHdr = { ...H, lineItems: lines, barCode: codes?.barCode ?? null, qrCode: codes?.qrText ?? null };
+
+        // show images
+        this.barCodeSrc = codes?.barCodeSrcBase64 ?? '';
+        this.qrCodeSrc = codes?.qrCodeSrcBase64 ?? '';
+
+        const fallback = this.soList.find(s => s.id === this.selectedSoId)?.lineItems ?? [];
+        this.rows = (lines?.length ? lines : (fallback ?? [])) as Row[];
+        this.recalcTotals();
+      },
+      error: err => {
+        console.error('Failed to load SO details/codes', err);
+        this.soHdr = null;
+      }
+    });
+
+  }
+
   recalcTotals() {
     this.totalDeliverQty = (this.rows ?? []).reduce((sum, r) => sum + (+r.deliverQty || 0), 0);
   }
@@ -102,19 +170,13 @@ export class PickingPackingcreateComponent implements OnInit {
   trackByLine = (_: number, r: Row) => r.id;
 
   // Header actions
-  resetForm() {
-    this.selectedSoId = null;
-    this.soHdr = undefined;
-    this.rows = [];
-    this.totalDeliverQty = 0;
+  cancelForm() {
+    this.router.navigate(['/Sales/Sales-Order-list']);
   }
 
   // Save / Generate DO
   saveDo() {
-    if (!this.selectedSoId || !this.hasAnyDeliverQty()) {
-      // this.toast.warning('Select a Sales Order and enter at least one quantity.');
-      return;
-    }
+    if (!this.selectedSoId || !this.hasAnyDeliverQty()) return;
 
     const payload = {
       soId: this.selectedSoId,
@@ -123,15 +185,20 @@ export class PickingPackingcreateComponent implements OnInit {
         .map(r => ({
           soLineId: r.id,
           itemId: r.itemId,
+          warehouseId: r.warehouseId,
+          warehousName: r.warehousName,
+          supplierId: r.supplierId,
+          supplierName: r.supplierName,
+          bin: r.binId,
           qty: r.deliverQty,
-          uom: r.uom,            // include uomId if you track it
-          pickBin: r.pickBin,
           cartonId: r.cartonId ?? null
         }))
     };
 
-    // TODO: call your API
-    // this.pickService.createDo(payload).subscribe(() => { ... });
-    console.log('Generate DO payload', payload);
+    // this.packingService.generateDo(payload).subscribe(...)
+  }
+
+  DownloadPickingList() {
+    // this.packingService.downloadPickList(this.selectedSoId!).subscribe(...)
   }
 }

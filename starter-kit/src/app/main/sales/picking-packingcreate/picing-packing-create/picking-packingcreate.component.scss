@@ -39,3 +39,56 @@ $brand: #2E5F73;
   border-color: $brand;
   box-shadow: 0 0 0 .2rem rgba(46,95,115,.15);
 }
+
+
+.pp-card {
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.pp-header {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.pp-body {
+  padding: 1rem;
+}
+
+.pp-table thead th {
+  font-size: .8rem;
+  letter-spacing: .02em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.pp-item .fw-semibold { font-weight: 600; }
+
+.code-box {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 40px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.barcode-img {
+  max-height: 40px;   // slim barcode strip
+  width: auto;
+  display: block;
+}
+
+.qrcode-img {
+  height: 80px;
+  width: 80px;
+  object-fit: contain;
+}
+
+.placeholder {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
