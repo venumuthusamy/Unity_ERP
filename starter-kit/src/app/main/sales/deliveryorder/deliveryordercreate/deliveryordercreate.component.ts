@@ -316,6 +316,7 @@ export class DeliveryordercreateComponent implements OnInit {
 
   /* ---------------- Create mode: SO change -> SO lines ---------------- */
   onSoChanged(soId: number | null) {
+    debugger
     if (this.isEdit) return;
     this.soLines = [];
     this.totalDeliverQty = 0;
@@ -329,7 +330,7 @@ export class DeliveryordercreateComponent implements OnInit {
         const ordered   = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
         const delivered = Number(l.deliveredQty ?? l.shippedQty ?? 0);
         const pending   = Math.max(ordered - delivered, 0);
-
+console.log("pending",pending)
         return {
           soLineId: Number(l.id ?? l.soLineId ?? 0),
           itemId: Number(l.itemId ?? 0),
