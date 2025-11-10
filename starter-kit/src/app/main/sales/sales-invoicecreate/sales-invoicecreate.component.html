@@ -1,1 +1,183 @@
-<p>sales-invoicecreate works!</p>
+<!-- sales-invoicecreate.component.html -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="m-0" style="color:#2E5F73">Sales Invoice (SI)</h5>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary" (click)="onSourceTypeChanged()">Clear</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="!invoiceDate || !sourceId || lines.length===0">Save</button>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Header -->
+    <div class="row g-3">
+      <!-- Source Type -->
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label">Source</label>
+        <ng-select
+          [items]="sourceTypeOptions"
+          bindLabel="label"
+          bindValue="value"
+          [(ngModel)]="sourceType"
+          [clearable]="false"
+          [searchable]="false"
+          (change)="onSourceTypeChanged()"
+          [appendTo]="'body'"
+          [ngModelOptions]="{standalone:true}">
+        </ng-select>
+      </div>
+
+      <!-- Source Id (SO/DO) -->
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label">{{ sourceType===1 ? 'Sales Order' : 'Delivery Order' }}</label>
+
+        <!-- SO -->
+        <ng-select *ngIf="sourceType===1"
+          [items]="soList"
+          bindLabel="salesOrderNo"
+          bindValue="id"
+          [(ngModel)]="sourceId"
+          placeholder="Select SO…"
+          [clearable]="true"
+          [searchable]="true"
+          [virtualScroll]="true"
+          [trackByFn]="trackById"
+          (change)="loadSourceLines()"
+          [appendTo]="'body'"
+          [ngModelOptions]="{standalone:true}">
+          <ng-template ng-option-tmp let-s="item">
+            <div class="d-flex flex-column">
+              <span class="fw-600">{{ s?.salesOrderNo }}</span>
+              <small class="text-muted">#{{ s?.id }}</small>
+            </div>
+          </ng-template>
+        </ng-select>
+
+        <!-- DO (template-driven label so casing mismatches never break display) -->
+        <ng-select *ngIf="sourceType===2"
+          [items]="doList"
+          bindValue="id"
+          [(ngModel)]="sourceId"
+          [compareWith]="compareById"
+          placeholder="Select DO…"
+          [clearable]="true"
+          [searchable]="true"
+          [virtualScroll]="true"
+          [trackByFn]="trackById"
+          (change)="loadSourceLines()"
+          [appendTo]="'body'"
+          [ngModelOptions]="{standalone:true}">
+
+          <!-- Selected label -->
+          <ng-template ng-label-tmp let-item="item">
+            {{ item?.doNumber }} <small class="text-muted">#{{ item?.id }}</small>
+          </ng-template>
+
+          <!-- Options -->
+          <ng-template ng-option-tmp let-d="item">
+            <div class="d-flex flex-column">
+              <span class="fw-600">{{ d?.doNumber }}</span>
+              <small class="text-muted">#{{ d?.id }}</small>
+            </div>
+          </ng-template>
+        </ng-select>
+      </div>
+
+      <!-- Invoice Date -->
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label">Invoice Date</label>
+        <input type="date" class="form-control" [(ngModel)]="invoiceDate" [ngModelOptions]="{standalone:true}">
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <div class="table-responsive mt-3">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Unit Price</th>
+            <th class="text-end">Discount %</th>
+            <!-- <th>Tax Code</th>
+            <th>Currency</th> -->
+            <th class="text-end">Amount</th>
+            <th style="width:56px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of lines; index as i; trackBy: trackByLine">
+            <td>
+              <div class="fw-600">{{ r.itemName }}</div>
+              <small class="text-muted">{{ r.uom || '' }}</small>
+            </td>
+
+            <td class="text-end">
+              <input type="number" step="0.0001" class="form-control text-end"
+                     [(ngModel)]="r.qty" (input)="recalc()" [ngModelOptions]="{standalone:true}">
+            </td>
+            <td class="text-end">
+              <input type="number" step="0.0001" class="form-control text-end"
+                     [(ngModel)]="r.unitPrice" (input)="recalc()" [ngModelOptions]="{standalone:true}">
+            </td>
+            <td class="text-end">
+              <input type="number" step="0.01" class="form-control text-end"
+                     [(ngModel)]="r.discountPct" (input)="recalc()" [ngModelOptions]="{standalone:true}">
+            </td>
+
+            <!-- Tax Code -->
+            <!-- <td>
+              <ng-select
+                [items]="taxCodes"
+                bindLabel="name"
+                bindValue="id"
+                [(ngModel)]="r.taxCodeId"
+                placeholder="—"
+                [clearable]="true"
+                [searchable]="true"
+                [virtualScroll]="true"
+                [trackByFn]="trackById"
+                [appendTo]="'body'"
+                [ngModelOptions]="{standalone:true}">
+              </ng-select>
+            </td>
+
+
+            <td>
+              <ng-select
+                [items]="currencies"
+                bindLabel="currencyName"
+                bindValue="id"
+                [(ngModel)]="r.currencyId"
+                placeholder="Default"
+                [clearable]="true"
+                [searchable]="true"
+                [virtualScroll]="true"
+                [trackByFn]="trackById"
+                [appendTo]="'body'"
+                [ngModelOptions]="{standalone:true}">
+              </ng-select>
+            </td> -->
+
+            <td class="text-end">{{ lineAmount(r) | number:'1.2-2' }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" (click)="removeLine(i)">
+                <i class="fa fa-times"></i>
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="lines.length===0">
+            <td colspan="8" class="text-center text-muted">
+              No lines. Select a {{ sourceType===1?'Sales Order':'Delivery Order' }} to load items.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-end mt-2">
+      <div class="fs-6"><strong>Total:</strong> {{ total | number:'1.2-2' }}</div>
+    </div>
+  </div>
+</div>

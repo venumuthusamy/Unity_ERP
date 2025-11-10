@@ -1,22 +1,50 @@
+
+
 <button (click)="goDoList()"
         class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
         style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
   <i class="fas fa-arrow-left position-absolute"
-     style="left:0.75rem; top:50%; transform:translateY(-50%);" aria-hidden="true"></i>
+     style="left:0.75rem; top:50%; transform:translateY(-50%);"
+     aria-hidden="true"></i>
   <span>Go to DO list</span>
 </button>
+<!-- Card -->
+<div class="card shadow-sm prl-card mt-0">
+  <!-- SINGLE header bar -->
+  <div class="card-header prl-headbar">
+    <!-- LEFT: icon + title + status -->
+    <div class="d-flex align-items-center gap-3 prl-head-left">
+      <span class="prl-head-icon"
+        style="color:#2E5F73 !important; background:rgba(46,95,115,.10);
+               border:1px solid rgba(46,95,115,.20); width:40px; height:40px;
+               border-radius:12px; display:grid; place-items:center;">
+    <i class="fas fa-truck" aria-hidden="true" style="color:#2E5F73 !important;"></i>
+  </span>
 
-<div class="card shadow-sm">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="m-0">
-      {{ isEdit ? 'Edit Delivery Order' : 'Create Delivery Order' }}
-      <small *ngIf="isEdit && doId" class="text-muted ms-2">#{{ doId }}</small>
-      <span *ngIf="isEdit && isPosted" class="badge bg-success ms-2">Posted</span>
-    </h5>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="min-w-0">
+          <!-- <div class="prl-eyebrow">Sales · Logistics</div> -->
+         <h1 class="m-0 prl-heading"
+      style="color:#2E5F73 !important; font-weight:800; line-height:1.2;">
+    {{ isEdit ? 'Edit Delivery Order' : 'Create Delivery Order' }}
+    <!-- <small *ngIf="isEdit && doId" class="prl-id" style="color:#2E5F73 !important;">#{{ doId }}</small> -->
+  </h1>
+        </div>
 
-    <div class="d-flex gap-2">
-      <button class="btn btn-outline-secondary" (click)="resetForm()">Clear</button>
-      <button class="btn btn-primary"
+        <!-- STATUS next to title -->
+        <span *ngIf="isEdit"
+              class="badge prl-badge"
+              [class.prl-badge-green]="isPosted"
+              [class.prl-badge-amber]="!isPosted">
+          {{ isPosted ? 'Posted' : 'Draft' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- RIGHT: actions -->
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-secondary prl-btn-outline" (click)="resetForm()">Clear</button>
+      <button class="btn prl-btn-primary"
               (click)="saveDo()"
               [disabled]="!selectedSoId || !deliveryDate || !driverId || !vehicleId || (isEdit && isPosted)">
         {{ isEdit ? 'Update Header' : 'Save DO' }}
@@ -24,12 +52,14 @@
     </div>
   </div>
 
-  <div class="card-body">
+  <!-- Body -->
+  <div class="card-body pt-2">
     <!-- Header form -->
-    <div class="row g-3">
+    <div class="row g-2">
       <div class="col-lg-3 col-md-6">
-        <label class="form-label">Sales Order</label>
+        <label class="form-label prl-label">Sales Order</label>
         <ng-select
+          class="custom-ng-select"
           [items]="soList"
           bindLabel="salesOrderNo"
           bindValue="id"
@@ -50,8 +80,9 @@
       </div>
 
       <div class="col-lg-3 col-md-6">
-        <label class="form-label">Driver</label>
+        <label class="form-label prl-label">Driver</label>
         <ng-select
+          class="custom-ng-select"
           [items]="driverList"
           bindLabel="name"
           bindValue="id"
@@ -65,8 +96,9 @@
       </div>
 
       <div class="col-lg-3 col-md-6">
-        <label class="form-label">Vehicle</label>
+        <label class="form-label prl-label">Vehicle</label>
         <ng-select
+          class="custom-ng-select"
           [items]="vehicleList"
           bindValue="id"
           [(ngModel)]="vehicleId"
@@ -85,26 +117,32 @@
       </div>
 
       <div class="col-lg-3 col-md-6">
-        <label class="form-label">Route</label>
-        <input type="text" class="form-control"
+        <label class="form-label prl-label">Route</label>
+        <input type="text" class="form-control prl-input"
                placeholder="Enter route…" [(ngModel)]="routeText"
-               name="routeText" [disabled]="isPosted" autocomplete="off" />
+               name="routeText" [disabled]="isPosted" autocomplete="off"/>
       </div>
 
       <div class="col-lg-3 col-md-6">
-        <label class="form-label">Delivery Date</label>
-        <input type="date" class="form-control"
+        <label class="form-label prl-label">Delivery Date</label>
+        <input type="date" class="form-control prl-input"
                [(ngModel)]="deliveryDate" name="deliveryDate"
                [min]="today" [disabled]="isPosted">
       </div>
     </div>
 
     <!-- CREATE MODE -->
-    <div class="mt-4" *ngIf="!isEdit">
-      <h6 class="mb-2">Items (from Sales Order)</h6>
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead>
+    <div class="mt-3" *ngIf="!isEdit">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="m-0 prl-subtitle">Items (from Sales Order)</h6>
+        <div class="text-muted small" *ngIf="soLines?.length">
+          Total lines: {{ soLines.length }} • Total deliver: <b>{{ totalDeliverQty | number:'1.0-2' }}</b>
+        </div>
+      </div>
+
+      <div class="table-responsive prl-table-wrap">
+        <table class="table align-middle prl-table">
+          <thead class="prl-thead-brand">
             <tr>
               <th>Item</th>
               <th style="width:120px">UOM</th>
@@ -121,21 +159,22 @@
               <td class="text-end">{{ l.orderedQty | number:'1.0-2' }}</td>
               <td class="text-end">{{ l.pendingQty | number:'1.0-2' }}</td>
               <td class="text-end">
-                <input type="number" class="form-control text-end"
+                <input type="number" class="form-control text-end prl-input"
                        [(ngModel)]="l.deliverQty" [min]="0" [max]="l.pendingQty"
                        (ngModelChange)="recalcTotals()">
               </td>
-              <td><input class="form-control" [(ngModel)]="l.notes" placeholder="(optional)"></td>
+              <td><input class="form-control prl-input" [(ngModel)]="l.notes" placeholder="(optional)"></td>
             </tr>
+
             <tr *ngIf="!selectedSoId">
-              <td colspan="6" class="text-center text-muted">Choose a Sales Order to view items</td>
+              <td colspan="6" class="text-center text-muted py-4">Choose a Sales Order to view items</td>
             </tr>
             <tr *ngIf="selectedSoId && !soLines?.length">
-              <td colspan="6" class="text-center text-muted">No lines found for this Sales Order</td>
+              <td colspan="6" class="text-center text-muted py-4">No lines found for this Sales Order</td>
             </tr>
           </tbody>
           <tfoot *ngIf="soLines?.length">
-            <tr class="table-light">
+            <tr class="prl-tfoot">
               <th colspan="4" class="text-end">Total Deliver Qty</th>
               <th class="text-end">{{ totalDeliverQty | number:'1.0-2' }}</th>
               <th></th>
@@ -146,17 +185,21 @@
     </div>
 
     <!-- EDIT MODE: existing lines -->
-    <div class="mt-4" *ngIf="isEdit">
-      <h6 class="mb-2">Existing DO Lines</h6>
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead>
+    <div class="mt-3" *ngIf="isEdit">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="m-0 prl-subtitle">Existing DO Lines</h6>
+        <div class="text-muted small" *ngIf="editLines?.length">
+          Total qty: <b>{{ totalEditQty | number:'1.0-2' }}</b>
+        </div>
+      </div>
+
+      <div class="table-responsive prl-table-wrap">
+        <table class="table align-middle prl-table">
+          <thead class="prl-thead-brand">
             <tr>
               <th>Item</th>
               <th style="width:120px">UOM</th>
               <th class="text-end" style="width:120px">Qty</th>
-              <!-- <th style="width:180px">Pick From</th>
-              <th style="width:120px">Supplier</th> -->
               <th style="width:260px">Notes</th>
               <th style="width:120px">Actions</th>
             </tr>
@@ -166,8 +209,6 @@
               <td>{{ l.itemName || ('#' + (l.itemId || '')) }}</td>
               <td>{{ uomLabel(l.uom ?? l.uomId) }}</td>
               <td class="text-end">{{ l.qty | number:'1.0-2' }}</td>
-              <!-- <td class="small text-muted">WH: {{ l.warehouseId || '-' }} / Bin: {{ l.binId || '-' }}</td>
-              <td class="text-muted small">{{ l.supplierId || '-' }}</td> -->
               <td>{{ l.notes || '-' }}</td>
               <td>
                 <button class="btn btn-outline-danger btn-sm"
@@ -177,35 +218,34 @@
               </td>
             </tr>
             <tr *ngIf="!editLines?.length">
-              <td colspan="7" class="text-center text-muted">No lines on this DO</td>
+              <td colspan="5" class="text-center text-muted py-4">No lines on this DO</td>
             </tr>
           </tbody>
           <tfoot *ngIf="editLines?.length">
-            <tr class="table-light">
+            <tr class="prl-tfoot">
               <th colspan="2" class="text-end">TOTAL</th>
               <th class="text-end">{{ totalEditQty | number:'1.0-2' }}</th>
-              <th colspan="4"></th>
+              <th colspan="2"></th>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
 
-    <!-- EDIT MODE: Re-Delivery (from Sales Order) -->
-    <div class="mt-4" *ngIf="isEdit && redeliveryRows?.length">
+    <!-- EDIT MODE: Re-Delivery -->
+    <div class="mt-3" *ngIf="isEdit && redeliveryRows?.length">
       <div class="d-flex align-items-center justify-content-between mb-2">
-        <h6 class="m-0">Re-Delivery (from Sales Order)</h6>
-        <!-- ENABLE even if posted -->
-        <button class="btn btn-outline-primary btn-sm"
+        <h6 class="m-0 prl-subtitle">Re-Delivery (from Sales Order)</h6>
+        <button class="btn btn-sm prl-btn-outline-brand"
                 (click)="addSelectedRedeliveries()"
                 [disabled]="totalDeliverMore <= 0">
-          Add Selected
+          Add to DO
         </button>
       </div>
 
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead>
+      <div class="table-responsive prl-table-wrap">
+        <table class="table align-middle prl-table">
+          <thead class="prl-thead-brand">
             <tr>
               <th>Item</th>
               <th style="width:120px">UOM</th>
@@ -223,8 +263,7 @@
               <td class="text-end">{{ r.deliveredOnThisDo | number:'1.0-2' }}</td>
               <td class="text-end">{{ r.pending | number:'1.0-2' }}</td>
               <td class="text-end">
-                <!-- ENABLE even if posted -->
-                <input type="number" class="form-control text-end"
+                <input type="number" class="form-control text-end prl-input"
                        [(ngModel)]="r.deliverMore"
                        [min]="0" [max]="r.pending"
                        (ngModelChange)="clampDeliverMore(r)">
@@ -232,7 +271,7 @@
             </tr>
           </tbody>
           <tfoot>
-            <tr class="table-light">
+            <tr class="prl-tfoot">
               <th colspan="4" class="text-end">Totals</th>
               <th class="text-end">{{ totalPending | number:'1.0-2' }}</th>
               <th class="text-end">{{ totalDeliverMore | number:'1.0-2' }}</th>
@@ -241,5 +280,6 @@
         </table>
       </div>
     </div>
+
   </div>
 </div>
