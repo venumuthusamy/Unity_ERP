@@ -92,3 +92,15 @@ $brand: #2E5F73;
   font-size: 0.85rem;
   color: #94a3b8;
 }
+.code-box { display: block; }
+.barcode-img { max-height: 48px; display: block; }
+.qrcode-img  { max-height: 140px; display: block; }
+.placeholder { padding: .6rem .75rem; background: #f8f9fa; border: 1px dashed #e1e3e6; border-radius: .5rem; color: #6c757d; }
+.code-caption { margin-top: .35rem; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.btn-row { margin-top: .1rem; }
+
+.pp-table thead th {
+  background-color: #2E5F73 !important;
+  color: #fff !important;
+}
