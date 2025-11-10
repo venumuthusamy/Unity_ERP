@@ -1,4 +1,3 @@
-// src/app/main/sales/delivery-order/deliveryordercreate.component.ts
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
@@ -9,30 +8,26 @@ import { DriverService } from 'app/main/master/driver/driver.service';
 import { SalesOrderService } from '../../sales-order/sales-order.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 
-// ------------ Contracts ------------
-type DoCreateRequest = {
-  soId: number | null;
-  packId: number | null;
-  driverId: number;
-  vehicleId: number | null;
-  routeName: string | null;
-  deliveryDate: string | null;
-  lines: Array<{
-    soLineId: number | null;
-    packLineId: number | null;
-    itemId: number | null;
-    itemName: string;
-    uom: string | null;
-    qty: number;
-    notes: string | null;
-  }>;
-};
+/* ---------- local types ---------- */
 
-type DoUpdateHeaderRequest = {
-  driverId: number | null;
-  vehicleId: number | null;
-  routeName: string | null;
-  deliveryDate: string | null;
+type SoBrief = { id: number; salesOrderNo: string; customerName?: string };
+type Driver  = { id: number; name: string };
+type Vehicle = { id: number; vehicleNo: string; vehicleType?: string };
+type UomRow  = { id: number; name: string };
+
+type UiSoLine = {
+  soLineId: number;
+  itemId: number;
+  itemName: string;
+  uom: string;
+  orderedQty: number;
+  pendingQty: number;
+  deliverQty: number;
+  notes?: string | null;
+  warehouseId?: number | null;
+  binId?: number | null;
+  supplierId?: number | null;
+  available?: number | null;
 };
 
 type DoHeaderDto = {
@@ -44,51 +39,51 @@ type DoHeaderDto = {
   driverId: number | null;
   vehicleId: number | null;
   routeName: string | null;
-  deliveryDate: string | null;
-  isPosted: boolean;
+  deliveryDate: string | null; // ISO
+  isPosted: boolean | number;  // 0/1 or bool
 };
 
 type DoLineDto = {
   id: number;
   doId: number;
   soLineId: number | null;
-  packLineId?: number | null;
   itemId: number | null;
   itemName: string;
-  uom: string | null;        // may be name or id-ish string
-  uomId?: number | null;     // sometimes APIs return this instead
+  uom: string | null;
+  uomId?: number | null;
   qty: number;
   notes: string | null;
+  warehouseId?: number | null;
+  binId?: number | null;
+  supplierId?: number | null;
 };
 
 type SoRedeliveryRow = {
   soLineId: number;
   itemId: number | null;
   itemName: string;
-  uom: string | null;        // display-ready (name) after normalization
+  uom: string | null;
   ordered: number;
   deliveredBefore: number;
   deliveredOnThisDo: number;
   pending: number;
-  deliverMore?: number;      // UI input
+  deliverMore?: number;
+
+  // NEW: show/use these from SalesOrderLines
+  warehouseId?: string | null;
+  binId?: string | null;
+  supplierId?: string | null;
 };
 
-type SoBrief = { id: number; salesOrderNo: string; customerName?: string };
-type Driver = { id: number; name: string };
-type Vehicle = { id: number; vehicleNo: string; vehicleType?: string };
 
-type UiSoLine = {
-  soLineId: number;
-  itemId: number;
-  itemName: string;
-  uom: string;
-  orderedQty: number;
-  pendingQty: number;
-  deliverQty: number;
-  notes?: string | null;
+type DoUpdateHeaderRequest = {
+  driverId: number | null;
+  vehicleId: number | null;
+  routeName: string | null;
+  deliveryDate: string | null;
 };
 
-type UomRow = { id: number; name: string };
+/* ================================================= */
 
 @Component({
   selector: 'app-deliveryordercreate',
@@ -96,27 +91,28 @@ type UomRow = { id: number; name: string };
   styleUrls: ['./deliveryordercreate.component.scss']
 })
 export class DeliveryordercreateComponent implements OnInit {
-  // ---- mode ----
+  // mode
   isEdit = false;
   doId: number | null = null;
+  isPosted = false;
 
   // lookups
   soList: SoBrief[] = [];
   driverList: Driver[] = [];
   vehicleList: Vehicle[] = [];
 
-  // UOMs
+  // UOM map
   uoms: UomRow[] = [];
   uomMap = new Map<number, string>();
 
-  // header selections (both modes)
+  // header selections
   selectedSoId: number | null = null;
-  driverId: number | null = null;
-  vehicleId: number | null = null;
-  deliveryDate: string | null = null;  // yyyy-MM-dd
-  routeText: string | null = null;
+  driverId:    number | null = null;
+  vehicleId:   number | null = null;
+  deliveryDate: string | null = null; // yyyy-MM-dd
+  routeText:    string | null = null;
 
-  // create-mode SO lines
+  // create-mode lines
   soLines: UiSoLine[] = [];
   totalDeliverQty = 0;
 
@@ -141,14 +137,12 @@ export class DeliveryordercreateComponent implements OnInit {
     private uomService: UomService
   ) {}
 
-  // ---------------- Lifecycle ----------------
+  /* ---------------- Lifecycle ---------------- */
   ngOnInit(): void {
     this.detectMode();
-    this.loadUoms();          // load UOMs first (for label resolution)
+    this.loadUoms();
     this.loadDropdowns();
-    if (this.isEdit && this.doId) {
-      this.loadForEdit(this.doId);
-    }
+    if (this.isEdit && this.doId) this.loadForEdit(this.doId);
   }
 
   private detectMode() {
@@ -157,7 +151,7 @@ export class DeliveryordercreateComponent implements OnInit {
     this.doId = idStr ? +idStr : null;
   }
 
-  // ---------------- UOMs ----------------
+  /* ---------------- UOMs ---------------- */
   private loadUoms() {
     this.uomService.getAllUom().subscribe((res: any) => {
       const arr = res?.data ?? res ?? [];
@@ -170,21 +164,18 @@ export class DeliveryordercreateComponent implements OnInit {
     });
   }
 
-  /** Convert a uom value (name or id) to display name */
   uomLabel(uom: any): string {
     if (uom == null || uom === '') return '-';
-    // numeric-ish? try map
     const n = Number(uom);
     if (!isNaN(n) && `${n}`.trim() === `${uom}`.trim()) {
       return this.uomMap.get(n) || `#${n}`;
     }
-    // already a string name
     return String(uom);
   }
 
-  // ---------------- Lookups ----------------
+  /* ---------------- Lookups ---------------- */
   private loadDropdowns() {
-    // Sales Orders
+    // SO list
     this.soSrv.getSO().subscribe((res: any) => {
       const arr = res?.data ?? res ?? [];
       this.soList = arr.map((r: any) => ({
@@ -214,59 +205,69 @@ export class DeliveryordercreateComponent implements OnInit {
     });
   }
 
-  // ---------------- Load existing DO (edit) ----------------
+  /* ---------------- Load for edit ---------------- */
   private loadForEdit(id: number) {
     this.doSrv.get(id).subscribe((res: any) => {
       const hdr: DoHeaderDto = res?.data?.header ?? res?.header ?? res;
       const lines: DoLineDto[] = res?.data?.lines ?? res?.lines ?? [];
+
       if (!hdr) {
         Swal.fire({ icon: 'error', title: 'Delivery Order not found' });
         this.router.navigate(['/Sales/Delivery-order-list']);
         return;
       }
 
-      // bind header
       this.selectedSoId = hdr.soId ?? null;
       this.driverId     = hdr.driverId ?? null;
       this.vehicleId    = hdr.vehicleId ?? null;
       this.routeText    = hdr.routeName ?? null;
       this.deliveryDate = this.toDateInput(hdr.deliveryDate);
+      this.isPosted     = !!(hdr.isPosted as any);
 
-      // existing DO lines (normalize qty & uom label)
       this.editLines = (lines || []).map(l => ({
         ...l,
         qty: Number(l.qty || 0),
-        // Prefer explicit name if we already have one; else map uomId if present
         uom: l.uom ?? (l.uomId != null ? (this.uomMap.get(Number(l.uomId)) || String(l.uomId)) : null)
       }));
       this.recalcEditTotals();
 
-      // re-delivery snapshot
       if (hdr.soId) {
-        this.doSrv.getSoSnapshot(id).subscribe((rows: any[]) => {
-          this.redeliveryRows = (rows || []).map(r => ({
-            soLineId: Number(r.soLineId),
-            itemId:  (r.itemId ?? null) !== null ? Number(r.itemId) : null,
-            itemName: String(r.itemName ?? ''),
-            // normalize UOM to display name:
-            uom: r.uomName
-                ?? (r.uomId != null ? (this.uomMap.get(Number(r.uomId)) || String(r.uomId)) : (r.uom ?? null)),
-            ordered: +r.ordered || 0,
-            deliveredBefore: +r.deliveredBefore || 0,
-            deliveredOnThisDo: +r.deliveredOnThisDo || 0,
-            pending: +r.pending || 0,
-            deliverMore: 0
-          }));
-          this.computeRedeliveryTotals();
-        });
+       this.doSrv.getSoSnapshot(id).subscribe((rows: any[]) => {
+  this.redeliveryRows = (rows || []).map(r => {
+    const ordered = Number(r.ordered ?? r.Ordered ?? 0);
+    const deliveredBefore = Number(r.deliveredBefore ?? r.DeliveredBefore ?? 0);
+    const deliveredOnThisDo = Number(r.deliveredOnThisDo ?? r.DeliveredOnThisDo ?? 0);
+    const pending = Math.max(ordered - (deliveredBefore + deliveredOnThisDo), 0);
+
+    return {
+      soLineId: Number(r.soLineId ?? r.SoLineId ?? 0),
+      itemId: (r.itemId ?? r.ItemId) != null ? Number(r.itemId ?? r.ItemId) : null,
+      itemName: String(r.itemName ?? r.ItemName ?? ''),
+      uom: r.uomName ?? r.UomName ?? r.uom ?? r.Uom ?? null,
+      ordered,
+      deliveredBefore,
+      deliveredOnThisDo,
+      pending,
+      deliverMore: 0,
+
+      // NEW: keep as strings (UI display / debugging / tooltips)
+      warehouseId: r.warehouseId ?? r.WarehouseId ?? null,
+      binId: r.binId ?? r.BinId ?? null,
+      supplierId: r.supplierId ?? r.SupplierId ?? null
+    } as SoRedeliveryRow;
+  });
+
+  this.computeRedeliveryTotals();
+});
+
       }
     });
   }
 
-  // ---------------- Re-delivery helpers ----------------
+  /* ---------------- Redelivery helpers ---------------- */
   computeRedeliveryTotals() {
-    this.totalPending = this.redeliveryRows.reduce((s, x) => s + (+x.pending || 0), 0);
-    this.totalDeliverMore = this.redeliveryRows.reduce((s, x) => s + (+x.deliverMore || 0), 0);
+    this.totalPending = this.redeliveryRows.reduce((s, x) => s + (Number(x.pending) || 0), 0);
+    this.totalDeliverMore = this.redeliveryRows.reduce((s, x) => s + (Number(x.deliverMore) || 0), 0);
   }
 
   clampDeliverMore(row: SoRedeliveryRow) {
@@ -277,7 +278,7 @@ export class DeliveryordercreateComponent implements OnInit {
   }
 
   addSelectedRedeliveries() {
-    if (!this.isEdit || !this.doId) return;
+    if (!this.isEdit || !this.doId || this.isPosted) return;
     const picks = this.redeliveryRows.filter(r => (Number(r.deliverMore) || 0) > 0);
     if (!picks.length) {
       return Swal.fire({ icon: 'info', title: 'Nothing to add', text: 'Enter Deliver More qty first.' });
@@ -286,25 +287,26 @@ export class DeliveryordercreateComponent implements OnInit {
     let idx = 0, ok = 0, fail = 0;
     const next = () => {
       if (idx >= picks.length) {
-        if (fail === 0) {
-          Swal.fire({ icon: 'success', title: 'Lines added', text: `${ok} line(s) added` });
-        } else {
-          Swal.fire({ icon: 'warning', title: 'Partial', text: `${ok} added, ${fail} failed` });
-        }
+        if (fail === 0) Swal.fire({ icon: 'success', title: 'Lines added', text: `${ok} line(s) added` });
+        else Swal.fire({ icon: 'warning', title: 'Partial', text: `${ok} added, ${fail} failed` });
         this.loadForEdit(this.doId!);
         return;
       }
       const r = picks[idx++];
       this.doSrv.addLine({
-        doId: this.doId!,
-        soLineId: r.soLineId,
-        packLineId: null,
-        itemId: r.itemId,
-        itemName: r.itemName,
-        uom: r.uom, // sending the name; backend can accept name or map to id
-        qty: Number(r.deliverMore) || 0,
-        notes: null
-      }).subscribe({
+  doId: this.doId!,
+  soLineId: r.soLineId,
+  packLineId: null,
+  itemId: r.itemId,
+  itemName: r.itemName,
+  uom: r.uom,
+  qty: Number(r.deliverMore) || 0,
+  notes: null,
+  warehouseId: r.warehouseId ?? null, // strings are OK
+  binId: r.binId ?? null,
+  supplierId: r.supplierId ?? null
+})
+.subscribe({
         next: () => { ok++; next(); },
         error: () => { fail++; next(); }
       });
@@ -312,9 +314,9 @@ export class DeliveryordercreateComponent implements OnInit {
     next();
   }
 
-  // ---------------- Create mode: SO change -> SO lines ----------------
+  /* ---------------- Create mode: SO change -> SO lines ---------------- */
   onSoChanged(soId: number | null) {
-    if (this.isEdit) return; // keep DO lines in edit
+    if (this.isEdit) return;
     this.soLines = [];
     this.totalDeliverQty = 0;
     if (!soId) return;
@@ -332,11 +334,15 @@ export class DeliveryordercreateComponent implements OnInit {
           soLineId: Number(l.id ?? l.soLineId ?? 0),
           itemId: Number(l.itemId ?? 0),
           itemName: String(l.itemName ?? ''),
-          uom: String(l.uomName ?? l.uom ?? ''), // friendly name
+          uom: String(l.uomName ?? l.uom ?? ''),
           orderedQty: ordered,
           pendingQty: pending || ordered,
           deliverQty: pending || ordered,
-          notes: ''
+          notes: '',
+          warehouseId: l.warehouseId ?? null,
+          binId:       l.binId ?? null,
+          supplierId:  l.supplierId ?? null,
+          available:   l.available ?? null
         } as UiSoLine;
       });
 
@@ -344,7 +350,7 @@ export class DeliveryordercreateComponent implements OnInit {
     });
   }
 
-  // ---------------- Totals ----------------
+  /* ---------------- Totals ---------------- */
   recalcTotals() {
     for (const l of this.soLines) {
       const v = Number(l.deliverQty ?? 0);
@@ -358,27 +364,24 @@ export class DeliveryordercreateComponent implements OnInit {
     this.totalEditQty = this.editLines.reduce((s, x) => s + (Number(x.qty) || 0), 0);
   }
 
-  trackBySoLineId = (_: number, row: UiSoLine) => row.soLineId;
+  trackBySoLineId = (_: number, row: UiSoLine | SoRedeliveryRow) => (row as any).soLineId;
   trackByLineId   = (_: number, row: { id: number }) => row.id;
 
-  // ---------------- Save (Create or Edit) ----------------
+  /* ---------------- Save (Create or Edit) ---------------- */
   saveDo() {
-    // validations
     if (!this.selectedSoId) {
       return Swal.fire({ icon: 'warning', title: 'Sales Order required' });
     }
     if (!this.deliveryDate || !this.driverId || !this.vehicleId) {
       return Swal.fire({ icon: 'warning', title: 'Fill Driver, Vehicle and Delivery Date' });
     }
+    if (this.isPosted) return;
 
     if (!this.isEdit) {
-      // CREATE
       const anyQty = this.soLines.some(l => (Number(l.deliverQty) || 0) > 0);
-      if (!anyQty) {
-        return Swal.fire({ icon: 'warning', title: 'Enter at least one deliver quantity' });
-      }
+      if (!anyQty) return Swal.fire({ icon: 'warning', title: 'Enter at least one deliver quantity' });
 
-      const payload: DoCreateRequest = {
+      const payload = {
         soId: this.selectedSoId,
         packId: null,
         driverId: this.driverId!,
@@ -394,7 +397,10 @@ export class DeliveryordercreateComponent implements OnInit {
             itemName: l.itemName || '',
             uom: (l.uom || '').toString(),
             qty: Number(l.deliverQty) || 0,
-            notes: l.notes || null
+            notes: l.notes || null,
+            warehouseId: l.warehouseId ?? null,
+            binId: l.binId ?? null,
+            supplierId: l.supplierId ?? null
           }))
       };
 
@@ -402,13 +408,12 @@ export class DeliveryordercreateComponent implements OnInit {
         next: (res: any) => {
           const id = res?.data ?? res;
           Swal.fire({ icon: 'success', title: 'Delivery Order created', text: `DO #${id}` });
-          this.router.navigate(['/Sales/Delivery-order-edit', id]);
+          this.router.navigate(['/Sales/Delivery-order-list']);
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed to create DO' })
       });
 
     } else {
-      // EDIT: update header only
       const payload: DoUpdateHeaderRequest = {
         driverId: this.driverId,
         vehicleId: this.vehicleId,
@@ -423,9 +428,9 @@ export class DeliveryordercreateComponent implements OnInit {
     }
   }
 
-  // ---------------- Edit lines: remove ----------------
+  /* ---------------- Remove line (edit mode) ---------------- */
   removeEditLine(lineId: number) {
-    if (!this.isEdit) return;
+    if (!this.isEdit || this.isPosted) return;
     Swal.fire({
       icon: 'warning',
       title: 'Remove this line?',
@@ -441,7 +446,7 @@ export class DeliveryordercreateComponent implements OnInit {
     });
   }
 
-  // ---------------- Utils ----------------
+  /* ---------------- Utils ---------------- */
   resetForm(keepDropdowns = false) {
     if (!keepDropdowns) this.selectedSoId = null;
     this.driverId = null;
@@ -455,6 +460,7 @@ export class DeliveryordercreateComponent implements OnInit {
     this.totalEditQty = 0;
     this.totalPending = 0;
     this.totalDeliverMore = 0;
+    this.isPosted = false;
   }
 
   private toDateInput(d: Date | string | null): string | null {
