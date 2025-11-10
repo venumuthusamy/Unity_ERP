@@ -9,7 +9,7 @@
 }
 input[type="number"]{ text-align:right; }
 
-/* --- Generic dropdown-input (same pattern as PO) --- */
+/* --- Generic dropdown-input --- */
 .dropdown-input {
   position: relative;
 
@@ -21,10 +21,9 @@ input[type="number"]{ text-align:right; }
     display:flex; align-items:center; justify-content:center; cursor:pointer;
     background: transparent; border: 0;
   }
-  .btn-clear { right: 2.0rem; color:#9ca3af; }  /* gray-400 */
-  .btn-caret { right: .5rem;  color:#6b7280; }  /* gray-500 */
+  .btn-clear { right: 2.0rem; color:#9ca3af; }
+  .btn-caret { right: .5rem;  color:#6b7280; }
 
-  /* dropdown panel (header + lines reuse this) */
   ul, .dropdown-panel {
     position:absolute; top:100%; left:0; right:0; z-index:50;
     background:#fff; border:1px solid #e5e7eb; border-radius:12px;
@@ -33,7 +32,6 @@ input[type="number"]{ text-align:right; }
   }
 }
 
-/* helper wrappers so TS can detect outside clicks */
 .so-header-dd { position: relative; }
 .so-line-dd   { position: relative; }
 
@@ -43,7 +41,12 @@ input[type="number"]{ text-align:right; }
 
 /* --- Small chips & links --- */
 .badge   { display:inline-block; padding:.15rem .5rem; border-radius:9999px; font-size:.75rem; background:#f3f4f6; }
-.badge-ok{ background:#ecfdf5; color:#047857; }  /* emerald tone */
+.badge-ok{ background:#ecfdf5; color:#047857; }
+
+.chip-outline{
+  font-size: 12px; padding: 3px 8px; border-radius: 999px;
+  background: #fff; color:#2e5f73; border:1px solid #d1e4ea;
+}
 
 .btn-link{
   padding:.35rem .6rem; border-radius:.75rem; font-size:.85rem; font-weight:500;
@@ -51,7 +54,7 @@ input[type="number"]{ text-align:right; }
 }
 .btn-link:hover { background:#f3f4f6; }
 
-/* --- Buttons used inside card --- */
+/* --- Buttons --- */
 .btn-add{
   padding:.45rem .9rem; border-radius:.75rem; font-size:.85rem; font-weight:600;
   color:#fff; background:#2E5F73; border:0; cursor:pointer;
@@ -68,13 +71,18 @@ input[type="number"]{ text-align:right; }
 }
 .btn-dark:hover{ background:#092f3f; }
 
-/* --- Status pill on header right --- */
+.btn-light{
+  padding:.45rem .9rem; border-radius:.75rem; font-size:.85rem; font-weight:500;
+  color:#2E5F73; background:#e6f1f5; border:1px solid #cde0e7; cursor:pointer;
+}
+
+/* --- Status pill --- */
 .pill{ padding:.25rem .6rem; border-radius:9999px; font-size:.8rem; border:1px solid transparent; }
 .so-pending{ border-color:#facc15; color:#a16207; background:#fffbeb; }
 .so-approve{ color:#fff; background:#2E5F73; }
 .so-reject { border-color:#dc2626; color:#b91c1c; background:#fff; }
 
-/* --- Totals (right column) --- */
+/* --- Totals --- */
 .so-totals{ display:grid; gap:.5rem; font-size:.9rem; }
 .so-row{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
 .so-total{ font-weight:600; border-top:1px solid #e5e7eb; padding-top:.5rem; }
@@ -85,37 +93,64 @@ input[type="number"]{ text-align:right; }
 }
 .so-w-24{ width:6rem; }
 
-/* --- Sticky bottom action bar (matches PO) --- */
-.so-sticky-bar{
-  position:sticky; bottom:0; left:0; right:0;
-  background:#ffffffcc; backdrop-filter:blur(6px);
-  border-top:1px solid #e5e7eb; padding:.5rem 0; z-index:40;
-}
-.so-bar-inner{
-  max-width:1200px; margin:0 auto; padding:0 .75rem;
-  display:flex; align-items:center; justify-content:space-between; gap:.75rem;
-}
-.so-left{ display:flex; align-items:center; gap:.5rem; }
-.so-right{ display:flex; align-items:center; gap:.5rem; }
-.so-muted{ color:#6b7280; font-size:.85rem; }
+/* --- Card tweaks --- */
+.so-card { padding-bottom: 1.5rem !important; }
+.so-actions { padding-bottom: .25rem; }
 
-/* footer buttons */
-.so-btn{ padding:.5rem .9rem; border-radius:.75rem; font-size:.85rem; font-weight:500; cursor:pointer; }
-.so-btn-outline{ border:1px solid #2E5F73; color:#2E5F73; background:#fff; }
-.so-btn-primary{ background:#2E5F73; color:#fff; border:0; }
-.so-btn-primary:hover{ background:#092f3f; }
-.so-btn-danger{ border:1px solid #dc2626; color:#dc2626; background:#fff; }
+/* --- Modal preview --- */
+/* Backdrop */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 9998;
+}
 
-/* --- Responsive tweaks --- */
+/* Wrapper that centers content */
+.modal {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;         /* keeps card from touching edges on small screens */
+  z-index: 9999;
+}
+
+/* Card */
+.modal-card {
+  width: min(920px, 96vw);
+  max-height: 84vh;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-head, .modal-foot {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-foot { border-top: 1px solid #eee; border-bottom: 0; }
+.modal-body {
+  padding: 14px 16px;
+  overflow: auto;
+  max-height: 60vh;
+}
+
+.title { font-weight: 600; font-size: 16px; }
+.btn-close { background: transparent; border: 0; font-size: 18px; cursor: pointer; }
+
+.pv-line { border: 1px solid #eee; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.pv-line-head { display: flex; gap: 16px; flex-wrap: wrap; }
+
+.ok { color: #065f46; }
+.bad { color: #991b1b; }
+
+.chip-solid {
+  font-size: 12px; padding: 4px 8px; border-radius: 999px;
+  background: #2e5f73; color: #fff;
+}
+
+/* Small screens */
 @media (max-width: 768px){
-  .so-bar-inner{ flex-direction:column; align-items:stretch; gap:.5rem; }
-  .so-right{ justify-content:flex-end; flex-wrap:wrap; }
+  .modal-card { width: 96vw; }
 }
-
-
-.so-card { padding-bottom: 1.5rem !important; }  
-
-
-.so-actions { padding-bottom: .25rem; }  
-
-

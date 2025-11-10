@@ -151,3 +151,20 @@
   filter: brightness(.95);
 }
 
+/* purchase-request-list.component.scss */
+
+.alerts-panel{
+  position:absolute; right:0; top:42px; z-index:1000; width:460px;
+  border-radius:14px; overflow:hidden;
+  box-shadow:0 16px 36px rgba(0,0,0,.18);
+}
+.alerts-head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 12px; background:#2E5F73; color:#fff;
+}
+.alerts-body{ max-height:380px; overflow:auto; background:#fff; }
+.alert-card{
+  padding:12px 14px; border-bottom:1px solid #f1f5f9;
+}
+.alert-title{ font-weight:700; color:#111827; }
+.alert-sub{ font-size:12px; color:#6b7280; }

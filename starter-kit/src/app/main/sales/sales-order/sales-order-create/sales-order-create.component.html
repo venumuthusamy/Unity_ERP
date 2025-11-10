@@ -39,33 +39,9 @@
         <p *ngIf="submitted && isEmpty(searchTexts['customer'])" class="text-xs text-red-600 mt-1">Customer is required.</p>
       </div>
 
-      <!-- Warehouse (header, optional) -->
-      <!-- <div class="so-header-dd dropdown-input">
-        <label class="text-xs font-medium text-gray-600">Warehouse</label>
-        <div class="relative">
-          <input type="text" [(ngModel)]="searchTexts['warehouse']" (focus)="toggleDropdown('warehouse', true)"
-                 (input)="filter('warehouse')" placeholder="Search Warehouse..."
-                 class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm" style="border-color:#0e3a4c" />
-          <button *ngIf="searchTexts['warehouse']" type="button" (click)="onClearWarehouse()"
-                  class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">✕</button>
-          <button type="button" (click)="toggleDropdown('warehouse')"
-                  class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret">▼</button>
-        </div>
-        <ul *ngIf="dropdownOpen['warehouse']"
-            class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
-          <li *ngFor="let w of filteredLists['warehouse']" (click)="selectWarehouse(w)"
-              class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between">
-            <span>{{ w.warehouseName }}</span><span class="text-gray-500">#{{ w.id }}</span>
-          </li>
-        </ul>
-        <p class="text-[11px] text-gray-500 mt-1" *ngIf="selectedWarehouseId">
-          Selected: {{ selectedWarehouseName }} (ID: {{ selectedWarehouseId }})
-        </p>
-      </div> -->
-
-      <!-- GST -->
+      <!-- GST (from quotation; read-only) -->
       <div>
-        <label class="text-xs font-medium text-gray-600">Gst</label>
+        <label class="text-xs font-medium text-gray-600">GST (%)</label>
         <input class="w-full rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" type="text" disabled [(ngModel)]="soHdr.gstPct" />
       </div>
 
@@ -82,7 +58,9 @@
 
     <!-- Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-      <div></div>
+      <div>
+        <button type="button" class="btn-light" (click)="previewAlloc()">Preview Allocation</button>
+      </div>
       <div class="flex gap-2 md:justify-end">
         <button type="button" class="btn-outline" (click)="reserveStock()">Reserve Stock</button>
         <button type="button" class="btn-dark" (click)="releaseToPicking()">Release to Picking</button>
@@ -100,40 +78,55 @@
             <th class="th">Unit Price</th>
             <th class="th">Discount %</th>
             <th class="th">Tax</th>
-            <th class="th">Warehouses</th>
             <th class="th">Total</th>
             <th class="th text-right">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="soLines.length===0">
-            <td [attr.colspan]="9" class="px-3 py-6 text-center text-gray-400">No lines yet.</td>
+            <td [attr.colspan]="8" class="px-3 py-6 text-center text-gray-400">No lines yet.</td>
           </tr>
 
           <tr *ngFor="let ln of soLines; let i=index; trackBy: trackByIndex" class="border-t">
-            <!-- Item (search) -->
+            <!-- Item (search) + Availability chips -->
             <td class="td relative so-line-dd dropdown-input">
-              <input type="text" class="w-52 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
+              <input type="text" class="w-64 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
                      [(ngModel)]="soLines[i].item" (focus)="openDropdown(i,'item')" (input)="filterOptions(i,'item')" placeholder="Search Item...">
               <div *ngIf="soLines[i].dropdownOpen==='item'"
-                   class="absolute left-0 top-full mt-1 w-64 bg-white border rounded-xl shadow-lg max-h-56 overflow-y-auto z-50">
+                   class="absolute left-0 top-full mt-1 w-72 bg-white border rounded-xl shadow-lg max-h-56 overflow-y-auto z-50">
                 <div *ngFor="let it of soLines[i].filteredOptions" (click)="selectOption(i,'item', it)"
                      class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
                   <span>{{ it.itemCode }}</span><span class="text-gray-500">{{ it.itemName }}</span>
                 </div>
               </div>
+
+              <!-- read-only chips -->
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span *ngFor="let w of soLines[i].warehouses" class="chip-outline">
+                  {{ w.warehouseName }} · Avl {{ w.available }}
+                </span>
+              </div>
             </td>
 
-            <td class="td"><input class="w-24 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c" [(ngModel)]="soLines[i].uom" placeholder="UOM"></td>
+            <td class="td">
+              <input class="w-24 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
+                     [(ngModel)]="soLines[i].uom" placeholder="UOM">
+            </td>
 
-            <td class="td"><input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
-                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].quantity" (input)="recalcLine(i)"></td>
+            <td class="td">
+              <input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
+                     style="border-color:#0e3a4c" [(ngModel)]="soLines[i].quantity" (input)="recalcLine(i)">
+            </td>
 
-            <td class="td"><input type="number" class="w-28 rounded-xl border px-3 py-2 text-sm text-right"
-                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].unitPrice" (input)="recalcLine(i)"></td>
+            <td class="td">
+              <input type="number" class="w-28 rounded-xl border px-3 py-2 text-sm text-right"
+                     style="border-color:#0e3a4c" [(ngModel)]="soLines[i].unitPrice" (input)="recalcLine(i)">
+            </td>
 
-            <td class="td"><input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
-                                  style="border-color:#0e3a4c" [(ngModel)]="soLines[i].discount" (input)="recalcLine(i)"></td>
+            <td class="td">
+              <input type="number" class="w-24 rounded-xl border px-3 py-2 text-sm text-right"
+                     style="border-color:#0e3a4c" [(ngModel)]="soLines[i].discount" (input)="recalcLine(i)">
+            </td>
 
             <td class="td">
               <div class="text-xs text-gray-500 mb-1">
@@ -142,20 +135,10 @@
               <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
             </td>
 
-            <!-- Warehouse select -->
-            <td class="td">
-              <select class="w-48 rounded-xl border px-3 py-2 text-sm" style="border-color:#0e3a4c"
-                      [(ngModel)]="soLines[i].selectedWarehouseId" (ngModelChange)="onWarehouseChange(i)">
-                <option [ngValue]="null">-- Select Warehouse --</option>
-                <option *ngFor="let w of soLines[i].warehouses" [ngValue]="w.warehouseId">{{ w.warehouseName }}</option>
-              </select>
-              <div *ngIf="soLines[i].selectedWh" class="text-[11px] text-gray-500 mt-1">
-                Avl: {{ soLines[i].selectedWh?.available }}
-              </div>
-            </td>
-
             <td class="td text-right">{{ (soLines[i].total || 0) | number:'1.2-2' }}</td>
-            <td class="td text-right"><button class="btn-link" (click)="removeLine(i)">Remove</button></td>
+            <td class="td text-right">
+              <button class="btn-link" (click)="removeLine(i)">Remove</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -166,9 +149,19 @@
       <div class="md:col-span-2"></div>
       <div class="so-totals">
         <div class="so-row"><span>Sub Total</span><span class="so-num">{{ totals.subTotal | number:'1.2-2' }}</span></div>
-        <div class="so-row"><span>Shipping</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.shipping" (input)="recalcTotals()"></div>
-        <div class="so-row"><span>Discount (absolute)</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.discount" (input)="recalcTotals()"></div>
-        <div class="so-row"><span>GST (%)</span><input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.gstPct" (input)="recalcTotals()"></div>
+        <div class="so-row">
+          <span>Shipping</span>
+          <input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.shipping" (input)="recalcTotals()">
+        </div>
+        <div class="so-row">
+          <span>Discount (absolute)</span>
+          <input type="number" class="so-inp so-w-24" [(ngModel)]="soHdr.discount" (input)="recalcTotals()">
+        </div>
+        <div class="so-row">
+          <span>GST (%)</span>
+          <!-- read-only because it comes from quotation -->
+          <input type="number" class="so-inp so-w-24" [disabled]="true" [(ngModel)]="soHdr.gstPct">
+        </div>
         <div class="so-row so-total"><span>Net Total</span><span class="so-num">{{ totals.netTotal | number:'1.2-2' }}</span></div>
       </div>
     </div>
@@ -176,6 +169,44 @@
     <div class="mt-4 pt-3 border-t flex flex-wrap gap-2 justify-end so-actions">
       <button class="so-btn so-btn-primary" (click)="post()">Save</button>
       <button class="so-btn so-btn-danger" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Allocation Preview Modal -->
+  <div class="modal-backdrop" *ngIf="showPreview"></div>
+  <div class="modal" *ngIf="showPreview" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="title">Allocation Preview</div>
+        <button class="btn-close" (click)="closePreview()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="!previewData?.length" class="text-gray-500">No allocations.</div>
+
+        <div *ngFor="let p of previewData" class="pv-line">
+          <div class="pv-line-head">
+            <div><b>Item Id:</b> {{ p.itemId }}</div>
+            <div><b>Requested:</b> {{ p.requestedQty }}</div>
+            <div [class.ok]="p.fullyAllocated" [class.bad]="!p.fullyAllocated">
+              <b>Allocated:</b> {{ p.allocatedQty }} ({{ p.fullyAllocated ? 'Full' : 'Partial' }})
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span *ngFor="let a of p.allocations" class="chip-solid">
+              {{ a.warehouseName || ('WH ' + (a.warehouseId ?? '—')) }}
+              · {{ a.supplierName || ('SUP ' + (a.supplierId ?? '—')) }}
+              · {{ a.binName || (a.binId ?? '—') }}
+              · QTY {{ a.qty }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn-dark" (click)="closePreview()">Close</button>
+      </div>
     </div>
   </div>
 </div>

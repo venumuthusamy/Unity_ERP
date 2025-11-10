@@ -8,7 +8,8 @@ import { QuotationsService } from '../../quotations/quotations.service';
 import { CountriesService } from 'app/main/master/countries/countries.service';
 import { SalesOrderService } from '../sales-order.service';
 
-/** ===== Types ===== */
+/* ================= Types ================= */
+
 type WarehouseInfo = {
   warehouseId: number;
   warehouseName: string;
@@ -19,26 +20,44 @@ type WarehouseInfo = {
 
 type WarehouseMaster = { id: number; warehouseName: string };
 
+type LineTaxMode = 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT';
+
 type SoLine = {
-  item?: string;      // display "CODE - NAME" or name only
+  item?: string;
   itemId?: number;
   uom?: string;
   quantity?: number | string;
   unitPrice?: number | string;
   discount?: number | string;
-  tax?: 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT';
+  tax?: LineTaxMode;
   lineNet?: number;
   lineTax?: number;
   total?: number;
 
-  // Per-line warehouses & selection
+  // read-only availability badges
   warehouses?: WarehouseInfo[];
-  selectedWarehouseId?: number | null;
-  selectedWh?: WarehouseInfo | null;
 
   // row dropdowns for item/tax
   dropdownOpen?: '' | 'item' | 'tax';
   filteredOptions?: any[];
+};
+
+type PreviewPiece = {
+  warehouseId?: number;
+  supplierId?: number;
+  binId?: number | null;
+  warehouseName?: string | null;
+  supplierName?: string | null;
+  binName?: string | null;
+  qty: number;
+};
+
+type PreviewLine = {
+  itemId: number;
+  requestedQty: number;
+  allocatedQty: number;
+  fullyAllocated: boolean;
+  allocations: PreviewPiece[];
 };
 
 @Component({
@@ -48,7 +67,7 @@ type SoLine = {
 })
 export class SalesOrderCreateComponent implements OnInit {
 
-  /** -------- Header Model ---------- */
+  /* ============ Header Model ============ */
   soHdr: any = {
     id: 0,
     quotationNo: '',
@@ -62,27 +81,27 @@ export class SalesOrderCreateComponent implements OnInit {
     statusText: 'Pending'
   };
 
-  /** -------- Masters ---------- */
+  /* ============ Masters ============ */
   customers: any[] = [];
   quotationList: any[] = [];
-  items: any[] = [];     // optional, if you open the line item selector
-  taxCodes: any[] = [];  // optional, if you use tax dropdown
+  items: any[] = [];
+  taxCodes: any[] = [];
 
-  /** Header warehouse dropdown (optional, informational) */
+  // Optional header-level warehouse list (derived from lines)
   warehousesMaster: WarehouseMaster[] = [];
   selectedWarehouseId: number | null = null;
   selectedWarehouseName = '';
 
-  /** -------- Lines ---------- */
+  /* ============ Lines ============ */
   soLines: SoLine[] = [];
 
-  /** -------- SearchText style dropdowns (Header) ---------- */
+  /* ============ Header dropdown helpers ============ */
   submitted = false;
 
   searchTexts: { [k: string]: string } = {
     quotationNo: '',
     customer: '',
-    warehouse: '' // header search for warehouses
+    warehouse: ''
   };
 
   dropdownOpen: { [k: string]: boolean } = {
@@ -97,11 +116,15 @@ export class SalesOrderCreateComponent implements OnInit {
     warehouse: []
   };
 
-  /** Which header fields are required */
-  requiredKeys = ['quotationNo', 'customer'];
+  requiredKeys: Array<'quotationNo' | 'customer'> = ['quotationNo', 'customer'];
 
-  /** Optional UI bits */
+  /* ============ Optional UI bits ============ */
   allocation = { reservedPct: 0 };
+
+  /* ============ Preview ============ */
+  showPreview = false;
+  previewData: PreviewLine[] = [];
+
   countries: any[] = [];
 
   constructor(
@@ -112,9 +135,9 @@ export class SalesOrderCreateComponent implements OnInit {
     private salesOrderService: SalesOrderService
   ) {}
 
-  /** ======= Init ======= */
+  /* ============ Init ============ */
   ngOnInit(): void {
-    // Countries (for GST%)
+    // Countries (you can keep this if used elsewhere; not needed for GST now)
     this.countriesSvc.getCountry().subscribe((res: any) => {
       this.countries = (res?.data ?? []).map((c: any) => ({
         id: Number(c.id ?? c.Id),
@@ -133,14 +156,15 @@ export class SalesOrderCreateComponent implements OnInit {
 
       this.filteredLists.quotationNo = [...this.quotationList];
       this.filteredLists.customer = [...this.customers];
-      this.filteredLists.warehouse = [...this.warehousesMaster]; // empty initially
+      this.filteredLists.warehouse = [...this.warehousesMaster];
     });
   }
 
-  /** ======= Header dropdown helpers ======= */
-isEmpty(v: any): boolean {
-  return (v ?? '').toString().trim() === '';
-}
+  /* ============ Header dropdown helpers ============ */
+  isEmpty(v: any): boolean {
+    return (v ?? '').toString().trim() === '';
+  }
+
   toggleDropdown(field: 'quotationNo' | 'customer' | 'warehouse', open?: boolean) {
     this.dropdownOpen[field] = open !== undefined ? open : !this.dropdownOpen[field];
     if (field === 'quotationNo') {
@@ -164,7 +188,7 @@ isEmpty(v: any): boolean {
     }
   }
 
-  /** Select from header dropdowns */
+  // Select from header dropdowns
   select(field: 'quotationNo' | 'customer', item: any) {
     if (field === 'quotationNo') {
       // 1) set quotation on header
@@ -180,14 +204,13 @@ isEmpty(v: any): boolean {
       );
       this.soHdr.customerId = match?.customerId ?? this.soHdr.customerId ?? 0;
 
-      // 4) GST by customer's country
-      const cust = this.customers.find(x => x.customerId === this.soHdr.customerId) || null;
-      const country = this.countries?.find((c: any) => c.id === (cust?.countryId ?? -1)) || null;
-      this.soHdr.gstPct = country?.gstPercentage ?? 0;
-
-      // 5) Load quotation detail (lines + per-line warehouses)
+      // 4) Load quotation detail (lines + per-line warehouses + GST from backend)
       this.salesOrderService.GetByQuatitonDetails(this.soHdr.quotationNo).subscribe((res: any) => {
-        const lines = (res?.data?.lines ?? []) as any[];
+        const head = res?.data || res || {};
+        const lines = (head?.lines ?? []) as any[];
+
+        // ✅ Set GST (%) from API (supports gstPct or gst)
+        this.soHdr.gstPct = Number(head?.gstPct ?? head?.gst ?? 0);
 
         this.soLines = lines.map(l => {
           const wh: WarehouseInfo[] = Array.isArray(l.warehouses)
@@ -201,22 +224,18 @@ isEmpty(v: any): boolean {
             quantity: Number(l.qty) || 0,
             unitPrice: Number(l.unitPrice) || 0,
             discount: Number(l.discountPct) || 0,
-            tax: (l.taxMode || 'EXCLUSIVE') as any,
+            tax: (l.taxMode || 'EXCLUSIVE') as LineTaxMode,
             lineNet: Number(l.lineNet) || 0,
             lineTax: Number(l.lineTax) || 0,
             total: Number(l.lineTotal) || 0,
-
             warehouses: wh,
-            selectedWarehouseId: wh?.length === 1 ? wh[0].warehouseId : null, // auto-pick if only one
-            selectedWh: wh?.length === 1 ? { ...wh[0] } : null,
-
             dropdownOpen: '',
             filteredOptions: []
           };
           return line;
         });
 
-        // Build header warehouse master = union of all line warehouses
+        // Union of all line warehouses (for optional header list)
         const seen = new Map<number, string>();
         this.soLines.forEach(l => (l.warehouses || []).forEach(w => seen.set(w.warehouseId, w.warehouseName)));
         this.warehousesMaster = Array.from(seen.entries()).map(([id, warehouseName]) => ({ id, warehouseName }));
@@ -239,18 +258,10 @@ isEmpty(v: any): boolean {
     }
   }
 
-  /** Header warehouse dropdown select (optional, informational) */
-  selectWarehouse(w: WarehouseMaster) {
-    this.selectedWarehouseId = w.id;
-    this.selectedWarehouseName = w.warehouseName;
-    this.searchTexts['warehouse'] = w.warehouseName;
-    this.dropdownOpen['warehouse'] = false;
-  }
-
   onClearWarehouse() {
     this.searchTexts['warehouse'] = '';
     this.selectedWarehouseId = null;
-    this.selectedWarehouseName = '';
+       this.selectedWarehouseName = '';
     this.dropdownOpen['warehouse'] = false;
   }
 
@@ -261,7 +272,7 @@ isEmpty(v: any): boolean {
     if (field === 'customer') this.soHdr.customerId = 0;
   }
 
-  /** Close any open dropdowns if clicking outside */
+  /* ============ Close dropdowns on outside click ============ */
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event) {
     const el = e.target as HTMLElement;
@@ -273,7 +284,7 @@ isEmpty(v: any): boolean {
     });
   }
 
-  /** ======= Line mini-dropdowns (item/tax) ======= */
+  /* ============ Line mini-dropdowns (item/tax) ============ */
   openDropdown(i: number, field: 'item' | 'tax') {
     this.soLines[i].dropdownOpen = field;
     this.soLines[i].filteredOptions = field === 'item' ? [...this.items] : [...this.taxCodes];
@@ -307,16 +318,7 @@ isEmpty(v: any): boolean {
     this.soLines[i].filteredOptions = [];
   }
 
-  /** ======= Per-line Warehouse change ======= */
-  onWarehouseChange(i: number) {
-    const L = this.soLines[i];
-    const id = L.selectedWarehouseId ?? null;
-    if (!id) { L.selectedWh = null; return; }
-    const found = (L.warehouses || []).find(w => w.warehouseId === id) || null;
-    L.selectedWh = found ? { ...found } : null;
-  }
-
-  /** ======= Calculations ======= */
+  /* ============ Calculations ============ */
   private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
   recalcLine(i: number) {
@@ -359,21 +361,18 @@ isEmpty(v: any): boolean {
 
   recalcTotals() { this.soHdr = { ...this.soHdr }; }
 
-  /** ======= Validate & Save ======= */
+  /* ============ Validate & Save ============ */
   private validateSO(): boolean {
-    // header required
     const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
     if (missing.length) {
       this.submitted = true;
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please fill required header fields.' });
       return false;
     }
-    // lines present
     if (this.soLines.length === 0) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line.' });
       return false;
     }
-    // each line valid
     const bad = this.soLines.find(l => !l.itemId || !(Number(l.quantity) > 0) || !(Number(l.unitPrice) > 0));
     if (bad) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Each line needs Item, Qty > 0, Unit Price > 0.' });
@@ -386,7 +385,6 @@ isEmpty(v: any): boolean {
     if (!this.validateSO()) return;
 
     const payload = {
-      // header
       id: this.soHdr.id,
       quotationNo: this.soHdr.quotationNo,
       customerId: this.soHdr.customerId,
@@ -398,13 +396,9 @@ isEmpty(v: any): boolean {
       status: this.soHdr.status,
       customerName: this.searchTexts.customer,
 
-      // optional header selection
-      headerWarehouseId: this.selectedWarehouseId ?? null,
-      headerWarehouseName: this.selectedWarehouseName || null,
-
-      // lines
+      // lines (backend auto-allocates → creates multiple SOL rows with LockedQty per slice)
       lineItems: this.soLines.map(l => ({
-        id: 0, // if edit, put existing id
+        id: 0,
         itemId: l.itemId!,
         itemName: (l.item || '').toString(),
         uom: l.uom || '',
@@ -412,10 +406,7 @@ isEmpty(v: any): boolean {
         unitPrice: Number(l.unitPrice) || 0,
         discount: Number(l.discount) || 0,
         tax: l.tax || null,
-        total: Number(l.total) || 0,
-        // persist the user's per-line selection (not shown in UI beyond dropdown)
-        selectedWarehouseId: l.selectedWarehouseId ?? null,
-        selectedWarehouseAvailable: l.selectedWh?.available ?? null
+        total: Number(l.total) || 0
       })),
 
       totals: this.totals
@@ -432,11 +423,12 @@ isEmpty(v: any): boolean {
         });
         this.router.navigate(['/Sales/Sales-Order-list']);
       },
-      error: () => {
+      error: (err) => {
+        const msg = err?.error?.message || err?.message || 'Failed to create Sales Order';
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Failed to create Sales Order',
+          text: msg,
           confirmButtonText: 'OK',
           confirmButtonColor: '#d33'
         });
@@ -444,7 +436,35 @@ isEmpty(v: any): boolean {
     });
   }
 
-  /** ======= Misc UI ======= */
+  /* ============ Preview Allocation (modal) ============ */
+  previewAlloc(): void {
+    const req = this.soLines
+      .filter(l => !!l.itemId && Number(l.quantity) > 0)
+      .map(l => ({ itemId: l.itemId as number, quantity: Number(l.quantity) || 0 }));
+
+    if (req.length === 0) {
+      Swal.fire({ icon: 'info', title: 'Nothing to preview', text: 'Add at least one valid line.' });
+      return;
+    }
+
+    this.salesOrderService.previewAllocation(req).subscribe({
+      next: (res: any) => {
+        const linesFromWrapper = res?.data?.lines;
+        const linesDirect = res?.lines;
+        this.previewData = (linesFromWrapper ?? linesDirect ?? []) as PreviewLine[];
+        this.showPreview = true;
+      },
+      error: () => {
+        Swal.fire({ icon: 'error', title: 'Preview failed', text: 'Cannot preview allocation now.' });
+      }
+    });
+  }
+
+  closePreview(): void {
+    this.showPreview = false;
+  }
+
+  /* ============ Misc UI ============ */
   removeLine(i: number) {
     this.soLines.splice(i, 1);
     this.recalcTotals();
@@ -472,7 +492,7 @@ isEmpty(v: any): boolean {
   }
 }
 
-/** safe JSON parse helper */
+/* ============ safe JSON parse helper ============ */
 function safeJsonParse<T>(txt: string, fallback: T): T {
   try { return JSON.parse(txt) as T; } catch { return fallback; }
 }
