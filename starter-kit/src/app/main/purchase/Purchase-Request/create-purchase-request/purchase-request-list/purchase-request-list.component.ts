@@ -13,6 +13,22 @@ import * as feather from 'feather-icons';
 
 import { PurchaseService } from 'app/main/purchase/purchase.service';
 import { PrDraftService } from '../../pr-draft.service';
+import { PurchaseAlertService } from '../../purchase-alert.service';
+
+// ⬇️ NEW: alerts service
+
+
+type PurchaseAlert = {
+  id: number;
+  message: string;
+  // optional context the API might return
+  itemId?: number;
+  itemName?: string;
+  requiredQty?: number;
+  warehouseId?: number | null;
+  supplierId?: number | null;
+  createdOn?: string; // ISO
+};
 
 @Component({
   selector: 'app-purchase-request-list',
@@ -40,12 +56,19 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   draftCount = 0;
   showDraftsModal = false;
 
+  // ⬇️ NEW: Alerts
+  showAlertsPanel = false;
+  alerts: PurchaseAlert[] = [];
+  alertCount = 0; // unread count badge
+
   userId: string;
 
   constructor(
     private purchaseService: PurchaseService,
     private draftSvc: PrDraftService,
-    private router: Router
+    private router: Router,
+    // ⬇️ NEW
+    private alertSvc: PurchaseAlertService
   ) {
     this.userId = localStorage.getItem('id') || '';
   }
@@ -55,6 +78,8 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   ngOnInit(): void {
     this.loadRequests();
     this.refreshDraftCount();
+    // ⬇️ NEW: load alerts once (you can add a manual refresh button)
+    this.refreshAlerts();
   }
 
   ngAfterViewInit(): void {
@@ -171,7 +196,6 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
     this.draftSvc.getAll().subscribe({
       next: (res) => {
         const list = res?.data ?? [];
-        // keep pure drafts only
         this.drafts = list.filter((x: any) => +x.status === 0 || x.status == null);
       },
       error: (err) => console.error('Error loading drafts', err),
@@ -188,52 +212,80 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
     });
   }
 
-  /**
-   * IMPORTANT: Promote button here ONLY opens the draft in the Create screen.
-   * It does NOT create a PR yet. The actual promote happens in Create (Convert to PO/RFQ).
-   */
-  promoteDraft(id: number): void {
-    // If you want a confirm before opening, keep this; otherwise navigate directly.
-    Swal.fire({
-      title: 'Open draft?',
-      text: 'Continue editing this draft.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Open',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#2E5F73',
-      cancelButtonColor: '#6c757d',
-    }).then((r) => {
-      if (r.value) {
-        this.router.navigate(['/purchase/Create-PurchaseRequest'], { queryParams: { draftId: id } });
+  // ============== Alerts (NEW) ==============
+
+  toggleAlerts(): void {
+    this.showAlertsPanel = !this.showAlertsPanel;
+    if (this.showAlertsPanel) {
+      this.refreshAlerts();
+    }
+  }
+
+  closeAlerts()  { this.showAlertsPanel = false; }
+  refreshAlerts(): void {
+    this.alertSvc.getUnread().subscribe({
+      next: (res: any) => {
+        const list: PurchaseAlert[] = res?.data ?? [];
+        this.alerts = list;
+        this.alertCount = list.length;
+      },
+      error: (err) => {
+        console.error('Error loading alerts', err);
+        this.alerts = [];
+        this.alertCount = 0;
       }
     });
   }
 
-  deleteDraft(id: number): void {
-    this.draftSvc.delete(id, this.userId).subscribe({
+  acknowledgeAlert(a: PurchaseAlert): void {
+    this.alertSvc.markRead(a.id).subscribe({
       next: () => {
+        // Remove from UI list and update badge
+        this.alerts = this.alerts.filter(x => x.id !== a.id);
+        this.alertCount = this.alerts.length;
+
+        // Friendly toast
+        const msg = a?.message || 'Alert acknowledged';
+        Swal.fire({
+          icon: 'info',
+          title: 'Stock Needed',
+          text: msg,
+          confirmButtonColor: '#2E5F73'
+        });
+        this.showAlertsPanel = false; 
+      },
+      error: () => {
+        Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not mark alert as read', confirmButtonColor: '#2E5F73' });
+      }
+    });
+  }
+
+  acknowledgeAll(): void {
+    if (!this.alerts.length) return;
+    this.alertSvc.markAll().subscribe({
+      next: () => {
+        this.alerts = [];
+        this.alertCount = 0;
         Swal.fire({
           icon: 'success',
-          title: 'Deleted',
-          text: 'Draft removed.',
-          confirmButtonColor: '#2E5F73',
+          title: 'All Alerts Acknowledged',
+          text: 'You have cleared all shortage notifications.',
+          confirmButtonColor: '#2E5F73'
         });
-        this.loadDrafts();
-        this.refreshDraftCount();
+        this.showAlertsPanel = false; 
       },
-      error: () =>
-        Swal.fire({
-          icon: 'error',
-          title: 'Delete Failed',
-          text: 'Try again.',
-          confirmButtonColor: '#2E5F73',
-        }),
+      error: () => {
+        Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not clear alerts', confirmButtonColor: '#2E5F73' });
+      }
     });
   }
 
   // util
   trackById(_: number, row: any) {
     return row?.id ?? _;
+  }
+
+  trackByAlertId(_: number, a: PurchaseAlert) {
+    return a?.id ?? _;
   }
 }
