@@ -1,227 +1,251 @@
+<!-- app/main/sales/sales-order/list/sales-order-list.component.html -->
 <div class="content-wrapper p-0">
-    <div class="content-body">
-        <!-- User List -->
-        <section class="users-list-wrapper">
-            <div class="card">
-                <div class="row">
-                    <div class="col-md-6 col-12">
-                        <h4 class="card-text"
-                            style="margin-left: 0.85rem; margin-top: 0.75rem;font-size: 1.25rem;font-weight: 600; color: #2E5F73;">
-                            Sales Order
-                            List</h4>
-                        <div class="d-flex justify-content-between align-items-center m-1">
-                            <label class="d-flex align-items-center">Show
-                                <select class="form-control mx-25" [(ngModel)]="selectedOption">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                                entries
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-12 d-flex justify-content-md-end">
-                        <div class="d-flex align-items-center justify-content-md-end gap-2
-              flex-md-nowrap flex-wrap w-100">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card">
 
-                            <!-- Search FIRST, fixed basis so it doesn't collapse -->
-                            <input [(ngModel)]="searchValue" name="searchValue" type="search"
-                                class="form-control me-2 flex-shrink-0" placeholder="Search"
-                                (keyup)="filterUpdate($event)" (search)="filterUpdate($event)"
-                                style="flex:0 0 320px; max-width:40vw;" />
+        <!-- Title -->
+        <h4 class="card-text heading">Sales Order List</h4>
 
-                            <button (click)="openCreate()" class="btn d-inline-flex align-items-center flex-shrink-0"
-                                style="background-color:#2E5F73; color:white; gap:4px;">
-                                <i data-feather="plus-circle" class="w-4 h-4"></i><span>Add</span>
-                            </button>
+        <!-- Controls row: left(entries) | middle(search right-aligned) | right(drafts+add) -->
+        <div class="so-controls">
+          <!-- left: show entries -->
+          <div class="entries">
+            <label class="d-flex align-items-center gap-2">Show
+              <select class="form-control mx-25" [(ngModel)]="selectedOption">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              entries
+            </label>
+          </div>
 
-                        </div>
-                    </div>
+          <!-- middle: search (smaller + push to right) -->
+          <div class="search-wrap">
+            <input [(ngModel)]="searchValue" name="searchValue" type="search"
+                   class="form-control so-search"
+                   placeholder="Search SO no / customer / status / date"
+                   (keyup)="filterUpdate($event)" (search)="filterUpdate($event)" />
+          </div>
 
-                </div>
-                <ngx-datatable class="bootstrap core-bootstrap" [rows]="rows" [rowHeight]="50" [headerHeight]="50"
-                    [footerHeight]="50" [limit]="selectedOption" [columnMode]="'force'" [scrollbarH]="true"
-                    [reorderable]="true">
+          <!-- right: buttons -->
+          <div class="actions">
+            <button (click)="openDrafts()" class="btn btn-drafts">
+              <i class="fas fa-file-alt me-1"></i>
+              <span>Drafts</span>
+              <span *ngIf="draftCount > 0" class="notif-count">{{ draftCount }}</span>
+            </button>
 
-                    <!-- Expand/Collapse + FadeIn Column -->
-                    <ngx-datatable-column [width]="50" [resizeable]="false" [sortable]="false" [draggable]="false"
-                        [canAutoResize]="false">
-                        <ng-template ngx-datatable-cell-template let-row="row">
-                            <span (click)="openLinesModal(row)" title="View Details"
-                                style="cursor:pointer; font-size:18px; color:#2E5F73;">
-                                <i class="fas fa-eye"></i>
-                            </span>
+            <button (click)="openCreate()" class="btn btn-add">
+              <i data-feather="plus-circle" class="me-1"></i>
+              <span>Add</span>
+            </button>
+          </div>
+        </div>
 
-                        </ng-template>
-                    </ngx-datatable-column>
-                    <ngx-datatable-column name="SO Number" prop="salesOrderNo" [width]="120"></ngx-datatable-column>
+        <!-- Table -->
+        <ngx-datatable class="bootstrap core-bootstrap so-table"
+                       [rows]="rows"
+                       [rowHeight]="50"
+                       [headerHeight]="50"
+                       [footerHeight]="50"
+                       [limit]="selectedOption"
+                       [columnMode]="'force'"
+                       [scrollbarH]="true"
+                       [reorderable]="true">
 
+          <!-- View Details -->
+          <ngx-datatable-column [width]="50" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <span (click)="openLinesModal(row)" title="View Details"
+                    style="cursor:pointer; font-size:18px; color:#2E5F73;">
+                <i class="fas fa-eye"></i>
+              </span>
+            </ng-template>
+          </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Customer Name" prop="customerName" [width]="140"></ngx-datatable-column>
+          <ngx-datatable-column name="SO Number" prop="salesOrderNo" [width]="140"></ngx-datatable-column>
+          <ngx-datatable-column name="Customer Name" prop="customerName" [width]="200"></ngx-datatable-column>
 
-                    <ngx-datatable-column name="Warehouse Name" prop="warehouseName" [width]="140"></ngx-datatable-column>
+          <ngx-datatable-column name="Requested Date" prop="requestedDate" [width]="150">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.requestedDate | date:'dd-MM-yyyy' }}
+            </ng-template>
+          </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Requested Date" prop="requestedDate" [width]="140">
-                        <ng-template let-row="row" ngx-datatable-cell-template>
-                            {{ row.requestedDate | date:'dd-MM-yyyy' }}
-                        </ng-template>
-                    </ngx-datatable-column>
+          <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="150">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.deliveryDate | date:'dd-MM-yyyy' }}
+            </ng-template>
+          </ngx-datatable-column>
 
+          <ngx-datatable-column name="Status" prop="status" [width]="140">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <span class="badge badge-pill"
+                    [ngClass]="{
+                      'badge-warning'  : row.status === 1,
+                      'badge-success'  : row.status === 2,
+                      'badge-primary'  : row.status === 3
+                    }"
+                    style="padding:6px 12px; font-size:13px;">
+                {{
+                  row.status === 1 ? 'Pending'   :
+                  row.status === 2 ? 'Approved'  :
+                  row.status === 3 ? 'Completed' : 'Unknown'
+                }}
+              </span>
+            </ng-template>
+          </ngx-datatable-column>
 
+          <!-- Edit/Delete -->
+          <ngx-datatable-column name="Action" [width]="120">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <i class="fas fa-pen mr-2"
+                 [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-success cursor-pointer'"
+                 [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
+                 [attr.aria-disabled]="isRowLocked(row)"
+                 (click)="!isRowLocked(row) && editSO(row)"
+                 title="{{ isRowLocked(row) ? 'Disabled for approved/rejected SO' : 'Edit' }}">
+              </i>
 
-                    <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="120">
-                        <ng-template let-row="row" ngx-datatable-cell-template>
-                            {{ row.deliveryDate | date:'dd-MM-yyyy' }}
-                        </ng-template>
-                    </ngx-datatable-column>
+              <i class="fas fa-trash"
+                 [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-danger cursor-pointer'"
+                 [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
+                 [attr.aria-disabled]="isRowLocked(row)"
+                 (click)="!isRowLocked(row) && deletePO(row.id)"
+                 title="{{ isRowLocked(row) ? 'Disabled for approved/rejected SO' : 'Delete' }}">
+              </i>
+            </ng-template>
+          </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Status" prop="approvalStatus" [width]="120">
-                        <ng-template let-value="value" ngx-datatable-cell-template>
-                            <div class="badge badge-pill text-center inline-flex items-center !px-3 !py-1 !leading-none"
-                                [ngClass]="{
-              'badge-secondary': value === 0,
-              'badge-warning'  : value === 1,
-              'badge-success'  : value === 2,
-              'badge-danger'   : value === 3
-            }" [style.backgroundColor]="(value === 3 || value === 4) ? 'red' : ''" style="cursor: default;">
+          <!-- Approval -->
+          <ngx-datatable-column name="Approval" [width]="120">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <button *ngIf="row.status === 1"
+                      (click)="onApprove(row)"
+                      class="btn btn-sm btn-success mr-1"
+                      style="padding:3px 8px; font-size:12px;">
+                Approve
+              </button>
+              <button *ngIf="row.status === 1"
+                      (click)="onReject(row)"
+                      class="btn btn-sm btn-danger"
+                      style="padding:3px 8px; font-size:12px;">
+                Reject
+              </button>
+            </ng-template>
+          </ngx-datatable-column>
 
-                                {{
-                                value === 0 ? 'Draft' :
-                                value === 1 ? 'Pending' :
-                                value === 2 ? 'Approved' :
-                                value === 3 ? 'Rejected' : 'Unknown'
-
-                                }}
-                            </div>
-                        </ng-template>
-                    </ngx-datatable-column>
-
-                    <!-- Edit/Delete Actions -->
-                    <ngx-datatable-column name="Action" [width]="120">
-                        <ng-template let-row="row" ngx-datatable-cell-template>
-                            <!-- Edit -->
-                            <i class="fas fa-pen mr-2"
-                                [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-success cursor-pointer'"
-                                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
-                                [attr.aria-disabled]="isRowLocked(row)" (click)="!isRowLocked(row) && editPO(row)"
-                                title="{{ isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Edit' }}">
-                            </i>
-
-                            <!-- Delete -->
-                            <i class="fas fa-trash"
-                                [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-danger cursor-pointer'"
-                                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
-                                [attr.aria-disabled]="isRowLocked(row)" (click)="!isRowLocked(row) && deletePO(row.id)"
-                                title="{{ isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Delete' }}">
-                            </i>
-                        </ng-template>
-                    </ngx-datatable-column>
-
-
-                </ngx-datatable>
-
-            </div>
-        </section>
-    </div>
-
+        </ngx-datatable>
+      </div>
+    </section>
+  </div>
 </div>
 
-<div *ngIf="showLinesModal" (click)="closeLinesModal()"
-    style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
-
-    <!-- Modal Card -->
-    <div (click)="$event.stopPropagation()"
-        style="width:800px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
-
-        <!-- Header -->
-        <div
-            style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
-            <h3 style="margin:0; font-size:20px; line-height:1.2; font-weight:700; color:#374151;">PO Lines</h3>
-            <button (click)="closeLinesModal()" aria-label="Close"
-                style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
-        </div>
-
-        <!-- Body -->
-        <div style="padding:16px 20px;">
-            <div style="max-height:60vh; overflow:auto; border:1px solid #eef2f7; border-radius:10px;">
-                <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
-                    <thead>
-                        <tr style="background:#2E5F73; color:#fff;">
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">PR NO</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Item Name</th>
-                            <!-- <th style="padding:10px 12px; text-align:left; font-weight:600;">Budget</th> -->
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Recurring</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">TaxCode</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Location</th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Qty</th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Price</th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Discount(%)
-                            </th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let l of modalLines; let i = index"
-                            [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
-                            style="border-bottom:1px solid #f1f5f9;">
-                            <td
-                                style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.prNo || '-' }}
-                            </td>
-                            <td
-                                style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.item || '-' }}
-                            </td>
-                            <!-- <td style="padding:10px 12px;">
-                {{ l.budget || '-' }}
-              </td> -->
-                            <td style="padding:10px 12px;">
-                                {{ l.recurring || '-' }}
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.taxCode || '-' }}
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.location || '-' }}
-                            </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.qty || 0 }}
-                            </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.price || 0 }}
-                            </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.discount || 0 }}
-                            </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.total || 0 }}
-                            </td>
-                        </tr>
-                        <tr *ngIf="!modalLines?.length">
-                            <td colspan="3" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>
-                        </tr>
-                    </tbody>
-
-                    <tfoot *ngIf="modalLines?.length">
-                        <tr style="background:#f3f4f6; border-top:1px solid #e5e7eb;">
-                            <td colspan="8" style="padding:10px 12px; font-weight:700;">Total</td>
-                            <td
-                                style="padding:10px 12px; text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">
-                                {{ modalTotal }}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
-            <button (click)="closeLinesModal()"
-                style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
-                Close
-            </button>
-        </div>
+<!-- Lines Modal -->
+<div *ngIf="showLinesModal" (click)="closeLinesModal()" class="backdrop">
+  <div (click)="$event.stopPropagation()" class="modal-card">
+    <div class="modal-head">
+      <h3>SO Lines</h3>
+      <button (click)="closeLinesModal()" aria-label="Close" class="modal-close">×</button>
     </div>
+    <div class="modal-body">
+      <div class="lines-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th *ngIf="lineCols.uom">UOM</th>
+              <th *ngIf="lineCols.qty" class="num">Qty</th>
+              <th *ngIf="lineCols.unitPrice" class="num">Unit Price</th>
+              <th *ngIf="lineCols.discount" class="num">Discount(%)</th>
+              <th *ngIf="lineCols.tax" class="num">Tax</th>
+              <th *ngIf="lineCols.total" class="num">Total</th>
+              <th *ngIf="lineCols.lockedQty" class="num">LockedQty</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of modalLines; let i = index" [class.alt]="i % 2 === 0">
+              <td>{{ l.itemName || l.item || '-' }}</td>
+              <td *ngIf="lineCols.uom">{{ l.uom || '-' }}</td>
+              <td *ngIf="lineCols.qty" class="num">{{ l.quantity || l.qty || 0 }}</td>
+              <td *ngIf="lineCols.unitPrice" class="num">{{ l.unitPrice || l.price || 0 }}</td>
+              <td *ngIf="lineCols.discount" class="num">{{ l.discount ?? 0 }}</td>
+              <td *ngIf="lineCols.tax" class="num">{{ l.tax ?? 0 }}</td>
+              <td *ngIf="lineCols.total" class="num">{{ l.total ?? 0 }}</td>
+              <td *ngIf="lineCols.lockedQty" class="num">{{ l.lockedQty ?? 0 }}</td>
+            </tr>
+            <tr *ngIf="!modalLines?.length">
+              <td [attr.colspan]="getLinesColsCount()" class="empty">No lines</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="modalLines?.length">
+            <tr>
+              <td [attr.colspan]="getLinesColsCount() - 1" class="total-label">Total</td>
+              <td class="total-val num">{{ modalTotal | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button (click)="closeLinesModal()" class="btn-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAFTS MODAL -->
+<div *ngIf="showDraftsModal" class="backdrop" (click)="closeDrafts()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <div class="title-wrap">
+        <h3>Draft Lines</h3>
+        <div class="sub" *ngIf="!draftLoading">
+          <span>Total: <strong>{{ draftRows?.length || 0 }}</strong></span>
+        </div>
+      </div>
+      <button (click)="closeDrafts()" aria-label="Close" class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="draftLoading" class="draft-loading">Loading…</div>
+      <div *ngIf="!draftLoading" class="lines-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>SO No</th>
+              <th>Item</th>
+              <th>UOM</th>
+              <th class="num">Qty</th>
+              <th class="num">WH Id</th>
+              <th class="num">Bin Id</th>
+              <th class="num">Supplier Id</th>
+              <th class="reason">Reason</th>
+              <th class="num">LockedQty</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of draftRows; let i = index" [class.alt]="i % 2 === 0">
+              <td>{{ r.salesOrderNo }}</td>
+              <td>{{ r.itemName }}</td>
+              <td>{{ r.uom || '-' }}</td>
+              <td class="num">{{ r.quantity }}</td>
+              <td class="num">{{ r.warehouseId ?? '-' }}</td>
+              <td class="num">{{ r.binId ?? '-' }}</td>
+              <td class="num">{{ r.supplierId ?? '-' }}</td>
+              <td class="reason">{{ r.reason }}</td>
+              <td class="num">{{ r.lockedQty ?? 0 }}</td>
+            </tr>
+            <tr *ngIf="!draftRows?.length">
+              <td colspan="9" class="empty">No drafts</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button (click)="closeDrafts()" class="btn-close">Close</button>
+    </div>
+  </div>
 </div>

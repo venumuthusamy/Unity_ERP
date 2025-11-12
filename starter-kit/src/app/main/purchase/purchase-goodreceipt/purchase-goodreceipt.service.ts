@@ -37,4 +37,8 @@ private url = environment.apiUrl;
     return this.http.get<any[]>(this.url + GRNApiUrls.GetAllGRNByPOId);
   }
 
+applyGrnAndUpdateSalesOrder(req: any): Observable<any> {
+  return this.http.post<any>(this.url + GRNApiUrls.ApplyGrnAndUpdateSalesOrder, req);
+}
+
 }
