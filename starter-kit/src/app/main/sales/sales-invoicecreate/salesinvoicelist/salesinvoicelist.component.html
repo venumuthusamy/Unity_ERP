@@ -122,6 +122,7 @@
           <thead>
             <tr>
               <th>Item</th>
+              <th>Description</th>
               <th>UOM</th>
               <th class="ta-right">Qty</th>
               <th class="ta-right">Unit Price</th>
@@ -132,6 +133,7 @@
           <tbody>
             <tr *ngFor="let l of modalLines; let i = index" [class.zebra]="i % 2 === 0">
               <td>{{ l.itemName || ('#' + (l.itemId || '')) }}</td>
+               <td>{{ l.description }}</td>
               <td>{{ l.uom || '-' }}</td>
               <td class="ta-right">{{ l.qty | number:'1.0-3' }}</td>
               <td class="ta-right">{{ l.unitPrice | number:'1.2-2' }}</td>
@@ -144,8 +146,8 @@
           </tbody>
           <tfoot *ngIf="modalLines?.length">
             <tr>
-              <td colspan="5" class="fw-700 ta-right">Total Amount</td>
-              <td class="ta-right fw-700">{{ modalGrand | number:'1.2-2' }}</td>
+              <td colspan="6" class="fw-800 ta-right">Total Amount</td>
+              <td class="ta-right fw-800">{{ modalGrand | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>

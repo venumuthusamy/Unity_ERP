@@ -89,4 +89,7 @@ rejectSO(id: number) {
 getDrafts() {
   return this.http.get<ResponseResult<any[]>>(this.url + SalesOrderApiUrls.Drafts);
 }
+ getSOByStatus(id): Observable<ResponseResult<any>> {
+    return this.http.get<ResponseResult<any>>(this.url + SalesOrderApiUrls.GetSOByStatus+id);
+  }
 }

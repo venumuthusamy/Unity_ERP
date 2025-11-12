@@ -1,12 +1,14 @@
+// sales-invoice.service.ts
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
 import { environment } from 'environments/environment';
+import { Observable } from 'rxjs';
+import { SalesInvoiceAPIUrls } from 'Urls/SalesInvoiceAPIUrls ';
 
 export type SiSourceType = 1 | 2;
 
-export interface ApiResponse<T = any> {
-  isSuccess: boolean;   // your API returns isSuccess
+export interface ApiResponse<T=any> {
+  isSuccess?: boolean; success?: boolean;
   message: string;
   data: T;
 }
@@ -33,84 +35,50 @@ export interface SiCreateLine {
   unitPrice: number;
   discountPct: number;
   taxCodeId?: number | null;
+  description?: string | null;     // <— NEW
 }
 
 export interface SiCreateRequest {
   sourceType: SiSourceType;
   soId?: number | null;
   doId?: number | null;
-  invoiceDate: string;     // yyyy-MM-dd
+  invoiceDate: string;          // yyyy-MM-dd
   lines: SiCreateLine[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class SalesInvoiceService {
   private base = environment.apiUrl;
-
   constructor(private http: HttpClient) {}
 
-  // URLs (make sure these match your backend routes)
-  private urls = {
-    List:         '/salesinvoice/List',
-    Get:          '/salesinvoice/',               // + id
-    SourceLines:  '/salesinvoice/SourceLines',    // ?sourceType=&sourceId=
-    Create:       '/salesinvoice/Create',
-    Delete:       '/salesinvoice/Delete/',        // + id
-    UpdateHeader: '/salesinvoice/UpdateHeader/',  // + id
-    AddLine:      '/salesinvoice/AddLine/',       // + siId
-    UpdateLine:   '/salesinvoice/UpdateLine/',    // + lineId
-    RemoveLine:   '/salesinvoice/RemoveLine/'     // + lineId
-  };
-
   list(): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(this.base + this.urls.List);
+    return this.http.get<ApiResponse>(this.base + SalesInvoiceAPIUrls.List);
   }
-
   get(id: number): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(this.base + this.urls.Get + id);
+    return this.http.get<ApiResponse>(this.base + SalesInvoiceAPIUrls.Get + id);
   }
-
   sourceLines(sourceType: SiSourceType, sourceId: number): Observable<ApiResponse> {
     const params = new HttpParams().set('sourceType', String(sourceType)).set('sourceId', String(sourceId));
-    return this.http.get<ApiResponse>(this.base + this.urls.SourceLines, { params });
+    return this.http.get<ApiResponse>(this.base + SalesInvoiceAPIUrls.SourceLines, { params });
   }
-
   create(req: SiCreateRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(this.base + this.urls.Create, req);
+    return this.http.post<ApiResponse>(this.base + SalesInvoiceAPIUrls.Create, req);
   }
-
   delete(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(this.base + this.urls.Delete + id);
+    return this.http.delete<ApiResponse>(this.base + SalesInvoiceAPIUrls.Delete + id);
   }
 
-  // --- EDIT endpoints (no currency anywhere) ---
-  updateHeader(id: number, body: { invoiceDate: string }) {
-    return this.http.put<ApiResponse>(this.base + this.urls.UpdateHeader + id, body);
+  // --- edit endpoints already in your controller ---
+  updateHeader(id: number, body: { invoiceDate: string }): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(this.base + `/salesinvoice/UpdateHeader/${id}`, body);
   }
-
-  addLine(siId: number, body: {
-    sourceLineId?: number | null;
-    itemId?: number | null;
-    itemName?: string | null;
-    uom?: string | null;
-    qty: number;
-    unitPrice: number;
-    discountPct: number;
-    taxCodeId?: number | null;
-  }) {
-    return this.http.post<ApiResponse>(this.base + this.urls.AddLine + siId, body);
+  addLine(siId: number, body: SiCreateLine): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(this.base + `/salesinvoice/AddLine/${siId}`, body);
   }
-
-  updateLine(lineId: number, body: {
-    qty: number;
-    unitPrice: number;
-    discountPct: number;
-    taxCodeId?: number | null;
-  }) {
-    return this.http.put<ApiResponse>(this.base + this.urls.UpdateLine + lineId, body);
+  updateLine(lineId: number, body: { qty: number; unitPrice: number; discountPct: number; taxCodeId?: number|null; description?: string|null }): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(this.base + `/salesinvoice/UpdateLine/${lineId}`, body);
   }
-
-  removeLine(lineId: number) {
-    return this.http.delete<ApiResponse>(this.base + this.urls.RemoveLine + lineId);
+  removeLine(lineId: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(this.base + `/salesinvoice/RemoveLine/${lineId}`);
   }
 }

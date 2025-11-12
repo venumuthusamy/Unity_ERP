@@ -114,18 +114,19 @@
 
     <div class="table-responsive mt-2 prl-table-wrap si-compact">
       <table class="table table-sm align-middle prl-table">
-        <thead class="prl-thead-brand">
-          <tr>
-            <th style="min-width:220px">Item</th>
-            <th style="min-width:120px">UOM</th>
-            <th class="text-center" style="min-width:80px">Qty</th>
-            <th class="text-center" style="min-width:120px">Unit Price</th>
-            <th class="text-center" style="min-width:90px">Discount %</th>
-            <th class="text-center" style="min-width:110px">Tax Code</th>
-            <th class="text-center" style="min-width:120px">Amount</th>
-            <th style="min-width:56px"></th>
-          </tr>
-        </thead>
+       <thead class="prl-thead-brand">
+  <tr>
+    <th style="min-width:220px">Item</th>
+    <th style="min-width:220px">Description</th> <!-- NEW -->
+    <th style="min-width:120px">UOM</th>
+    <th class="text-center" style="min-width:80px">Qty</th>
+    <th class="text-center" style="min-width:120px">Unit Price</th>
+    <th class="text-center" style="min-width:90px">Discount %</th>
+    <th class="text-center" style="min-width:110px">Tax Code</th>
+    <th class="text-center" style="min-width:120px">Amount</th>
+    <th style="min-width:56px"></th>
+  </tr>
+</thead>
 
         <tbody>
           <tr *ngFor="let r of lines; index as i; trackBy: trackByLine">
@@ -159,7 +160,14 @@
                 </ng-template>
               </ng-select>
             </td>
-
+ <td>
+      <input type="text"
+             class="form-control prl-input"
+             [(ngModel)]="r.description"
+             (change)="onCellChanged(r)"
+             [ngModelOptions]="{standalone:true}"
+             placeholder="Description">
+    </td>
             <td>
               <input type="text" class="form-control prl-input" [value]="r.uom || ''" readonly>
             </td>
