@@ -21,6 +21,7 @@ import { SalesOrderCreateComponent } from './sales-order/sales-order-create/sale
 import { SalesOrderListComponent } from './sales-order/sales-order-list/sales-order-list.component';
 import { PickingPackingListComponent } from './picking-packingcreate/picking-packing-list/picking-packing-list.component';
 import { DeliveryorderlistComponent } from './deliveryorder/deliveryorderlist/deliveryorderlist.component';
+import { SalesinvoicelistComponent } from './sales-invoicecreate/salesinvoicelist/salesinvoicelist.component';
 
 const routes = [
   {
@@ -94,9 +95,16 @@ const routes = [
     data: { animation: 'ReturnCreditcreateComponent' }
   },
     {
-    path: 'Sales-Invoice-create',
+    path: 'sales-Invoice-create',
     component: SalesInvoicecreateComponent,
     data: { animation: 'SalesInvoicecreateComponent' }
+  },
+  { path: 'sales-invoice/edit/:id', 
+    component: SalesInvoicecreateComponent },
+   {
+    path: 'Sales-Invoice-list',
+    component: SalesinvoicelistComponent,
+    data: { animation: 'SalesinvoicelistComponent' }
   },
    {
     path: 'Sales-Order-list',
@@ -131,7 +139,8 @@ const routes = [
     QuotationlistComponent,
     SalesOrderListComponent,
     PickingPackingListComponent,
-    DeliveryorderlistComponent
+    DeliveryorderlistComponent,
+    SalesinvoicelistComponent,
   ],
   imports: [
     CommonModule,
