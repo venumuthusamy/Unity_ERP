@@ -383,6 +383,7 @@ console.log("pending",pending)
       if (!anyQty) return Swal.fire({ icon: 'warning', title: 'Enter at least one deliver quantity' });
 
       const payload = {
+        req: 'currentUserId', 
         soId: this.selectedSoId,
         packId: null,
         driverId: this.driverId!,
@@ -399,7 +400,7 @@ console.log("pending",pending)
             uom: (l.uom || '').toString(),
             qty: Number(l.deliverQty) || 0,
             notes: l.notes || null,
-            warehouseId: l.warehouseId ?? null,
+            warehouseId: l.warehouseId!,
             binId: l.binId ?? null,
             supplierId: l.supplierId ?? null
           }))
@@ -413,7 +414,6 @@ console.log("pending",pending)
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed to create DO' })
       });
-
     } else {
       const payload: DoUpdateHeaderRequest = {
         driverId: this.driverId,

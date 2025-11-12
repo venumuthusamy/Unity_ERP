@@ -6,4 +6,12 @@ export class SalesOrderApiUrls {
   public static readonly DeleteSO = "/SalesOrder/Delete/";
    public static readonly GetByQuatitonDetails = "/SalesOrder/GetByQuatitonDetails/";
   public static readonly previewAllocation = "/SalesOrder/preview-allocation";
+  static ApproveSO(id: number, approvedBy = 1) {
+    return `/SalesOrder/approve/${id}?approvedBy=${approvedBy}`;
+  }
+  static RejectSO(id: number) {
+    return `/SalesOrder/reject/${id}`;
+  }
+
+    public static readonly Drafts = "/SalesOrder/drafts";
 }

@@ -59,7 +59,7 @@ const routes = [
     component: PickingPackingListComponent,
     data: { animation: 'PickingPackinglistComponent' }
   },
-  {
+   {
     path: 'Picking-packing-create',
     component: PickingPackingcreateComponent,
     data: { animation: 'PickingPackingcreateComponent' }
@@ -68,7 +68,7 @@ const routes = [
       path: 'Picking-packing-edit/:id',
       component: PickingPackingcreateComponent,
       
-    },
+  },
     {
     path: 'Quotation-create',
     component: QuotationscreateComponent,
@@ -116,10 +116,16 @@ const routes = [
     component: SalesOrderCreateComponent,
     data: { animation: 'SalesOrderCreateComponent' }
   },
+
     {
     path: 'Shared-create',
     component: SharedcreateComponent,
     data: { animation: 'SharedcreateComponent' }
+  },
+      {
+    path: 'Sales-Order-edit/:id',
+    component: SalesOrderCreateComponent,
+    data: { animation: 'SalesOrderEditComponent' }
   },
 ]
 
