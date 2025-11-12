@@ -116,17 +116,13 @@
                 <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
                     <thead>
                         <tr style="background:#2E5F73; color:#fff;">
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">PR NO</th>
+                           
                             <th style="padding:10px 12px; text-align:left; font-weight:600;">Item Name</th>
-                            <!-- <th style="padding:10px 12px; text-align:left; font-weight:600;">Budget</th> -->
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Recurring</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">TaxCode</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Location</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Warehouse</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Supplier</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Bin</th>
                             <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Qty</th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Price</th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Discount(%)
-                            </th>
-                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Total</th>
+                            <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Pack to Carton</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -135,36 +131,24 @@
                             style="border-bottom:1px solid #f1f5f9;">
                             <td
                                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.prNo || '-' }}
-                            </td>
-                            <td
-                                style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.item || '-' }}
-                            </td>
-                            <!-- <td style="padding:10px 12px;">
-                {{ l.budget || '-' }}
-              </td> -->
-                            <td style="padding:10px 12px;">
-                                {{ l.recurring || '-' }}
+                                {{ l.itemName || '-' }}
                             </td>
                             <td style="padding:10px 12px;">
-                                {{ l.taxCode || '-' }}
+                                {{ l.warehouseName || '-' }}
                             </td>
                             <td style="padding:10px 12px;">
-                                {{ l.location || '-' }}
+                                {{ l.supplierName || '-' }}
+                            </td>
+                            <td style="padding:10px 12px;">
+                                {{ l.bin || '-' }}
                             </td>
                             <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.qty || 0 }}
+                                {{ l.quantity || 0 }}
                             </td>
                             <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.price || 0 }}
+                                 {{ l?.cartonId != null && l?.cartonId !== '' ? ('Carton ' + l.cartonId) : '-' }}
                             </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.discount || 0 }}
-                            </td>
-                            <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
-                                {{ l.total || 0 }}
-                            </td>
+                                                  
                         </tr>
                         <tr *ngIf="!modalLines?.length">
                             <td colspan="3" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>

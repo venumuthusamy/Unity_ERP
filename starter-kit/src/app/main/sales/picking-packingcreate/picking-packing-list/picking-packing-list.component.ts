@@ -142,7 +142,7 @@ export class PickingPackingListComponent implements OnInit {
     // Normalize lines (supports array or JSON string)
     let lines: any[] = [];
     try {
-      lines = Array.isArray(row?.LineItems) ? row.LineItems : JSON.parse(row?.LineItems || '[]');
+      lines = Array.isArray(row?.lineItems) ? row.lineItems : JSON.parse(row?.lineItems || '[]');
     } catch {
       lines = [];
     }

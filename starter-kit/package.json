@@ -43,6 +43,8 @@
     "@ngx-translate/core": "13.0.0",
     "@sweetalert2/ngx-sweetalert2": "8.1.1",
     "@swimlane/ngx-datatable": "19.0.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.20.0",
     "angular-in-memory-web-api": "0.11.0",
     "angular-shepherd": "11.0.0",
     "animate.css": "4.1.1",
