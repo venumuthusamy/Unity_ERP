@@ -1,3 +1,4 @@
+// sales-invoicecreate.component.ts
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
@@ -17,6 +18,7 @@ import { SalesOrderService } from '../sales-order/sales-order.service';
 import { DeliveryOrderService } from '../deliveryorder/deliveryorder.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 
+/* ========== Local UI types ========== */
 interface SimpleItem {
   id: number;
   itemName: string;
@@ -25,12 +27,11 @@ interface SimpleItem {
   uomId: number;
   catagoryName?: string;
 }
-
 type UiLine = SiCreateLine & {
-  id?: number;           // server line id (edit mode)
-  itemName: string;      // UI label
-  uom?: string | null;
-  __new?: boolean;
+  id?: number;             // server line id (edit mode)
+  itemName: string;        // label for UI
+  uom?: string | null;     // display UOM
+  __new?: boolean;         // unsaved line in edit mode
 };
 
 @Component({
@@ -41,12 +42,12 @@ type UiLine = SiCreateLine & {
 export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  // mode
+  // ----- Edit state -----
   isEdit = false;
   siId: number | null = null;
   invoiceNo: string | null = null;
 
-  // UI helpers
+  // ----- UI helpers -----
   sourceTypeOptions = [
     { value: 1 as SiSourceType, label: 'From SO' },
     { value: 2 as SiSourceType, label: 'From DO' }
@@ -55,18 +56,18 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   compareById = (a: any, b: any) => (a != null && b != null ? +a === +b : a === b);
   trackByLine = (idx: number, row: any) => row?.id ?? row?.sourceLineId ?? row?.itemId ?? idx;
 
-  // header
+  // ----- Header -----
   sourceType: SiSourceType = 1;
   sourceId: number | null = null;
-  invoiceDate = new Date().toISOString().slice(0,10); // yyyy-MM-dd
+  invoiceDate = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
 
-  // dropdown data
+  // ----- Dropdown data -----
   soList: any[] = [];
   doList: any[] = [];
   taxCodes: any[] = [];
   itemsList: SimpleItem[] = [];
 
-  // lines & totals
+  // ----- Lines & totals -----
   lines: UiLine[] = [];
   total = 0;
 
@@ -80,8 +81,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute
   ) {}
 
-  // ==================== lifecycle ====================
+  // ============================================================
+  // Lifecycle
+  // ============================================================
   ngOnInit(): void {
+    // Handle create -> edit navigation and re-load
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
       .subscribe(pm => {
@@ -89,9 +93,10 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         this.isEdit = !!idStr;
         this.siId = idStr ? +idStr : null;
 
+        // Load static lookups
         forkJoin({
           taxCodes: this.taxCodeService.getTaxCode(),
-          soList:   this.soSrv.getSO(),
+          soList:   this.soSrv.getSOByStatus(3),
           doList:   this.doSrv.getAll()
         })
         .pipe(takeUntil(this.destroy$))
@@ -107,6 +112,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               doNumber: d.doNumber ?? d.DoNumber ?? ''
             }));
 
+            // Load items for labels/UOM
             this.itemsService.getAllItem()
               .pipe(takeUntil(this.destroy$))
               .subscribe({
@@ -140,6 +146,15 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // ============================================================
+  // Helpers
+  // ============================================================
+  private toDateInput(val: string | Date | null): string {
+    if (!val) return new Date().toISOString().slice(0,10);
+    const d = typeof val === 'string' ? new Date(val) : val;
+    return isNaN(d.getTime()) ? new Date().toISOString().slice(0,10) : d.toISOString().slice(0,10);
+  }
+
   private resetForCreate() {
     this.sourceType = 1;
     this.sourceId = null;
@@ -148,15 +163,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     this.total = 0;
   }
 
-  private toDateInput(val: string | Date | null): string {
-    if (!val) return new Date().toISOString().slice(0,10);
-    const d = typeof val === 'string' ? new Date(val) : val;
-    return isNaN(d.getTime()) ? new Date().toISOString().slice(0,10) : d.toISOString().slice(0,10);
-  }
-
   private isOk(res: any) { return res?.isSuccess ?? res?.success; }
 
-  // ==================== load edit ====================
+  // ============================================================
+  // Load for Edit
+  // ============================================================
   private loadForEdit(id: number) {
     this.api.get(id).subscribe({
       next: (res: ApiResponse) => {
@@ -182,7 +193,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           qty: Number(r.qty || 0),
           unitPrice: Number(r.unitPrice || 0),
           discountPct: Number(r.discountPct || 0),
-          taxCodeId: r.taxCodeId ?? null
+          taxCodeId: r.taxCodeId ?? null,
+          description: r.description ?? r.itemName ?? ''   // <— default from item
         })) as UiLine[];
 
         this.reconcileLinesWithItems();
@@ -192,23 +204,35 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==================== header controls ====================
+  // ============================================================
+  // Header controls
+  // ============================================================
   onSourceTypeChanged(): void {
-    if (this.isEdit) return;
+    if (this.isEdit) return; // Lock source in edit
     this.sourceId = null;
     this.lines = [];
     this.total = 0;
   }
 
-  // ==================== items/lines helpers ====================
+  // ============================================================
+  // Items / lines helpers
+  // ============================================================
   private reconcileLinesWithItems() {
     if (!this.itemsList?.length || !this.lines?.length) return;
     this.lines = this.lines.map(l => {
       const it = this.itemsList.find(ii => +ii.id === +l.itemId!);
+      const prevName = l.itemName || '';
+      const newItemName = it?.itemName ?? l.itemName;
+      // If description was equal to old item name, update it to new item name
+      const shouldOverwriteDesc =
+        !l.description ||
+        l.description.trim().toLowerCase() === prevName.trim().toLowerCase();
+
       return {
         ...l,
-        itemName: it?.itemName ?? l.itemName,
-        uom: it?.uomName ?? l.uom ?? null
+        itemName: newItemName ?? l.itemName,
+        uom: it?.uomName ?? l.uom ?? null,
+        description: shouldOverwriteDesc ? (newItemName ?? l.itemName ?? '') : l.description
       };
     });
   }
@@ -222,9 +246,10 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       qty: null as any,
       unitPrice: 0,
       discountPct: 0,
-      taxCodeId: null
+      taxCodeId: null,
+      description: ''   // editable; can be filled after picking item
     };
-    if (this.isEdit) row.__new = true;
+    if (this.isEdit) row.__new = true; // mark unsaved in edit mode
     this.lines.push(row);
     this.recalc();
   }
@@ -233,10 +258,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     const line = this.lines[index];
     if (!line) return;
 
+    const prevName = line.itemName || '';
     if (!itemId) {
       line.itemId = 0;
       line.itemName = '';
       line.uom = null;
+      // keep user description as-is
       this.recalc();
       return;
     }
@@ -246,10 +273,15 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     line.itemName = it?.itemName ?? line.itemName ?? '';
     line.uom = it?.uomName ?? line.uom ?? null;
 
+    // If description is empty or previously matched the old item name, update from new item name
+    if (!line.description || line.description.trim().toLowerCase() === prevName.trim().toLowerCase()) {
+      line.description = line.itemName;
+    }
+
     this.recalc();
   }
 
-  // create: load open lines from source
+  // Create mode: load from SO/DO open lines
   loadSourceLines(): void {
     if (this.isEdit) return;
     if (!this.sourceId) return;
@@ -271,7 +303,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             qty: r.qtyOpen,
             unitPrice: r.unitPrice,
             discountPct: r.discountPct ?? 0,
-            taxCodeId: r.taxCodeId ?? null
+            taxCodeId: r.taxCodeId ?? null,
+            description: r.itemName // default from item
           })) as UiLine[];
 
           this.reconcileLinesWithItems();
@@ -281,7 +314,9 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ==================== totals ====================
+  // ============================================================
+  // Totals
+  // ============================================================
   lineAmount(r: SiCreateLine): number {
     const q = Number(r.qty || 0);
     const p = Number(r.unitPrice || 0);
@@ -293,16 +328,22 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     this.total = this.lines.reduce((s, r) => s + this.lineAmount(r), 0);
   }
 
-  // ==================== edit: persist lines ====================
+  // ============================================================
+  // Edit: persist lines in place
+  // ============================================================
   onCellChanged(line: UiLine) {
     if (!this.isEdit || !line?.id) { this.recalc(); return; }
     this.api.updateLine(line.id, {
       qty: Number(line.qty || 0),
       unitPrice: Number(line.unitPrice || 0),
       discountPct: Number(line.discountPct || 0),
-      taxCodeId: line.taxCodeId ?? null
+      taxCodeId: line.taxCodeId ?? null,
+      description: (line.description && line.description.trim().length>0) ? line.description : (line.itemName ?? null)
     }).subscribe({
-      next: (r) => { if (!this.isOk(r)) Swal.fire({ icon:'warning', title:'Line update failed', text: r?.message || '' }); this.recalc(); },
+      next: (r) => {
+        if (!this.isOk(r)) Swal.fire({ icon:'warning', title:'Line update failed', text: (r as any)?.message || '' });
+        this.recalc();
+      },
       error: () => Swal.fire({ icon:'error', title:'Failed to update line' })
     });
   }
@@ -316,7 +357,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     const next = () => {
       if (i >= pending.length) {
         Swal.fire({ icon: fail ? 'warning' : 'success', title: fail ? 'Partial' : 'Lines added', text: `${ok} added${fail ? `, ${fail} failed` : ''}` });
-        this.loadForEdit(this.siId!);
+        if (this.siId) this.loadForEdit(this.siId);
         return;
       }
       const l = pending[i++];
@@ -328,7 +369,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         qty: Number(l.qty || 0),
         unitPrice: Number(l.unitPrice || 0),
         discountPct: Number(l.discountPct || 0),
-        taxCodeId: l.taxCodeId ?? null
+        taxCodeId: l.taxCodeId ?? null,
+        description: (l.description && l.description.trim().length>0) ? l.description : (l.itemName ?? null)
       }).subscribe({
         next: (r) => { (this.isOk(r)) ? ok++ : fail++; next(); },
         error: _ => { fail++; next(); }
@@ -340,7 +382,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   removeLine(ix: number): void {
     const row = this.lines[ix];
 
-    // unsaved/new or create mode
+    // Unsaved/new or create mode
     if (!this.isEdit || !row?.id) {
       this.lines.splice(ix, 1);
       this.recalc();
@@ -358,7 +400,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       this.api.removeLine(row.id!).subscribe({
         next: (r) => {
           if (!this.isOk(r)) {
-            Swal.fire({ icon:'error', title:'Failed', text:r?.message || 'Remove failed' });
+            Swal.fire({ icon:'error', title:'Failed', text:(r as any)?.message || 'Remove failed' });
             return;
           }
           this.lines.splice(ix, 1);
@@ -369,15 +411,20 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==================== save ====================
+  // ============================================================
+  // Save
+  // ============================================================
   save(): void {
     if (!this.invoiceDate) {
-       Swal.fire({ icon: 'warning', title: 'Invoice Date is required' });
+      Swal.fire({ icon: 'warning', title: 'Invoice Date is required' });
+      return;
     }
 
+    // CREATE
     if (!this.isEdit) {
       if (!this.sourceId || this.lines.length === 0) {
-         Swal.fire({ icon: 'warning', title: 'Missing data', text: 'Select a source and add at least one line.' });
+        Swal.fire({ icon: 'warning', title: 'Missing data', text: 'Select a source and add at least one line.' });
+        return;
       }
 
       const req: SiCreateRequest = {
@@ -393,7 +440,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           qty: Number(l.qty || 0),
           unitPrice: Number(l.unitPrice || 0),
           discountPct: Number(l.discountPct || 0),
-          taxCodeId: l.taxCodeId ?? null
+          taxCodeId: l.taxCodeId ?? null,
+          description: (l.description && l.description.trim().length>0) ? l.description : (l.itemName ?? null)
         }))
       };
 
@@ -405,7 +453,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               Swal.fire({ icon: 'success', title: 'Created', text: `Invoice #${res.data} created successfully` });
               this.router.navigate(['/Sales/Sales-Invoice-list']);
             } else {
-              Swal.fire({ icon: 'error', title: 'Error', text: res?.message || 'Failed to create' });
+              Swal.fire({ icon: 'error', title: 'Error', text: (res as any)?.message || 'Failed to create' });
             }
           },
           error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to create invoice.' })
@@ -420,12 +468,14 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (r) => {
           if (this.isOk(r)) Swal.fire({ icon: 'success', title: 'Header updated' });
-          else Swal.fire({ icon: 'error', title: 'Update failed', text: r?.message || '' });
+          else Swal.fire({ icon: 'error', title: 'Update failed', text: (r as any)?.message || '' });
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed to update header' })
       });
   }
 
-  // nav
+  // ============================================================
+  // Navigation
+  // ============================================================
   goSIList() { this.router.navigate(['/Sales/Sales-Invoice-list']); }
 }

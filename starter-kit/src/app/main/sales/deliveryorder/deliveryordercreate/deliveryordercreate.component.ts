@@ -176,7 +176,7 @@ export class DeliveryordercreateComponent implements OnInit {
   /* ---------------- Lookups ---------------- */
   private loadDropdowns() {
     // SO list
-    this.soSrv.getSO().subscribe((res: any) => {
+    this.soSrv.getSOByStatus(2).subscribe((res: any) => {
       const arr = res?.data ?? res ?? [];
       this.soList = arr.map((r: any) => ({
         id: Number(r.id ?? r.Id),
