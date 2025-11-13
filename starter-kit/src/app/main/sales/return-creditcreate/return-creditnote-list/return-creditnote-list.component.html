@@ -73,14 +73,34 @@
                                 {{ statusText(row.status) }}
                             </span>
                         </ng-template>
-                    </ngx-datatable-column>           
+                    </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Action" [width]="120">
+                    <ngx-datatable-column name="Action" [width]="140">
                         <ng-template let-row="row" ngx-datatable-cell-template>
                             <!-- Edit -->
-                            <i class="fas fa-pen mr-2" (click)="edit(row)"></i>
+                            <button type="button" class="btn btn-sm" [disabled]="row.status === 2" (click)="edit(row)"
+                                title="Edit" [ngStyle]="{
+        cursor: row.status === 2 ? 'not-allowed' : 'pointer',
+        color: row.status === 2 ? '#9ca3af' : '#2563eb',
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        marginRight: '8px'
+      }">
+                                <i class="fas fa-pen"></i>
+                            </button>
+
                             <!-- Delete -->
-                            <i class="fas fa-trash" (click)="delete(row.id)"></i>
+                            <button type="button" class="btn btn-sm" [disabled]="row.status === 2"
+                                (click)="delete(row.id)" title="Delete" [ngStyle]="{
+        cursor: row.status === 2 ? 'not-allowed' : 'pointer',
+        color: row.status === 2 ? '#d1d5db' : '#dc2626',
+        background: 'transparent',
+        border: 'none',
+        padding: 0
+      }">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </ng-template>
                     </ngx-datatable-column>
 

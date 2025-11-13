@@ -15,11 +15,11 @@
       </h1>
     </div>
 
-    <div class="d-flex gap-2 prl-head-actions">
+    <!-- <div class="d-flex gap-2 prl-head-actions">
       <button class="btn prl-btn-primary" (click)="save()" [disabled]="!creditNoteDate || !doId || lines.length===0">
         {{ isEdit ? 'Update Credit Note' : 'Create Credit Note' }}
       </button>
-    </div>
+    </div> -->
   </div>
 
   <div class="card-body">
@@ -148,9 +148,22 @@
       </table>
     </div>
 
-    <!-- footer: Subtotal only -->
-    <!-- <div class="d-flex justify-content-end mt-2">
-      <div class="fs-6 prl-subtitle"><strong>Subtotal:</strong> {{ subtotal | number:'1.2-2' }}</div>
-    </div> -->
+       <div class="d-flex justify-content-end mt-3 gap-2">
+      <button
+        type="button"
+        class="btn prl-btn-outline"
+        (click)="save(1)"
+        [disabled]="!creditNoteDate || !doId || lines.length===0">
+        Save as Draft
+      </button>
+
+      <button
+        type="button"
+        class="btn prl-btn-primary"
+        (click)="save(2)"
+        [disabled]="!creditNoteDate || !doId || lines.length===0">
+        Save & Approve
+      </button>
+    </div>
   </div>
 </div>
