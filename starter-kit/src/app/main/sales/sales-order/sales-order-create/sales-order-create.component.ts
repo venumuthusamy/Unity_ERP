@@ -149,43 +149,58 @@ userId
      this.userId = localStorage.getItem('id');
   }
 
-  ngOnInit(): void {
-    // 1) Detect mode
-    const idParam = this.route.snapshot.paramMap.get('id');
-    this.editMode = !!idParam;
-    this.routeId = idParam ? Number(idParam) : null;
+ ngOnInit(): void {
+  // 1️⃣ Detect edit mode
+  const idParam = this.route.snapshot.paramMap.get('id');
+  this.editMode = !!idParam;
+  this.routeId = idParam ? Number(idParam) : null;
 
-      if (!this.editMode) {
+  if (!this.editMode) {
     this.soHdr.requestedDate = this.toInputDate(new Date());
-    
   }
 
-    // 2) Load masters
-    this.countriesSvc.getCountry().subscribe((res: any) => {
-      this.countries = (res?.data ?? []).map((c: any) => ({
-        id: Number(c.id ?? c.Id),
-        countryName: String(c.countryName ?? c.CountryName ?? '').trim(),
-        gstPercentage: Number(c.gstPercentage ?? c.GSTPercentage ?? 0)
-      }));
-    });
+  // 2️⃣ Load Country masters
+  this.countriesSvc.getCountry().subscribe((res: any) => {
+    this.countries = (res?.data ?? []).map((c: any) => ({
+      id: Number(c.id ?? c.Id),
+      countryName: String(c.countryName ?? c.CountryName ?? '').trim(),
+      gstPercentage: Number(c.gstPercentage ?? c.GSTPercentage ?? 0),
+    }));
+  });
 
-    forkJoin({
-      quotations: this.quotationSvc.getAll(),
-      customers: this.customerSvc.GetAllCustomerDetails(),
-    }).subscribe((res: any) => {
-      this.quotationList = res.quotations?.data ?? [];
-      this.customers = res.customers?.data ?? [];
+  // 3️⃣ Load quotations, customers, and sales orders together
+  forkJoin({
+    quotations: this.quotationSvc.getAll(),
+    customers: this.customerSvc.GetAllCustomerDetails(),
+    salesOrders: this.salesOrderService.getSO(), // ✅ Added
+  }).subscribe((res: any) => {
+    const allQuotations = res.quotations?.data ?? [];
+    const allCustomers = res.customers?.data ?? [];
+    const allSalesOrders = res.salesOrders?.data ?? [];
 
-      this.filteredLists.quotationNo = [...this.quotationList];
-      this.filteredLists.customer = [...this.customers];
-      this.filteredLists.warehouse = [...this.warehousesMaster];
+    // 🧮 Extract quotation numbers already used in sales orders
+    const usedQuotationNos = allSalesOrders
+      .map((so: any) => so.quotationNo)
+      .filter((no: any) => no); // remove null or undefined
 
-      // 3) If edit mode, load existing SO by id
-      if (this.editMode && this.routeId) {
-        this.loadSOForEdit(this.routeId);
-      }
-    });
-  }
+    // 🚫 Filter out quotations already used in sales orders
+    this.quotationList = allQuotations.filter(
+      (q: any) => !usedQuotationNos.includes(q.id) && !usedQuotationNos.includes(q.number)
+    );
+
+    // Assign filtered results
+    this.customers = allCustomers;
+    this.filteredLists.quotationNo = [...this.quotationList];
+    this.filteredLists.customer = [...this.customers];
+    this.filteredLists.warehouse = [...this.warehousesMaster];
+
+    // 4️⃣ If edit mode, load existing Sales Order
+    if (this.editMode && this.routeId) {
+      this.loadSOForEdit(this.routeId);
+    }
+  });
+}
+
 
   /* ======== helpers for amounts ======== */
   private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
