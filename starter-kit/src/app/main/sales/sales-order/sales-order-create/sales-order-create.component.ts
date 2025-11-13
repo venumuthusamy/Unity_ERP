@@ -134,7 +134,7 @@ export class SalesOrderCreateComponent implements OnInit {
   /* ============ Preview ============ */
   showPreview = false;
   previewData: PreviewLine[] = [];
-
+userId
   countries: any[] = [];
 
   constructor(
@@ -143,8 +143,11 @@ export class SalesOrderCreateComponent implements OnInit {
     private customerSvc: CustomerMasterService,
     private quotationSvc: QuotationsService,
     private countriesSvc: CountriesService,
-    private salesOrderService: SalesOrderService
-  ) {}
+    private salesOrderService: SalesOrderService,
+    
+  ) {
+     this.userId = localStorage.getItem('id');
+  }
 
   ngOnInit(): void {
     // 1) Detect mode
@@ -154,6 +157,7 @@ export class SalesOrderCreateComponent implements OnInit {
 
       if (!this.editMode) {
     this.soHdr.requestedDate = this.toInputDate(new Date());
+    
   }
 
     // 2) Load masters
@@ -568,6 +572,8 @@ export class SalesOrderCreateComponent implements OnInit {
       gstPct: Number(this.soHdr.gstPct || 0),
       status: this.soHdr.status,
       customerName: this.searchTexts.customer,
+      createdBy:this.userId,
+      updatedBy:this.userId,
 
       lineItems: this.soLines.map(l => ({
         id: l.__id || 0,                               // ← existing lines keep their id; new = 0
@@ -578,7 +584,9 @@ export class SalesOrderCreateComponent implements OnInit {
         unitPrice: Number(l.unitPrice) || 0,
         discount: Number(l.discount) || 0,
         tax: l.tax || null,
-        total: Number(l.total) || 0
+        total: Number(l.total) || 0,
+         createdBy:this.userId,
+      updatedBy:this.userId
       })),
 
       totals: this.totals
