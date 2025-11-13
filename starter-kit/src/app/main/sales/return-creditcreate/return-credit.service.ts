@@ -21,6 +21,9 @@ export interface CnLine {
   lineNet: number;           // computed client-side, persisted
   reasonId?: number | null;
   restockDispositionId?: number | null;
+  warehouseId:number,
+  supplierId:number,
+  binId:number
 }
 
 export interface CnHeader {

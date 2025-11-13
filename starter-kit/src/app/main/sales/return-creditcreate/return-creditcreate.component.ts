@@ -20,6 +20,9 @@ type DoItem = {
   unitPrice: number;
   discountPct: number;
   taxCodeId?: number | null;
+  warehouseId: number;
+  supplierId: number;
+  binId: number;
 };
 
 @Component({
@@ -46,7 +49,7 @@ export class ReturnCreditcreateComponent implements OnInit {
   // header fields
   doId: number | null = null;
   doNumber: string | null = null;
-  siId :number | null = null;
+  siId: number | null = null;
   siNumber: string | null = null;
   customerId: number | null = null;
   customerName: string | null = null;
@@ -115,8 +118,8 @@ export class ReturnCreditcreateComponent implements OnInit {
         this.cnNo = data.creditNoteNo;
         this.doId = data.doId;
         this.doNumber = data.doNumber;
-        this.siId= data.siId, 
-        this.siNumber = data.siNumber;
+        this.siId = data.siId,
+          this.siNumber = data.siNumber;
         this.customerId = data.customerId;
         this.customerName = data.customerName;
         this.creditNoteDate = this.toDateInput(data.creditNoteDate);
@@ -125,7 +128,7 @@ export class ReturnCreditcreateComponent implements OnInit {
         this.lines = (data.lines ?? []).map((l: any) => ({
           id: l.id,
           creditNoteId: l.creditNoteId,
-          doLineId: l.doLineId,         
+          doLineId: l.doLineId,
           siId: l.siId,
           itemId: l.itemId,
           itemName: l.itemName,
@@ -137,7 +140,10 @@ export class ReturnCreditcreateComponent implements OnInit {
           taxCodeId: l.taxCodeId,
           lineNet: +l.lineNet,
           reasonId: l.reasonId,
-          restockDispositionId: l.restockDispositionId
+          restockDispositionId: l.restockDispositionId,
+          warehouseId: l.warehouseId,
+          supplierId: l.supplierId,
+          binId: l.binId
         }));
         this.recalcAll();
       }
@@ -145,22 +151,43 @@ export class ReturnCreditcreateComponent implements OnInit {
   }
 
   private toDateInput(v: any) {
-    if (!v) return new Date().toISOString().slice(0, 10);
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10);
+    if (!v) return this.today();
+
+    // Parse 'YYYY-MM-DD' as local date; otherwise fall back to Date(...)
+    const d = typeof v === 'string'
+      ? this.parseLocalYmd(v)
+      : new Date(v);
+
+    if (isNaN(d.getTime())) return this.today();
+    return this.formatYmdLocal(d);
   }
 
+  private parseLocalYmd(s: string): Date {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s);
+  }
+
+  private formatYmdLocal(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  private today(): string {
+    return this.formatYmdLocal(new Date());
+  }
   onDoChanged() {
     const row = this.doList.find(d => +d.id === +this.doId!);
     if (!row) { this.clearHeaderFromDo(); return; }
 
     // header bindings
     this.doNumber = row.doNumber ?? row.DoNumber ?? '';
-    this.siNumber = row.siNumber ?? row.invoiceNo ?? row.SiNumber ?? ''; 
+    this.siNumber = row.siNumber ?? row.invoiceNo ?? row.SiNumber ?? '';
     this.siId = row.siId
     this.customerId = row.customerId;
     this.customerName = this.customers?.find(c => c.customerId == this.customerId)?.customerName ?? '';
-   
+
 
     // load DO lines -> only to the "pool", NOT table
     this.api.getLines(this.doId).subscribe({
@@ -174,7 +201,10 @@ export class ReturnCreditcreateComponent implements OnInit {
           deliveredQty: + (r.QtyDelivered ?? r.qty ?? 0),
           unitPrice: + (r.UnitPrice ?? 0),
           discountPct: + (r.DiscountPct ?? 0),
-          taxCodeId: r.TaxCodeId ?? null
+          taxCodeId: r.TaxCodeId ?? null,
+          warehouseId: r.WarehouseId,
+          supplierId: r.SupplierId,
+          binId: r.BinId
         })) as DoItem[];
 
         // start with empty table; user will pick items via Add Line
@@ -190,14 +220,14 @@ export class ReturnCreditcreateComponent implements OnInit {
   private clearHeaderFromDo() {
     this.doNumber = null; this.siNumber = null;
     this.customerId = null; this.customerName = null;
-    
+
   }
 
   addLine() {
     // blank row waiting for item selection from the restricted list
     this.lines.push({
       doLineId: null as any,
-      siId:0,
+      siId: 0,
       itemId: 0,
       itemName: '',
       uom: null,
@@ -208,11 +238,15 @@ export class ReturnCreditcreateComponent implements OnInit {
       taxCodeId: null,
       lineNet: 0,
       reasonId: null,
-      restockDispositionId: 1
+      restockDispositionId: 1,
+      warehouseId: 0,
+      supplierId: 0,
+      binId: 0
     });
     this.refreshAvailable();
   }
   onItemPicked(ix: number, pickedItemId: number | null) {
+    debugger
     const row = this.lines[ix]; if (!row) return;
 
     if (!pickedItemId) {
@@ -234,8 +268,11 @@ export class ReturnCreditcreateComponent implements OnInit {
     row.unitPrice = src.unitPrice;
     row.discountPct = src.discountPct ?? 0;
     row.taxCodeId = src.taxCodeId ?? null;
+    row.warehouseId = src.warehouseId,
+      row.supplierId = src.supplierId,
+      row.binId = src.binId,
 
-    this.refreshAvailable();
+      this.refreshAvailable();
     this.recalc(ix);
   }
 
@@ -264,6 +301,7 @@ export class ReturnCreditcreateComponent implements OnInit {
   }
 
   save() {
+    debugger
     if (!this.creditNoteDate) { Swal.fire({ icon: 'warning', title: 'Credit note date required' }); return; }
     if (!this.doId) { Swal.fire({ icon: 'warning', title: 'Select a Delivery Order' }); return; }
     if (this.lines.length === 0) { Swal.fire({ icon: 'warning', title: 'Add at least one line' }); return; }
@@ -272,7 +310,7 @@ export class ReturnCreditcreateComponent implements OnInit {
       ...(this.isEdit && this.cnId ? { id: this.cnId } : {}),
       doId: this.doId,
       doNumber: this.doNumber ?? null,
-      siId: this.siId, 
+      siId: this.siId,
       siNumber: this.siNumber ?? null,
       customerId: this.customerId ?? null,
       customerName: this.customerName ?? null,
@@ -280,9 +318,9 @@ export class ReturnCreditcreateComponent implements OnInit {
       status: this.status,
       subtotal: this.subtotal,
       lines: this.lines.map(l => ({
-        id:l.id?l.id:0,
+        id: l.id ? l.id : 0,
         doLineId: l.doLineId ?? null,
-        siId:l.siId,
+        siId: l.siId,
         itemId: l.itemId,
         itemName: l.itemName,
         uom: l.uom ?? null,
@@ -293,7 +331,10 @@ export class ReturnCreditcreateComponent implements OnInit {
         taxCodeId: l.taxCodeId ?? null,
         lineNet: +l.lineNet,
         reasonId: l.reasonId ?? null,
-        restockDispositionId: l.restockDispositionId ?? 1
+        restockDispositionId: l.restockDispositionId ?? 1,
+        warehouseId: l.warehouseId,
+        supplierId: l.supplierId,
+        binId: l.binId
       }))
     };
 
@@ -308,7 +349,7 @@ export class ReturnCreditcreateComponent implements OnInit {
     } else if (this.cnId) {
       this.api.updateCreditNote(payload).subscribe({
         next: (r: any) => {
-          if (r?.isSuccess) { Swal.fire({ icon: 'success', title: 'Header updated' });this.router.navigate(['/Sales/Return-credit-list']);}
+          if (r?.isSuccess) { Swal.fire({ icon: 'success', title: 'Header updated' }); this.router.navigate(['/Sales/Return-credit-list']); }
           else Swal.fire({ icon: 'error', title: 'Update failed', text: r?.message || '' });
         },
         error: _ => Swal.fire({ icon: 'error', title: 'Update failed' })
