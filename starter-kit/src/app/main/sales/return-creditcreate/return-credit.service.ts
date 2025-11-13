@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { environment } from 'environments/environment';
@@ -46,11 +46,14 @@ export type DoItem = {
   doLineId: number;
   itemId: number;
   itemName: string;
-  uom: string | null;
-  qtyDelivered: number;   // or QtyDelivered from API (we’ll map)
+  uom?: string | null;
+  deliveredQty: number;    // <= this will hold the REMAINING qty
   unitPrice: number;
   discountPct: number;
-  taxCodeId: number | null;
+  taxCodeId?: number | null;
+  warehouseId?: number | null;
+  supplierId?: number | null;
+  binId?: number | null;
 };
 
 @Injectable({
@@ -83,9 +86,10 @@ export class CreditNoteService {
     return this.http.delete<any>(this.url + CrdeitNoteApiUrls.DeleteCreditNote + id);
   }
 
-  getLines(doId: number): Observable<DoItem[]> {
-    return this.http.get<any>(`${this.url}/CreditNote/do-lines/${doId}`);
-
+   getLines(doId: number, excludeCnId?: number | null): Observable<any> {
+    let params = new HttpParams();
+    if (excludeCnId) params = params.set('excludeCnId', String(excludeCnId));
+    return this.http.get(`${this.url}/CreditNote/dolines/${doId}`, { params });
   }
 
 }

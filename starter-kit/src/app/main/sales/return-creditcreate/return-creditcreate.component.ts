@@ -105,9 +105,17 @@ export class ReturnCreditcreateComponent implements OnInit {
   ngOnDestroy() { this.destroy$.next(); this.destroy$.complete(); }
 
   private refreshAvailable() {
-    const used = new Set(this.lines.filter(x => x.itemId).map(x => +x.itemId));
-    this.availableItems = this.doPool.filter(p => !used.has(p.itemId));
+    const used = new Set(
+      this.lines
+        .filter(x => x?.doLineId != null)
+        .map(x => `${x.doLineId}|${x.itemId}|${x.warehouseId}|${x.supplierId}|${x.binId ?? 'null'}`)
+    );
+
+    this.availableItems = this.doPool.filter(p =>
+      !used.has(`${p.doLineId}|${p.itemId}|${p.warehouseId}|${p.supplierId}|${p.binId ?? 'null'}`)
+    );
   }
+
 
 
   private loadForEdit(id: number) {
@@ -190,7 +198,7 @@ export class ReturnCreditcreateComponent implements OnInit {
 
 
     // load DO lines -> only to the "pool", NOT table
-    this.api.getLines(this.doId).subscribe({
+    this.api.getLines(this.doId, this.isEdit ? this.cnId : null).subscribe({
       next: (res: any) => {
         const raw = Array.isArray(res) ? res : [];
         this.doPool = raw.map((r: any) => ({
@@ -198,22 +206,27 @@ export class ReturnCreditcreateComponent implements OnInit {
           itemId: +r.ItemId,
           itemName: r.ItemName,
           uom: r.Uom ?? 'Pieces',
-          deliveredQty: + (r.QtyDelivered ?? r.qty ?? 0),
-          unitPrice: + (r.UnitPrice ?? 0),
-          discountPct: + (r.DiscountPct ?? 0),
+          deliveredQty: +(
+            r.QtyRemaining   // ✅ use remaining from API
+            ?? r.QtyDelivered // fallback if you call old API
+            ?? r.qty
+            ?? 0
+          ),
+          unitPrice: +(r.UnitPrice ?? 0),
+          discountPct: +(r.DiscountPct ?? 0),
           taxCodeId: r.TaxCodeId ?? null,
-          warehouseId: r.WarehouseId,
-          supplierId: r.SupplierId,
-          binId: r.BinId
+          warehouseId: r.WarehouseId ?? null,
+          supplierId: r.SupplierId ?? null,
+          binId: r.BinId ?? null
         })) as DoItem[];
 
-        // start with empty table; user will pick items via Add Line
         this.lines = [];
         this.subtotal = 0;
         this.refreshAvailable();
       },
       error: _ => Swal.fire({ icon: 'error', title: 'Failed', text: 'Load DO lines' })
     });
+
   }
 
 
@@ -246,15 +259,9 @@ export class ReturnCreditcreateComponent implements OnInit {
     this.refreshAvailable();
   }
   onItemPicked(ix: number, pickedItemId: number | null) {
-    debugger
     const row = this.lines[ix]; if (!row) return;
 
-    if (!pickedItemId) {
-      row.itemId = 0; row.itemName = ''; row.uom = null;
-      row.deliveredQty = 0; row.returnedQty = 0; row.unitPrice = 0;
-      row.discountPct = 0; row.taxCodeId = null; row.lineNet = 0;
-      this.refreshAvailable(); this.recalc(ix); return;
-    }
+    if (!pickedItemId) { /* clear row… */ return; }
 
     const src = this.doPool.find(p => +p.itemId === +pickedItemId);
     if (!src) return;
@@ -263,16 +270,18 @@ export class ReturnCreditcreateComponent implements OnInit {
     row.itemId = src.itemId;
     row.itemName = src.itemName;
     row.uom = src.uom ?? 'Pieces';
-    row.deliveredQty = src.deliveredQty;
+    row.deliveredQty = src.deliveredQty;   // ✅ remaining
     row.returnedQty = 0;
     row.unitPrice = src.unitPrice;
     row.discountPct = src.discountPct ?? 0;
     row.taxCodeId = src.taxCodeId ?? null;
-    row.warehouseId = src.warehouseId,
-      row.supplierId = src.supplierId,
-      row.binId = src.binId,
 
-      this.refreshAvailable();
+    // carry keys (needed for stock update logic)
+    row.warehouseId = src.warehouseId ?? null;
+    row.supplierId = src.supplierId ?? null;
+    row.binId = src.binId ?? null;
+
+    this.refreshAvailable();
     this.recalc(ix);
   }
 
@@ -300,7 +309,8 @@ export class ReturnCreditcreateComponent implements OnInit {
     this.lines.forEach((_, i) => this.recalc(i));
   }
 
-  save() {
+  save(status) {
+    this.status = status
     debugger
     if (!this.creditNoteDate) { Swal.fire({ icon: 'warning', title: 'Credit note date required' }); return; }
     if (!this.doId) { Swal.fire({ icon: 'warning', title: 'Select a Delivery Order' }); return; }
