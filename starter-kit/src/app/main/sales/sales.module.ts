@@ -29,6 +29,7 @@ import { ReportsDeliveriesComponent } from './reportscreate/reports-deliveries/r
 import { ReportsFiltersComponent } from './reportscreate/reports-filters/reports-filters.component';
 import { CoreCommonModule } from '@core/common.module';
 import { CoreSidebarModule } from '@core/components';
+ import { ReturnCreditnoteListComponent } from './return-creditcreate/return-creditnote-list/return-creditnote-list.component';
 
 const routes = [
   {
@@ -96,11 +97,23 @@ const routes = [
     component: ReportscreateComponent,
     data: { animation: 'ReportscreateComponent' }
   },
+   {
+    path: 'Return-credit-list',
+    component: ReturnCreditnoteListComponent,
+    data: { animation: 'ReturnCreditcreateComponent' }
+  },
     {
     path: 'Return-credit-create',
     component: ReturnCreditcreateComponent,
     data: { animation: 'ReturnCreditcreateComponent' }
   },
+  
+{
+    path: 'Return-credit-edit/:id',
+    component: ReturnCreditcreateComponent,
+    data: { animation: 'ReturnCreditcreateComponent' }
+  },
+
     {
     path: 'sales-Invoice-create',
     component: SalesInvoicecreateComponent,
@@ -158,6 +171,7 @@ const routes = [
     ReportsAvarageMarginComponent,
     ReportsDeliveriesComponent,
     ReportsFiltersComponent,
+     ReturnCreditnoteListComponent,
   ],
   imports: [
     CommonModule,
