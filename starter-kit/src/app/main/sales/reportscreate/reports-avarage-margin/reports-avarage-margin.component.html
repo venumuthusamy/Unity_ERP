@@ -5,7 +5,7 @@
 
         <div class="row">
           <!-- Title + page size -->
-          <div class="col-md-6 col-12">
+          <div class="col-md-3 col-12">
             <h4 class="card-text page-title">
               Average Margin Reports
             </h4>
@@ -24,7 +24,7 @@
           </div>
 
           <!-- Search + Sort + Filter buttons -->
-          <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+          <div class="col-md-9 col-12 d-flex justify-content-start justify-content-md-end">
             <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
 
               <!-- Search -->
@@ -49,7 +49,6 @@
                   [(ngModel)]="sortBy"
                   (change)="onSortChange()">
                   <option value="">None</option>
-                  <option value="salesInvoiceDate">Invoice Date</option>
                   <option value="customerName">Customer Name</option>
                   <option value="netSales">Net Sales</option>
                   <option value="marginAmount">Margin (Value)</option>
@@ -99,7 +98,7 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Invoice Date" prop="invoiceDate" [width]="140">
+          <ngx-datatable-column name="Invoice Date" prop="salesInvoiceDate" [width]="140">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.salesInvoiceDate | date:'dd-MM-yyyy' }}
             </ng-template>
