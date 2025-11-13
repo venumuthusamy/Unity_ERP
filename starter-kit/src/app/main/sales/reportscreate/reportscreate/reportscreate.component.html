@@ -2,7 +2,7 @@
   <div class="content-body">
     <div class="row g-3 metrics-row">
 
-      <!-- Total Sales -->
+      <!-- Total Sales (Quantity Sold) -->
       <div class="col-md-4">
         <div
           class="card h-100 text-center metric-card clickable"
@@ -12,8 +12,10 @@
             <div class="metric-icon">
               <i data-feather="shopping-cart"></i>
             </div>
-            <h4 class="metric-title">10000</h4>
-            <div class="metric-subtitle">Total Sales</div>
+            <h4 class="metric-title">
+              {{ totalQuantitySold | number:'1.0-0' }}
+            </h4>
+            <div class="metric-subtitle">Total Quantity Sold</div>
           </div>
         </div>
       </div>
@@ -28,7 +30,9 @@
             <div class="metric-icon">
               <i data-feather="trending-up"></i>
             </div>
-            <h4 class="metric-title">18.5%</h4>
+            <h4 class="metric-title">
+              {{ averageMarginPct | number:'1.1-1' }}%
+            </h4>
             <div class="metric-subtitle">Average Margin</div>
           </div>
         </div>
@@ -44,7 +48,9 @@
             <div class="metric-icon">
               <i data-feather="clock"></i>
             </div>
-            <h4 class="metric-title">72.*%</h4>
+            <h4 class="metric-title">
+              {{ onTimeDeliveryPct | number:'1.1-1' }}%
+            </h4>
             <div class="metric-subtitle">On-Time Delivery</div>
           </div>
         </div>

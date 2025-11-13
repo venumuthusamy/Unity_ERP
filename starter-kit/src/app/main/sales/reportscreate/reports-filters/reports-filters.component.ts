@@ -1,7 +1,7 @@
+// reports-filters.component.ts
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgForm } from '@angular/forms';
 
-/* --- Types --- */
 export type DateRangeValue =
   | 'today' | 'yesterday'
   | 'last7' | 'last30'
@@ -12,11 +12,11 @@ export interface FilterModel {
   dateRange: DateRangeValue | null;
   fromDate: string | null;
   toDate: string | null;
-  customerId: number | null;
-  branchId: number | null;
+  customerId: string | null;    // <-- changed to string | null (we won’t use here)
+  branchId: string | null;      // location name
   status: string | null;
-  salespersonId: number | null;
-  categoryId: number | null;
+  salespersonId: string | null; // salesperson name
+  categoryId: string | null;    // category name
 }
 
 export interface FilterApplyPayload extends FilterModel {
@@ -30,32 +30,22 @@ export interface FilterApplyPayload extends FilterModel {
   styleUrls: ['./reports-filters.component.scss']
 })
 export class ReportsFiltersComponent implements OnInit {
-  /* Outputs */
-  @Output() saved = new EventEmitter<FilterApplyPayload>();
+  /* What fields to show for this report */
+  @Input() showCustomer    = false; // not used for "Sales by Item"
+  @Input() showBranch      = true;
+  @Input() showStatus      = false;
+  @Input() showSalesperson = true;
+  @Input() showCategory    = true;
+
+  /* Lookup lists coming from parent (dynamic from API) */
+  @Input() customers:   Array<{ id: string; name: string }> = [];
+  @Input() branches:    Array<{ id: string; name: string }> = [];
+  @Input() salespersons:Array<{ id: string; name: string }> = [];
+  @Input() categories:  Array<{ id: string; name: string }> = [];
+  @Input() statuses:    Array<{ value: string; label: string }> = [];
+
+  @Output() saved    = new EventEmitter<FilterApplyPayload>();
   @Output() canceled = new EventEmitter<void>();
-
-  /* If you want to feed lists from parent, keep these @Input()s.
-     Otherwise the defaults below will work for now. */
-  @Input() customers: Array<{ id: number; name: string }> = [
-    { id: 1, name: 'Alpha Co' }, { id: 2, name: 'Beta Traders' }
-  ];
-  @Input() branches: Array<{ id: number; name: string }> = [
-    { id: 10, name: 'Chennai' }, { id: 11, name: 'Coimbatore' }
-  ];
-  @Input() salespersons: Array<{ id: number; name: string }> = [
-    { id: 100, name: 'Ravi' }, { id: 101, name: 'Meena' }
-  ];
-  @Input() categories: Array<{ id: number; name: string }> = [
-    { id: 201, name: 'Electronics' }, { id: 202, name: 'FMCG' }
-  ];
-  @Input() statuses: Array<{ value: string; label: string }> = [
-    { value: 'draft',    label: 'Draft' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'posted',   label: 'Posted' },
-    { value: 'cancel',   label: 'Cancelled' }
-  ];
-
-  brand = '#2E5F73';
 
   dateRangeOptions: Array<{ value: DateRangeValue; label: string }> = [
     { value: 'today',     label: 'Today' },
@@ -67,7 +57,6 @@ export class ReportsFiltersComponent implements OnInit {
     { value: 'custom',    label: 'Custom Range' }
   ];
 
-  /* === This matches your HTML bindings === */
   filterModel: FilterModel = {
     dateRange: 'last30',
     fromDate: null,
@@ -83,9 +72,8 @@ export class ReportsFiltersComponent implements OnInit {
 
   ngOnInit(): void {}
 
-  toggleSidebar(id: string) {
-    console.debug('toggleSidebar:', id);
-    // integrate with your layout service if needed
+  private toggleSidebar(name: string) {
+    // integrate with your CoreSidebarService if you want, or just let parent close it
   }
 
   onSubmit(form: NgForm) {
@@ -100,12 +88,12 @@ export class ReportsFiltersComponent implements OnInit {
 
     const payload = this.resolveRange(this.filterModel);
     this.saved.emit(payload);
-    this.toggleSidebar('new-user-sidebar'); // same id you already close
+    this.toggleSidebar('reports-filters-sidebar');
   }
 
   onCancel() {
     this.canceled.emit();
-    this.toggleSidebar('new-user-sidebar');
+    this.toggleSidebar('reports-filters-sidebar');
   }
 
   onReset() {
@@ -135,14 +123,50 @@ export class ReportsFiltersComponent implements OnInit {
     const lastDayLastMonth  = new Date(today.getFullYear(), today.getMonth(), 0);
 
     switch (model.dateRange) {
-      case 'today':      startDate = endDate = ymd(today); break;
-      case 'yesterday': { const d = new Date(today); d.setDate(d.getDate() - 1); startDate = endDate = ymd(d); break; }
-      case 'last7':     { const d = new Date(today); d.setDate(d.getDate() - 6); startDate = ymd(d); endDate = ymd(today); break; }
-      case 'last30':    { const d = new Date(today); d.setDate(d.getDate() - 29); startDate = ymd(d); endDate = ymd(today); break; }
-      case 'thisMonth':  startDate = ymd(firstDayThisMonth); endDate = ymd(lastDayThisMonth); break;
-      case 'lastMonth':  startDate = ymd(firstDayLastMonth); endDate = ymd(lastDayLastMonth); break;
-      case 'custom':     startDate = model.fromDate; endDate = model.toDate; break;
-      default:           startDate = null; endDate = null; break;
+      case 'today': {
+        startDate = endDate = ymd(today);
+        break;
+      }
+      case 'yesterday': {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 1);
+        startDate = endDate = ymd(d);
+        break;
+      }
+      case 'last7': {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 6);
+        startDate = ymd(d);
+        endDate   = ymd(today);
+        break;
+      }
+      case 'last30': {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 29);
+        startDate = ymd(d);
+        endDate   = ymd(today);
+        break;
+      }
+      case 'thisMonth': {
+        startDate = ymd(firstDayThisMonth);
+        endDate   = ymd(lastDayThisMonth);
+        break;
+      }
+      case 'lastMonth': {
+        startDate = ymd(firstDayLastMonth);
+        endDate   = ymd(lastDayLastMonth);
+        break;
+      }
+      case 'custom': {
+        startDate = model.fromDate;
+        endDate   = model.toDate;
+        break;
+      }
+      default: {
+        startDate = null;
+        endDate   = null;
+        break;
+      }
     }
 
     return { ...model, startDate, endDate };

@@ -1,132 +1,220 @@
-import { Component, OnInit } from '@angular/core';
-import { CoreSidebarComponent } from '@core/components/core-sidebar/core-sidebar.component';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  ViewEncapsulation
+} from '@angular/core';
+import feather from 'feather-icons';
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 import { ReportsService } from '../reports.service';
+import { FilterApplyPayload } from '../reports-filters/reports-filters.component';
 
-declare const feather: any;
-
-type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'AED' | string;
-
-interface ReportRow {
-  invoiceNo: string;
-  invoiceDate: Date | string;
-  customerName: string;
-  itemName: string;
-  category: string;
-  netSales: number;
-  costOfSales: number;
-  marginValue: number;
-  marginPct: number;
-  currency: CurrencyCode;
-  branch: string;
-  company: string;
-  salesperson: string;
-}
 @Component({
   selector: 'app-reports-avarage-margin',
   templateUrl: './reports-avarage-margin.component.html',
-  styleUrls: ['./reports-avarage-margin.component.scss']
+  styleUrls: ['./reports-avarage-margin.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
-export class ReportsAvarageMarginComponent implements OnInit {
+export class ReportsAvarageMarginComponent implements OnInit, AfterViewInit {
 
-   // table data
-  rows: ReportRow[] = [];
-  allRows: ReportRow[] = [];
+  rows: any[] = [];          // shown in table after filter + sort + search
+  filteredRows: any[] = [];  // after filter + sort (no search)
+  allRows: any[] = [];       // original data from API
 
-  // paging + search
   selectedOption = 10;
   searchValue = '';
 
-  // filters
-  dateFrom?: string; // yyyy-MM-dd
-  dateTo?: string;   // yyyy-MM-dd
-  branchFilter = '';
-  companyFilter = '';
-  salespersonFilter = '';
-  currencyFilter = '';
+  // dropdown data
+  customers:   Array<{ id: string; name: string }> = [];
+  branches:    Array<{ id: string; name: string }> = [];
+  salespersons:Array<{ id: string; name: string }> = [];
+
+  lastFilters: FilterApplyPayload | null = null;
+
+  // ==== SORT STATE ====
+  // keys must match row property names coming from backend
+  sortBy:
+    | ''
+    | 'salesInvoiceDate'
+    | 'customerName'
+    | 'netSales'
+    | 'marginAmount'
+    | 'marginPct'
+    | 'location' = '';
+
+  sortDir: 'asc' | 'desc' = 'asc';
 
   constructor(
-    private _coreSidebarService: CoreSidebarService,
-    private _salesReportService:ReportsService
+    private _sidebarService: CoreSidebarService,
+    private _reportsService: ReportsService
   ) {}
 
   ngOnInit(): void {
-    this.loadSalesMarginReport();
-    // this.loadMockData();
-    // this.applyFilters();
+    this.loadAverageMarginReport();
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      if (typeof feather !== 'undefined' && feather?.replace) feather.replace();
-    }, 0);
+    setTimeout(() => feather.replace(), 0);
   }
 
   onLimitChange(event: any) {
     this.selectedOption = +event.target.value;
   }
 
- toggleSidebar(name): void {
-    this._coreSidebarService.getSidebarRegistry(name).toggleOpen();
+  filterUpdate(event: any) {
+    const val = (event.target.value || '').toLowerCase();
+    this.searchValue = val;
+
+    this.rows = this.filteredRows.filter((r: any) =>
+      Object.values(r).some(v => v != null && String(v).toLowerCase().includes(val))
+    );
   }
 
-
-  clearFilters() {
-    this.searchValue = '';
-    this.dateFrom = undefined;
-    this.dateTo = undefined;
-    this.branchFilter = '';
-    this.companyFilter = '';
-    this.salespersonFilter = '';
-    this.currencyFilter = '';
-    this.applyFilters();
+  toggleSidebar(name: string): void {
+    this._sidebarService.getSidebarRegistry(name).toggleOpen();
   }
 
-  filterUpdate(event?: any) {
-    this.searchValue = event?.target?.value ?? this.searchValue ?? '';
-    this.applyFilters();
+  openFilters() {
+    this.toggleSidebar('reports-filters-sidebar');
   }
 
-  applyFilters() {
-    const search = (this.searchValue || '').toLowerCase();
-    const df = this.dateFrom ? new Date(this.dateFrom) : undefined;
-    const dt = this.dateTo ? new Date(this.dateTo) : undefined;
-    if (dt) { dt.setHours(23,59,59,999); }
+  // === called from <app-reports-filters> ===
+  onFiltersApplied(payload: FilterApplyPayload) {
+    this.lastFilters = payload;
+    this.applyFiltersSortSearch();
+    this.toggleSidebar('reports-filters-sidebar');
+  }
 
-    this.rows = this.allRows.filter(r => {
-      // quick search across visible fields
-      const hit = [
-        r.invoiceNo, r.customerName, r.itemName, r.category,
-        r.branch, r.company, r.salesperson, r.currency
-      ].some(v => String(v).toLowerCase().includes(search));
+  onFilterCanceled() {
+    this.toggleSidebar('reports-filters-sidebar');
+  }
 
-      if (!hit) return false;
+  // === load data from API ===
+  loadAverageMarginReport() {
+    this._reportsService.GetSalesMarginAsync().subscribe((res: any) => {
+      if (res && res.isSuccess) {
+        this.allRows = res.data || [];
 
-      // date range
-      const invDate = new Date(r.invoiceDate);
-      if (df && invDate < df) return false;
-      if (dt && invDate > dt) return false;
-
-      // dropdown filters
-      if (this.branchFilter && r.branch !== this.branchFilter) return false;
-      if (this.companyFilter && r.company !== this.companyFilter) return false;
-      if (this.salespersonFilter && r.salesperson !== this.salespersonFilter) return false;
-      if (this.currencyFilter && r.currency !== this.currencyFilter) return false;
-
-      return true;
+        this.buildFilterLists();
+        this.applyFiltersSortSearch(); // initial apply (no filters, but sort/search pipeline set up)
+      }
     });
   }
 
-  // unique list helpers for dropdowns
- 
+  // Build lists for customer / branch / salesperson from loaded data
+  private buildFilterLists() {
+    const custSet = new Set<string>();
+    const branchSet = new Set<string>();
+    const spSet = new Set<string>();
 
- 
+    this.allRows.forEach((r: any) => {
+      if (r.customerName) custSet.add(r.customerName);
+      if (r.location)     branchSet.add(r.location);
+      if (r.salesPerson)  spSet.add(r.salesPerson);
+    });
 
-   loadSalesMarginReport(){
-this._salesReportService.GetSalesMarginAsync().subscribe((res:any)=>{
-  if(res.isSuccess){
-    this.rows = res.data;
+    this.customers   = Array.from(custSet).map(c => ({ id: c, name: c }));
+    this.branches    = Array.from(branchSet).map(b => ({ id: b, name: b }));
+    this.salespersons= Array.from(spSet).map(s => ({ id: s, name: s }));
   }
-})
+
+  // ==== SORT HANDLERS ====
+  onSortChange() {
+    this.applyFiltersSortSearch();
+  }
+
+  toggleSortDir() {
+    this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    this.applyFiltersSortSearch();
+  }
+
+  // ==== FILTER + SORT + SEARCH PIPELINE ====
+  private applyFiltersSortSearch() {
+    let data = [...this.allRows];
+
+    // 1) FILTERS
+    if (this.lastFilters) {
+      const f = this.lastFilters;
+
+      // Date range (use SalesInvoiceDate or fallback to CreatedDate)
+      if (f.startDate || f.endDate) {
+        const start = f.startDate ? new Date(f.startDate) : null;
+        const end   = f.endDate   ? new Date(f.endDate)   : null;
+
+        data = data.filter(r => {
+          const dtRaw = r.salesInvoiceDate || r.createdDate;
+          if (!dtRaw) return false;
+          const dt = new Date(dtRaw);
+
+          if (start && dt < start) return false;
+          if (end) {
+            const endPlus = new Date(end);
+            endPlus.setHours(23, 59, 59, 999);
+            if (dt > endPlus) return false;
+          }
+          return true;
+        });
+      }
+
+      // customer filter
+      if (f.customerId) {
+        data = data.filter(r => r.customerName === f.customerId);
+      }
+
+      // branch / location filter
+      if (f.branchId) {
+        data = data.filter(r => r.location === f.branchId);
+      }
+
+      // salesperson filter
+      if (f.salespersonId) {
+        data = data.filter(r => r.salesPerson === f.salespersonId);
+      }
+    }
+
+    // 2) SORT
+    data = this.applySort(data);
+
+    // store filtered + sorted set
+    this.filteredRows = data;
+
+    // 3) SEARCH
+    if (this.searchValue) {
+      const val = this.searchValue.toLowerCase();
+      this.rows = this.filteredRows.filter((r: any) =>
+        Object.values(r).some(v => v != null && String(v).toLowerCase().includes(val))
+      );
+    } else {
+      this.rows = [...this.filteredRows];
+    }
+  }
+
+  private applySort(data: any[]): any[] {
+    if (!this.sortBy) return data; // no sort selected
+
+    const dir = this.sortDir === 'asc' ? 1 : -1;
+
+    return data.sort((a, b) => {
+      const av = a[this.sortBy];
+      const bv = b[this.sortBy];
+
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;   // nulls last
+      if (bv == null) return -1;
+
+      // numeric vs string
+      const aNum = typeof av === 'number' ? av : parseFloat(av);
+      const bNum = typeof bv === 'number' ? bv : parseFloat(bv);
+
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        if (aNum === bNum) return 0;
+        return aNum > bNum ? 1 * dir : -1 * dir;
+      }
+
+      const aStr = String(av).toLowerCase();
+      const bStr = String(bv).toLowerCase();
+      if (aStr === bStr) return 0;
+      return aStr > bStr ? 1 * dir : -1 * dir;
+    });
   }
 }

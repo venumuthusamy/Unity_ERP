@@ -140,13 +140,26 @@
 </ngx-datatable>
 
       </div>
-            <core-sidebar
-    class="modal modal-slide-in sidebar-todo-modal fade"
-    name="reports-filters-sidebar"
-    overlayClass="modal-backdrop"
-  >
-    <app-reports-filters></app-reports-filters>
-  </core-sidebar>
+       <core-sidebar
+  class="modal modal-slide-in sidebar-todo-modal fade"
+  name="reports-filters-sidebar"
+  overlayClass="modal-backdrop"
+>
+  <app-reports-filters
+    [showCustomer]="true"
+    [showBranch]="true"
+    [showStatus]="true"
+    [showSalesperson]="false"
+    [showCategory]="false"
+    [customers]="customers"
+    [branches]="branches"
+    [statuses]="statuses"
+    (saved)="onFiltersApplied($event)"
+    (canceled)="onFilterCanceled()"
+  ></app-reports-filters>
+</core-sidebar>
+
+
     </section>
   </div>
 </div>

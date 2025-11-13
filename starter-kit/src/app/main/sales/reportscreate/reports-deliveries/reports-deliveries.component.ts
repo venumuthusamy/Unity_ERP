@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
+import { FilterApplyPayload } from '../reports-filters/reports-filters.component';
 type DeliveryStatus = 'PLANNED' | 'IN TRANSIT' | 'DELIVERED' | 'DELAYED' | 'CANCELLED';
 
 interface DeliveryRow {
@@ -27,7 +28,13 @@ rows: DeliveryRow[] = [];
 allRows: DeliveryRow[] = []
   selectedOption = 10;
   searchValue = '';
-
+  lastFilters: FilterApplyPayload;
+   customers: Array<{ id: string; name: string }> = [];
+  branches:  Array<{ id: string; name: string }> = [];
+ statuses:  Array<{ value: string; label: string }> = [
+    { value: 'ON_TIME', label: 'On-Time' },
+    { value: 'LATE',    label: 'Late' }
+  ];
   constructor(private _coreSidebarService : CoreSidebarService) { }
 
   ngOnInit(): void {
@@ -63,6 +70,16 @@ statusClass(st: DeliveryStatus): string {
     default: return 'pill';
   }
 }
+ onFiltersApplied(payload: FilterApplyPayload) {
+    this.lastFilters = payload;
+    // TODO: apply filters when your DO report API is ready
+    // for now just close the sidebar
+    this.toggleSidebar('reports-filters-sidebar');
+  }
+
+  onFilterCanceled() {
+    this.toggleSidebar('reports-filters-sidebar');
+  }
 
 // Update your global search (applyFilters or filterUpdate) to search across these fields
 // Example inside applyFilters():
