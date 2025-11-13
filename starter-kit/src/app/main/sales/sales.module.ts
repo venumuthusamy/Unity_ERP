@@ -7,7 +7,7 @@ import { DeliveryordercreateComponent } from './deliveryorder/deliveryordercreat
 import { PermissionscreateComponent } from './permissionscreate/permissionscreate.component';
 import { PickingPackingcreateComponent } from './picking-packingcreate/picing-packing-create/picking-packingcreate.component';
 import { QuotationscreateComponent } from './quotations/quotationscreate/quotationscreate.component';
-import { ReportscreateComponent } from './reportscreate/reportscreate.component';
+
 import { ReturnCreditcreateComponent } from './return-creditcreate/return-creditcreate.component';
 import { SalesInvoicecreateComponent } from './sales-invoicecreate/sales-invoicecreate.component';
 import { SharedcreateComponent } from './sharedcreate/sharedcreate.component';
@@ -22,6 +22,13 @@ import { SalesOrderListComponent } from './sales-order/sales-order-list/sales-or
 import { PickingPackingListComponent } from './picking-packingcreate/picking-packing-list/picking-packing-list.component';
 import { DeliveryorderlistComponent } from './deliveryorder/deliveryorderlist/deliveryorderlist.component';
 import { SalesinvoicelistComponent } from './sales-invoicecreate/salesinvoicelist/salesinvoicelist.component';
+import { ReportscreateComponent } from './reportscreate/reportscreate/reportscreate.component';
+import { ReportsSalesByItemComponent } from './reportscreate/reports-sales-by-item/reports-sales-by-item.component';
+import { ReportsAvarageMarginComponent } from './reportscreate/reports-avarage-margin/reports-avarage-margin.component';
+import { ReportsDeliveriesComponent } from './reportscreate/reports-deliveries/reports-deliveries.component';
+import { ReportsFiltersComponent } from './reportscreate/reports-filters/reports-filters.component';
+import { CoreCommonModule } from '@core/common.module';
+import { CoreSidebarModule } from '@core/components';
 
 const routes = [
   {
@@ -147,6 +154,10 @@ const routes = [
     PickingPackingListComponent,
     DeliveryorderlistComponent,
     SalesinvoicelistComponent,
+    ReportsSalesByItemComponent,
+    ReportsAvarageMarginComponent,
+    ReportsDeliveriesComponent,
+    ReportsFiltersComponent,
   ],
   imports: [
     CommonModule,
@@ -157,6 +168,8 @@ const routes = [
          ReactiveFormsModule,
          SweetAlert2Module.forRoot(),
          NgSelectModule,
+            CoreCommonModule,
+    CoreSidebarModule  
   ]
 })
 export class SalesModule { }
