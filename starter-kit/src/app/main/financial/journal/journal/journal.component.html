@@ -1,0 +1,188 @@
+<div class="content-wrapper container-xxl p-0">
+  <div class="content-body">
+    <div class="row g-3 metrics-row">
+      <div class="col-md-12">
+        <div class="card h-100 journal-card">
+          <div class="card-body">
+
+            <!-- Header: title + buttons -->
+            <div class="journal-header d-flex justify-content-between align-items-center mb-2">
+              <h2 class="journal-title mb-0"
+                  style="color:#2E5F73; font-size:20px; font-weight:600;">
+                Journal
+              </h2>
+
+              <div class="d-flex align-items-center">
+                <!-- Recurring (Outline Button) -->
+                <!-- <button
+                  type="button"
+                  class="btn m-1 d-inline-flex align-items-center justify-content-center"
+                  style="
+                    background-color:transparent;
+                    color:#2E5F73;
+                    gap:6px;
+                    border-radius:8px;
+                    padding:8px 18px;
+                    height:40px;
+                    font-weight:500;
+                    border:2px solid #2E5F73;
+                    min-width:140px;
+                  "
+                  (click)="openRecurring()">
+                  <i class="fas fa-sync-alt" style="font-size:14px;"></i>
+                  <span>Recurring</span>
+                </button> -->
+
+                <!-- New Journal (Solid Button) -->
+                <button
+                  type="button"
+                  class="btn m-1 d-inline-flex align-items-center justify-content-center"
+                  style="
+                    background-color:#2E5F73;
+                    color:white;
+                    gap:6px;
+                    border-radius:8px;
+                    padding:8px 18px;
+                    height:40px;
+                    font-weight:500;
+                    border:2px solid #2E5F73;
+                    min-width:140px;
+                  "
+                  (click)="newJournal()">
+                  <i class="fas fa-plus-circle" style="font-size:14px;"></i>
+                  <span>New Journal</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Fields row -->
+            <div class="row gx-3 gy-3 journal-fields">
+
+              <!-- Journal Date -->
+              <div class="col-md-4 col-sm-6">
+                <label class="form-label mb-25">Journal Date</label>
+                <div class="journal-date-group">
+                  <input
+                    type="date"
+                    class="form-control journal-input"
+                    [(ngModel)]="journalDate"
+                    name="journalDate"
+                    placeholder="dd/mm/yyyy" />
+                  <span class="journal-date-icon">
+                    <i data-feather="calendar"></i>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Reference -->
+              <div class="col-md-4 col-sm-6">
+                <label class="form-label mb-25">Reference</label>
+                <input
+                  type="text"
+                  class="form-control journal-input"
+                  placeholder="e.g. ACCRUAL-SEP"
+                  [(ngModel)]="reference"
+                  name="reference" />
+              </div>
+
+              <!-- Type -->
+              <div class="col-md-4 col-sm-6">
+                <label class="form-label mb-25">Type</label>
+                <ng-select
+                  class="w-100 journal-select"
+                  [items]="journalTypes"
+                  bindLabel="text"
+                  bindValue="value"
+                  [(ngModel)]="selectedType"
+                  name="selectedType"
+                  [clearable]="false"
+                  placeholder="Standard">
+                </ng-select>
+              </div>
+            </div>
+
+            <!-- Journal lines table -->
+            <div class="row mt-3">
+              <div class="col-12">
+<table class="table table-sm journal-table">
+  <thead>
+    <tr>
+      <th class="jt-header"># / Select</th>  <!-- small label change -->
+      <th class="jt-header">Account Name</th>
+      <th class="jt-header">Description</th>
+      <th class="jt-header text-right">Debit</th>
+      <th class="jt-header text-right">Credit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let row of journalList; let i = index">
+      <td>
+        <!-- If MJ, show checkbox; otherwise show index -->
+        <ng-container *ngIf="row.rowType === 'MJ'; else indexCell">
+          <input
+            type="checkbox"
+            [(ngModel)]="row.selected"
+            [ngModelOptions]="{ standalone: true }" />
+        </ng-container>
+        <ng-template #indexCell>
+          {{ i + 1 }}
+        </ng-template>
+      </td>
+
+      <td>{{ row.accountName }}</td>
+      <td>{{ row.description }}</td>
+
+      <td>
+        <input
+          type="number"
+          class="form-control text-right"
+          [(ngModel)]="row.debit"
+          [ngModelOptions]="{ standalone: true }" />
+      </td>
+
+      <td>
+        <input
+          type="number"
+          class="form-control text-right"
+          [(ngModel)]="row.credit"
+          [ngModelOptions]="{ standalone: true }" />
+      </td>
+    </tr>
+
+    <tr *ngIf="!journalList || journalList.length === 0">
+      <td colspan="5" class="text-center text-muted py-3">
+        No journal lines.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<div class="d-flex justify-content-end mt-2">
+  <button
+    type="button"
+    class="btn d-inline-flex align-items-center justify-content-center"
+    style="
+      background-color:#2E5F73;
+      color:white;
+      gap:6px;
+      border-radius:8px;
+      padding:8px 22px;
+      height:40px;
+      font-weight:500;
+      border:2px solid #2E5F73;
+      min-width:140px;
+    "
+    (click)="submit()">
+    <i class="fas fa-check-circle" style="font-size:14px;"></i>
+    <span>Submit</span>
+  </button>
+</div>
+
+              </div>
+            </div>
+
+          </div><!-- card-body -->
+        </div><!-- card -->
+      </div>
+    </div>
+  </div>
+</div>

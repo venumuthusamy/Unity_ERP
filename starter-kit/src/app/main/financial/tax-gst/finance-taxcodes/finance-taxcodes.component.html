@@ -1,0 +1,40 @@
+<!-- app-finance-taxcodes (CHILD inside the tab) -->
+<div class="taxcode-wrap">
+  <div class="taxcode-card">
+
+    <!-- header row with Add button -->
+    <div class="taxcode-header">
+      <h5 class="taxcode-title mb-0">Tax Codes</h5>
+      <button type="button" class="btn btn-add-taxcode" >
+        + Add TaxCode
+      </button>
+    </div>
+
+    <table class="table mb-0 taxcode-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th>Rate</th>
+          <th>Level</th>
+          <th>Type (Input/Output)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of rows">
+          <td>{{ t.name }}</td>
+          <td>{{ t.description }}</td>
+          <td>{{ t.rate }}%</td>
+          <td>Line Level</td>
+          <td>{{ getTypeName(t.typeId) }}</td>
+        </tr>
+
+        <tr *ngIf="!rows || rows.length === 0">
+          <td colspan="5" class="text-center text-muted py-4">
+            No tax codes defined yet.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

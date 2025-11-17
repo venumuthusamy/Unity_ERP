@@ -110,7 +110,10 @@ export const menu: CoreMenu[] = [
     type: 'collapsible',
     icon: 'dollar-sign',
     children: [
-      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount' }
+      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount' },
+      { id: 'journal', title: 'Journal', translate: 'MENU.FINANCIAL.JOURNAL', type: 'item', icon: 'circle', url: '/financial/journal' },
+      { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable' },
+      { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst' }
     ]
   },
 
