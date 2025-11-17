@@ -27,6 +27,8 @@ interface SimpleItem {
   uomId: number;
   catagoryName?: string;
 }
+
+// SiCreateLine already has qty, unitPrice, discountPct, gstPct, tax, taxCodeId, lineAmount etc.
 type UiLine = SiCreateLine & {
   id?: number;             // server line id (edit mode)
   itemName: string;        // label for UI
@@ -79,7 +81,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     private itemsService: ItemsService,
     private router: Router,
     private route: ActivatedRoute
-  ) {}
+  ) { }
 
   // ============================================================
   // Lifecycle
@@ -96,48 +98,48 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         // Load static lookups
         forkJoin({
           taxCodes: this.taxCodeService.getTaxCode(),
-          soList:   this.soSrv.getSOByStatus(3),
-          doList:   this.doSrv.getAll()
+          soList: this.soSrv.getSOByStatus(3),
+          doList: this.doSrv.getAll()
         })
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (bag: any) => {
-            this.taxCodes = Array.isArray(bag?.taxCodes?.data) ? bag.taxCodes.data : [];
-            this.soList   = Array.isArray(bag?.soList?.data)   ? bag.soList.data   : [];
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (bag: any) => {
+              this.taxCodes = Array.isArray(bag?.taxCodes?.data) ? bag.taxCodes.data : [];
+              this.soList = Array.isArray(bag?.soList?.data) ? bag.soList.data : [];
 
-            const doRaw = Array.isArray(bag?.doList) ? bag.doList : [];
-            this.doList = doRaw.map((d: any) => ({
-              ...d,
-              id: +d.id,
-              doNumber: d.doNumber ?? d.DoNumber ?? ''
-            }));
+              const doRaw = Array.isArray(bag?.doList) ? bag.doList : [];
+              this.doList = doRaw.map((d: any) => ({
+                ...d,
+                id: +d.id,
+                doNumber: d.doNumber ?? d.DoNumber ?? ''
+              }));
 
-            // Load items for labels/UOM
-            this.itemsService.getAllItem()
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (ires: any) => {
-                  const raw = ires?.data ?? [];
-                  this.itemsList = raw.map((item: any) => ({
-                    id: Number(item.id ?? item.itemId ?? 0),
-                    itemName: item.itemName ?? item.name ?? '',
-                    itemCode: item.itemCode ?? '',
-                    uomName: item.uomName ?? item.uom ?? '',
-                    uomId: Number(item.uomId ?? item.UomId ?? item.uomid ?? 0),
-                    catagoryName: item.catagoryName
-                  }) as SimpleItem);
+              // Load items for labels/UOM
+              this.itemsService.getAllItem()
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (ires: any) => {
+                    const raw = ires?.data ?? [];
+                    this.itemsList = raw.map((item: any) => ({
+                      id: Number(item.id ?? item.itemId ?? 0),
+                      itemName: item.itemName ?? item.name ?? '',
+                      itemCode: item.itemCode ?? '',
+                      uomName: item.uomName ?? item.uom ?? '',
+                      uomId: Number(item.uomId ?? item.UomId ?? item.uomid ?? 0),
+                      catagoryName: item.catagoryName
+                    }) as SimpleItem);
 
-                  if (this.isEdit && this.siId) {
-                    this.loadForEdit(this.siId);
-                  } else {
-                    this.resetForCreate();
-                  }
-                },
-                error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load items.' })
-              });
-          },
-          error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load initial data.' })
-        });
+                    if (this.isEdit && this.siId) {
+                      this.loadForEdit(this.siId);
+                    } else {
+                      this.resetForCreate();
+                    }
+                  },
+                  error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load items.' })
+                });
+            },
+            error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load initial data.' })
+          });
       });
   }
 
@@ -150,20 +152,60 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Helpers
   // ============================================================
   private toDateInput(val: string | Date | null): string {
-    if (!val) return new Date().toISOString().slice(0,10);
+    if (!val) return new Date().toISOString().slice(0, 10);
     const d = typeof val === 'string' ? new Date(val) : val;
-    return isNaN(d.getTime()) ? new Date().toISOString().slice(0,10) : d.toISOString().slice(0,10);
+    return isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10);
   }
 
   private resetForCreate() {
     this.sourceType = 1;
     this.sourceId = null;
-    this.invoiceDate = new Date().toISOString().slice(0,10);
+    this.invoiceDate = new Date().toISOString().slice(0, 10);
     this.lines = [];
     this.total = 0;
   }
 
   private isOk(res: any) { return res?.isSuccess ?? res?.success; }
+
+  // ============================================================
+  // Tax helper – EXCLUSIVE / INCLUSIVE / EXEMPT
+  // ============================================================
+  private calcLineAmounts(line: UiLine) {
+    const qty  = Number(line.qty || 0);
+    const price = Number(line.unitPrice || 0);
+    const disc  = Number(line.discountPct || 0);
+    const gst   = Number(line.gstPct || 0);
+
+    const mode = (line.tax || 'EXCLUSIVE').toString().toUpperCase();
+    const baseAfterDisc = +(qty * price * (1 - disc / 100)).toFixed(2);
+
+    let net   = baseAfterDisc;
+    let tax   = 0;
+    let gross = baseAfterDisc;
+
+    // EXEMPT or 0% GST -> no tax
+    if (!gst || mode === 'EXEMPT') {
+      tax = 0;
+      gross = net;
+    }
+    // EXCLUSIVE: price is without GST
+    else if (mode === 'EXCLUSIVE') {
+      tax   = +(net * gst / 100).toFixed(2);
+      gross = +(net + tax).toFixed(2);
+    }
+    // INCLUSIVE: price already includes GST
+    else if (mode === 'INCLUSIVE') {
+      gross = baseAfterDisc;
+      net   = +(gross * 100 / (100 + gst)).toFixed(2);
+      tax   = +(gross - net).toFixed(2);
+    }
+
+    // keep on line for UI / save
+    line.lineAmount = gross;
+    (line as any).taxAmount = tax;
+
+    return { net, tax, gross };
+  }
 
   // ============================================================
   // Load for Edit
@@ -181,7 +223,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
         this.invoiceNo   = hdr.invoiceNo || null;
         this.invoiceDate = this.toDateInput(hdr.invoiceDate);
-        this.sourceType  = (hdr.sourceType ?? 1) as 1|2;
+        this.sourceType  = (hdr.sourceType ?? 1) as 1 | 2;
         this.sourceId    = this.sourceType === 1 ? (hdr.soId ?? null) : (hdr.doId ?? null);
 
         this.lines = (rows as any[]).map(r => ({
@@ -193,8 +235,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           qty: Number(r.qty || 0),
           unitPrice: Number(r.unitPrice || 0),
           discountPct: Number(r.discountPct || 0),
+          gstPct: r.gstPct,
+          tax: r.tax,
           taxCodeId: r.taxCodeId ?? null,
-          description: r.description ?? r.itemName ?? ''   // <— default from item
+          lineAmount: r.lineAmount,
+          description: r.description ?? r.itemName ?? ''
         })) as UiLine[];
 
         this.reconcileLinesWithItems();
@@ -223,7 +268,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       const it = this.itemsList.find(ii => +ii.id === +l.itemId!);
       const prevName = l.itemName || '';
       const newItemName = it?.itemName ?? l.itemName;
-      // If description was equal to old item name, update it to new item name
+
       const shouldOverwriteDesc =
         !l.description ||
         l.description.trim().toLowerCase() === prevName.trim().toLowerCase();
@@ -246,10 +291,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       qty: null as any,
       unitPrice: 0,
       discountPct: 0,
+      gstPct: 0,
+      tax: 'EXCLUSIVE',
       taxCodeId: null,
-      description: ''   // editable; can be filled after picking item
+      description: '',
+      lineAmount: 0
     };
-    if (this.isEdit) row.__new = true; // mark unsaved in edit mode
+    if (this.isEdit) row.__new = true;
     this.lines.push(row);
     this.recalc();
   }
@@ -263,7 +311,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       line.itemId = 0;
       line.itemName = '';
       line.uom = null;
-      // keep user description as-is
       this.recalc();
       return;
     }
@@ -273,7 +320,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     line.itemName = it?.itemName ?? line.itemName ?? '';
     line.uom = it?.uomName ?? line.uom ?? null;
 
-    // If description is empty or previously matched the old item name, update from new item name
     if (!line.description || line.description.trim().toLowerCase() === prevName.trim().toLowerCase()) {
       line.description = line.itemName;
     }
@@ -303,8 +349,10 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             qty: r.qtyOpen,
             unitPrice: r.unitPrice,
             discountPct: r.discountPct ?? 0,
+            gstPct: r.gstPct,
+            tax: r.tax,
             taxCodeId: r.taxCodeId ?? null,
-            description: r.itemName // default from item
+            description: r.itemName
           })) as UiLine[];
 
           this.reconcileLinesWithItems();
@@ -318,10 +366,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Totals
   // ============================================================
   lineAmount(r: SiCreateLine): number {
-    const q = Number(r.qty || 0);
-    const p = Number(r.unitPrice || 0);
-    const d = Number(r.discountPct || 0);
-    return +(q * p * (1 - d / 100)).toFixed(2);
+    return this.calcLineAmounts(r as UiLine).gross;
+  }
+
+  lineTaxAmount(r: SiCreateLine): number {
+    return this.calcLineAmounts(r as UiLine).tax;
   }
 
   recalc(): void {
@@ -332,57 +381,125 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Edit: persist lines in place
   // ============================================================
   onCellChanged(line: UiLine) {
-    if (!this.isEdit || !line?.id) { this.recalc(); return; }
+    const { gross, tax } = this.calcLineAmounts(line);
+    const qty   = Number(line.qty || 0);
+    const price = Number(line.unitPrice || 0);
+    const disc  = Number(line.discountPct || 0);
+
+    if (!this.isEdit || !line?.id) {
+      this.recalc();
+      return;
+    }
+
     this.api.updateLine(line.id, {
-      qty: Number(line.qty || 0),
-      unitPrice: Number(line.unitPrice || 0),
-      discountPct: Number(line.discountPct || 0),
+      qty,
+      unitPrice: price,
+      discountPct: disc,
+      gstPct: line.gstPct,
+      tax: line.tax,
+      // taxAmount: tax,
       taxCodeId: line.taxCodeId ?? null,
-      description: (line.description && line.description.trim().length>0) ? line.description : (line.itemName ?? null)
+      lineAmount: gross,
+      description:
+        (line.description && line.description.trim().length > 0)
+          ? line.description
+          : (line.itemName ?? null)
     }).subscribe({
       next: (r) => {
-        if (!this.isOk(r)) Swal.fire({ icon:'warning', title:'Line update failed', text: (r as any)?.message || '' });
+        if (!this.isOk(r)) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Line update failed',
+            text: (r as any)?.message || ''
+          });
+        }
         this.recalc();
       },
-      error: () => Swal.fire({ icon:'error', title:'Failed to update line' })
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to update line'
+        });
+        this.recalc();
+      }
     });
   }
 
   saveNewLines(): void {
-    if (!this.isEdit || !this.siId) return;
-    const pending = this.lines.filter(l => l.__new && Number(l.qty || 0) > 0);
-    if (!pending.length) { Swal.fire({ icon:'info', title:'Nothing to add' }); return; }
+    if (!this.isEdit || !this.siId) {
+      return;
+    }
 
-    let i = 0, ok = 0, fail = 0;
+    const pending = this.lines.filter(l => l.__new && Number(l.qty || 0) > 0);
+    if (!pending.length) {
+      Swal.fire({ icon: 'info', title: 'Nothing to add' });
+      return;
+    }
+
+    let i = 0;
+    let ok = 0;
+    let fail = 0;
+
     const next = () => {
       if (i >= pending.length) {
-        Swal.fire({ icon: fail ? 'warning' : 'success', title: fail ? 'Partial' : 'Lines added', text: `${ok} added${fail ? `, ${fail} failed` : ''}` });
-        if (this.siId) this.loadForEdit(this.siId);
+        Swal.fire({
+          icon: fail ? 'warning' : 'success',
+          title: fail ? 'Partial' : 'Lines added',
+          text: `${ok} added${fail ? `, ${fail} failed` : ''}`
+        });
+
+        if (this.siId) {
+          this.loadForEdit(this.siId);
+        }
         return;
       }
+
       const l = pending[i++];
+      const { gross, tax } = this.calcLineAmounts(l);
+
+      const qty   = Number(l.qty || 0);
+      const price = Number(l.unitPrice || 0);
+      const disc  = Number(l.discountPct || 0);
+
       this.api.addLine(this.siId!, {
         sourceLineId: l.sourceLineId ?? null,
         itemId: l.itemId ?? null,
         itemName: l.itemName ?? null,
         uom: l.uom ?? null,
-        qty: Number(l.qty || 0),
-        unitPrice: Number(l.unitPrice || 0),
-        discountPct: Number(l.discountPct || 0),
+        qty,
+        unitPrice: price,
+        discountPct: disc,
+        gstPct: l.gstPct,
+        tax: l.tax,
+        // taxAmount: tax,
         taxCodeId: l.taxCodeId ?? null,
-        description: (l.description && l.description.trim().length>0) ? l.description : (l.itemName ?? null)
+        lineAmount: gross,
+        description:
+          (l.description && l.description.trim().length > 0)
+            ? l.description
+            : (l.itemName ?? null)
       }).subscribe({
-        next: (r) => { (this.isOk(r)) ? ok++ : fail++; next(); },
-        error: _ => { fail++; next(); }
+        next: (r) => {
+          if (this.isOk(r)) {
+            ok++;
+          } else {
+            fail++;
+          }
+          next();
+        },
+        error: () => {
+          fail++;
+          next();
+        }
       });
     };
+
     next();
   }
 
   removeLine(ix: number): void {
     const row = this.lines[ix];
 
-    // Unsaved/new or create mode
     if (!this.isEdit || !row?.id) {
       this.lines.splice(ix, 1);
       this.recalc();
@@ -400,7 +517,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       this.api.removeLine(row.id!).subscribe({
         next: (r) => {
           if (!this.isOk(r)) {
-            Swal.fire({ icon:'error', title:'Failed', text:(r as any)?.message || 'Remove failed' });
+            Swal.fire({ icon: 'error', title: 'Failed', text: (r as any)?.message || 'Remove failed' });
             return;
           }
           this.lines.splice(ix, 1);
@@ -432,17 +549,29 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         soId: this.sourceType === 1 ? this.sourceId : null,
         doId: this.sourceType === 2 ? this.sourceId : null,
         invoiceDate: this.invoiceDate,
-        lines: this.lines.map(l => ({
-          sourceLineId: l.sourceLineId ?? null,
-          itemId: l.itemId ?? 0,
-          itemName: l.itemName ?? null,
-          uom: l.uom ?? null,
-          qty: Number(l.qty || 0),
-          unitPrice: Number(l.unitPrice || 0),
-          discountPct: Number(l.discountPct || 0),
-          taxCodeId: l.taxCodeId ?? null,
-          description: (l.description && l.description.trim().length>0) ? l.description : (l.itemName ?? null)
-        }))
+        total: this.total,
+        lines: this.lines.map(l => {
+          const { gross, tax } = this.calcLineAmounts(l);
+
+          return {
+            sourceLineId: l.sourceLineId ?? null,
+            itemId: l.itemId ?? 0,
+            itemName: l.itemName ?? null,
+            uom: l.uom ?? null,
+            qty: Number(l.qty || 0),
+            unitPrice: Number(l.unitPrice || 0),
+            discountPct: Number(l.discountPct || 0),
+            gstPct: l.gstPct,
+            tax: l.tax,
+            taxAmount: tax,
+            taxCodeId: l.taxCodeId ?? null,
+            lineAmount: gross,
+            description:
+              (l.description && l.description.trim().length > 0)
+                ? l.description
+                : (l.itemName ?? null)
+          };
+        })
       };
 
       this.api.create(req)
@@ -472,6 +601,24 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed to update header' })
       });
+  }
+    netPortion(line: UiLine): number {
+    const total = this.lineAmount(line);         // already after discount
+    const gst = Number(line.gstPct || 0);
+
+    if (!gst) {
+      return total; // no GST => whole amount is net
+    }
+
+    const base = total / (1 + gst / 100);        // reverse‐calculate net
+    return +base.toFixed(2);
+  }
+
+  taxPortion(line: UiLine): number {
+    const total = this.lineAmount(line);
+    const base  = this.netPortion(line);
+    const tax   = total - base;
+    return +tax.toFixed(2);
   }
 
   // ============================================================

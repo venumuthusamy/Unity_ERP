@@ -23,7 +23,10 @@ export interface SiSourceLine {
   qtyOpen: number;
   unitPrice: number;
   discountPct: number;
+  gstPct:number,
+  tax:string,
   taxCodeId?: number | null;
+  lineAmount?:number;
 }
 
 export interface SiCreateLine {
@@ -34,15 +37,20 @@ export interface SiCreateLine {
   qty: number;
   unitPrice: number;
   discountPct: number;
+  gstPct:number,
+  tax:string,
   taxCodeId?: number | null;
-  description?: string | null;     // <— NEW
+  lineAmount?:number;
+  description?: string | null; 
+      
 }
 
 export interface SiCreateRequest {
   sourceType: SiSourceType;
   soId?: number | null;
   doId?: number | null;
-  invoiceDate: string;          // yyyy-MM-dd
+  invoiceDate: string;  
+  total:number,        // yyyy-MM-dd
   lines: SiCreateLine[];
 }
 
@@ -75,7 +83,7 @@ export class SalesInvoiceService {
   addLine(siId: number, body: SiCreateLine): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(this.base + `/salesinvoice/AddLine/${siId}`, body);
   }
-  updateLine(lineId: number, body: { qty: number; unitPrice: number; discountPct: number; taxCodeId?: number|null; description?: string|null }): Observable<ApiResponse> {
+  updateLine(lineId: number, body: { qty: number; unitPrice: number; discountPct: number; gstPct:number,tax:string,taxCodeId?: number|null; lineAmount?:number,description?: string|null }): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(this.base + `/salesinvoice/UpdateLine/${lineId}`, body);
   }
   removeLine(lineId: number): Observable<ApiResponse> {

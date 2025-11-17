@@ -1,0 +1,80 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card">
+
+        <!-- Header -->
+        <div class="row align-items-center">
+          <div class="col-md-6 col-12">
+            <h4 class="page-title">Receipts</h4>
+          </div>
+          <div class="col-md-6 col-12 d-flex justify-content-md-end justify-content-start align-items-center pr-1 pb-1 pb-md-0">
+            <label class="d-flex align-items-center mr-1">
+              Search:
+              <input
+                type="search"
+                class="form-control ml-25"
+                placeholder="Receipt / Customer"
+                (input)="onSearch($event.target.value)" />
+            </label>
+            <button class="btn btn-brand ml-1" (click)="goCreate()">
+              <i class="fas fa-plus mr-25"></i> New Receipt
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Receipt</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Method</th>
+                <th class="text-end">Amount</th>
+                <th>Status</th>
+                <th class="text-center" style="width: 140px;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of filtered">
+                <td>{{ r.receiptNo }}</td>
+                <td>{{ r.customerName }}</td>
+                <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
+                <td>{{ r.paymentMode }}</td>
+                <td class="text-end">{{ r.amountReceived | number:'1.2-2' }}</td>
+                <td>
+                  <span class="badge rounded-pill bg-light text-dark border small">
+                    {{ r.status || 'Posted' }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <div class="actions">
+                    <i
+                      class="fas fa-pen text-primary"
+                      title="Edit"
+                      (click)="edit(r.id)">
+                    </i>
+                    <i
+                      class="fas fa-trash text-danger"
+                      title="Delete"
+                      (click)="delete(r.id)">
+                    </i>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="!filtered.length">
+                <td colspan="7" class="text-center text-muted py-3">
+                  No receipts found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>

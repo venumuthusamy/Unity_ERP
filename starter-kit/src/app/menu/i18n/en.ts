@@ -32,6 +32,7 @@ export const locale = {
         TITLE: 'Financial',
         CHARTOFACCOUNT: 'Chart of Account',
         JOURNAL: 'journal',
+        ACCCOUNTSRECEIVABLE: 'Accounts Receivable',
         ACCOUNTPAYABLE: 'Account Payable',
          TAX: 'tax-gst'     
       },

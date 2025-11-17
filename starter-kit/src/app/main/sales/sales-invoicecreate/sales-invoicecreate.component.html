@@ -1,8 +1,7 @@
-<button (click)="goSIList()"
-        class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
-        style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
-  <i class="fas fa-arrow-left position-absolute"
-     style="left:0.75rem; top:50%; transform:translateY(-50%);" aria-hidden="true"></i>
+<button (click)="goSIList()" class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
+  style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
+  <i class="fas fa-arrow-left position-absolute" style="left:0.75rem; top:50%; transform:translateY(-50%);"
+    aria-hidden="true"></i>
   <span>Go to SI list</span>
 </button>
 
@@ -10,21 +9,19 @@
   <div class="card-header d-flex justify-content-between align-items-center prl-headbar">
     <div class="prl-heading-wrap">
       <!-- <div class="prl-eyebrow">Billing</div> -->
-     <!-- <h5 class="m-0 prl-heading prl-heading-decor" style="color:#2E5F73;">
+      <!-- <h5 class="m-0 prl-heading prl-heading-decor" style="color:#2E5F73;">
   {{ isEdit ? 'Edit Sales Invoice' : 'Sales Invoice (SI)' }}
   <span class="prl-id" *ngIf="invoiceNo">{{ invoiceNo }}</span>
 </h5> -->
-  <h1 class="m-0 prl-heading"
-      style="color:#2E5F73 !important; font-weight:800; line-height:1.2;">
-    {{  isEdit ? 'Edit Sales Invoice' : 'Sales Invoice (SI)' }}
-    <span class="prl-id" *ngIf="invoiceNo">{{ invoiceNo }}</span>
-  </h1>
+      <h1 class="m-0 prl-heading" style="color:#2E5F73 !important; font-weight:800; line-height:1.2;">
+        {{ isEdit ? 'Edit Sales Invoice' : 'Sales Invoice (SI)' }}
+        <span class="prl-id" *ngIf="invoiceNo">{{ invoiceNo }}</span>
+      </h1>
     </div>
 
     <div class="d-flex gap-2 prl-head-actions">
-      <button class="btn prl-btn-primary"
-              (click)="save()"
-              [disabled]="!invoiceDate || ( !isEdit && (!sourceId || lines.length===0) )">
+      <button class="btn prl-btn-primary" (click)="save()"
+        [disabled]="!invoiceDate || ( !isEdit && (!sourceId || lines.length===0) )">
         {{ isEdit ? 'Save Header' : 'Create Invoice' }}
       </button>
       <button *ngIf="isEdit" class="btn btn-outline-primary prl-btn-outline" (click)="saveNewLines()">
@@ -37,37 +34,19 @@
     <div class="row g-3">
       <div class="col-lg-4 col-md-6">
         <label class="form-label prl-label">Source</label>
-        <ng-select
-          class="custom-ng-select"
-          [items]="sourceTypeOptions"
-          bindLabel="label"
-          bindValue="value"
-          [(ngModel)]="sourceType"
-          [clearable]="false"
-          [searchable]="false"
-          (change)="onSourceTypeChanged()"
-          [appendTo]="'body'"
-          [disabled]="isEdit"
-          [ngModelOptions]="{standalone:true}">
+        <ng-select class="custom-ng-select" [items]="sourceTypeOptions" bindLabel="label" bindValue="value"
+          [(ngModel)]="sourceType" [clearable]="false" [searchable]="false" (change)="onSourceTypeChanged()"
+          [appendTo]="'body'" [disabled]="isEdit" [ngModelOptions]="{standalone:true}">
         </ng-select>
       </div>
 
       <div class="col-lg-4 col-md-6">
         <label class="form-label prl-label">{{ sourceType===1 ? 'Sales Order' : 'Delivery Order' }}</label>
 
-        <ng-select *ngIf="sourceType===1"
-          class="custom-ng-select"
-          [items]="soList"
-          bindLabel="salesOrderNo"
-          bindValue="id"
-          [(ngModel)]="sourceId"
-          placeholder="Select SO…"
-          [clearable]="true" [searchable]="true" [virtualScroll]="true"
-          [trackByFn]="trackById"
-          (change)="loadSourceLines()"
-          [appendTo]="'body'"
-          [disabled]="isEdit"
-          [ngModelOptions]="{standalone:true}">
+        <ng-select *ngIf="sourceType===1" class="custom-ng-select" [items]="soList" bindLabel="salesOrderNo"
+          bindValue="id" [(ngModel)]="sourceId" placeholder="Select SO…" [clearable]="true" [searchable]="true"
+          [virtualScroll]="true" [trackByFn]="trackById" (change)="loadSourceLines()" [appendTo]="'body'"
+          [disabled]="isEdit" [ngModelOptions]="{standalone:true}">
           <ng-template ng-option-tmp let-s="item">
             <div class="d-flex flex-column">
               <span class="fw-600">{{ s?.salesOrderNo }}</span>
@@ -76,19 +55,10 @@
           </ng-template>
         </ng-select>
 
-        <ng-select *ngIf="sourceType===2"
-          class="custom-ng-select"
-          [items]="doList"
-          bindValue="id"
-          [(ngModel)]="sourceId"
-          [compareWith]="compareById"
-          placeholder="Select DO…"
-          [clearable]="true" [searchable]="true" [virtualScroll]="true"
-          [trackByFn]="trackById"
-          (change)="loadSourceLines()"
-          [appendTo]="'body'"
-          [disabled]="isEdit"
-          [ngModelOptions]="{standalone:true}">
+        <ng-select *ngIf="sourceType===2" class="custom-ng-select" [items]="doList" bindValue="id"
+          [(ngModel)]="sourceId" [compareWith]="compareById" placeholder="Select DO…" [clearable]="true"
+          [searchable]="true" [virtualScroll]="true" [trackByFn]="trackById" (change)="loadSourceLines()"
+          [appendTo]="'body'" [disabled]="isEdit" [ngModelOptions]="{standalone:true}">
           <ng-template ng-label-tmp let-item="item">
             {{ item?.doNumber }} <small class="text-muted">#{{ item?.id }}</small>
           </ng-template>
@@ -103,8 +73,8 @@
 
       <div class="col-lg-4 col-md-6">
         <label class="form-label prl-label">Invoice Date</label>
-        <input type="date" class="form-control prl-input"
-               [(ngModel)]="invoiceDate" [ngModelOptions]="{standalone:true}">
+        <input type="date" class="form-control prl-input" [(ngModel)]="invoiceDate"
+          [ngModelOptions]="{standalone:true}">
       </div>
     </div>
 
@@ -114,35 +84,29 @@
 
     <div class="table-responsive mt-2 prl-table-wrap si-compact">
       <table class="table table-sm align-middle prl-table">
-       <thead class="prl-thead-brand">
-  <tr>
-    <th style="min-width:220px">Item</th>
-    <th style="min-width:220px">Description</th> <!-- NEW -->
-    <th style="min-width:120px">UOM</th>
-    <th class="text-center" style="min-width:80px">Qty</th>
-    <th class="text-center" style="min-width:120px">Unit Price</th>
-    <th class="text-center" style="min-width:90px">Discount %</th>
-    <th class="text-center" style="min-width:110px">Tax Code</th>
-    <th class="text-center" style="min-width:120px">Amount</th>
-    <th style="min-width:56px"></th>
-  </tr>
-</thead>
+        <thead class="prl-thead-brand">
+          <tr>
+            <th style="min-width:220px">Item</th>
+            <th style="min-width:220px">Description</th> <!-- NEW -->
+            <th style="min-width:120px">UOM</th>
+            <th class="text-center" style="min-width:80px">Qty</th>
+            <th class="text-center" style="min-width:120px">Unit Price</th>
+            <th class="text-center" style="min-width:90px">Discount %</th>
+            <!-- <th class="text-center" style="min-width:110px">Tax Code</th> -->
+            <th class="text-center" style="min-width:110px">GST Pct</th>
+            <th class="text-center" style="min-width:110px">Tax</th>
+            <th class="text-center" style="min-width:120px">Amount</th>
+            <th style="min-width:56px"></th>
+          </tr>
+        </thead>
 
         <tbody>
           <tr *ngFor="let r of lines; index as i; trackBy: trackByLine">
             <td>
-              <ng-select
-                class="custom-ng-select"
-                [items]="itemsList"
-                bindLabel="itemName"
-                bindValue="id"
-                [(ngModel)]="r.itemId"
-                [clearable]="true" [searchable]="true" [virtualScroll]="true"
-                [trackByFn]="trackById"
-                [compareWith]="compareById"
-                [appendTo]="'body'"
-                (change)="onItemChanged(i, r.itemId)"
-                [ngModelOptions]="{standalone:true}">
+              <ng-select class="custom-ng-select" [items]="itemsList" bindLabel="itemName" bindValue="id"
+                [(ngModel)]="r.itemId" [clearable]="true" [searchable]="true" [virtualScroll]="true"
+                [trackByFn]="trackById" [compareWith]="compareById" [appendTo]="'body'"
+                (change)="onItemChanged(i, r.itemId)" [ngModelOptions]="{standalone:true}">
                 <ng-template ng-label-tmp let-item="item">
                   {{ item?.itemName || r.itemName }}
                   <small class="text-muted" *ngIf="item?.itemCode">( {{ item.itemCode }} )</small>
@@ -160,43 +124,55 @@
                 </ng-template>
               </ng-select>
             </td>
- <td>
-      <input type="text"
-             class="form-control prl-input"
-             [(ngModel)]="r.description"
-             (change)="onCellChanged(r)"
-             [ngModelOptions]="{standalone:true}"
-             placeholder="Description">
-    </td>
+            <td>
+              <input type="text" class="form-control prl-input" [(ngModel)]="r.description" (change)="onCellChanged(r)"
+                [ngModelOptions]="{standalone:true}" placeholder="Description">
+            </td>
             <td>
               <input type="text" class="form-control prl-input" [value]="r.uom || ''" readonly>
             </td>
 
             <td class="text-end">
-              <input type="number" step="0.0001" class="form-control prl-input text-end"
-                     [(ngModel)]="r.qty" (change)="onCellChanged(r)" (input)="recalc()"
-                     [ngModelOptions]="{standalone:true}">
+              <input type="number" step="0.0001" class="form-control prl-input text-end" [(ngModel)]="r.qty"
+                (change)="onCellChanged(r)" (input)="recalc()" [ngModelOptions]="{standalone:true}">
             </td>
 
             <td class="text-end">
-              <input type="number" step="0.0001" class="form-control prl-input text-end"
-                     [(ngModel)]="r.unitPrice" (change)="onCellChanged(r)" (input)="recalc()"
-                     [ngModelOptions]="{standalone:true}">
+              <input type="number" step="0.0001" class="form-control prl-input text-end" [(ngModel)]="r.unitPrice"
+                (change)="onCellChanged(r)" (input)="recalc()" [ngModelOptions]="{standalone:true}">
             </td>
 
             <td class="text-end">
-              <input type="number" step="0.01" class="form-control prl-input text-end"
-                     [(ngModel)]="r.discountPct" (change)="onCellChanged(r)" (input)="recalc()"
-                     [ngModelOptions]="{standalone:true}">
+              <input type="number" step="0.01" class="form-control prl-input text-end" [(ngModel)]="r.discountPct"
+                (change)="onCellChanged(r)" (input)="recalc()" [ngModelOptions]="{standalone:true}">
+            </td>
+            <td class="text-end">
+              <input type="number" step="0.01" class="form-control prl-input text-end" [(ngModel)]="r.gstPct"
+                (change)="onCellChanged(r)" (input)="recalc()" [ngModelOptions]="{standalone:true}" readonly>
             </td>
 
-            <td class="text-end">
+            <!-- <td class="text-end">
               <input type="number" step="1" class="form-control prl-input text-end"
                      [(ngModel)]="r.taxCodeId" (change)="onCellChanged(r)"
                      [ngModelOptions]="{standalone:true}">
-            </td>
+            </td> -->
+            <td>{{r.tax}}</td>
 
-            <td class="text-end">{{ lineAmount(r) | number:'1.2-2' }}</td>
+            <td class="text-end">
+              <!-- main amount -->
+              <div>{{ lineAmount(r) | number:'1.2-2' }}</div>
+
+              <!-- split: 100% + GST% -->
+              <div *ngIf="r.gstPct" class="small text-muted">
+                {{ netPortion(r) | number:'1.2-2' }} (100%) +
+                {{ taxPortion(r) | number:'1.2-2' }} ({{ r.gstPct }}%)
+              </div>
+
+              <!-- for EXEMPT / 0% -->
+              <div *ngIf="!r.gstPct" class="small text-muted">
+                {{ lineAmount(r) | number:'1.2-2' }} (100%) + 0.00 (0%)
+              </div>
+            </td>
 
             <td class="text-end">
               <button class="btn btn-sm btn-outline-danger prl-btn-outline" (click)="removeLine(i)">

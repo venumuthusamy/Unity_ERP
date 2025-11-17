@@ -17,37 +17,55 @@ import { FinanceGstdetailsComponent } from './tax-gst/finance-gstdetails/finance
 import { TaxGstComponent } from './tax-gst/taxmain/tax-gst.component';
 import { CreateJournalComponent } from './journal/create-journal/create-journal.component';
 import { AccountsPayableComponent } from './accounts-payable/accounts-payable.component';
+import { InvoiceComponent } from './AR/Invoice/invoice/invoice.component';
+import { ReceiptComponent } from './AR/Receipt/receipt/receipt.component';
+import { ARCombineComponent } from './AR/AR-Component/ar-combine/ar-combine.component';
+import { ReceiptCreateComponent } from './AR/Receipt/receipt-create/receipt-create.component';
+import { InvoiceCreateComponent } from './AR/Invoice/invoice-create/invoice-create.component';
+
 
 
 const routes: Routes = [
   { path: 'ChartOfAccount', component: ChartofaccountComponent },
-   { path: 'journal', component: JournalComponent },
-    { path: 'create-journal', component: CreateJournalComponent },
-   { path: 'tax-gst', component: TaxGstComponent },
-   { path: 'AccountPayable', component: AccountsPayableComponent },
-  
+  { path: 'journal', component: JournalComponent },
+  { path: 'create-journal', component: CreateJournalComponent },
+  { path: 'tax-gst', component: TaxGstComponent },
+  { path: 'AccountPayable', component: AccountsPayableComponent },
+  { path: 'AR', component: ARCombineComponent },
+  { path: 'AR-invoice', component: InvoiceComponent },
+  { path: 'AR-invoice-create', component: InvoiceCreateComponent },
+  { path: 'AR-receipt', component: ReceiptComponent },
+  { path: 'AR-receipt-create', component: ReceiptCreateComponent },
+  { path: 'AR-receipt-edit/:id', component: ReceiptCreateComponent },
+
+
 ];
 
 @NgModule({
   declarations: [
     ChartofaccountComponent,
-   ChartOfAccountCreateComponent,
-   JournalComponent,
-   TaxGstComponent,
-   FinanceTaxcodesComponent,
-   FinanceGstreturnsComponent,
-   FinanceGstdetailsComponent,
-   CreateJournalComponent
+    ChartOfAccountCreateComponent,
+    JournalComponent,
+    TaxGstComponent,
+    FinanceTaxcodesComponent,
+    FinanceGstreturnsComponent,
+    FinanceGstdetailsComponent,
+    CreateJournalComponent,
+    InvoiceComponent,
+    ReceiptComponent,
+    ARCombineComponent,
+    ReceiptCreateComponent,
+    InvoiceCreateComponent
   ],
   imports: [
     CommonModule,
-    RouterModule.forChild(routes)  ,
+    RouterModule.forChild(routes),
     NgxDatatableModule,
     FormsModule,
     NgbModule,
     CoreSidebarModule,
     ReactiveFormsModule,
-      NgSelectModule,
+    NgSelectModule,
   ]
 })
 export class FinancialModule { }

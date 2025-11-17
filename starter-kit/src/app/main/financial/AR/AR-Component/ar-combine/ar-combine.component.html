@@ -1,0 +1,49 @@
+<div class="content-wrapper container-xxl p-0">
+  <div class="content-body">
+    <div class="card ar-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0 ar-title">Accounts Receivable (AR)</h4>
+      </div>
+
+      <!-- Tabs -->
+      <ul class="nav nav-tabs ar-tabs" role="tablist">
+        <li class="nav-item" (click)="setTab('invoices')">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'invoices'"
+            href="javascript:void(0);"
+          >
+            Invoices
+          </a>
+        </li>
+
+        <li class="nav-item" (click)="setTab('receipts')">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'receipts'"
+            href="javascript:void(0);"
+          >
+            Receipts
+          </a>
+        </li>
+
+        <li class="nav-item" (click)="setTab('aging')">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'aging'"
+            href="javascript:void(0);"
+          >
+            Aging
+          </a>
+        </li>
+      </ul>
+
+      <!-- Tab content -->
+      <div class="card-body">
+        <app-invoice-create *ngIf="activeTab === 'invoices'"></app-invoice-create>
+        <app-receipt *ngIf="activeTab === 'receipts'"></app-receipt>
+      </div>
+    </div>
+  </div>
+</div>
+
