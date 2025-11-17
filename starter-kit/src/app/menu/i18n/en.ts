@@ -30,7 +30,10 @@ export const locale = {
       },
       FINANCIAL: {
         TITLE: 'Financial',
-        CHARTOFACCOUNT: 'Chart of Account'
+        CHARTOFACCOUNT: 'Chart of Account',
+        JOURNAL: 'journal',
+        ACCOUNTPAYABLE: 'Account Payable',
+         TAX: 'tax-gst'     
       },
 
       BUSINESSPARTNERS: {

@@ -1,0 +1,74 @@
+.journal-card {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.journal-input,
+.journal-select .ng-select-container {
+  border-radius: 10px;
+  border-color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.journal-input:focus,
+.ng-select.ng-select-opened .ng-select-container {
+  border-color: #2E5F73;
+  box-shadow: 0 0 0 1px rgba(46, 95, 115, 0.1);
+}
+
+/* Date input icon group */
+.journal-date-group {
+  position: relative;
+}
+
+.journal-date-group input {
+  padding-right: 2.2rem;
+}
+
+.journal-date-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+/* Recurring panel */
+.recurring-card {
+  background: #f9fafb;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 0.85rem 1.25rem 1.1rem;
+}
+
+.recurring-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #6b7280;
+  margin-bottom: 0.15rem;
+}
+
+.recurring-help {
+  color: #9ca3af;
+}
+
+/* Checkbox alignment */
+.form-check-input {
+  cursor: pointer;
+}
+
+.form-check-label {
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* Small tweak so bottom row lines up nicely */
+@media (max-width: 767.98px) {
+  .recurring-card {
+    padding: 0.75rem 0.9rem 1rem;
+  }
+}
