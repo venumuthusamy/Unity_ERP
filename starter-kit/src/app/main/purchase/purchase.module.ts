@@ -21,6 +21,7 @@ import { DebitNoteListComponent } from './debit-note/debit-note-list/debit-note-
 import { DebitNoteCreateComponent } from './debit-note/debit-note-create/debit-note-create.component';
 import { NgSelectModule } from '@ng-select/ng-select';
 
+
 const routes = [
   {
     path: 'Create-PurchaseRequest',
@@ -109,6 +110,7 @@ const routes = [
     component: DebitNoteCreateComponent,
     data: { animation: 'editdebitnote' }
   },
+  
 ];
 
 @NgModule({

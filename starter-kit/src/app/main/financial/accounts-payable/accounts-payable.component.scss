@@ -1,0 +1,74 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
+
+$brand: #2E5F73;
+
+.page-title {
+  margin-left: .85rem;
+  margin-top: .75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $brand;
+}
+
+.ap-pay-card {
+  padding: .75rem .5rem 1rem .5rem;
+}
+
+.ap-form-row {
+  border-radius: .75rem;
+  margin: .5rem .75rem 1rem .75rem !important;
+  padding: .75rem;
+  background-color: #f9fafb;
+}
+
+.btn-brand {
+  background-color: $brand;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background-color: darken($brand, 5%);
+    color: #fff;
+  }
+}
+
+.ap-table-wrap {
+  margin: .25rem .75rem .5rem .75rem;
+
+  .sub-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: .5rem;
+  }
+}
+
+.ap-table {
+  thead {
+    background: #f9fafb;
+
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4b5563;
+      border-top: none;
+      border-bottom: 1px solid #e5e7eb;
+      padding: .5rem .75rem;
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    td {
+      font-size: 12px;
+      padding: .5rem .75rem;
+      vertical-align: middle;
+      border-top: 1px solid #f3f4f6;
+    }
+  }
+}

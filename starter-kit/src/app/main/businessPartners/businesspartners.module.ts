@@ -11,6 +11,7 @@ import { CreateCustomerMasterComponent } from './customer-master/create-customer
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SweetAlert2Module } from '@sweetalert2/ngx-sweetalert2';
 import { OverlayModule } from '@angular/cdk/overlay';
+import { AccountsPayableComponent } from '../financial/accounts-payable/accounts-payable.component';
 
 
 
@@ -29,7 +30,8 @@ const routes: Routes = [
     CreatesuppliersComponent,
     SupplierComponent,
     CreateCustomerMasterComponent,
-    CustomerMasterListComponent
+    CustomerMasterListComponent,
+    AccountsPayableComponent
   ],
   imports: [
     CommonModule,
