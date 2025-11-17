@@ -1,0 +1,327 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card ap-card">
+
+        <!-- PAGE HEADER -->
+        <div class="row">
+          <div class="col-12 d-flex justify-content-between align-items-center">
+            <h4 class="card-text page-title">
+              Accounts Payable
+            </h4>
+          </div>
+        </div>
+
+        <!-- TABS -->
+        <ul class="nav nav-tabs ap-tabs mt-1" role="tablist">
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'invoices' }"
+              (click)="setTab('invoices')">
+              Supplier Invoices
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'payments' }"
+              (click)="setTab('payments')">
+              Payments
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'match' }"
+              (click)="setTab('match')">
+              3-Way Match
+            </a>
+          </li>
+        </ul>
+
+        <!-- TAB CONTENT -->
+        <div class="tab-content p-1">
+
+          <!-- Supplier Invoices TAB -->
+          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'invoices' }" *ngIf="activeTab === 'invoices'">
+
+            <!-- FILTER -->
+            <div class="row mb-1">
+              <div class="col-md-6 col-12">
+                <label class="d-flex align-items-center">
+                  Search:
+                  <input
+                    [(ngModel)]="invoiceSearch"
+                    type="search"
+                    class="form-control ml-25"
+                    (keyup)="filterInvoices($event)"
+                    (search)="filterInvoices($event)" />
+                </label>
+              </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="table-responsive ap-table-wrap">
+              <table class="table mb-0 ap-table">
+                <thead>
+                  <tr>
+                    <th>Invoice No</th>
+                    <th>Supplier</th>
+                    <th>Invoice Date</th>
+                    <th>Due Date</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-right">Paid</th>
+                    <th class="text-right">Outstanding</th>
+                    <th class="text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of invoices">
+                    <td>{{ r.invoiceNo }}</td>
+                    <td>{{ r.supplierName }}</td>
+                    <td>{{ r.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                    <td>{{ r.dueDate | date:'dd-MMM-yyyy' }}</td>
+                    <td class="text-right">{{ r.grandTotal | number:'1.2-2' }}</td>
+                    <td class="text-right">{{ r.paidAmount | number:'1.2-2' }}</td>
+                    <td class="text-right text-brand font-weight-bold">
+                      {{ r.outstandingAmount | number:'1.2-2' }}
+                    </td>
+                    <td class="text-center">
+                      <span class="badge status-pill" [ngClass]="getInvoiceStatusClass(r.status)">
+                        {{ r.statusText || (r.status === 2 ? 'Paid' : r.status === 1 ? 'Partial' : 'Unpaid') }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="invoices.length === 0">
+                    <td colspan="8" class="text-center text-muted py-2">
+                      No AP invoices found.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- TOTALS -->
+            <div class="ap-totals">
+              <div class="ap-total-item">
+                <div class="label">Total Invoice Amount</div>
+                <div class="value">{{ totalInvAmount | number:'1.2-2' }}</div>
+              </div>
+              <div class="ap-total-item">
+                <div class="label">Total Paid</div>
+                <div class="value text-success">{{ totalInvPaid | number:'1.2-2' }}</div>
+              </div>
+              <div class="ap-total-item">
+                <div class="label">Total Outstanding</div>
+                <div class="value text-brand">{{ totalInvOutstanding | number:'1.2-2' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAYMENTS TAB -->
+          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'payments' }" *ngIf="activeTab === 'payments'">
+
+            <!-- FORM -->
+            <div class="ap-form-row row">
+
+              <div class="col-md-3 col-12">
+                <div class="form-group">
+                  <label>Supplier <span class="text-danger">*</span></label>
+                  <select
+                    class="form-control"
+                    [(ngModel)]="paySupplierId"
+                    name="paySupplier"
+                    (change)="onPaySupplierChange()">
+                    <option [ngValue]="null">-- Select Supplier --</option>
+                    <option *ngFor="let s of suppliers" [ngValue]="s.id">
+                      {{ s.name || s.supplierName }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-3 col-12">
+                <div class="form-group">
+                  <label>Invoice <span class="text-danger">*</span></label>
+                  <select
+                    class="form-control"
+                    [(ngModel)]="payInvoiceId"
+                    name="payInvoice"
+                    (change)="onPayInvoiceChange()">
+                    <option [ngValue]="null">-- Select Invoice --</option>
+                    <option *ngFor="let i of payInvoicesForSupplier" [ngValue]="i.id">
+                      {{ i.invoiceNo }} (OS: {{ i.outstandingAmount | number:'1.2-2' }})
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-2 col-12">
+                <div class="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    [(ngModel)]="payDate"
+                    name="payDate" />
+                </div>
+              </div>
+
+              <div class="col-md-2 col-12">
+                <div class="form-group">
+                  <label>Method</label>
+                  <select
+                    class="form-control"
+                    [(ngModel)]="payMethodId"
+                    name="payMethod">
+                    <option [ngValue]="1">Cash</option>
+                    <option [ngValue]="2">Bank Transfer</option>
+                    <option [ngValue]="3">Cheque</option>
+                    <option [ngValue]="4">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-2 col-12">
+                <div class="form-group">
+                  <label>Amount <span class="text-danger">*</span></label>
+                  <input
+                    type="number"
+                    class="form-control text-right"
+                    [(ngModel)]="payAmount"
+                    name="payAmount"
+                    min="0"
+                    step="0.01" />
+                </div>
+              </div>
+
+              <div class="col-md-3 col-12">
+                <div class="form-group">
+                  <label>Reference No</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [(ngModel)]="payReference"
+                    name="payRef"
+                    placeholder="Cheque / UTR No" />
+                </div>
+              </div>
+
+              <div class="col-md-5 col-12">
+                <div class="form-group">
+                  <label>Notes</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [(ngModel)]="payNotes"
+                    name="payNotes"
+                    placeholder="Remarks / Description" />
+                </div>
+              </div>
+
+              <div class="col-md-4 col-12 d-flex align-items-end justify-content-md-end">
+                <button type="button" class="btn btn-brand" (click)="postPayment()">
+                  <i data-feather="check-circle" class="mr-25"></i>
+                  Post Payment
+                </button>
+              </div>
+            </div>
+
+            <!-- RECENT PAYMENTS TABLE -->
+            <div class="ap-table-wrap">
+              <h6 class="sub-title">Recent Payments</h6>
+              <div class="table-responsive">
+                <table class="table mb-0 ap-table">
+                  <thead>
+                    <tr>
+                      <th>Payment No</th>
+                      <th>Supplier</th>
+                      <th>Invoice</th>
+                      <th>Payment Date</th>
+                      <th>Method</th>
+                      <th class="text-right">Amount</th>
+                      <th>Reference</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let p of payments">
+                      <td>{{ p.paymentNo }}</td>
+                      <td>{{ p.supplierName }}</td>
+                      <td>{{ p.invoiceNo }}</td>
+                      <td>{{ p.paymentDate | date:'dd-MMM-yyyy' }}</td>
+                      <td>{{ p.paymentMethodName || getPaymentMethodName(p.paymentMethodId) }}</td>
+                      <td class="text-right">{{ p.amount | number:'1.2-2' }}</td>
+                      <td>{{ p.referenceNo }}</td>
+                      <td>{{ p.notes }}</td>
+                    </tr>
+                    <tr *ngIf="payments.length === 0">
+                      <td colspan="8" class="text-center text-muted py-2">
+                        No payments posted yet.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        
+          <!-- 3-WAY MATCH TAB -->
+          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'match' }" *ngIf="activeTab === 'match'">
+
+            <div class="ap-table-wrap">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="sub-title mb-0">PO vs GRN vs Supplier Invoice</h6>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table mb-0 ap-table">
+                  <thead>
+                    <tr>
+                      <th>PO No</th>
+                      <th>GRN No</th>
+                      <th>Invoice No</th>
+                      <th>Supplier</th>
+                      <th class="text-right">PO Amt</th>
+                      <th class="text-right">GRN Amt</th>
+                      <th class="text-right">Invoice Amt</th>
+                      <th class="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let m of matchRows">
+                      <td>{{ m.poNo }}</td>
+                      <td>{{ m.grnNo }}</td>
+                      <td>{{ m.invoiceNo }}</td>
+                      <td>{{ m.supplierName }}</td>
+                      <td class="text-right">{{ m.poAmount | number:'1.2-2' }}</td>
+                      <td class="text-right">{{ m.grnAmount | number:'1.2-2' }}</td>
+                      <td class="text-right">{{ m.invoiceAmount | number:'1.2-2' }}</td>
+                      <td class="text-center">
+                        <span class="badge status-pill" [ngClass]="matchStatusClass(m.status)">
+                          {{ m.status || 'Mismatch' }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="matchRows.length === 0">
+                      <td colspan="8" class="text-center text-muted py-2">
+                        No match data available.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>

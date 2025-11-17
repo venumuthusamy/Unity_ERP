@@ -24,14 +24,20 @@ interface GRNItem {
   itemName?: string;
   qty?: number | string;
   price?: number | string;
+
+  // 🔹 GRN fields from grnJson
+  qtyReceived?: number | string;
+  unitPrice?: number | string;
+
   supplierId?: number;
   storageType?: string;
   surfaceTemp?: string | number;
   expiry?: string | Date;
-  isPostInventory?: boolean | string | number; // various shapes from server
+  isPostInventory?: boolean | string | number;
   IsPostInventory?: boolean | string | number;
   [k: string]: any;
 }
+
  
 @Component({
   selector: 'app-supplier-invoice',
@@ -246,15 +252,28 @@ export class SupplierInvoiceComponent {
     this.recalcHeaderFromLines();
   }
  
-  // Respect PO mapping even when adding single GRN item
-  addLineFromGrn(it: GRNItem) {
-    const po = this.shiftPoLineForGrn(it);
-    this.addLine({
-      item: it.item ?? it.itemName ?? it.itemCode,
-      qty: po?.qty != null ? Number(po.qty) : (it.qty != null ? Number(it.qty) : 1),
-      price: po?.price != null ? Number(po.price) : (it.price != null ? Number(it.price) : null)
-    });
-  }
+ // NEW: prefer GRN qty/price, PO only as backup
+addLineFromGrn(it: GRNItem) {
+  const po = this.shiftPoLineForGrn(it);
+
+  const qty =
+    it.qtyReceived != null ? Number(it.qtyReceived) :
+    po?.qty           != null ? Number(po.qty) :
+    it.qty            != null ? Number(it.qty) : 1;
+
+  const price =
+    it.unitPrice != null ? Number(it.unitPrice) :
+    po?.price    != null ? Number(po.price) :
+    it.price     != null ? Number(it.price) : null;
+
+  this.addLine({
+    item: it.item ?? it.itemName ?? it.itemCode,
+    qty,
+    price,
+    tax: this.form.value.tax // optional, or it.tax if you have it
+  });
+}
+
  
   importAllFromGrn() {
     if (!this.selectedGrnItems?.length) return;
@@ -319,12 +338,35 @@ export class SupplierInvoiceComponent {
   }
  
   // Amount = Σ(qty * price)
-  private recalcHeaderFromLines() {
-    const lines = this.lines.value as Array<{ qty: any; price: any }>;
-    const subtotal = lines.reduce((s, l) => s + ((Number(l.qty) || 0) * (Number(l.price) || 0)), 0);
-    this.form.patchValue({ amount: Number(subtotal.toFixed(2)) }, { emitEvent: false });
+  // Amount = Σ(qty * price) + tax%
+private recalcHeaderFromLines() {
+  const lines = this.lines.value as Array<{ qty: any; price: any }>;
+
+  // subtotal from lines
+  const subtotal = lines.reduce(
+    (s, l) => s + ((Number(l.qty) || 0) * (Number(l.price) || 0)),
+    0
+  );
+
+  // tax as percentage (e.g. 9 = 9%)
+  const taxPct = Number(this.form.get('tax')?.value || 0);
+
+  let amount = subtotal;
+
+  if (taxPct > 0) {
+    const taxAmount = +(subtotal * taxPct / 100).toFixed(2);
+    amount = +(subtotal + taxAmount).toFixed(2);
   }
- 
+
+  this.form.patchValue(
+    { amount: amount },
+    { emitEvent: false }
+  );
+}
+onTaxChange() {
+  this.recalcHeaderFromLines();
+}
+
   save(action: 'POST' | 'HOLD' = 'POST') {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -533,27 +575,33 @@ export class SupplierInvoiceComponent {
     this.clearLines();
     if (!items?.length) { this.recalcHeaderFromLines(); return; }
  
-    items.forEach((it: GRNItem) => {
-      if (!this.shouldIncludeItem(it)) return; // hard gate
- 
-      const itemLabel = it.item ?? it.itemName ?? it.itemCode ?? '';
-      const po = this.shiftPoLineForGrn(it);
- 
-      const qty = po?.qty != null ? Number(po.qty)
-                : (it.qty != null ? Number(it.qty) : 1);
- 
-      const price = po?.price != null ? Number(po.price)
-                  : (it.price != null ? Number(it.price) : null);
- 
-      this.lines.push(this.fb.group({
-        item: [itemLabel],
-        qty: [qty],
-        price: [price],
-        matchStatus: ['OK'],
-        mismatchFields: [''],
-        dcNoteNo: ['']
-      }));
-    });
+   items.forEach((it: GRNItem) => {
+  if (!this.shouldIncludeItem(it)) return;
+
+  const itemLabel = it.item ?? it.itemName ?? it.itemCode ?? '';
+  const po = this.shiftPoLineForGrn(it);
+
+  const qty =
+    it.qtyReceived != null ? Number(it.qtyReceived) :
+    po?.qty         != null ? Number(po.qty) :
+    it.qty          != null ? Number(it.qty) : 1;
+
+  const price =
+    it.unitPrice != null ? Number(it.unitPrice) :
+    po?.price    != null ? Number(po.price) :
+    it.price     != null ? Number(it.price) : null;
+
+  this.lines.push(this.fb.group({
+    item: [itemLabel],
+    qty: [qty],
+    price: [price],
+    tax: [this.form.value.tax],
+    matchStatus: ['OK'],
+    mismatchFields: [''],
+    dcNoteNo: ['']
+  }));
+});
+
  
     this.recalcHeaderFromLines();
   }

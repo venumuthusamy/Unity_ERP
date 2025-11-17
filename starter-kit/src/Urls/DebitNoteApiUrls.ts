@@ -1,7 +1,12 @@
+// src/app/Urls/DebitNoteApiUrls.ts
 export class DebitNoteApiUrls {
-  public static readonly CreateDebitNote = "/DebitNote/insert";
-  public static readonly GetAllDebitNote = "/DebitNote/getAll";
-  public static readonly GetDebitNoteById = "/DebitNote/get/"; 
-  public static readonly UpdateDebitNote = "/DebitNote/update";
-  public static readonly DeleteDebitNote = "/DebitNote/Delete/";
+  public static readonly CreateDebitNote     = "/SupplierDebitNote/Create";
+  public static readonly GetAllDebitNote    = "/SupplierDebitNote/GetAll";
+  public static readonly GetDebitNoteById   = "/SupplierDebitNote/GetById/";       // + id
+  public static readonly UpdateDebitNote    = "/SupplierDebitNote/Update/";        // + id
+  public static readonly DeleteDebitNote    = "/SupplierDebitNote/Delete/";        // + id
+
+  // 🔹 NEW → matches [HttpGet("GetDebitNoteSource/{id}")]
+  public static readonly GetDebitNoteSource = "/SupplierDebitNote/GetDebitNoteSource/"; // + id (PIN or source id)
+    public static readonly MarkDebitNote    = '/SupplierDebitNote/MarkDebitNote/'; 
 }

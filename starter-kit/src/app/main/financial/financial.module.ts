@@ -16,6 +16,7 @@ import { FinanceGstreturnsComponent } from './tax-gst/finance-gstreturns/finance
 import { FinanceGstdetailsComponent } from './tax-gst/finance-gstdetails/finance-gstdetails.component';
 import { TaxGstComponent } from './tax-gst/taxmain/tax-gst.component';
 import { CreateJournalComponent } from './journal/create-journal/create-journal.component';
+import { AccountsPayableComponent } from './accounts-payable/accounts-payable.component';
 
 
 const routes: Routes = [
@@ -23,6 +24,7 @@ const routes: Routes = [
    { path: 'journal', component: JournalComponent },
     { path: 'create-journal', component: CreateJournalComponent },
    { path: 'tax-gst', component: TaxGstComponent },
+   { path: 'AccountPayable', component: AccountsPayableComponent },
   
 ];
 
