@@ -40,6 +40,7 @@ type UiLine =
   Omit<QuotationLine, 'uom' | 'uomId'> & {
     uomId: number | null;
     taxMode?: LineTaxMode;
+    taxCodeId?: number | null;
     lineNet?: number;
     lineTax?: number;
     lineTotal?: number;
@@ -160,6 +161,15 @@ export class QuotationscreateComponent implements OnInit {
     private currencyService: CurrencyService,
     private paymentTermsService: PaymentTermsService
   ) {}
+// -------- TaxMode → TaxCodeId mapping (1 = Exclusive, 2 = Inclusive, 3 = Zero/Exempt) ------
+private taxModeToTaxCodeId(mode?: LineTaxMode): number {
+  switch (mode) {
+    case 'EXCLUSIVE': return 1;
+    case 'INCLUSIVE': return 2;
+    case 'EXEMPT':    return 3;
+    default:          return 1;
+  }
+}
 
   // ---------- Lifecycle ----------
   ngOnInit(): void {
@@ -274,6 +284,7 @@ export class QuotationscreateComponent implements OnInit {
         unitPrice: Number(l.unitPrice ?? l.UnitPrice ?? 0),
         discountPct: Number(l.discountPct ?? l.DiscountPct ?? 0),
         taxMode: (l.taxMode as LineTaxMode) || 'EXCLUSIVE',
+        taxCodeId: l.taxCodeId ?? l.TaxCodeId ?? this.taxModeToTaxCodeId(l.taxMode as LineTaxMode),
         remarks: String(l.remarks ?? l.Remarks ?? ''),
         lineNet: Number(l.lineNet ?? l.LineNet ?? 0),
         lineTax: Number(l.lineTax ?? l.LineTax ?? 0),
@@ -747,7 +758,8 @@ computeTotals() {
       unitPrice: +this.modal.unitPrice || 0,
       discountPct: +this.modal.discountPct || 0,
       remarks: this.modal.remarks ?? '',
-      taxMode: this.modal.taxMode || 'EXCLUSIVE'
+      taxMode: this.modal.taxMode || 'EXCLUSIVE',
+      taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
     };
 
     this.computeLine(payload);
@@ -786,7 +798,8 @@ computeTotals() {
         qty: +l.qty,
         unitPrice: +l.unitPrice,
         discountPct: +l.discountPct,
-        taxMode: l.taxMode || 'EXCLUSIVE'
+        taxMode: l.taxMode || 'EXCLUSIVE',
+        taxCodeId: l.taxCodeId ?? this.taxModeToTaxCodeId(l.taxMode)
       }))
     };
 

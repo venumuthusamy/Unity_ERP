@@ -230,3 +230,69 @@
 .text-danger {
   color: #da1e28;
 }
+/* ===== KPI CARDS (TOP 4) ===== */
+
+.pin-kpi-card {
+  background: #ffffff;                 /* smooth white panel */
+  border-radius: 20px;                 /* rounded corners */
+  padding: 14px 18px;
+  min-height: 90px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  border: 1px solid #eef2f7;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);  /* soft shadow */
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* tiny hover lift so they feel clickable */
+.pin-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.10);
+  border-color: #e0e7ff;
+}
+
+/* title: medium weight, calm color */
+.pin-kpi-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+/* value: big + bold */
+.pin-kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* accent colors for each number */
+.pin-kpi-card .text-warning {  /* Total Pending */
+  color: #d97706 !important;   /* orange */
+}
+
+.pin-kpi-card .text-success {  /* Auto-Matched */
+  color: #059669 !important;   /* green */
+}
+
+.pin-kpi-card .text-danger {   /* Mismatched */
+  color: #dc2626 !important;   /* red */
+}
+
+.pin-kpi-card .text-primary {  /* Awaiting Approval */
+  color: #2563eb !important;   /* blue */
+}
+
+/* small screen spacing */
+@media (max-width: 767.98px) {
+  .pin-kpi-card {
+    margin-bottom: 8px;
+  }
+}

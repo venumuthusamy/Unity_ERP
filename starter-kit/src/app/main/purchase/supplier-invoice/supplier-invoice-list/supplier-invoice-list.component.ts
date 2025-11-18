@@ -41,6 +41,7 @@ interface ThreeWayMatch {
 })
 export class SupplierInvoiceListComponent
   implements OnInit, AfterViewInit, AfterViewChecked {
+
   @ViewChild(DatatableComponent) table!: DatatableComponent;
 
   rows: any[] = [];
@@ -48,6 +49,12 @@ export class SupplierInvoiceListComponent
   searchValue = '';
   ColumnMode = ColumnMode;
   selectedOption = 10;
+
+  // KPI counters
+  totalPending = 0;
+  autoMatched = 0;
+  mismatched = 0;
+  awaitingApproval = 0;
 
   // lines modal
   showLinesModal = false;
@@ -59,6 +66,8 @@ export class SupplierInvoiceListComponent
   showMatchModal = false;
   currentRow: any = null;
   threeWay: ThreeWayMatch | null = null;
+  matchIssues: string[] = [];
+   pinMismatchLabel: string | null = null;
   isPosting = false;
 
   constructor(
@@ -78,6 +87,8 @@ export class SupplierInvoiceListComponent
     feather.replace();
   }
 
+  // ================= LOAD & SUMMARY =================
+
   loadInvoices(): void {
     this.api.getAll().subscribe({
       next: (res: any) => {
@@ -90,15 +101,48 @@ export class SupplierInvoiceListComponent
           tax: x.tax,
           currency: x.currency || 'SGD',
           status: Number(x.status ?? 0),
-          linesJson: x.linesJson || '[]'
+          linesJson: x.linesJson || '[]',
+          // optional fields from backend, if you later add them
+          pinMatch: x.pinMatch ?? null,
+          matchStatus: x.matchStatus ?? null  // 'OK' | 'MISMATCH'
         }));
+
         this.rows = mapped;
         this.tempData = [...mapped];
         if (this.table) this.table.offset = 0;
+
+        // compute KPIs from statuses and any existing match flags
+        this.recalcSummary();
       },
       error: (e) => console.error(e)
     });
   }
+
+  private recalcSummary(): void {
+    const all = this.rows || [];
+
+    // Not posted to AP
+    this.totalPending = all.filter(r => r.status !== 3).length;
+
+    // Awaiting approval: here using status=2 (Debit Note Created)
+    this.awaitingApproval = all.filter(r => r.status === 2).length;
+
+    // If some rows already have matchStatus / pinMatch info, count them
+    this.autoMatched = all.filter(r => r.status !== 3 && r.pinMatch === true).length;
+    this.mismatched = all.filter(r => r.status !== 3 && r.pinMatch === false).length;
+  }
+
+  // recompute KPIs when one row's match result is known
+  private updateMatchSummaryForRow(rowId: number, pinMatch: boolean): void {
+    const idx = this.rows.findIndex(r => r.id === rowId);
+    if (idx !== -1) {
+      this.rows[idx].pinMatch = pinMatch;
+      this.rows[idx].matchStatus = pinMatch ? 'OK' : 'MISMATCH';
+    }
+    this.recalcSummary();
+  }
+
+  // =============== FILTER / SEARCH ===============
 
   filterUpdate(event: any): void {
     const val = (event?.target?.value || '').toLowerCase();
@@ -123,18 +167,20 @@ export class SupplierInvoiceListComponent
     if (this.table) this.table.offset = 0;
   }
 
-  // 0=Draft, 1=Hold, 2=Flagged, 3=Posted to A/P
+  // 0=Draft, 1=Hold, 2=Debit Note, 3=Posted to A/P
   statusText(s: number): string {
     return s === 0
       ? 'Draft'
       : s === 1
       ? 'Hold'
       : s === 2
-      ? 'Flagged'
+      ? 'Debit Note Created'
       : s === 3
       ? 'Posted to A/P'
       : 'Unknown';
   }
+
+  // =============== NAVIGATION / CRUD ===============
 
   goToCreate(): void {
     this.router.navigate(['/purchase/Create-SupplierInvoice']);
@@ -176,98 +222,126 @@ export class SupplierInvoiceListComponent
     });
   }
 
-  // lines modal
-  openLinesModal(row: any): void {
-    let lines: any[] = [];
-    try {
-      lines = JSON.parse(row?.linesJson || '[]');
-    } catch {
-      lines = [];
-    }
-
-    this.modalLines = lines;
-    this.modalTotalQty = lines.reduce(
-      (s, l) => s + (Number(l?.qty) || 0),
-      0
-    );
-    this.modalTotalAmt = lines.reduce(
-      (s, l) => s + (Number(l?.qty) || 0) * (Number(l?.price) || 0),
-      0
-    );
-    this.showLinesModal = true;
+openLinesModal(row: any): void {
+  let lines: any[] = [];
+  try {
+    lines = JSON.parse(row?.linesJson || '[]');
+  } catch {
+    lines = [];
   }
+
+  this.modalLines = lines;
+
+  // total qty
+  this.modalTotalQty = lines.reduce(
+    (s, l) => s + (Number(l?.qty) || 0),
+    0
+  );
+
+  // total amount = Σ lineTotal (fallback to qty * unitPrice/price)
+  this.modalTotalAmt = lines.reduce((s, l) => {
+    const qty = Number(l?.qty) || 0;
+    const unit = l?.unitPrice != null ? Number(l.unitPrice) : Number(l?.price || 0);
+    const lineTotal =
+      l?.lineTotal != null ? Number(l.lineTotal) : qty * unit;
+
+    return s + lineTotal;
+  }, 0);
+
+  this.showLinesModal = true;
+}
+
 
   closeLinesModal(): void {
     this.showLinesModal = false;
   }
 
-  // 3-way match modal
+  // =============== 3-WAY MATCH MODAL ===============
+
   openMatchModal(row: any): void {
     this.currentRow = row;
     this.showMatchModal = true;
     this.threeWay = null;
+    this.matchIssues = [];
 
-   this.api.getThreeWayMatch(row.id).subscribe({
-  next: (res: any) => {
-    const d = res?.data || res || null;
-    if (!d) {
-      this.threeWay = null;
-      return;
-    }
+    this.api.getThreeWayMatch(row.id).subscribe({
+      next: (res: any) => {
+        const d = res?.data || res || null;
+        if (!d) {
+          this.threeWay = null;
+          return;
+        }
 
-    this.threeWay = {
-      ...d,
-      pinMatch: !!(d.pinMatch ?? d.PinMatch)   // force to boolean
-    };
-  },
-  error: (err) => {
-    console.error('Error loading 3-way match', err);
-    this.showMatchModal = false;
-    Swal.fire('Error', 'Unable to load 3-way match details.', 'error');
-  }
-});
+        const match: ThreeWayMatch = {
+          ...d,
+          pinMatch: !!(d.pinMatch ?? d.PinMatch)
+        };
+        this.threeWay = match;
 
+       const issues: string[] = [];
+const qtyDiff = Math.abs((match.pinQty || 0) - (match.poQty || 0));
+const totalDiff = Math.abs((match.pinTotal || 0) - (match.poTotal || 0));
+
+// qty issue
+if (qtyDiff > 0.0001) {
+  issues.push(`Quantity mismatch: PO ${match.poQty || 0}, PIN ${match.pinQty || 0}`);
+}
+
+// price/total issue
+if (totalDiff > 0.01) {
+  const poTotal = (match.poTotal ?? 0).toFixed(2);
+  const pinTotal = (match.pinTotal ?? 0).toFixed(2);
+  issues.push(`Price/Total mismatch: PO ${poTotal}, PIN ${pinTotal}`);
+}
+
+this.matchIssues = issues;
+
+// 👉 short label near "Mismatch"
+if (!match.pinMatch) {
+  const tags: string[] = [];
+  if (qtyDiff > 0.0001) tags.push('Qty');
+  if (totalDiff > 0.01) tags.push('Total');
+
+  this.pinMismatchLabel = tags.length
+    ? `Mismatch (${tags.join(' & ')})`
+    : 'Mismatch';
+} else {
+  this.pinMismatchLabel = 'Match';
+}
+
+// update row + KPI
+this.updateMatchSummaryForRow(row.id, match.pinMatch);
+      },
+      error: (err) => {
+        console.error('Error loading 3-way match', err);
+        this.showMatchModal = false;
+        Swal.fire('Error', 'Unable to load 3-way match details.', 'error');
+      }
+    });
   }
 
   closeMatchModal(): void {
     this.showMatchModal = false;
     this.currentRow = null;
     this.threeWay = null;
+    this.matchIssues = [];
     this.isPosting = false;
   }
 
-  // Status 2 = Flagged
-  flagForReview(): void {
-    if (!this.currentRow) return;
+  // NEW: navigate to Debit Note create screen with this PIN
+  goToDebitNote(): void {
+    if (!this.currentRow) { return; }
 
-    this.isPosting = true;
-    this.api.flagForReview(this.currentRow.id).subscribe({
-      next: () => {
-        this.currentRow.status = 2;
-        this.isPosting = false;
-        this.closeMatchModal();
-        this.loadInvoices();
-        Swal.fire('Updated', 'Invoice flagged for review.', 'success');
-      },
-      error: (err) => {
-        console.error('Flag review failed', err);
-        this.isPosting = false;
-        Swal.fire('Error', 'Failed to flag for review.', 'error');
+    this.router.navigate(['/purchase/create-debitnote'], {
+      queryParams: {
+        pinId: this.currentRow.id
       }
     });
+
+    this.closeMatchModal();
   }
-// NEW: navigate to Debit Note create screen with this PIN
-goToDebitNote(): void {
-  if (!this.currentRow) { return; }
 
-  this.router.navigate(['/purchase/create-debitnote'], {
-    queryParams: {
-      pinId: this.currentRow.id
-    }
-  });
-
-  this.closeMatchModal();
-}
+  // =============== STATUS ACTIONS ===============
 
   // Status 3 = Posted to A/P
   approveAndPostToAp(): void {
