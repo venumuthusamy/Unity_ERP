@@ -256,4 +256,31 @@ export class AccountsPayableComponent implements OnInit {
     if (lower === 'warning') return 'badge-warning';
     return 'badge-danger';
   }
+  // AP status based on payments, not PIN workflow
+getInvoiceStatusTextByAmounts(row: any): string {
+  const paid = Number(row.paidAmount || 0);
+  const os   = Number(row.outstandingAmount || 0);
+
+  if (os <= 0 && paid > 0) {
+    return 'Paid';
+  }
+  if (paid > 0 && os > 0) {
+    return 'Partial';
+  }
+  return 'Unpaid';
+}
+
+getInvoiceStatusClassByAmounts(row: any): string {
+  const txt = this.getInvoiceStatusTextByAmounts(row);
+
+  switch (txt) {
+    case 'Paid':
+      return 'badge-success';   // green pill
+    case 'Partial':
+      return 'badge-warning';   // amber pill
+    default:
+      return 'badge-danger';    // red pill
+  }
+}
+
 }

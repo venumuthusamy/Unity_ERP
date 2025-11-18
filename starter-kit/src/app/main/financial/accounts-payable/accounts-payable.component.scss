@@ -5,70 +5,273 @@
 
 $brand: #2E5F73;
 
+/* ====== Shell / Page ====== */
+.content-body {
+  background: #f4f7fb;
+}
+
+.ap-card {
+  border-radius: 18px;
+  border: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+  background: #ffffff;
+}
+
 .page-title {
-  margin-left: .85rem;
-  margin-top: .75rem;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: $brand;
+  margin-bottom: 0.25rem;
+}
+
+/* ====== Tabs ====== */
+.ap-tabs {
+  border-bottom: 1px solid #e2e8f0;
+  margin-top: 0.75rem;
+}
+
+.ap-tabs .nav-link {
+  border: 0;
+  margin-right: 1.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #70839b;
+  position: relative;
+  border-radius: 0;
+  transition: color 0.15s ease;
+}
+
+.ap-tabs .nav-link:hover {
   color: $brand;
 }
 
-.ap-pay-card {
-  padding: .75rem .5rem 1rem .5rem;
+.ap-tabs .nav-link.active {
+  color: $brand;
+  font-weight: 600;
 }
 
-.ap-form-row {
-  border-radius: .75rem;
-  margin: .5rem .75rem 1rem .75rem !important;
-  padding: .75rem;
-  background-color: #f9fafb;
-}
-
-.btn-brand {
+.ap-tabs .nav-link.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.35rem;
+  width: 42%;
+  height: 3px;
+  border-radius: 999px;
   background-color: $brand;
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
-  &:hover {
-    background-color: darken($brand, 5%);
-    color: #fff;
-  }
 }
 
-.ap-table-wrap {
-  margin: .25rem .75rem .5rem .75rem;
+/* ====== Summary cards (top of invoice tab) ====== */
+.ap-summary-row {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
 
-  .sub-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #4b5563;
-    margin-bottom: .5rem;
-  }
+.ap-summary-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0.6rem 0.9rem;
+  margin: 0.3rem 0.5rem 0.3rem 0;
+  border: 1px solid #e1e8f0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.ap-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  border-color: #c4d1e3;
+}
+
+.ap-summary-card .label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 0.1rem;
+}
+
+.ap-summary-card .value {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* accents */
+.ap-summary-total .value {
+  color: #f59e0b; // orange
+}
+
+.ap-summary-paid .value {
+  color: #16a34a; // green
+}
+
+.ap-summary-outstanding .value {
+  color: #2563eb; // blue
+}
+
+/* search label */
+.ap-search-label span {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-right: 0.3rem;
+}
+
+/* ====== Tables ====== */
+.ap-table-wrap {
+  margin-top: 0.4rem;
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem 1rem;
 }
 
 .ap-table {
-  thead {
-    background: #f9fafb;
+  font-size: 0.84rem;
+  color: #1f2933;
+}
 
-    th {
-      font-size: 12px;
-      font-weight: 600;
-      color: #4b5563;
-      border-top: none;
-      border-bottom: 1px solid #e5e7eb;
-      padding: .5rem .75rem;
-      white-space: nowrap;
-    }
-  }
+.ap-table thead th {
+  border-bottom: 0;
+  background: #2E5F73;     // brand header color
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.75rem;
+  color: #ffffff;          // white text for contrast
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+}
 
-  tbody {
-    td {
-      font-size: 12px;
-      padding: .5rem .75rem;
-      vertical-align: middle;
-      border-top: 1px solid #f3f4f6;
-    }
-  }
+
+.ap-table tbody td {
+  padding: 0.55rem 0.75rem;
+  vertical-align: middle;
+  border-top: 1px solid #edf2f7;
+}
+
+.ap-table tbody tr:nth-child(even) {
+  background-color: #fdfefe;
+}
+
+.ap-table tbody tr:hover {
+  background-color: #eef6fb;
+}
+
+/* ====== Totals row (legacy, if you use it somewhere else) ====== */
+.ap-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.ap-total-item {
+  flex: 0 0 auto;
+  min-width: 210px;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #e5edf6;
+}
+
+.ap-total-item .label {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 0.15rem;
+}
+
+.ap-total-item .value {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ====== Forms (Payments tab) ====== */
+.ap-form-row .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.ap-form-row label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.ap-card .form-control,
+.ap-card select.form-control {
+  border-radius: 0.6rem;
+  border-color: #cbd5e1;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.ap-card .form-control:focus {
+  border-color: $brand;
+  box-shadow: 0 0 0 1px rgba(46, 95, 115, 0.18);
+}
+
+/* Submit button */
+.btn-brand {
+  background-color: $brand;
+  border-color: $brand;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.4rem 1.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-brand i {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-brand:hover {
+  background-color: #224758;
+  border-color: #224758;
+}
+
+/* ====== Status pills (invoice & match) ====== */
+.status-pill {
+  border-radius: 999px;
+  padding: 0.1rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.badge-success.status-pill {
+  background: #e3f9e5;
+  color: #1a7c3f;
+}
+
+.badge-warning.status-pill {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.badge-danger.status-pill {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-secondary.status-pill {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+/* Brand colour reuse */
+.text-brand {
+  color: $brand !important;
+}
+
+/* Small helper subtitles */
+.ap-card .sub-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
 }
