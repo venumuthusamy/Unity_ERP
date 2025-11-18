@@ -25,7 +25,7 @@ export interface QuotationHeader {
   status: number;                  // 0 draft, 1 submitted, 2 approved, 3 rejected, 4 posted
   customerId: number | null;
   customerName?: string;
-  currencyId: number;
+  currencyId: number | null;
   fxRate: number;
   paymentTermsId?: number | null;
   validityDate?: string | null;    // yyyy-MM-dd
