@@ -279,41 +279,40 @@
               </div>
 
               <div class="table-responsive">
-                <table class="table mb-0 ap-table">
-                  <thead>
-                    <tr>
-                      <th>PO No</th>
-                      <th>GRN No</th>
-                      <th>Invoice No</th>
-                      <th>Supplier</th>
-                      <th class="text-right">PO Amt</th>
-                      <th class="text-right">GRN Amt</th>
-                      <th class="text-right">Invoice Amt</th>
-                      <th class="text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let m of matchRows">
-                      <td>{{ m.poNo }}</td>
-                      <td>{{ m.grnNo }}</td>
-                      <td>{{ m.invoiceNo }}</td>
-                      <td>{{ m.supplierName }}</td>
-                      <td class="text-right">{{ m.poAmount | number:'1.2-2' }}</td>
-                      <td class="text-right">{{ m.grnAmount | number:'1.2-2' }}</td>
-                      <td class="text-right">{{ m.invoiceAmount | number:'1.2-2' }}</td>
-                      <td class="text-center">
-                        <span class="badge status-pill" [ngClass]="matchStatusClass(m.status)">
-                          {{ m.status || 'Mismatch' }}
-                        </span>
-                      </td>
-                    </tr>
-                    <tr *ngIf="matchRows.length === 0">
-                      <td colspan="8" class="text-center text-muted py-2">
-                        No match data available.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+             <table class="table mb-0 ap-table">
+  <thead>
+    <tr>
+      <th>PO No</th>
+      <th>GRN No</th>
+      <th>Invoice No</th>
+      <th>Supplier</th>
+      <th class="text-right">PO Amt</th>
+      <th class="text-right">Invoice Amt</th>
+      <th class="text-center">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let m of matchRows">
+      <td>{{ m.poNo }}</td>
+      <td>{{ m.grnNo }}</td>
+      <td>{{ m.invoiceNo }}</td>
+      <td>{{ m.supplierName }}</td>
+      <td class="text-right">{{ m.poAmount | number:'1.2-2' }}</td>
+      <td class="text-right">{{ m.invoiceAmount | number:'1.2-2' }}</td>
+      <td class="text-center">
+        <span class="badge status-pill" [ngClass]="matchStatusClass(m.status)">
+          {{ m.status || 'Mismatch' }}
+        </span>
+      </td>
+    </tr>
+    <tr *ngIf="matchRows.length === 0">
+      <td colspan="7" class="text-center text-muted py-2">
+        No match data available.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
               </div>
             </div>
 
