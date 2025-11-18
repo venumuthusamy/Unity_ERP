@@ -9,7 +9,7 @@ import { CrdeitNoteApiUrls } from 'Urls/CreditNoteAPIUrls';
 export interface CnLine {
   id?: number;
   doLineId?: number | null;
-  siId:number,
+  siId: number,
   itemId: number;
   itemName: string;
   uom?: string | null;
@@ -17,13 +17,15 @@ export interface CnLine {
   returnedQty: number;       // user input
   unitPrice: number;
   discountPct: number;
+  gstPct?: number | null;
+  tax?: string | null;
   taxCodeId?: number | null;
   lineNet: number;           // computed client-side, persisted
   reasonId?: number | null;
   restockDispositionId?: number | null;
-  warehouseId:number,
-  supplierId:number,
-  binId:number
+  warehouseId: number,
+  supplierId: number,
+  binId: number
 }
 
 export interface CnHeader {
@@ -50,6 +52,8 @@ export type DoItem = {
   deliveredQty: number;    // <= this will hold the REMAINING qty
   unitPrice: number;
   discountPct: number;
+  gstPct?: number | null;
+  tax?: string | null;
   taxCodeId?: number | null;
   warehouseId?: number | null;
   supplierId?: number | null;
@@ -86,7 +90,7 @@ export class CreditNoteService {
     return this.http.delete<any>(this.url + CrdeitNoteApiUrls.DeleteCreditNote + id);
   }
 
-   getLines(doId: number, excludeCnId?: number | null): Observable<any> {
+  getLines(doId: number, excludeCnId?: number | null): Observable<any> {
     let params = new HttpParams();
     if (excludeCnId) params = params.set('excludeCnId', String(excludeCnId));
     return this.http.get(`${this.url}/CreditNote/dolines/${doId}`, { params });

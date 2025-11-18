@@ -5,7 +5,10 @@
 
         <!-- Header bar -->
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4 class="page-title mb-0">New Receipt</h4>
+          <h4 class="page-title mb-0">
+            {{ isEdit ? 'Edit Receipt' : 'New Receipt' }}
+            <span *ngIf="receiptNo" class="text-muted small ms-1">#{{ receiptNo }}</span>
+          </h4>
           <div class="d-flex gap-1">
             <button class="btn btn-outline-secondary mr-25" (click)="cancel()">
               Cancel
@@ -18,45 +21,56 @@
 
         <div class="card-body">
 
-          <!-- Top form row: only required fields -->
+          <!-- Top form row -->
           <div class="row g-2 mb-3 align-items-end">
 
             <!-- Customer -->
             <div class="col-md-4">
               <label class="form-label">Customer <span class="text-danger">*</span></label>
-
-              <!-- ng-select bound to customerId, showing customerName from customerList -->
-              <ng-select [items]="customerList" bindLabel="customerName" bindValue="customerId" [(ngModel)]="customerId"
-                name="customerId" placeholder="Select customer" (change)="onCustomerChange($event)">
+              <ng-select
+                [items]="customerList"
+                bindLabel="customerName"
+                bindValue="customerId"
+                [(ngModel)]="customerId"
+                name="customerId"
+                placeholder="Select customer"
+                (change)="onCustomerChange($event)">
               </ng-select>
-
             </div>
-
 
             <!-- Date -->
             <div class="col-md-2 col-6">
               <label class="form-label">Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" [(ngModel)]="receiptDate" name="receiptDate" />
+              <input type="date"
+                     class="form-control"
+                     [(ngModel)]="receiptDate"
+                     name="receiptDate" />
             </div>
 
             <!-- Payment Mode -->
             <div class="col-md-2 col-6">
               <label class="form-label d-block">Payment Mode <span class="text-danger">*</span></label>
-              <select class="bank-select w-100" [(ngModel)]="paymentMode" name="paymentMode"
-                (change)="onPaymentModeChange()">
+              <select class="bank-select w-100"
+                      [(ngModel)]="paymentMode"
+                      name="paymentMode"
+                      (change)="onPaymentModeChange()">
                 <option value="CASH">Cash</option>
                 <option value="BANK">Bank</option>
               </select>
             </div>
 
-
-            <!-- Bank (only when BANK) -->
-            <!-- Bank (only when BANK) -->
+            <!-- Bank -->
             <div class="col-md-2" *ngIf="paymentMode === 'BANK'">
               <label class="form-label d-block">Bank <span class="text-danger">*</span></label>
-
-              <ng-select class="w-100 bank-select" [items]="banks" bindLabel="name" bindValue="id"
-                [(ngModel)]="selectedBankId" name="bankId" placeholder="-- Select Bank --" (change)="onBankChange()">
+              <ng-select
+                class="w-100 bank-select"
+                [items]="banks"
+                bindLabel="name"
+                bindValue="id"
+                [(ngModel)]="selectedBankId"
+                name="bankId"
+                placeholder="-- Select Bank --"
+                (change)="onBankChange()">
               </ng-select>
             </div>
 
@@ -64,40 +78,54 @@
             <div class="col-md-2">
               <label class="form-label">Amount Received <span class="text-danger">*</span></label>
 
-              <!-- CASH: manual entry -->
-              <input *ngIf="paymentMode === 'CASH'" type="number" class="form-control text-end"
-                [(ngModel)]="amountReceived" name="amountReceived" min="0" (input)="onAmountReceivedChange()" />
+              <!-- CASH -->
+              <input *ngIf="paymentMode === 'CASH'"
+                     type="number"
+                     class="form-control text-end"
+                     [(ngModel)]="amountReceived"
+                     name="amountReceived"
+                     min="0"
+                     (input)="onAmountReceivedChange()" />
 
-              <!-- BANK: fetched & readonly -->
-              <input *ngIf="paymentMode === 'BANK'" type="number" class="form-control text-end"
-                [ngModel]="amountReceived" name="amountReceivedBank" readonly />
+              <!-- BANK -->
+              <input *ngIf="paymentMode === 'BANK'"
+                     type="number"
+                     class="form-control text-end"
+                     [ngModel]="amountReceived"
+                     name="amountReceivedBank"
+                     readonly />
             </div>
-
           </div>
 
           <!-- Totals row -->
           <div class="row mb-2">
             <div class="col-md-6"></div>
-            <div class="col-md-6 text-right">
-              <div class="small text-muted">
-                Amount Received:
-                <strong>{{ amountReceived | number:'1.2-2' }}</strong>
-                &nbsp; | &nbsp;
-                Total Allocated:
-                <strong>{{ totalAllocated | number:'1.2-2' }}</strong>
-                &nbsp; | &nbsp;
-                Unallocated:
-                <strong [ngClass]="{
-          'text-success': unallocatedAmount >= 0,
-          'text-danger': unallocatedAmount < 0
-        }">
-                  {{ unallocatedAmount | number:'1.2-2' }}
-                </strong>
+            <div class="col-md-6">
+              <div class="d-flex justify-content-end small text-muted gap-2 flex-wrap">
+                <span>
+                  Amount Received:
+                  <strong>{{ amountReceived | number:'1.2-2' }}</strong>
+                </span>
+                <span>|</span>
+                <span>
+                  Total Allocated:
+                  <strong>{{ totalAllocated | number:'1.2-2' }}</strong>
+                </span>
+                <span>|</span>
+                <span>
+                  Unallocated:
+                  <strong [ngClass]="{
+                    'text-success': unallocatedAmount >= 0,
+                    'text-danger': unallocatedAmount < 0
+                  }">
+                    {{ unallocatedAmount | number:'1.2-2' }}
+                  </strong>
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- Allocation grid (unchanged) -->
+          <!-- Allocation grid -->
           <div class="table-responsive" *ngIf="customerId">
             <table class="table table-sm table-bordered align-middle">
               <thead>
@@ -115,23 +143,41 @@
                   <td>{{ inv.invoiceNo }}</td>
                   <td>{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="text-end">{{ inv.amount | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ inv.paidAmount | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ inv.balance | number:'1.2-2' }}</td>
+
+                  <!-- Paid = already paid + allocation -->
                   <td class="text-end">
-                    <input type="number" min="0" [max]="inv.balance" class="form-control form-control-sm text-end"
-                      [(ngModel)]="allocations[i].allocatedAmount" name="alloc_{{ i }}" />
+                    {{ rowPaid(inv, i) | number:'1.2-2' }}
+                  </td>
+
+                  <!-- Balance = amount - (already paid + allocation) -->
+                  <td class="text-end">
+                    {{ rowBalance(inv, i) | number:'1.2-2' }}
+                  </td>
+
+                  <!-- Allocate -->
+                  <td class="text-end">
+                    <input type="number"
+                           min="0"
+                           class="form-control form-control-sm text-end"
+                           [(ngModel)]="allocations[i].allocatedAmount"
+                           name="alloc_{{ i }}"
+                           (input)="onAllocateChange(i)" />
                   </td>
                 </tr>
+
                 <tr *ngIf="!invoices.length">
                   <td colspan="6" class="text-center text-muted py-3">
                     No open invoices for this customer
                   </td>
                 </tr>
               </tbody>
+
               <tfoot *ngIf="invoices.length">
                 <tr class="fw-semibold">
                   <td colspan="5" class="text-end">Total Allocate</td>
-                  <td class="text-end">{{ totalAllocated | number:'1.2-2' }}</td>
+                  <td class="text-end">
+                    {{ totalAllocated | number:'1.2-2' }}
+                  </td>
                 </tr>
               </tfoot>
             </table>

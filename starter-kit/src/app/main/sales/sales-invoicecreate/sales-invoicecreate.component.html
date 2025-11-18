@@ -156,23 +156,33 @@
                      [(ngModel)]="r.taxCodeId" (change)="onCellChanged(r)"
                      [ngModelOptions]="{standalone:true}">
             </td> -->
-            <td>{{r.tax}}</td>
+            <td class="text-start">
+              <!-- EXEMPT (always 0 tax) -->
+              <ng-container *ngIf="r.tax === 'EXEMPT' || !r.gstPct; else hasGst">
+                <div>Exempt (0%)</div>
+                <div class="small text-muted">
+                  Tax: {{ 0 | number:'1.2-2' }} (0%)
+                </div>
+              </ng-container>
+
+              <!-- EXCLUSIVE / INCLUSIVE -->
+              <ng-template #hasGst>
+                <div>
+                  <!-- label text based on tax type -->
+                  <span *ngIf="r.tax === 'EXCLUSIVE'">Exclusive (add GST)</span>
+                  <span *ngIf="r.tax === 'INCLUSIVE'">Inclusive (includes GST)</span>
+                </div>
+                <div class="small text-muted">
+                  Tax: {{ taxPortion(r) | number:'1.2-2' }} ({{ r.gstPct }}%)
+                </div>
+              </ng-template>
+            </td>
+
 
             <td class="text-end">
-              <!-- main amount -->
-              <div>{{ lineAmount(r) | number:'1.2-2' }}</div>
-
-              <!-- split: 100% + GST% -->
-              <div *ngIf="r.gstPct" class="small text-muted">
-                {{ netPortion(r) | number:'1.2-2' }} (100%) +
-                {{ taxPortion(r) | number:'1.2-2' }} ({{ r.gstPct }}%)
-              </div>
-
-              <!-- for EXEMPT / 0% -->
-              <div *ngIf="!r.gstPct" class="small text-muted">
-                {{ lineAmount(r) | number:'1.2-2' }} (100%) + 0.00 (0%)
-              </div>
+              {{ lineAmount(r) | number:'1.2-2' }}
             </td>
+
 
             <td class="text-end">
               <button class="btn btn-sm btn-outline-danger prl-btn-outline" (click)="removeLine(i)">

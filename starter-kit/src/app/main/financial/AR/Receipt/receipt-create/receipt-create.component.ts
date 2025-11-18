@@ -29,7 +29,16 @@ export class ReceiptCreateComponent implements OnInit {
   amountReceived: number = 0;
 
   // ------- grid -------
+  /**
+   * each invoice row:
+   * {
+   *   id, invoiceNo, invoiceDate, amount,
+   *   paidBefore,   // paid before THIS receipt
+   * }
+   */
   invoices: any[] = [];
+
+  // allocation typed in this screen
   allocations: { invoiceId: number; invoiceNo: string; allocatedAmount: number }[] = [];
 
   isSaving = false;
@@ -73,39 +82,44 @@ export class ReceiptCreateComponent implements OnInit {
   // LOAD EXISTING RECEIPT
   // ==========================
   private loadReceiptForEdit(id: number): void {
-  this.receiptService.getReceiptById(id).subscribe((dto: ReceiptDetailDto) => {
-    if (!dto) { return; }
+    this.receiptService.getReceiptById(id).subscribe((dto: ReceiptDetailDto) => {
+      if (!dto) { return; }
 
-    this.receiptId      = dto.id;
-    this.receiptNo      = dto.receiptNo;
-    this.customerId     = dto.customerId;
-    this.customerName   = dto.customerName;
-    this.receiptDate    = dto.receiptDate.toString().substring(0, 10);
-    this.paymentMode    = dto.paymentMode === 'BANK' ? 'BANK' : 'CASH';
-    this.selectedBankId = dto.bankId ?? null;
-    this.amountReceived = dto.amountReceived;
+      this.receiptId      = dto.id;
+      this.receiptNo      = dto.receiptNo;
+      this.customerId     = dto.customerId;
+      this.customerName   = dto.customerName;
+      this.receiptDate    = dto.receiptDate.toString().substring(0, 10);
+      this.paymentMode    = dto.paymentMode === 'BANK' ? 'BANK' : 'CASH';
+      this.selectedBankId = dto.bankId ?? null;
+      this.amountReceived = dto.amountReceived;
 
-    // allocations (for saving)
-    this.allocations = (dto.allocations || []).map(a => ({
-      invoiceId: a.invoiceId,
-      invoiceNo: a.invoiceNo,
-      allocatedAmount: a.allocatedAmount
-    }));
+      // current receipt allocations
+      this.allocations = (dto.allocations || []).map(a => ({
+        invoiceId: a.invoiceId,
+        invoiceNo: a.invoiceNo,
+        allocatedAmount: a.allocatedAmount
+      }));
 
-    // rows for the grid (to show amount/paid/balance)
-    this.invoices = (dto.allocations || []).map(a => ({
-      id:         a.invoiceId,
-      invoiceNo:  a.invoiceNo,
-      invoiceDate: a.invoiceDate,
-      amount:     a.amount,
-      paidAmount: a.paidAmount,
-      balance:    a.balance
-    }));
+      // for the grid we want "amount" and
+      // "paid BEFORE this receipt" so it doesn't double count
+      this.invoices = (dto.allocations || []).map(a => {
+        const allocated = Number(a.allocatedAmount || 0);
+        const paidTotal = Number(a.paidAmount || 0); // this INCLUDES this receipt!
+        const paidBefore = Math.max(0, paidTotal - allocated);
 
-    this.recalculateTotals();
-  });
-}
+        return {
+          id:          a.invoiceId,
+          invoiceNo:   a.invoiceNo,
+          invoiceDate: a.invoiceDate,
+          amount:      a.amount,
+          paidBefore   // custom field for UI calc
+        };
+      });
 
+      this.recalculateTotals();
+    });
+  }
 
   // ==========================
   // CUSTOMER
@@ -118,7 +132,7 @@ export class ReceiptCreateComponent implements OnInit {
   }
 
   openCustomerLookup(): void {
-    // replace with real lookup; now just demo
+    // demo only
     this.customerId = 1;
     this.customerName = 'Demo Customer';
     this.loadInvoicesForCustomer();
@@ -128,9 +142,18 @@ export class ReceiptCreateComponent implements OnInit {
     if (!this.customerId) return;
 
     this.receiptService.getOpenInvoices(this.customerId).subscribe(res => {
-      this.invoices = res || [];
+      // backend returns amount, paidAmount, balance (BEFORE this new receipt)
+      const src = res || [];
 
-      // merge existing allocations if edit mode
+      this.invoices = src.map((i: any) => ({
+        id:          i.id,
+        invoiceNo:   i.invoiceNo,
+        invoiceDate: i.invoiceDate,
+        amount:      i.amount,
+        paidBefore:  Number(i.paidAmount || 0)
+      }));
+
+      // merge existing allocations if we are editing
       const existing = new Map<number, number>();
       this.allocations.forEach(a => existing.set(a.invoiceId, a.allocatedAmount));
 
@@ -150,10 +173,8 @@ export class ReceiptCreateComponent implements OnInit {
   onPaymentModeChange(): void {
     if (this.paymentMode === 'CASH') {
       this.selectedBankId = null;
-      // user types amount manually
     } else if (this.paymentMode === 'BANK') {
-      // in future: fetch amount from bank reconciliation
-      // this.onBankChange();
+      // future: fetch from bank reco
     }
   }
 
@@ -161,17 +182,47 @@ export class ReceiptCreateComponent implements OnInit {
     if (!this.customerId || !this.selectedBankId) {
       return;
     }
-
-    // TODO: call API to get bank amount for this receipt
-    // this.receiptService.getBankReceiptAmount(this.customerId, this.selectedBankId)
-    //   .subscribe(amount => {
-    //     this.amountReceived = amount || 0;
-    //     this.recalculateTotals();
-    //   });
+    // TODO: call API for bank amount
   }
 
   onAmountReceivedChange(): void {
     this.recalculateTotals();
+  }
+
+  // ==========================
+  // ALLOCATE EVENTS
+  // ==========================
+  onAllocateChange(index: number): void {
+    const inv  = this.invoices[index];
+    const alloc = this.allocations[index];
+    if (!inv || !alloc) {
+      this.recalculateTotals();
+      return;
+    }
+
+    const basePaid  = Number(inv.paidBefore || 0);     // paid before this receipt
+    const maxExtra  = Number(inv.amount || 0) - basePaid;
+    let val         = Number(alloc.allocatedAmount || 0);
+
+    if (val < 0) val = 0;
+    if (val > maxExtra) val = maxExtra;
+
+    alloc.allocatedAmount = val;
+    this.recalculateTotals();
+  }
+
+  // row helpers used in HTML
+  rowPaid(inv: any, index: number): number {
+    const base  = Number(inv.paidBefore || 0);
+    const extra = Number(this.allocations[index]?.allocatedAmount || 0);
+    return +(base + extra).toFixed(2);
+  }
+
+  rowBalance(inv: any, index: number): number {
+    const amount = Number(inv.amount || 0);
+    const paid   = this.rowPaid(inv, index);
+    const bal    = amount - paid;
+    return bal < 0 ? 0 : +bal.toFixed(2);
   }
 
   // ==========================
@@ -186,7 +237,7 @@ export class ReceiptCreateComponent implements OnInit {
   }
 
   recalculateTotals(): void {
-    // you can auto-limit allocations to amountReceived here if needed
+    // getters do the work – kept for future logic if needed
   }
 
   // ==========================
