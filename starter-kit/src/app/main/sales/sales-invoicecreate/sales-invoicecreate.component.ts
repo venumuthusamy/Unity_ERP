@@ -171,16 +171,16 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Tax helper – EXCLUSIVE / INCLUSIVE / EXEMPT
   // ============================================================
   private calcLineAmounts(line: UiLine) {
-    const qty  = Number(line.qty || 0);
+    const qty = Number(line.qty || 0);
     const price = Number(line.unitPrice || 0);
-    const disc  = Number(line.discountPct || 0);
-    const gst   = Number(line.gstPct || 0);
+    const disc = Number(line.discountPct || 0);
+    const gst = Number(line.gstPct || 0);
 
     const mode = (line.tax || 'EXCLUSIVE').toString().toUpperCase();
     const baseAfterDisc = +(qty * price * (1 - disc / 100)).toFixed(2);
 
-    let net   = baseAfterDisc;
-    let tax   = 0;
+    let net = baseAfterDisc;
+    let tax = 0;
     let gross = baseAfterDisc;
 
     // EXEMPT or 0% GST -> no tax
@@ -190,14 +190,14 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     }
     // EXCLUSIVE: price is without GST
     else if (mode === 'EXCLUSIVE') {
-      tax   = +(net * gst / 100).toFixed(2);
+      tax = +(net * gst / 100).toFixed(2);
       gross = +(net + tax).toFixed(2);
     }
     // INCLUSIVE: price already includes GST
     else if (mode === 'INCLUSIVE') {
       gross = baseAfterDisc;
-      net   = +(gross * 100 / (100 + gst)).toFixed(2);
-      tax   = +(gross - net).toFixed(2);
+      net = +(gross * 100 / (100 + gst)).toFixed(2);
+      tax = +(gross - net).toFixed(2);
     }
 
     // keep on line for UI / save
@@ -218,13 +218,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           return;
         }
         const data = res.data || {};
-        const hdr  = data.header || {};
-        const rows = data.lines  || [];
+        const hdr = data.header || {};
+        const rows = data.lines || [];
 
-        this.invoiceNo   = hdr.invoiceNo || null;
+        this.invoiceNo = hdr.invoiceNo || null;
         this.invoiceDate = this.toDateInput(hdr.invoiceDate);
-        this.sourceType  = (hdr.sourceType ?? 1) as 1 | 2;
-        this.sourceId    = this.sourceType === 1 ? (hdr.soId ?? null) : (hdr.doId ?? null);
+        this.sourceType = (hdr.sourceType ?? 1) as 1 | 2;
+        this.sourceId = this.sourceType === 1 ? (hdr.soId ?? null) : (hdr.doId ?? null);
 
         this.lines = (rows as any[]).map(r => ({
           id: Number(r.id ?? 0),
@@ -382,9 +382,9 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // ============================================================
   onCellChanged(line: UiLine) {
     const { gross, tax } = this.calcLineAmounts(line);
-    const qty   = Number(line.qty || 0);
+    const qty = Number(line.qty || 0);
     const price = Number(line.unitPrice || 0);
-    const disc  = Number(line.discountPct || 0);
+    const disc = Number(line.discountPct || 0);
 
     if (!this.isEdit || !line?.id) {
       this.recalc();
@@ -457,9 +457,9 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       const l = pending[i++];
       const { gross, tax } = this.calcLineAmounts(l);
 
-      const qty   = Number(l.qty || 0);
+      const qty = Number(l.qty || 0);
       const price = Number(l.unitPrice || 0);
-      const disc  = Number(l.discountPct || 0);
+      const disc = Number(l.discountPct || 0);
 
       this.api.addLine(this.siId!, {
         sourceLineId: l.sourceLineId ?? null,
@@ -602,24 +602,26 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         error: () => Swal.fire({ icon: 'error', title: 'Failed to update header' })
       });
   }
-    netPortion(line: UiLine): number {
-    const total = this.lineAmount(line);         // already after discount
+  netPortion(line: UiLine): number {
+    const total = this.lineAmount(line); // total (inclusive) after discount
     const gst = Number(line.gstPct || 0);
 
-    if (!gst) {
-      return total; // no GST => whole amount is net
+    // Exempt or 0% => whole amount is net, no tax
+    if (!gst || line.tax === 'EXEMPT') {
+      return total;
     }
 
-    const base = total / (1 + gst / 100);        // reverse‐calculate net
+    const base = total / (1 + gst / 100);   // reverse-calc net
     return +base.toFixed(2);
   }
 
   taxPortion(line: UiLine): number {
     const total = this.lineAmount(line);
-    const base  = this.netPortion(line);
-    const tax   = total - base;
+    const base = this.netPortion(line);
+    const tax = total - base;
     return +tax.toFixed(2);
   }
+
 
   // ============================================================
   // Navigation

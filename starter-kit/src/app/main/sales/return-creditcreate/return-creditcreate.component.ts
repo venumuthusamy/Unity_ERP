@@ -1,16 +1,16 @@
-// credit-note-create.component.ts
+// return-creditcreate.component.ts
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
-import { CreditNoteService, CnHeader, CnLine, } from '../return-creditcreate/return-credit.service';
+
+import { CreditNoteService, CnHeader, CnLine } from '../return-creditcreate/return-credit.service';
 import { DeliveryOrderService } from '../deliveryorder/deliveryorder.service';
 import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 
-type ApiResponse<T> = { isSuccess: boolean; message: string; data: T };
 type DoItem = {
   doLineId: number;
   itemId: number;
@@ -19,10 +19,12 @@ type DoItem = {
   deliveredQty: number;
   unitPrice: number;
   discountPct: number;
+  gstPct?: number | null;
+  tax?: string | null;
   taxCodeId?: number | null;
-  warehouseId: number;
-  supplierId: number;
-  binId: number;
+  warehouseId: number | null;
+  supplierId: number | null;
+  binId: number | null;
 };
 
 @Component({
@@ -30,7 +32,7 @@ type DoItem = {
   templateUrl: './return-creditcreate.component.html',
   styleUrls: ['./return-creditcreate.component.scss']
 })
-export class ReturnCreditcreateComponent implements OnInit {
+export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
@@ -40,13 +42,13 @@ export class ReturnCreditcreateComponent implements OnInit {
 
   doList: any[] = [];
   taxCodes: any[] = [];
-  reasons: any[] = [];        // bind to CreditNoteReason
+  reasons: any[] = [];
   dispositions = [
     { id: 1, name: 'RESTOCK' },
     { id: 2, name: 'SCRAP' },
   ];
 
-  // header fields
+  // header
   doId: number | null = null;
   doNumber: string | null = null;
   siId: number | null = null;
@@ -54,16 +56,16 @@ export class ReturnCreditcreateComponent implements OnInit {
   customerId: number | null = null;
   customerName: string | null = null;
   creditNoteDate: string = new Date().toISOString().slice(0, 10);
-  status: number = 1;
+  status = 1;
 
-  // lines
   lines: CnLine[] = [];
   subtotal = 0;
 
-  trackByLine = (_: number, r: CnLine) => r?.id ?? r?.doLineId ?? r?.itemId ?? _;
-  customers: any;
+  customers: any[] = [];
   doPool: DoItem[] = [];
   availableItems: DoItem[] = [];
+
+  trackByLine = (_: number, r: CnLine) => r?.id ?? r?.doLineId ?? r?.itemId ?? _;
 
   constructor(
     private api: CreditNoteService,
@@ -71,12 +73,11 @@ export class ReturnCreditcreateComponent implements OnInit {
     private route: ActivatedRoute,
     private doSvc: DeliveryOrderService,
     private taxCodeService: TaxCodeService,
-    private StockissueService: StockIssueService,
-    private _customerMasterService: CustomerMasterService,
+    private stockIssueService: StockIssueService,
+    private customerService: CustomerMasterService,
   ) { }
 
   ngOnInit(): void {
-    debugger
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(pm => {
       const idStr = pm.get('id');
       this.isEdit = !!idStr;
@@ -85,49 +86,46 @@ export class ReturnCreditcreateComponent implements OnInit {
       forkJoin({
         doList: this.doSvc.getAll(),
         taxCodes: this.taxCodeService.getTaxCode(),
-        reasons: this.StockissueService.getAllStockissue(),
-        customer: this._customerMasterService.GetAllCustomerDetails()
+        reasons: this.stockIssueService.getAllStockissue(),
+        customers: this.customerService.GetAllCustomerDetails()
       })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (bag: any) => {
             this.doList = bag?.doList ?? [];
-            this.taxCodes = (bag?.taxCodes?.data ?? []).map((t: any) => ({ id: +t.id, taxName: t.taxName ?? t.name ?? `#${t.id}` }));
+            this.taxCodes = (bag?.taxCodes?.data ?? []).map((t: any) => ({
+              id: +t.id,
+              taxName: t.taxName ?? t.name ?? `#${t.id}`
+            }));
             this.reasons = (bag?.reasons?.data ?? []);
-            this.customers = (bag?.customer?.data ?? []);
-            if (this.isEdit && this.cnId) this.loadForEdit(this.cnId);
+            this.customers = (bag?.customers?.data ?? []);
+
+            if (this.isEdit && this.cnId) {
+              this.loadForEdit(this.cnId);
+            }
           },
           error: _ => Swal.fire({ icon: 'error', title: 'Load failed', text: 'Init data' })
         });
     });
   }
 
-  ngOnDestroy() { this.destroy$.next(); this.destroy$.complete(); }
-
-  private refreshAvailable() {
-    const used = new Set(
-      this.lines
-        .filter(x => x?.doLineId != null)
-        .map(x => `${x.doLineId}|${x.itemId}|${x.warehouseId}|${x.supplierId}|${x.binId ?? 'null'}`)
-    );
-
-    this.availableItems = this.doPool.filter(p =>
-      !used.has(`${p.doLineId}|${p.itemId}|${p.warehouseId}|${p.supplierId}|${p.binId ?? 'null'}`)
-    );
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-
-
-  private loadForEdit(id: number) {
+  // =============  EDIT LOAD  =============
+  private loadForEdit(id: number): void {
     this.api.getCreditNoteById(id).subscribe({
       next: (res: any) => {
         const data = res?.data;
-        if (!data) return;
+        if (!data) { return; }
+
         this.cnNo = data.creditNoteNo;
         this.doId = data.doId;
         this.doNumber = data.doNumber;
-        this.siId = data.siId,
-          this.siNumber = data.siNumber;
+        this.siId = data.siId;
+        this.siNumber = data.siNumber;
         this.customerId = data.customerId;
         this.customerName = data.customerName;
         this.creditNoteDate = this.toDateInput(data.creditNoteDate);
@@ -145,6 +143,8 @@ export class ReturnCreditcreateComponent implements OnInit {
           returnedQty: +l.returnedQty,
           unitPrice: +l.unitPrice,
           discountPct: +l.discountPct,
+          gstPct: +(l.gstPct ?? 0),
+          tax: l.tax ?? 'EXCLUSIVE',
           taxCodeId: l.taxCodeId,
           lineNet: +l.lineNet,
           reasonId: l.reasonId,
@@ -153,19 +153,16 @@ export class ReturnCreditcreateComponent implements OnInit {
           supplierId: l.supplierId,
           binId: l.binId
         }));
+
         this.recalcAll();
       }
     });
   }
 
-  private toDateInput(v: any) {
+  // ======= date helpers =======
+  private toDateInput(v: any): string {
     if (!v) return this.today();
-
-    // Parse 'YYYY-MM-DD' as local date; otherwise fall back to Date(...)
-    const d = typeof v === 'string'
-      ? this.parseLocalYmd(v)
-      : new Date(v);
-
+    const d = typeof v === 'string' ? this.parseLocalYmd(v) : new Date(v);
     if (isNaN(d.getTime())) return this.today();
     return this.formatYmdLocal(d);
   }
@@ -185,20 +182,23 @@ export class ReturnCreditcreateComponent implements OnInit {
   private today(): string {
     return this.formatYmdLocal(new Date());
   }
-  onDoChanged() {
-    const row = this.doList.find(d => +d.id === +this.doId!);
-    if (!row) { this.clearHeaderFromDo(); return; }
 
-    // header bindings
+  // =============  DO CHANGE  =============
+  onDoChanged(): void {
+    const row = this.doList.find(d => +d.id === +this.doId!);
+    if (!row) {
+      this.clearHeaderFromDo();
+      return;
+    }
+
     this.doNumber = row.doNumber ?? row.DoNumber ?? '';
     this.siNumber = row.siNumber ?? row.invoiceNo ?? row.SiNumber ?? '';
-    this.siId = row.siId
+    this.siId = row.siId;
     this.customerId = row.customerId;
     this.customerName = this.customers?.find(c => c.customerId == this.customerId)?.customerName ?? '';
 
-
-    // load DO lines -> only to the "pool", NOT table
-    this.api.getLines(this.doId, this.isEdit ? this.cnId : null).subscribe({
+    // load DO lines for this DO
+    this.api.getLines(this.doId!, this.isEdit ? this.cnId : null).subscribe({
       next: (res: any) => {
         const raw = Array.isArray(res) ? res : [];
         this.doPool = raw.map((r: any) => ({
@@ -206,14 +206,11 @@ export class ReturnCreditcreateComponent implements OnInit {
           itemId: +r.ItemId,
           itemName: r.ItemName,
           uom: r.Uom ?? 'Pieces',
-          deliveredQty: +(
-            r.QtyRemaining   // ✅ use remaining from API
-            ?? r.QtyDelivered // fallback if you call old API
-            ?? r.qty
-            ?? 0
-          ),
+          deliveredQty: +(r.QtyRemaining ?? r.QtyDelivered ?? r.Qty ?? 0),
           unitPrice: +(r.UnitPrice ?? 0),
           discountPct: +(r.DiscountPct ?? 0),
+          gstPct: +(r.GstPct ?? r.gstPct ?? 0),
+          tax: r.Tax ?? r.tax ?? 'EXCLUSIVE',
           taxCodeId: r.TaxCodeId ?? null,
           warehouseId: r.WarehouseId ?? null,
           supplierId: r.SupplierId ?? null,
@@ -226,21 +223,35 @@ export class ReturnCreditcreateComponent implements OnInit {
       },
       error: _ => Swal.fire({ icon: 'error', title: 'Failed', text: 'Load DO lines' })
     });
-
   }
 
-
-  private clearHeaderFromDo() {
-    this.doNumber = null; this.siNumber = null;
-    this.customerId = null; this.customerName = null;
-
+  private clearHeaderFromDo(): void {
+    this.doNumber = null;
+    this.siNumber = null;
+    this.customerId = null;
+    this.customerName = null;
+    this.lines = [];
+    this.subtotal = 0;
   }
 
-  addLine() {
-    // blank row waiting for item selection from the restricted list
+  // =============  AVAILABLE ITEMS FILTER  =============
+  private refreshAvailable(): void {
+    const used = new Set(
+      this.lines
+        .filter(x => x?.doLineId != null)
+        .map(x => `${x.doLineId}|${x.itemId}|${x.warehouseId}|${x.supplierId}|${x.binId ?? 'null'}`)
+    );
+
+    this.availableItems = this.doPool.filter(p =>
+      !used.has(`${p.doLineId}|${p.itemId}|${p.warehouseId}|${p.supplierId}|${p.binId ?? 'null'}`)
+    );
+  }
+
+  // =============  ROW OPS  =============
+  addLine(): void {
     this.lines.push({
-      doLineId: null as any,
-      siId: 0,
+      doLineId: null,
+      siId: this.siId ?? 0,
       itemId: 0,
       itemName: '',
       uom: null,
@@ -248,35 +259,43 @@ export class ReturnCreditcreateComponent implements OnInit {
       returnedQty: 0,
       unitPrice: 0,
       discountPct: 0,
+      gstPct: 0,
+      tax: 'EXCLUSIVE',
       taxCodeId: null,
       lineNet: 0,
       reasonId: null,
       restockDispositionId: 1,
-      warehouseId: 0,
-      supplierId: 0,
-      binId: 0
+      warehouseId: null,
+      supplierId: null,
+      binId: null
     });
     this.refreshAvailable();
   }
-  onItemPicked(ix: number, pickedItemId: number | null) {
-    const row = this.lines[ix]; if (!row) return;
 
-    if (!pickedItemId) { /* clear row… */ return; }
+  onItemPicked(ix: number, pickedItemId: number | null): void {
+    const row = this.lines[ix];
+    if (!row) { return; }
+
+    if (!pickedItemId) {
+      // clear line if needed
+      return;
+    }
 
     const src = this.doPool.find(p => +p.itemId === +pickedItemId);
-    if (!src) return;
+    if (!src) { return; }
 
     row.doLineId = src.doLineId;
     row.itemId = src.itemId;
     row.itemName = src.itemName;
     row.uom = src.uom ?? 'Pieces';
-    row.deliveredQty = src.deliveredQty;   // ✅ remaining
+    row.deliveredQty = src.deliveredQty;
     row.returnedQty = 0;
     row.unitPrice = src.unitPrice;
     row.discountPct = src.discountPct ?? 0;
+    row.gstPct = src.gstPct ?? 0;
+    row.tax = src.tax ?? 'EXCLUSIVE';
     row.taxCodeId = src.taxCodeId ?? null;
 
-    // carry keys (needed for stock update logic)
     row.warehouseId = src.warehouseId ?? null;
     row.supplierId = src.supplierId ?? null;
     row.binId = src.binId ?? null;
@@ -285,36 +304,67 @@ export class ReturnCreditcreateComponent implements OnInit {
     this.recalc(ix);
   }
 
-
-
-  removeLine(ix: number) {
-    const removed = this.lines[ix];
-    this.lines.splice(ix, 1);   // just drop from UI
-    this.refreshAvailable();    // put that item back into the dropdown
-    this.recalcAll();           // update subtotal
+  removeLine(ix: number): void {
+    this.lines.splice(ix, 1);
+    this.refreshAvailable();
+    this.recalcAll();
   }
 
-  recalc(i: number) {
-    debugger
+  // =============  CALC (WITH GST)  =============
+  recalc(i: number): void {
     const r = this.lines[i];
+    if (!r) { return; }
+
     const qty = Math.max(0, +r.returnedQty || 0);
-    // cap returned <= delivered
     r.returnedQty = qty > r.deliveredQty ? r.deliveredQty : qty;
-    const net = (+r.unitPrice || 0) * r.returnedQty * (1 - (+r.discountPct || 0) / 100);
-    r.lineNet = +net.toFixed(2);
+
+    const unit = +r.unitPrice || 0;
+    const discPct = +r.discountPct || 0;
+    const gstPct = +r.gstPct || 0;
+    const taxFlag = (r.tax || '').toUpperCase();
+    const hasTax = !!r.taxCodeId && gstPct > 0;
+
+    // base (discounted) amount
+    const rawBase = r.returnedQty * unit * (1 - discPct / 100);
+    const baseAmount = +rawBase.toFixed(2);
+
+    let lineNet: number;
+
+    if (!hasTax || taxFlag === 'EXEMPT') {
+      lineNet = baseAmount;
+    } else if (taxFlag === 'EXCLUSIVE') {
+      const gstAmount = +(baseAmount * (gstPct / 100)).toFixed(2);
+      lineNet = baseAmount + gstAmount;
+    } else {
+      // INCLUSIVE – base already includes GST
+      lineNet = baseAmount;
+    }
+
+    r.lineNet = +lineNet.toFixed(2);
+
     this.subtotal = +this.lines.reduce((s, x) => s + (+x.lineNet || 0), 0).toFixed(2);
   }
 
-  private recalcAll() {
+  private recalcAll(): void {
     this.lines.forEach((_, i) => this.recalc(i));
   }
 
-  save(status) {
-    this.status = status
-    debugger
-    if (!this.creditNoteDate) { Swal.fire({ icon: 'warning', title: 'Credit note date required' }); return; }
-    if (!this.doId) { Swal.fire({ icon: 'warning', title: 'Select a Delivery Order' }); return; }
-    if (this.lines.length === 0) { Swal.fire({ icon: 'warning', title: 'Add at least one line' }); return; }
+  // =============  SAVE  =============
+  save(status: number): void {
+    this.status = status;
+
+    if (!this.creditNoteDate) {
+      Swal.fire({ icon: 'warning', title: 'Credit note date required' });
+      return;
+    }
+    if (!this.doId) {
+      Swal.fire({ icon: 'warning', title: 'Select a Delivery Order' });
+      return;
+    }
+    if (this.lines.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Add at least one line' });
+      return;
+    }
 
     const payload: CnHeader = {
       ...(this.isEdit && this.cnId ? { id: this.cnId } : {}),
@@ -328,7 +378,7 @@ export class ReturnCreditcreateComponent implements OnInit {
       status: this.status,
       subtotal: this.subtotal,
       lines: this.lines.map(l => ({
-        id: l.id ? l.id : 0,
+        id: l.id ?? 0,
         doLineId: l.doLineId ?? null,
         siId: l.siId,
         itemId: l.itemId,
@@ -338,6 +388,8 @@ export class ReturnCreditcreateComponent implements OnInit {
         returnedQty: +l.returnedQty,
         unitPrice: +l.unitPrice,
         discountPct: +l.discountPct,
+        gstPct: l.gstPct ?? 0,
+        tax: l.tax ?? 'EXCLUSIVE',
         taxCodeId: l.taxCodeId ?? null,
         lineNet: +l.lineNet,
         reasonId: l.reasonId ?? null,
@@ -348,29 +400,26 @@ export class ReturnCreditcreateComponent implements OnInit {
       }))
     };
 
-    if (!this.isEdit) {
-      this.api.insertCreditNote(payload).subscribe({
-        next: (res: any) => {
-          if (res?.isSuccess) { Swal.fire({ icon: 'success', title: 'Created', text: `CN #${res.data}` }); this.router.navigate(['/Sales/Return-credit-list']); }
-          else Swal.fire({ icon: 'error', title: 'Create failed', text: res?.message || '' });
-        },
-        error: _ => Swal.fire({ icon: 'error', title: 'Create failed' })
-      });
-    } else if (this.cnId) {
-      this.api.updateCreditNote(payload).subscribe({
-        next: (r: any) => {
-          if (r?.isSuccess) { Swal.fire({ icon: 'success', title: 'Header updated' }); this.router.navigate(['/Sales/Return-credit-list']); }
-          else Swal.fire({ icon: 'error', title: 'Update failed', text: r?.message || '' });
-        },
-        error: _ => Swal.fire({ icon: 'error', title: 'Update failed' })
-      });
-    }
+    const obs = !this.isEdit
+      ? this.api.insertCreditNote(payload)
+      : this.api.updateCreditNote(payload);
+
+    obs.subscribe({
+      next: (res: any) => {
+        if (res?.isSuccess === false) {
+          Swal.fire({ icon: 'error', title: 'Save failed', text: res?.message || '' });
+          return;
+        }
+        Swal.fire({ icon: 'success', title: this.isEdit ? 'Updated' : 'Created' });
+        this.router.navigate(['/Sales/Return-credit-list']);
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Save failed' });
+      }
+    });
   }
 
-  goList() { this.router.navigate(['/Sales/Return-credit-list']); }
-
+  goList(): void {
+    this.router.navigate(['/Sales/Return-credit-list']);
+  }
 }
-
-
-
-
