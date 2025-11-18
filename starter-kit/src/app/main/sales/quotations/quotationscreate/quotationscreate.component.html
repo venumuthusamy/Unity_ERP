@@ -98,7 +98,11 @@
       <!-- FX Rate -->
       <div class="col-md-3">
         <label class="form-label form-label-xs">FX Rate</label>
-        <input type="number" class="form-control" [(ngModel)]="header.fxRate" name="fxRate" step="0.000001">
+        <input type="number"
+               class="form-control"
+               [(ngModel)]="header.fxRate"
+               name="fxRate"
+               step="0.000001">
       </div>
 
       <!-- Payment Terms -->
@@ -129,7 +133,12 @@
       <!-- GST% (read-only) -->
       <div class="col-md-3">
         <label class="form-label form-label-xs">GST %</label>
-        <input type="number" class="form-control" [(ngModel)]="header.taxPct" name="taxPct" step="0.01" readonly>
+        <input type="number"
+               class="form-control"
+               [(ngModel)]="header.taxPct"
+               name="taxPct"
+               step="0.01"
+               readonly>
         <small class="text-muted">Derived from customer's country.</small>
       </div>
     </div>
@@ -176,8 +185,10 @@
       </table>
 
       <div class="p-2 border-top bg-light">
-        <button class="btn btn-sm text-white" type="button"
-                (mouseenter)="hoverAdd=true" (mouseleave)="hoverAdd=false"
+        <button class="btn btn-sm text-white"
+                type="button"
+                (mouseenter)="hoverAdd=true"
+                (mouseleave)="hoverAdd=false"
                 [style.background-color]="hoverAdd ? '#0b2e3d' : '#2E5F73'"
                 (click)="openAdd()">
           + Add line
@@ -188,20 +199,56 @@
     <!-- Remarks + totals -->
     <div class="row mt-2">
       <div class="col-md-8">
-        <!-- <label class="form-label form-label-xs">Remarks</label>
-        <textarea class="form-control" rows="4" [(ngModel)]="header.remarks" name="remarks"
-                  placeholder="Customer notes, delivery instructions..."></textarea> -->
+        <!-- optional remarks -->
       </div>
 
       <div class="col-md-4">
         <div class="p-1 border rounded-3">
           <div class="d-flex justify-content-between mb-1">
-            <span>Subtotal</span><strong>{{ header.subtotal | currency:header.currency }}</strong>
+            <span>Subtotal</span>
+            <strong>{{ header.subtotal | currency:header.currency }}</strong>
           </div>
+
+      <!-- Discount row -->
+<div class="d-flex justify-content-between mb-1 align-items-center">
+  <span>Discount</span>
+  <div class="d-flex align-items-center">
+
+    <!-- INPUT -->
+    <input
+      type="number"
+      class="form-control me-1"
+      style="width: 120px;"
+      [(ngModel)]="header.discountInput"
+      name="docDiscountInput"
+      (ngModelChange)="onDiscountChange()"
+    />
+
+    <!-- TYPE SELECTOR -->
+    <select
+  class="form-select"
+  style="width: 90px;"
+  [(ngModel)]="header.discountType"
+  name="docDiscountType"
+  (change)="onDiscountTypeChange($event.target.value)"
+>
+  <option value="VALUE">Amt</option>
+  <option value="PERCENT">%</option>
+</select>
+
+
+  </div>
+</div>
+
+
+
           <div class="d-flex justify-content-between mb-1">
-            <span>Tax</span><strong>{{ header.taxAmount | currency:header.currency }}</strong>
+            <span>Tax</span>
+            <strong>{{ header.taxAmount | currency:header.currency }}</strong>
           </div>
+
           <hr class="my-2">
+
           <div class="d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Grand Total</span>
             <h4 class="m-0">{{ header.grandTotal | currency:header.currency }}</h4>
@@ -209,8 +256,12 @@
         </div>
 
         <div class="d-flex gap-2 mt-2">
-          <button class="btn text-white ms-auto" type="button" (click)="save()"
-                  style="background-color:#2E5F73;">Save</button>
+          <button class="btn text-white ms-auto"
+                  type="button"
+                  (click)="save()"
+                  style="background-color:#2E5F73;">
+            Save
+          </button>
         </div>
       </div>
     </div>
@@ -221,7 +272,9 @@
 <div *ngIf="showModal" class="prl-overlay" aria-modal="true" role="dialog">
   <div class="prl-modal" (click)="onModalContainer($event)">
     <div class="prl-head">
-      <h2 class="prl-title">{{ editingIndex === null ? 'Add Quotation Line' : 'Edit Quotation Line' }}</h2>
+      <h2 class="prl-title">
+        {{ editingIndex === null ? 'Add Quotation Line' : 'Edit Quotation Line' }}
+      </h2>
       <button class="prl-close" (click)="closeModal()">✕</button>
     </div>
 
@@ -231,11 +284,13 @@
         <!-- Item search -->
         <div class="prl-col-12 prl-md-6 prl-dropdown" #modalItemBox>
           <label class="prl-label">Item</label>
-          <input #itemSearchInput class="prl-input pr-10" name="itemSearch"
+          <input #itemSearchInput class="prl-input pr-10"
+                 name="itemSearch"
                  [(ngModel)]="modal.itemSearch"
                  (focus)="onModalItemFocus(true)"
                  (input)="filterModalItems()"
-                 placeholder="Search Item..." autocomplete="off" />
+                 placeholder="Search Item..."
+                 autocomplete="off" />
           <div class="prl-menu" *ngIf="modal.dropdownOpen">
             <ng-container *ngIf="modal.filteredItems?.length; else noMatches">
               <div class="prl-mi prl-mi-split"
@@ -255,30 +310,41 @@
         <!-- Qty -->
         <div class="prl-col-6 prl-md-3">
           <label class="prl-label">Qty</label>
-          <input type="number" class="prl-input"
-                 [(ngModel)]="modal.qty" name="qty"
+          <input type="number"
+                 class="prl-input"
+                 [(ngModel)]="modal.qty"
+                 name="qty"
                  (ngModelChange)="previewLineTotals()">
         </div>
 
-        <!-- UOM (name, read-only) -->
+        <!-- UOM -->
         <div class="prl-col-6 prl-md-3">
           <label class="prl-label">UOM</label>
-          <input class="prl-input" [value]="getUomName(modal.uomId)" placeholder="UOM" readonly>
+          <input class="prl-input"
+                 [value]="getUomName(modal.uomId)"
+                 placeholder="UOM"
+                 readonly>
         </div>
 
         <!-- Unit Price -->
         <div class="prl-col-6 prl-md-3">
           <label class="prl-label">Unit Price</label>
-          <input type="number" class="prl-input"
-                 [(ngModel)]="modal.unitPrice" name="unitPrice" step="0.0001"
+          <input type="number"
+                 class="prl-input"
+                 [(ngModel)]="modal.unitPrice"
+                 name="unitPrice"
+                 step="0.0001"
                  (ngModelChange)="previewLineTotals()">
         </div>
 
         <!-- Discount -->
         <div class="prl-col-6 prl-md-3">
           <label class="prl-label">Discount %</label>
-          <input type="number" class="prl-input"
-                 [(ngModel)]="modal.discountPct" name="discountPct" step="0.01"
+          <input type="number"
+                 class="prl-input"
+                 [(ngModel)]="modal.discountPct"
+                 name="discountPct"
+                 step="0.01"
                  (ngModelChange)="previewLineTotals()">
         </div>
 
@@ -286,7 +352,8 @@
         <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Tax Mode (Line)</label>
           <select class="prl-input"
-                  [(ngModel)]="modal.taxMode" name="taxMode"
+                  [(ngModel)]="modal.taxMode"
+                  name="taxMode"
                   (ngModelChange)="previewLineTotals()">
             <option value="EXCLUSIVE">Exclusive (add GST)</option>
             <option value="INCLUSIVE">Inclusive (includes GST)</option>
@@ -294,12 +361,6 @@
           </select>
           <small class="text-gray-500">GST% used: {{ header.taxPct || 0 }}%</small>
         </div>
-
-        <!-- Remarks -->
-        <!-- <div class="prl-col-12">
-          <label class="prl-label">Remarks</label>
-          <textarea rows="3" class="prl-input prl-textarea" [(ngModel)]="modal.remarks" name="remarks"></textarea>
-        </div> -->
 
         <!-- Live preview -->
         <div class="prl-col-12" *ngIf="modalPreview">
@@ -317,27 +378,18 @@
         </div>
       </div>
 
-      <!-- Add mode footer -->
-<div *ngIf="editingIndex === null; else editFoot" class="prl-foot">
-  <button type="button" class="prl-btn prl-btn-outline-brand" (click)="addAnotherLine()">
-    Add Another Line
-  </button>
-  <button type="submit" class="prl-btn prl-btn-primary">
-    Add &amp; Close
-  </button>
-  <button type="button" class="prl-btn" (click)="closeModal()">
-    Close
-  </button>
-</div>
+      <!-- Modal footer -->
+      <div class="prl-foot" *ngIf="editingIndex !== null; else addFooter">
+        <button type="button" class="prl-btn" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="prl-btn prl-btn-primary">Save Changes</button>
+      </div>
 
-<!-- Edit mode footer stays the same -->
-<ng-template #editFoot>
-  <div class="prl-foot">
-    <button type="button" class="prl-btn" (click)="closeModal()">Cancel</button>
-    <button type="submit" class="prl-btn prl-btn-primary">Save Changes</button>
-  </div>
-</ng-template>
-
+      <ng-template #addFooter>
+        <div class="prl-foot">
+          <button type="submit" class="prl-btn prl-btn-primary">Add &amp; Close</button>
+          <button type="button" class="prl-btn" (click)="closeModal()">Close</button>
+        </div>
+      </ng-template>
     </form>
   </div>
 </div>
