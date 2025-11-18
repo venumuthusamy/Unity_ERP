@@ -2,7 +2,6 @@
   <div class="content-body">
     <section class="users-list-wrapper">
       <div class="card ap-card">
-
         <!-- PAGE HEADER -->
         <div class="row">
           <div class="col-12 d-flex justify-content-between align-items-center">
@@ -30,7 +29,6 @@
               Payments
             </a>
           </li>
-          
           <li class="nav-item">
             <a
               class="nav-link"
@@ -43,40 +41,74 @@
 
         <!-- TAB CONTENT -->
         <div class="tab-content p-1">
+          <!-- ================= Supplier Invoices TAB ================= -->
+          <div
+            class="tab-pane"
+            [ngClass]="{ 'active show': activeTab === 'invoices' }"
+            *ngIf="activeTab === 'invoices'">
 
-          <!-- Supplier Invoices TAB -->
-          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'invoices' }" *ngIf="activeTab === 'invoices'">
-
-            <!-- FILTER -->
-            <div class="row mb-1">
-              <div class="col-md-6 col-12">
-                <label class="d-flex align-items-center">
-                  Search:
-                  <input
-                    [(ngModel)]="invoiceSearch"
-                    type="search"
-                    class="form-control ml-25"
-                    (keyup)="filterInvoices($event)"
-                    (search)="filterInvoices($event)" />
-                </label>
+            <!-- SUMMARY CARDS -->
+            <div class="ap-summary-row row no-gutters">
+              <div class="col-md-4 col-sm-6 col-12">
+                <div class="ap-summary-card ap-summary-total">
+                  <div class="label">Total Invoice Amount</div>
+                  <div class="value">
+                    {{ totalInvAmount | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6 col-12">
+                <div class="ap-summary-card ap-summary-paid">
+                  <div class="label">Total Paid</div>
+                  <div class="value">
+                    {{ totalInvPaid | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-6 col-12">
+                <div class="ap-summary-card ap-summary-outstanding">
+                  <div class="label">Total Outstanding</div>
+                  <div class="value">
+                    {{ totalInvOutstanding | number:'1.2-2' }}
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- FILTER -->
+          <!-- FILTER -->
+<div class="row mb-1">
+  <div class="col-md-6 col-12 ml-auto">
+    <div class="d-flex justify-content-md-end justify-content-start">
+      <label class="d-flex align-items-center mb-0">
+        Search:
+        <input
+          [(ngModel)]="invoiceSearch"
+          type="search"
+          class="form-control ml-25"
+          (keyup)="filterInvoices($event)"
+          (search)="filterInvoices($event)" />
+      </label>
+    </div>
+  </div>
+</div>
+
 
             <!-- TABLE -->
             <div class="table-responsive ap-table-wrap">
               <table class="table mb-0 ap-table">
-                <thead>
-                  <tr>
-                    <th>Invoice No</th>
-                    <th>Supplier</th>
-                    <th>Invoice Date</th>
-                    <th>Due Date</th>
-                    <th class="text-right">Amount</th>
-                    <th class="text-right">Paid</th>
-                    <th class="text-right">Outstanding</th>
-                    <th class="text-center">Status</th>
-                  </tr>
-                </thead>
+                <thead style="background-color:#2E5F73; color:#ffffff;">
+      <tr>
+        <th style="background-color:#2E5F73; color:#ffffff;">Invoice No</th>
+        <th style="background-color:#2E5F73; color:#ffffff;">Supplier</th>
+        <th style="background-color:#2E5F73; color:#ffffff;">Invoice Date</th>
+        <th style="background-color:#2E5F73; color:#ffffff;">Due Date</th>
+        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Amount</th>
+        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Paid</th>
+        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Outstanding</th>
+        <th style="background-color:#2E5F73; color:#ffffff;" class="text-center">Status</th>
+      </tr>
+    </thead>
                 <tbody>
                   <tr *ngFor="let r of invoices">
                     <td>{{ r.invoiceNo }}</td>
@@ -88,11 +120,14 @@
                     <td class="text-right text-brand font-weight-bold">
                       {{ r.outstandingAmount | number:'1.2-2' }}
                     </td>
-                    <td class="text-center">
-                      <span class="badge status-pill" [ngClass]="getInvoiceStatusClass(r.status)">
-                        {{ r.statusText || (r.status === 2 ? 'Paid' : r.status === 1 ? 'Partial' : 'Unpaid') }}
-                      </span>
-                    </td>
+                   <td class="text-center">
+  <span
+    class="badge status-pill"
+    [ngClass]="getInvoiceStatusClassByAmounts(r)">
+    {{ getInvoiceStatusTextByAmounts(r) }}
+  </span>
+</td>
+
                   </tr>
                   <tr *ngIf="invoices.length === 0">
                     <td colspan="8" class="text-center text-muted py-2">
@@ -102,30 +137,16 @@
                 </tbody>
               </table>
             </div>
-
-            <!-- TOTALS -->
-            <div class="ap-totals">
-              <div class="ap-total-item">
-                <div class="label">Total Invoice Amount</div>
-                <div class="value">{{ totalInvAmount | number:'1.2-2' }}</div>
-              </div>
-              <div class="ap-total-item">
-                <div class="label">Total Paid</div>
-                <div class="value text-success">{{ totalInvPaid | number:'1.2-2' }}</div>
-              </div>
-              <div class="ap-total-item">
-                <div class="label">Total Outstanding</div>
-                <div class="value text-brand">{{ totalInvOutstanding | number:'1.2-2' }}</div>
-              </div>
-            </div>
           </div>
 
-          <!-- PAYMENTS TAB -->
-          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'payments' }" *ngIf="activeTab === 'payments'">
+          <!-- ================= Payments TAB ================= -->
+          <div
+            class="tab-pane"
+            [ngClass]="{ 'active show': activeTab === 'payments' }"
+            *ngIf="activeTab === 'payments'">
 
             <!-- FORM -->
             <div class="ap-form-row row">
-
               <div class="col-md-3 col-12">
                 <div class="form-group">
                   <label>Supplier <span class="text-danger">*</span></label>
@@ -222,7 +243,10 @@
               </div>
 
               <div class="col-md-4 col-12 d-flex align-items-end justify-content-md-end">
-                <button type="button" class="btn btn-brand" (click)="postPayment()">
+                <button
+                  type="button"
+                  class="btn btn-brand"
+                  (click)="postPayment()">
                   <i data-feather="check-circle" class="mr-25"></i>
                   Post Payment
                 </button>
@@ -236,14 +260,14 @@
                 <table class="table mb-0 ap-table">
                   <thead>
                     <tr>
-                      <th>Payment No</th>
-                      <th>Supplier</th>
-                      <th>Invoice</th>
-                      <th>Payment Date</th>
-                      <th>Method</th>
-                      <th class="text-right">Amount</th>
-                      <th>Reference</th>
-                      <th>Notes</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Payment No</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Supplier</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Invoice</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Payment Date</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Method</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Amount</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Reference</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Notes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,60 +290,63 @@
                 </table>
               </div>
             </div>
-
           </div>
 
-        
-          <!-- 3-WAY MATCH TAB -->
-          <div class="tab-pane" [ngClass]="{ 'active show': activeTab === 'match' }" *ngIf="activeTab === 'match'">
+          <!-- ================= 3-Way Match TAB ================= -->
+          <div
+            class="tab-pane"
+            [ngClass]="{ 'active show': activeTab === 'match' }"
+            *ngIf="activeTab === 'match'">
 
             <div class="ap-table-wrap">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <h6 class="sub-title mb-0">PO vs GRN vs Supplier Invoice</h6>
+                <h6 class="sub-title mb-0">
+                  PO vs GRN vs Supplier Invoice
+                </h6>
               </div>
 
               <div class="table-responsive">
-             <table class="table mb-0 ap-table">
-  <thead>
-    <tr>
-      <th>PO No</th>
-      <th>GRN No</th>
-      <th>Invoice No</th>
-      <th>Supplier</th>
-      <th class="text-right">PO Amt</th>
-      <th class="text-right">Invoice Amt</th>
-      <th class="text-center">Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr *ngFor="let m of matchRows">
-      <td>{{ m.poNo }}</td>
-      <td>{{ m.grnNo }}</td>
-      <td>{{ m.invoiceNo }}</td>
-      <td>{{ m.supplierName }}</td>
-      <td class="text-right">{{ m.poAmount | number:'1.2-2' }}</td>
-      <td class="text-right">{{ m.invoiceAmount | number:'1.2-2' }}</td>
-      <td class="text-center">
-        <span class="badge status-pill" [ngClass]="matchStatusClass(m.status)">
-          {{ m.status || 'Mismatch' }}
-        </span>
-      </td>
-    </tr>
-    <tr *ngIf="matchRows.length === 0">
-      <td colspan="7" class="text-center text-muted py-2">
-        No match data available.
-      </td>
-    </tr>
-  </tbody>
-</table>
-
+                <table class="table mb-0 ap-table">
+                  <thead>
+                    <tr>
+                      <th style="background-color:#2E5F73; color:#ffffff;">PO No</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">GRN No</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Invoice No</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;">Supplier</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">PO Amt</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Invoice Amt</th>
+                      <th style="background-color:#2E5F73; color:#ffffff;" class="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let m of matchRows">
+                      <td>{{ m.poNo }}</td>
+                      <td>{{ m.grnNo }}</td>
+                      <td>{{ m.invoiceNo }}</td>
+                      <td>{{ m.supplierName }}</td>
+                      <td class="text-right">{{ m.poAmount | number:'1.2-2' }}</td>
+                      <td class="text-right">{{ m.invoiceAmount | number:'1.2-2' }}</td>
+                      <td class="text-center">
+                        <span
+                          class="badge status-pill"
+                          [ngClass]="matchStatusClass(m.status)">
+                          {{ m.status || 'Mismatch' }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="matchRows.length === 0">
+                      <td colspan="7" class="text-center text-muted py-2">
+                        No match data available.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
           </div>
-
         </div>
-
+        <!-- /TAB CONTENT -->
       </div>
     </section>
   </div>
