@@ -197,3 +197,41 @@ input[type="number"]{ text-align:right; }
 .btn-chip--danger-outline:hover{ background:#fff5f5; border-color:#fca5a5; }
 .btn-chip--danger-outline:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.18); }
 .btn-chip--danger-outline:active{ transform:translateY(1px); }
+
+/* summary rows (if not already) */
+.mtc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .6rem;
+}
+
+.mtc-label {
+  font-size: .85rem;
+  font-weight: 500;
+  color: #2E5F73;
+}
+
+/* discount row specific */
+.mtc-discount-wrap {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  width: 100%;
+}
+
+.mtc-discount-mode {
+  flex: 0 0 70px;        /* dropdown width */
+  padding-inline: .4rem;
+  text-align: center;
+}
+
+.mtc-discount-value {
+  flex: 1 1 auto;        /* input takes remaining space */
+}
+
+/* keep same height / look as other summary inputs */
+.mtc-inp {
+  height: 38px;
+  border-radius: 10px;
+}
