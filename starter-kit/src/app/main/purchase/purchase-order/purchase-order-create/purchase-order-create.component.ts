@@ -45,7 +45,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     subTotal: 0,
     netTotal: 0,
     approvalStatus: '',
-    StockReorderId:0
+    StockReorderId: 0
   };
   purchaseOrderId: any;
   approvalLevel: any;
@@ -521,22 +521,21 @@ export class PurchaseOrderCreateComponent implements OnInit {
         break;
       case 'supplier':
         this.poHdr.supplierId = item.id;
-        // find matching currency in currency list
-        const found = this.currencies.find(x => x.id === item.currencyId);
 
-        // update header + input
+        const found = this.currencies.find(x => x.id === item.currencyId);
         this.poHdr.currencyId = item.currencyId;
         this.poHdr.currencyName = found?.currencyName || found?.name || '';
-        if (this.poHdr.currencyName === 'SGD') {
-          this.poHdr.fxRate = 1
-        } else {
-          this.poHdr.fxRate = 0
-        }
+        this.poHdr.fxRate = this.poHdr.currencyName === 'SGD' ? 1 : 0;
         this.searchTexts['currency'] = this.poHdr.currencyName;
 
         const foundGst = this.countries.find(x => x.id === item.countryId);
         this.poHdr.tax = foundGst?.gstPercentage || '';
+
+        // 🔹 Recalculate all line taxes with new GST%
+        this.poLines.forEach(l => this.calculateLineTotal(l));
+
         break;
+
       case 'paymentTerms':
         this.poHdr.paymentTermId = item.id;
         break;
@@ -658,6 +657,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       this.poLines[index][field] = option.recurringName;
     } else if (field === 'taxCode') {
       this.poLines[index][field] = option.name;
+      this.onTaxCodeChange(index);
     } else {
       this.poLines[index][field] = option;
     }
@@ -731,7 +731,6 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
     return po;
   }
-
   private makeEmptyPOLine() {
     return {
       prNo: '',
@@ -745,12 +744,41 @@ export class PurchaseOrderCreateComponent implements OnInit {
       qty: 0,
       price: '',
       discount: '',
-      total: '',
+      // NEW derived fields
+      baseAmount: 0,       // qty * unit
+      discountAmount: 0,   // discount amount in $
+      taxAmount: 0,        // GST amount in $
+      total: 0,
 
       dropdownOpen: '',
       filteredOptions: []
     };
   }
+
+  poAddLine() {
+    this.poLines.push({
+      prNo: '',
+      item: '',
+      description: '',
+      budget: '',
+      recurring: '',
+      taxCode: '',
+      location: '',
+      contactNumber: '',
+      qty: 0,
+      price: '',
+      discount: '',
+      baseAmount: 0,
+      discountAmount: 0,
+      taxAmount: 0,
+      total: 0,
+
+      dropdownOpen: '',
+      filteredOptions: []
+    });
+  }
+
+
 
   /** Treat a row with no meaningful data as empty */
   private isEmptyLine(line: any): boolean {
@@ -785,25 +813,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     );
   }
 
-  poAddLine() {
-    this.poLines.push({
-      prNo: '',
-      item: '',
-      description: '',
-      budget: '',
-      recurring: '',
-      taxCode: '',
-      location: '',
-      contactNumber: '',
-      qty: 0,
-      price: '',
-      discount: '',
-      total: '',
 
-      dropdownOpen: '',
-      filteredOptions: []
-    });
-  }
+
 
   poRemoveLine(i: number) {
     this.poLines.splice(i, 1);
@@ -816,20 +827,50 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
   trackByIndex = (i: number, _: any) => i;
 
-
   calculateLineTotal(line: any) {
-    const qty = Number(line.qty) || 0;
-    const price = Number(line.price) || 0;
-    const discount = Number(line.discount) || 0;
+    if (!line) { return; }
 
-    // If discount is percentage
-    const sub = qty * price;
-    line.total = sub - (sub * discount) / 100;
+    // quantity (non-negative)
+    const qty = Math.max(0, +line.qty || 0);
+    line.qty = qty;
 
-    // Round to 2 decimals
-    line.total = Number(line.total.toFixed(2));
+    const unit = +line.price || 0;          // unit price
+    const discPct = +line.discount || 0;    // discount %
+    const gstPct = +this.poHdr.tax || 0;    // GST % from supplier country
+    const taxMode = this.getTaxFlag(line);
+    const hasTax = !!line.taxCode && gstPct > 0;
 
-    // Recalculate overall totals whenever a line changes
+    // ---- base + discount ----
+    const rawBase = qty * unit;                           // qty * price
+    const discountAmt = rawBase * (discPct / 100);        // discount in $
+    const baseAfterDisc = +(rawBase - discountAmt).toFixed(2);
+
+    let taxAmt = 0;
+    let lineNet = 0;
+
+    if (!hasTax || taxMode === 'EXEMPT') {
+      // No GST or Exempt – just discounted base
+      lineNet = baseAfterDisc;
+      taxAmt = 0;
+    } else if (taxMode === 'EXCLUSIVE') {
+      // Exclusive – add GST on top of discounted base
+      taxAmt = +(baseAfterDisc * (gstPct / 100)).toFixed(2);
+      lineNet = baseAfterDisc + taxAmt;
+    } else {
+      // INCLUSIVE  – price already includes GST
+      // baseAfterDisc = GST-inclusive amount
+      lineNet = baseAfterDisc;
+      // split GST portion out (e.g. 12% of 1120 -> 120)
+      taxAmt = +(lineNet * (gstPct / (100 + gstPct))).toFixed(2);
+    }
+
+    // store back on the line
+    line.baseAmount = +rawBase.toFixed(2);
+    line.discountAmount = +discountAmt.toFixed(2);
+    line.taxAmount = +taxAmt.toFixed(2);
+    line.total = +lineNet.toFixed(2);
+
+    // refresh totals
     this.recalculateTotals();
   }
 
@@ -841,30 +882,96 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
 
   /** Compute totals dynamically */
+  /** Totals getter used in template */
   get poTotals() {
-    return this.calcTotals(this.poLines, this.poHdr.shipping, this.poHdr.discount, this.poHdr.tax);
+    // return this.calcTotals(this.poLines, this.poHdr.shipping, this.poHdr.discount, this.poHdr.tax);
+    return this.calcTotals(this.poLines, this.poHdr.shipping, this.poHdr.discount);
   }
 
-  /** Do the math: subtotal → +shipping → -discount → +GST */
-  calcTotals(lines: any[], shipping = 0, discount = 0, gstPercent = 0) {
-    const subTotal = lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0);
+  /** 
+   * subtotal       = sum of all (qty * price)  -> baseAmount
+   * lineDiscount   = sum of all discountAmount
+   * shippingWithTax = shipping + (shipping * GST%)
+   * netTotal       = subtotal - lineDiscount - headerDiscount + lineTax + shippingWithTax
+   */
+  // calcTotals(lines: any[], shipping = 0, headerDiscount = 0, gstPercent = 0) {
+  //   let subTotal = 0;
+  //   let lineDiscountTotal = 0;
+  //   let lineTaxTotal = 0;
 
-    const afterShipping = subTotal + Number(shipping || 0);
-    const afterDiscount = afterShipping - Number(discount || 0);
-    const gstAmount = afterDiscount * (Number(gstPercent) / 100);
-    const netTotal = afterDiscount + gstAmount;
+  //   for (const l of lines || []) {
+  //     subTotal += Number(l.baseAmount) || 0;
+  //     lineDiscountTotal += Number(l.discountAmount) || 0;
+  //     lineTaxTotal += Number(l.taxAmount) || 0;
+  //   }
+
+  //   const ship = Number(shipping) || 0;
+  //   const hdrDisc = Number(headerDiscount) || 0;
+  //   const gst = Number(gstPercent) || 0;
+
+  //   const shippingTax = gst > 0 ? ship * (gst / 100) : 0;
+  //   const shippingWithTax = ship + shippingTax;
+
+  //   const netTotal =
+  //     subTotal
+  //     - lineDiscountTotal
+  //     - hdrDisc
+  //     + lineTaxTotal
+  //     + shippingWithTax;
+
+  //   return {
+  //     subTotal: this.round(subTotal),
+  //     lineDiscountTotal: this.round(lineDiscountTotal),
+  //     lineTaxTotal: this.round(lineTaxTotal),
+  //     shipping: this.round(ship),
+  //     shippingTax: this.round(shippingTax),
+  //     shippingWithTax: this.round(shippingWithTax),
+  //     netTotal: this.round(netTotal)
+  //   };
+  // }
+
+  calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
+    let subTotal = 0;
+    let lineDiscountTotal = 0;
+    let lineTaxTotal = 0;
+
+    for (const l of lines || []) {
+      subTotal += Number(l.baseAmount) || 0;
+      lineDiscountTotal += Number(l.discountAmount) || 0;
+      lineTaxTotal += Number(l.taxAmount) || 0;
+    }
+
+    const ship = Number(shipping) || 0;
+    const hdrDisc = Number(headerDiscount) || 0;
+
+
+    // const shippingTax = 0;
+    const gst = Number(this.poHdr.tax) || 0;
+    const shippingWithTax = ship + (ship * gst / 100);
+
+    const netTotal =
+      subTotal
+      - lineDiscountTotal
+      - hdrDisc
+      + lineTaxTotal
+      + shippingWithTax;
 
     return {
       subTotal: this.round(subTotal),
-      gstAmount: this.round(gstAmount),
+      lineDiscountTotal: this.round(lineDiscountTotal),
+      lineTaxTotal: this.round(lineTaxTotal),
+      shipping: this.round(ship),
+      // shippingTax: this.round(shippingTax),
+      shippingWithTax: this.round(shippingWithTax),
       netTotal: this.round(netTotal)
     };
   }
 
-  /** Utility rounder */
-  round(value: number) {
-    return Math.round((value + Number.EPSILON) * 100) / 100;
+
+  round(val: number) {
+    return Math.round((val + Number.EPSILON) * 100) / 100;
   }
+
 
   calculateFxTotal() {
     const fx = Number(this.poHdr.fxRate) || 1;
@@ -983,7 +1090,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       netTotal: Number(this.poTotals.netTotal.toFixed(2)),
       approvalStatus: this.poHdr.approvalStatus,
       poLines: JSON.stringify(this.poLines),
-      StockReorderId:this.poHdr.stockReorderId
+      StockReorderId: this.poHdr.stockReorderId
     };
 
     if (this.poHdr.id && this.poHdr.id > 0) {
@@ -1054,6 +1161,26 @@ export class PurchaseOrderCreateComponent implements OnInit {
     this.poLines[index][field] = this.poLines[index][field]
       ?.toString()
       .replace(/\D/g, '') || '';
+  }
+
+  private getTaxFlag(line: any): 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT' {
+    const txt = (line?.taxCode || '').toString().toUpperCase();
+
+    if (txt.includes('EXEMPT')) {
+      return 'EXEMPT';
+    }
+    if (txt.includes('INCLUSIVE')) {
+      return 'INCLUSIVE';
+    }
+    // default if nothing found or “Exclusive (add GST)”
+    return 'EXCLUSIVE';
+  }
+  onTaxCodeChange(i: number): void {
+    const line = this.poLines[i];
+    if (!line) { return; }
+
+    // Recalculate using current qty, price, discount, GST% and tax mode
+    this.calculateLineTotal(line);
   }
 
   ///// for temp data------////
@@ -1157,6 +1284,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     });
   }
   ///// for temp data------////
+
 
 
 }
