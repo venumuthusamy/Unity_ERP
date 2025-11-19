@@ -2,10 +2,14 @@
   <div class="content-body">
     <section class="users-list-wrapper">
       <div class="card">
+
+        <!-- ==================== HEADER ROW ==================== -->
         <div class="row">
           <!-- Title + page size -->
           <div class="col-md-3 col-12">
-            <h4 class="card-text" style="margin-left:0.85rem;margin-top:0.75rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+            <h4
+              class="card-text"
+              style="margin-left:0.85rem;margin-top:0.75rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
               PR List
             </h4>
             <div class="d-flex justify-content-between align-items-center m-1">
@@ -22,75 +26,132 @@
             </div>
           </div>
 
-          <!-- Search + buttons + ALERTS -->
-<div class="col-md-9 col-12 d-flex justify-content-start justify-content-md-end">
-  <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
-    <!-- Search -->
-    <label class="d-flex align-items-center ml-1 ml-md-0">
-      Search:
-      <input
-        [(ngModel)]="searchValue"
-        name="searchValue"
-        type="search"
-        class="form-control ml-25"
-        (keyup)="filterUpdate($event)"
-        (search)="filterUpdate($event)"
-      />
-    </label>
+          <!-- Search + Alerts + Add + Drafts -->
+          <div class="col-md-9 col-12 d-flex justify-content-start justify-content-md-end">
+            <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
 
-    <!-- Button group (alerts / add / drafts) -->
-    <div class="d-flex align-items-center ml-1">
-      <!-- Alerts -->
-      <div class="position-relative mr-1">
-        <button
-          type="button"
-          (click)="toggleAlerts()"
-          class="btn d-inline-flex align-items-center"
-          style="background:#fff;color:#2E5F73;border:1px solid #2E5F73;gap:6px;"
-          title="Shortage Alerts">
-          <i data-feather="bell" class="w-4 h-4"></i>
-          <span>Alerts</span>
-          <span *ngIf="alertCount > 0"
-                class="badge badge-pill badge-danger"
-                style="position:absolute;top:-6px;right:-6px;">{{ alertCount }}</span>
-        </button>
+              <!-- Search -->
+              <label class="d-flex align-items-center ml-1 ml-md-0">
+                Search:
+                <input
+                  [(ngModel)]="searchValue"
+                  name="searchValue"
+                  type="search"
+                  class="form-control ml-25"
+                  (keyup)="filterUpdate($event)"
+                  (search)="filterUpdate($event)" />
+              </label>
 
-        <!-- Slide-down panel -->
-        <div *ngIf="showAlertsPanel" class="card alerts-panel">
-          <!-- existing alerts panel content -->
-        </div>
-      </div>
+              <!-- Button group -->
+              <div class="d-flex align-items-center ml-1">
 
-      <!-- Add -->
-      <button
-        (click)="goToCreate()"
-        class="btn mr-1 d-inline-flex align-items-center"
-        style="background-color:#2E5F73;color:white;gap:6px;">
-        <i data-feather="plus-circle" class="w-4 h-4"></i>
-        <span>Add</span>
-      </button>
+                <!-- Alerts button + panel -->
+                <div class="position-relative mr-1">
+                  <button
+                    type="button"
+                    (click)="toggleAlerts()"
+                    class="btn d-inline-flex align-items-center"
+                    style="background:#fff;color:#2E5F73;border:1px solid #2E5F73;gap:6px;"
+                    title="Shortage Alerts">
+                    <i data-feather="bell" class="w-4 h-4"></i>
+                    <span>Alerts</span>
+                    <span
+                      *ngIf="alertCount > 0"
+                      class="badge badge-pill badge-danger"
+                      style="position:absolute;top:-6px;right:-6px;">
+                      {{ alertCount }}
+                    </span>
+                  </button>
 
-      <!-- Drafts -->
-      <button
-        (click)="openDrafts()"
-        class="btn d-inline-flex align-items-center position-relative"
-        style="background:#ffffff;color:#2E5F73;border:1px solid #2E5F73;gap:6px;">
-        <i data-feather="file-text" class="w-4 h-4"></i>
-        <span>Drafts</span>
-        <span
-          *ngIf="draftCount > 0"
-          class="badge badge-pill badge-warning"
-          style="position:absolute;top:-6px;right:-6px;">
-          {{ draftCount }}
-        </span>
-      </button>
-    </div>
-  </div>
-</div>
+                  <!-- Slide-down alerts panel -->
+                  <div *ngIf="showAlertsPanel" class="card alerts-panel">
+                    <div class="alerts-head">
+                      <div class="d-flex align-items-center" style="gap:8px;">
+                        <i data-feather="bell"></i>
+                        <b>Shortage Alerts</b>
+                      </div>
+                      <div class="d-flex align-items-center" style="gap:8px;">
+                        <button class="btn btn-sm btn-light" (click)="refreshAlerts()">Refresh</button>
+                        <button
+                          class="btn btn-sm btn-warning"
+                          (click)="acknowledgeAll()"
+                          [disabled]="alerts.length === 0">
+                          Mark all read
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-light"
+                          (click)="closeAlerts()"
+                          aria-label="Close">
+                          ×
+                        </button>
+                      </div>
+                    </div>
 
-        </div>
+                    <div class="alerts-body">
+                      <div *ngIf="alerts.length === 0" class="p-3 text-center text-muted">
+                        No new alerts.
+                      </div>
 
-        <!-- Main datatable -->
+                      <div
+                        *ngFor="let a of alerts; trackBy: trackByAlertId"
+                        class="alert-card">
+                        <div class="alert-title">
+                          Sales shortage — Item: {{ a.itemName || ('#' + a.itemId) }}
+                          · Qty: {{ a.requiredQty }}
+                          <ng-container *ngIf="a.warehouseId != null">
+                            · WH: {{ a.warehouseName || a.warehouseId }}
+                          </ng-container>
+                          <ng-container *ngIf="a.supplierId != null">
+                            · SUP: {{ a.supplierName || a.supplierId }}
+                          </ng-container>
+                        </div>
+
+                        <div class="alert-sub">
+                          <span *ngIf="a.createdOn">{{ a.createdOn | date:'short' }}</span>
+                        </div>
+
+                        <div class="mt-2 d-flex" style="gap:8px;">
+                          <button
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="acknowledgeAlert(a)">
+                            Acknowledge
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div><!-- /alerts-panel -->
+                </div><!-- /position-relative -->
+
+                <!-- Add -->
+                <button
+                  (click)="goToCreate()"
+                  class="btn mr-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
+
+                <!-- Drafts -->
+                <button
+                  (click)="openDrafts()"
+                  class="btn d-inline-flex align-items-center position-relative"
+                  style="background:#ffffff;color:#2E5F73;border:1px solid #2E5F73;gap:6px;">
+                  <i data-feather="file-text" class="w-4 h-4"></i>
+                  <span>Drafts</span>
+                  <span
+                    *ngIf="draftCount > 0"
+                    class="badge badge-pill badge-warning"
+                    style="position:absolute;top:-6px;right:-6px;">
+                    {{ draftCount }}
+                  </span>
+                </button>
+
+              </div><!-- /button-group -->
+            </div><!-- /d-flex -->
+          </div><!-- /col-md-9 -->
+        </div><!-- /row -->
+
+        <!-- ==================== MAIN DATATABLE ==================== -->
         <ngx-datatable
           class="bootstrap core-bootstrap"
           [rows]="rows"
@@ -103,9 +164,17 @@
           [reorderable]="true">
 
           <!-- View lines -->
-          <ngx-datatable-column [width]="50" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+          <ngx-datatable-column
+            [width]="50"
+            [resizeable]="false"
+            [sortable]="false"
+            [draggable]="false"
+            [canAutoResize]="false">
             <ng-template ngx-datatable-cell-template let-row="row">
-              <span (click)="openLinesModal(row)" title="View Details" style="cursor:pointer;font-size:18px;color:#2E5F73;">
+              <span
+                (click)="openLinesModal(row)"
+                title="View Details"
+                style="cursor:pointer;font-size:18px;color:#2E5F73;">
                 <i class="fas fa-eye"></i>
               </span>
             </ng-template>
@@ -117,13 +186,13 @@
 
           <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="180">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              {{ row.deliveryDate | date: 'dd-MM-yyyy' }}
+              {{ row.deliveryDate | date:'dd-MM-yyyy' }}
             </ng-template>
           </ngx-datatable-column>
 
           <ngx-datatable-column name="By Reorder" prop="isReorder" [width]="150">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              {{ row?.isReorder == true ? 'Yes' : 'No' }}
+              {{ row?.isReorder === true ? 'Yes' : 'No' }}
             </ng-template>
           </ngx-datatable-column>
 
@@ -138,13 +207,12 @@
                   'badge-danger'  : value === 3
                 }"
                 [style.backgroundColor]="(value === 3 || value === 4) ? 'red' : ''"
-                title="Status"
-              >
+                title="Status">
                 {{
-                  value === 0 ? 'Draft' :
+                  value === 0 ? 'Draft'   :
                   value === 1 ? 'Pending' :
-                  value === 2 ? 'Approved' :
-                  value === 3 ? 'Rejected' : 'Unknown'
+                  value === 2 ? 'Approved':
+                  value === 3 ? 'Rejected': 'Unknown'
                 }}
               </div>
             </ng-template>
@@ -158,32 +226,45 @@
                   <i class="fas fa-trash text-gray-300" title="Disabled"></i>
                 </ng-container>
                 <ng-template #actionsEnabled>
-                  <i class="fas fa-pen text-primary" style="cursor:pointer;" (click)="editRequest(row.id)" title="Edit"></i>
-                  <i class="fas fa-trash text-danger" style="cursor:pointer;" (click)="deleteRequest(row.id)" title="Delete"></i>
+                  <i
+                    class="fas fa-pen text-primary"
+                    style="cursor:pointer;"
+                    (click)="editRequest(row.id)"
+                    title="Edit"></i>
+                  <i
+                    class="fas fa-trash text-danger"
+                    style="cursor:pointer;"
+                    (click)="deleteRequest(row.id)"
+                    title="Delete"></i>
                 </ng-template>
               </div>
             </ng-template>
           </ngx-datatable-column>
+
         </ngx-datatable>
-      </div>
+      </div><!-- /card -->
     </section>
   </div>
 </div>
 
-<!-- PR Lines Modal -->
+<!-- ==================== PR LINES MODAL ==================== -->
 <div
   *ngIf="showLinesModal"
   (click)="closeLinesModal()"
-  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;"
->
+  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div
     (click)="$event.stopPropagation()"
-    style="width:800px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);"
-  >
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef2f7;">
+    style="width:800px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef2f7;">
       <h3 style="margin:0;font-size:20px;line-height:1.2;font-weight:700;color:#374151;">PR Lines</h3>
-      <button (click)="closeLinesModal()" aria-label="Close"
-        style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">×</button>
+      <button
+        (click)="closeLinesModal()"
+        aria-label="Close"
+        style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">
+        ×
+      </button>
     </div>
 
     <div style="padding:16px 20px;">
@@ -197,12 +278,19 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let l of modalLines; let i = index" [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'" style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:10px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;">
+            <tr
+              *ngFor="let l of modalLines; let i = index"
+              [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
+              style="border-bottom:1px solid #f1f5f9;">
+              <td
+                style="padding:10px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;">
                 {{ l.itemSearch || '-' }}
               </td>
               <td style="padding:10px 12px;">{{ l.location || '-' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">{{ l.qty || 0 }}</td>
+              <td
+                style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums;">
+                {{ l.qty || 0 }}
+              </td>
             </tr>
             <tr *ngIf="!modalLines?.length">
               <td colspan="3" style="padding:14px 12px;text-align:center;color:#6b7280;">No lines</td>
@@ -211,36 +299,46 @@
           <tfoot *ngIf="modalLines?.length">
             <tr style="background:#f3f4f6;border-top:1px solid #e5e7eb;">
               <td colspan="2" style="padding:10px 12px;font-weight:700;">Total</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{{ modalTotalQty }}</td>
+              <td
+                style="padding:10px 12px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">
+                {{ modalTotalQty }}
+              </td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #eef2f7;">
-      <button (click)="closeLinesModal()"
+    <div
+      style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #eef2f7;">
+      <button
+        (click)="closeLinesModal()"
         style="background:#2E5F73;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">
         Close
       </button>
     </div>
+
   </div>
 </div>
 
-<!-- Drafts Modal -->
+<!-- ==================== DRAFTS MODAL ==================== -->
 <div
   *ngIf="showDraftsModal"
   (click)="closeDrafts()"
-  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1060;display:flex;align-items:center;justify-content:center;"
->
+  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1060;display:flex;align-items:center;justify-content:center;">
   <div
     (click)="$event.stopPropagation()"
-    style="width:960px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);"
-  >
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef2f7;">
+    style="width:960px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef2f7;">
       <h3 style="margin:0;font-size:18px;font-weight:700;color:#2E5F73;">Draft Purchase Requests</h3>
-      <button (click)="closeDrafts()" aria-label="Close"
-        style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">×</button>
+      <button
+        (click)="closeDrafts()"
+        aria-label="Close"
+        style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">
+        ×
+      </button>
     </div>
 
     <div style="padding:12px 16px;">
@@ -256,11 +354,14 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let d of drafts; trackBy: trackById" style="border-top:1px solid #f1f5f9;">
+            <tr
+              *ngFor="let d of drafts; trackBy: trackById"
+              style="border-top:1px solid #f1f5f9;">
               <td style="padding:10px 12px;">{{ d.requester || '-' }}</td>
               <td style="padding:10px 12px;">{{ d.departmentName || d.departmentID || '-' }}</td>
               <td style="padding:10px 12px;">{{ d.deliveryDate | date:'dd-MM-yyyy' }}</td>
-              <td style="padding:10px 12px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              <td
+                style="padding:10px 12px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 {{ d.description || '-' }}
               </td>
               <td style="padding:10px 12px;text-align:center;">
@@ -278,11 +379,14 @@
       </div>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #eef2f7;">
-      <button (click)="closeDrafts()"
+    <div
+      style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #eef2f7;">
+      <button
+        (click)="closeDrafts()"
         style="background:#2E5F73;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">
         Close
       </button>
     </div>
+
   </div>
 </div>

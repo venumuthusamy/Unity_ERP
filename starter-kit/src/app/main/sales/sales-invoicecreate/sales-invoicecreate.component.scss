@@ -145,3 +145,93 @@
 
 /* Remove any remaining default outlines */
 :host ::ng-deep .custom-ng-select .ng-select-container:focus { outline: none !important; }
+
+
+/* ===== Summary card (right side) ===== */
+.prl-summary-card {
+  border-radius: 22px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  padding: 14px 18px;
+  background: #ffffff;
+}
+
+.prl-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.prl-summary-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.prl-summary-input {
+  flex: 0 0 55%;
+  max-width: 55%;
+  border-radius: 14px;
+  border: 1px solid var(--prl-brand, #2E5F73);
+  height: 32px;
+  padding: 4px 10px;
+  font-size: 14px;
+  text-align: right;
+  color: #0f172a;
+}
+
+.prl-summary-input[readonly] {
+  background: #f9fafb;
+}
+
+.prl-summary-discount {
+  flex: 0 0 55%;
+  max-width: 55%;
+}
+
+.prl-summary-select {
+  border-radius: 14px 0 0 14px;
+  border: 1px solid var(--prl-brand, #2E5F73);
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #2E5F73;
+}
+
+.prl-summary-discount-input {
+  border-radius: 0 14px 14px 0;
+  border-left: 0;
+}
+
+.prl-summary-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+}
+
+.prl-summary-total-row span:first-child {
+  font-size: 14px;
+  color: #111827;
+}
+
+.prl-summary-total-value {
+  font-size: 16px;
+  color: var(--prl-brand, #2E5F73);
+}
+
+
+.notes-textarea {
+  border-radius: 999px;   // pill shape
+  resize: none;           // user can't create scrollbar by resizing
+  overflow-y: hidden;     // no inner vertical scroll
+  min-height: 40px;
+  line-height: 1.4;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
