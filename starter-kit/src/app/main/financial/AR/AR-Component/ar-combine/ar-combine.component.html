@@ -1,12 +1,13 @@
 <div class="content-wrapper container-xxl p-0">
   <div class="content-body">
     <div class="card ar-card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <!-- HEADER -->
+      <div class="card-header d-flex justify-content-between align-items-center py-1">
         <h4 class="mb-0 ar-title">Accounts Receivable (AR)</h4>
       </div>
 
-      <!-- Tabs -->
-      <ul class="nav nav-tabs ar-tabs" role="tablist">
+      <!-- TABS -->
+      <ul class="nav nav-tabs ar-tabs mb-1" role="tablist">
         <li class="nav-item" (click)="setTab('invoices')">
           <a
             class="nav-link"
@@ -38,12 +39,11 @@
         </li>
       </ul>
 
-      <!-- Tab content -->
-      <div class="card-body">
+      <!-- TAB CONTENT -->
+      <div class="card-body ar-body">
         <app-invoice-create *ngIf="activeTab === 'invoices'"></app-invoice-create>
         <app-receipt *ngIf="activeTab === 'receipts'"></app-receipt>
       </div>
     </div>
   </div>
 </div>
-

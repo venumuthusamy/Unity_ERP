@@ -1,0 +1,123 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+
+// invoice-create.component.scss
+$brand: #2e5f73;
+
+.ar-card {
+  border-radius: 18px;
+}
+
+.invoice-table thead {
+  background-color: $brand;
+  color: #fff;
+
+  th {
+    border: 0;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+}
+
+.customer-row {
+  background: #f7fafc;
+  font-weight: 600;
+}
+
+.inner-table {
+  background: #fff;
+
+  thead {
+    background: #f1f5f9;
+    color: #4a5568;
+  }
+}
+
+.summary-card {
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+   background-color: #f8fbff;  
+
+  .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #a0aec0;
+    margin-bottom: 0.25rem;
+  }
+
+  .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+}
+
+.status-pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.status-paid {
+  background-color: #e6f6ec;
+  color: #137333;
+}
+
+.status-partial {
+  background-color: #fff4e5;
+  color: #b26a00;
+}
+
+.status-unpaid {
+  background-color: #ffecec;
+  color: #c53929;
+}
+
+.invoice-table thead tr th {
+  background-color: #2E5F73 !important;
+  color: #fff !important;
+}
+/* print button inline with pill, no drop down */
+.ar-print-btn {
+  padding: 0.15rem 0.45rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.ar-print-btn i {
+  font-size: 0.8rem;
+}
+/* ===== AR tables ===== */
+
+/* main & inner headers: keep in one line, smaller so they fit */
+.ar-table thead th,
+.inner-table thead th {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 0.45rem 0.6rem;
+}
+
+/* numbers tighter so they don't push width */
+.inner-table td.text-end {
+  white-space: nowrap;
+}
+
+/* remove horizontal scrollbar for this page’s table */
+.ar-card .table-responsive {
+  overflow-x: visible;     /* no horizontal scroll bar */
+}
+/* Keep Invoice No + Invoice Date in a single line */
+.inner-table td:first-child,        /* Invoice No column */
+.inner-table td:nth-child(2),.inner-table td:nth-child(3) {      /* Invoice Date column */
+  white-space: nowrap;
+}
+
+/* Just to be safe, also keep all cells of the credit row in one line */
+.inner-table tr.credit-summary-row td {
+  white-space: nowrap;
+}
