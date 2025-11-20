@@ -74,13 +74,13 @@
                     <ngx-datatable-column name="Action" [width]="120">
                         <ng-template let-row="row" ngx-datatable-cell-template>
                             <!-- Edit -->
-                            <i class="fas fa-pen mr-2"
+                            <i class="fas fa-pen text-primary mr-2"
                                  (click)="editPicking(row)"
                                >
                             </i>
 
                             <!-- Delete -->
-                            <i class="fas fa-trash"
+                            <i class="fas fa-trash text-danger"
                                 (click)="deletePicking(row.id)">
                             </i>
                         </ng-template>

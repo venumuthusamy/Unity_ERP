@@ -32,3 +32,20 @@ $brand: #2E5F73;
     }
   }
 }
+
+.ar-card {
+  .card-header {
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;  // reduce gap above tabs
+  }
+
+  .ar-tabs {
+    margin-top: 0;            // remove extra space between title & tabs
+    margin-bottom: 0.25rem;   // small gap before content
+  }
+
+  .ar-body {
+    padding-top: 0.75rem;     // tighter space under tabs
+  }
+}
+
