@@ -128,7 +128,7 @@ export class DebitNoteCreateComponent implements OnInit {
         this.retRows = (lines || []).map((l: any) => ({
           item: l.item ?? '',
           qty: Number(l.qty ?? 0),
-          price: Number(l.price ?? 0),
+          price: Number(l.unitPrice ?? 0),
           remarks: l.remarks ?? ''
         }));
 
@@ -173,7 +173,7 @@ export class DebitNoteCreateComponent implements OnInit {
         this.retRows = (lines || []).map((l: any) => ({
           item: l.item ?? '',
           qty: 0,                           // will set from variance
-          price: Number(l.price ?? 0),
+          price: Number(l.unitPrice ?? 0),
           remarks: ''
         }));
 
