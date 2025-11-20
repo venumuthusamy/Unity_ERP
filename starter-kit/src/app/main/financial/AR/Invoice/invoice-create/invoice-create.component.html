@@ -83,7 +83,7 @@
                                         <td class="text-end">{{ g.totalPaid | number:'1.2-2' }}</td>
                                         <td class="text-end">{{ g.totalCreditNote | number:'1.2-2' }}</td>
                                         <td class="text-end">
-                                            {{ g.totalOutstanding | number:'1.2-2' }}
+                                            {{ g.netOutstanding | number:'1.2-2' }}
                                         </td>
                                     </tr>
 
@@ -114,17 +114,12 @@
                                                             </ng-container>
                                                             <ng-template #noDue>-</ng-template>
                                                         </td>
-                                                        <td class="text-end">
-                                                            {{ r.amount | number:'1.2-2' }}
-                                                        </td>
-                                                        <td class="text-end">
-                                                            {{ r.paid | number:'1.2-2' }}
-                                                        </td>
-
+                                                        <td class="text-end">{{ r.amount | number:'1.2-2' }}</td>
+                                                        <td class="text-end">{{ r.paid | number:'1.2-2' }}</td>
                                                         <td class="text-end" [ngClass]="{
-              'text-success': r.outstanding === 0,
-              'text-danger': r.outstanding > 0
-            }">
+          'text-success': r.outstanding === 0,
+          'text-danger': r.outstanding > 0
+        }">
                                                             {{ r.outstanding | number:'1.2-2' }}
                                                         </td>
                                                         <td class="text-end align-middle">
@@ -132,74 +127,70 @@
                                                                 [ngClass]="getStatusClassFromString(getInvoiceStatus(r))">
                                                                 {{ getInvoiceStatus(r) }}
                                                             </span>
-
                                                             <button
                                                                 class="btn btn-outline-secondary btn-sm ar-print-btn"
                                                                 type="button" (click)="printInvoice(r)">
                                                                 <i class="fa fa-print"></i>
                                                             </button>
                                                         </td>
-
                                                     </tr>
 
-                                                    <!-- credit note summary row for this customer -->
-                                                    <tr class="credit-summary-row" *ngIf="g.totalCreditNote > 0">
-                                                        <!-- Invoice No = CN No -->
-                                                        <td>
-                                                            {{ g.creditNoteNo || 'Credit Note' }}
+                                                    <!-- ONE ROW PER CREDIT NOTE -->
+                                                    <tr class="credit-summary-row" *ngFor="let cn of g.creditNotes">
+                                                        <!-- CN No -->
+                                                        <td class="invoice-ref">{{ cn.customerCreditNoteNo || cn.invoiceNo }}
+                                                             <span class="invoice-ref" *ngIf="cn.referenceNo"> ({{ cn.referenceNo }})</span>
                                                         </td>
 
-                                                        <!-- Invoice Date = CN Date -->
+                                                        <!-- CN Date -->
                                                         <td>
-                                                            <ng-container *ngIf="g.creditNoteDate; else cnNoDate">
-                                                                {{ g.creditNoteDate | date:'dd-MM-yyyy' }}
+                                                            <ng-container
+                                                                *ngIf="cn.customerCreditNoteDate; else cnNoDate">
+                                                                {{ cn.customerCreditNoteDate | date:'dd-MM-yyyy' }}
                                                             </ng-container>
                                                             <ng-template #cnNoDate>-</ng-template>
                                                         </td>
 
-                                                        <!-- Due Date = '-' -->
+                                                        <!-- Due Date -->
                                                         <td>-</td>
 
-                                                        <!-- Amount = always negative -->
+                                                        <!-- Amount (negative) -->
                                                         <td class="text-end text-danger">
-                                                            {{ (g.totalCreditNote * -1) | number:'1.2-2' }}
+                                                            {{ (cn.customerCreditNoteAmount! * -1) | number:'1.2-2' }}
                                                         </td>
 
-                                                        <!-- Paid depends on status:
-       Draft (1) -> 0
-       Approved/Posted (>=2) -> +credit -->
+                                                        <!-- Paid -->
                                                         <td class="text-end"
-                                                            [ngClass]="{'text-success': g.creditNoteStatus && g.creditNoteStatus > 1}">
+                                                            [ngClass]="{'text-success': (cn.customerCreditStatus || 0) > 1}">
                                                             {{
-                                                            (g.creditNoteStatus && g.creditNoteStatus > 1
-                                                            ? g.totalCreditNote
+                                                            ((cn.customerCreditStatus || 0) > 1
+                                                            ? cn.customerCreditNoteAmount
                                                             : 0) | number:'1.2-2'
                                                             }}
                                                         </td>
 
-                                                        <!-- Outstanding:
-       Draft -> -credit, Approved/Posted -> 0 -->
+                                                        <!-- Outstanding -->
                                                         <td class="text-end">
                                                             {{
-                                                            (g.creditNoteStatus && g.creditNoteStatus > 1
+                                                            ((cn.customerCreditStatus || 0) > 1
                                                             ? 0
-                                                            : -g.totalCreditNote) | number:'1.2-2'
+                                                            : -cn.customerCreditNoteAmount!) | number:'1.2-2'
                                                             }}
                                                         </td>
 
+                                                        <!-- Status -->
                                                         <td class="text-end">
                                                             <span class="status-pill" [ngClass]="{
-        'status-credit': g.creditNoteStatus && g.creditNoteStatus > 1,
-        'status-credit-draft': g.creditNoteStatus === 1
-      }">
-                                                                {{ g.creditNoteStatus === 1 ? 'Credit Draft' : 'Credit
-                                                                Note' }}
+              'status-credit': (cn.customerCreditStatus || 0) > 1,
+              'status-credit-draft': cn.customerCreditStatus === 1
+            }">
+                                                                {{ cn.customerCreditStatus === 1 ? 'Credit Draft' :
+                                                                'Credit Note' }}
                                                             </span>
                                                         </td>
                                                     </tr>
-
-
                                                 </tbody>
+
                                             </table>
                                         </td>
                                     </tr>

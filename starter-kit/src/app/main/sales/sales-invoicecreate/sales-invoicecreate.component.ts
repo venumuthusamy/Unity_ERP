@@ -185,7 +185,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   }
 
   private resetForCreate() {
-    this.sourceType = 1;
+    // this.sourceType = 1;
     this.sourceId = null;
     this.invoiceDate = new Date().toISOString().slice(0, 10);
 
@@ -741,6 +741,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Save
   // ============================================================
   save(): void {
+    debugger
     if (!this.invoiceDate) {
       Swal.fire({ icon: 'warning', title: 'Invoice Date is required' });
       return;

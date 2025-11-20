@@ -121,3 +121,8 @@ $brand: #2e5f73;
 .inner-table tr.credit-summary-row td {
   white-space: nowrap;
 }
+.invoice-ref {
+  font-size: 0.65rem;    // smaller text
+  color: #6c757d;        // muted grey
+  margin-top: -2px;      // tighten spacing
+}

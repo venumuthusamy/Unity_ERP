@@ -6,6 +6,7 @@ import { environment } from 'environments/environment';
 import { map } from 'rxjs/operators';
 
 export interface ArInvoiceListItem {
+    rowType: 'INV' | 'CN';
     invoiceId: number;
     invoiceNo: string;
     invoiceDate: string;
@@ -21,7 +22,8 @@ export interface ArInvoiceListItem {
     customerCreditNoteAmount?: number;
     customerCreditNoteNo?: string | null;
     customerCreditNoteDate?: string | null;
-    customerCreditStatus?: number; 
+    customerCreditStatus?: number;
+      referenceNo?: string | null;
 }
 
 /** Grouped by customer for UI */
@@ -29,16 +31,20 @@ export interface ArCustomerGroup {
     customerId: number;
     customerName: string;
     invoiceCount: number;
-    totalAmount: number;
-    totalPaid: number;
-    totalCreditNote: number;
-    totalOutstanding: number;
+    totalAmount: number;        // invoices only
+    totalPaid: number;          // invoices only
+    totalCreditNote: number;    // all CN amounts (for display)
+    totalOutstanding: number;   // invoices outstanding (before unapplied CN)
+    netOutstanding: number;     // totalOutstanding - unapplied CN
+
 
     invoices: ArInvoiceListItem[];
+    creditNotes: ArInvoiceListItem[];
+
     expanded?: boolean;
     creditNoteNo?: string | null;
     creditNoteDate?: string | null;
-     creditNoteStatus?: number; 
+    creditNoteStatus?: number;
 }
 
 @Injectable({ providedIn: 'root' })
