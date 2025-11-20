@@ -31,6 +31,7 @@ export class InvoiceCreateComponent implements OnInit {
   }
 
   loadInvoices(): void {
+    debugger
     this.loading = true;
     this.arService.getInvoices().subscribe({
       next: data => {
@@ -44,8 +45,7 @@ export class InvoiceCreateComponent implements OnInit {
       }
     });
   }
-
-  private buildGroups(rows: ArInvoiceListItem[]): void {
+private buildGroups(rows: ArInvoiceListItem[]): void {
   const map = new Map<number, ArCustomerGroup>();
 
   for (const r of rows) {
@@ -58,7 +58,9 @@ export class InvoiceCreateComponent implements OnInit {
         totalPaid: 0,
         totalCreditNote: 0,
         totalOutstanding: 0,
+        netOutstanding: 0,
         invoices: [],
+        creditNotes: [],
         expanded: false,
         creditNoteNo: undefined,
         creditNoteDate: undefined,
@@ -68,39 +70,53 @@ export class InvoiceCreateComponent implements OnInit {
 
     const g = map.get(r.customerId)!;
 
-    g.invoices.push(r);
-    g.totalAmount += r.amount || 0;
-    g.totalPaid += r.paid || 0;
-    g.totalCreditNote = r.customerCreditNoteAmount || g.totalCreditNote;
+    if (r.rowType === 'CN') {
+      // standalone credit-note display row
+      g.creditNotes.push(r);
 
-    if (r.customerCreditNoteAmount && r.customerCreditNoteAmount > 0) {
-      g.creditNoteNo = r.customerCreditNoteNo || g.creditNoteNo;
-      g.creditNoteDate = r.customerCreditNoteDate || g.creditNoteDate;
-      g.creditNoteStatus = r.customerCreditStatus ?? g.creditNoteStatus;
+      // total CN for display (always +ve)
+      g.totalCreditNote += Math.abs(r.customerCreditNoteAmount || r.amount || 0);
+    }
+    else {
+      // normal invoice row
+      g.invoices.push(r);
+      g.totalAmount      += r.amount || 0;
+      g.totalPaid        += r.paid || 0;
+      g.totalOutstanding += r.outstanding || 0;
     }
   }
 
   this.groups = Array.from(map.values()).map(g => {
     g.invoiceCount = g.invoices.length;
-    g.totalOutstanding = g.totalAmount - g.totalPaid - g.totalCreditNote;
+
+    // unapplied CN = CN rows with NO invoiceId
+    const unappliedCn = g.creditNotes
+      .filter(cn => !cn.invoiceId || cn.invoiceId <= 0)
+      .reduce((sum, cn) => sum + Math.abs(cn.customerCreditNoteAmount || cn.amount || 0), 0);
+
+    // net outstanding = invoices outstanding – **unapplied** credits
+    g.netOutstanding = g.totalOutstanding - unappliedCn;
+
     return g;
   });
 }
 
 
-  private computeHeaderTotals(): void {
-    this.totalInvoiceAmount = 0;
-    this.totalPaid = 0;
-    this.totalCreditNote = 0;
-    this.netOutstanding = 0;
 
-    for (const g of this.groups) {
-      this.totalInvoiceAmount += g.totalAmount;
-      this.totalPaid += g.totalPaid;
-      this.totalCreditNote += g.totalCreditNote;
-      this.netOutstanding += g.totalOutstanding;
-    }
+ private computeHeaderTotals(): void {
+  this.totalInvoiceAmount = 0;
+  this.totalPaid = 0;
+  this.totalCreditNote = 0;
+  this.netOutstanding = 0;
+
+  for (const g of this.groups) {
+    this.totalInvoiceAmount += g.totalAmount;
+    this.totalPaid          += g.totalPaid;
+    this.totalCreditNote    += g.totalCreditNote;
+    this.netOutstanding     += g.netOutstanding;   // << use net, not totalOutstanding
   }
+}
+
 
   onSearchChange(term: string): void {
     this.searchTerm = term || '';

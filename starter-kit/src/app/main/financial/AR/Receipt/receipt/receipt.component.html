@@ -32,6 +32,7 @@
             <thead>
               <tr>
                 <th>Receipt</th>
+                <th>InvoiceNo</th>
                 <th>Customer</th>
                 <th>Date</th>
                 <th>Method</th>
@@ -43,6 +44,7 @@
             <tbody>
               <tr *ngFor="let r of filtered">
                 <td>{{ r.receiptNo }}</td>
+                <td>{{ r.invoiceNos }}</td>
                 <td>{{ r.customerName }}</td>
                 <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
                 <td>{{ r.paymentMode }}</td>
