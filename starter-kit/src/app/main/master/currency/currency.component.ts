@@ -87,8 +87,8 @@ export class CurrencyComponent implements OnInit {
     const payload = {
       CurrencyName: this.CurrencyName,
       description: this.description,
-      CreatedBy: this.userId,
-      UpdatedBy: this.userId,
+      CreatedBy: '1',
+      UpdatedBy: '1',
       UpdatedDate: new Date(),
       isActive: true,
     };
