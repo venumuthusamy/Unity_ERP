@@ -23,7 +23,7 @@ import { ARCombineComponent } from './AR/AR-Component/ar-combine/ar-combine.comp
 import { ReceiptCreateComponent } from './AR/Receipt/receipt-create/receipt-create.component';
 import { InvoiceCreateComponent } from './AR/Invoice/invoice-create/invoice-create.component';
 import { GeneralLdegerComponent } from './general-ldeger/general-ledgerlist/general-ldeger.component';
-
+import { AgingComponent } from './AR/Aging/aging/aging.component';
 
 
 const routes: Routes = [
@@ -58,7 +58,8 @@ const routes: Routes = [
     ARCombineComponent,
     ReceiptCreateComponent,
     InvoiceCreateComponent,
-    GeneralLdegerComponent
+    GeneralLdegerComponent,
+    AgingComponent
   ],
   imports: [
     CommonModule,
