@@ -305,13 +305,15 @@
             <div class="ap-table-wrap" *ngIf="!showPaymentForm">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <h6 class="sub-title mb-0">Supplier Payments</h6>
-                <button
-                  type="button"
-                  class="btn btn-brand"
-                  (click)="openNewPayment()">
-                  <i class="fas fa-plus mr-25"></i>
-                  New Payment
-                </button>
+               <button
+  type="button"
+  class="btn btn-brand"
+  (click)="openNewPayment()"
+  [disabled]="isPeriodLocked">
+  <i class="fas fa-plus mr-25"></i>
+  New Payment
+</button>
+
               </div>
 
               <div class="table-responsive">
@@ -432,10 +434,12 @@
                 <div class="form-group">
                   <label>Date</label>
                   <input
-                    type="date"
-                    class="form-control"
-                    [(ngModel)]="payDate"
-                    name="payDate" />
+  type="date"
+  class="form-control"
+  [(ngModel)]="payDate"
+  name="payDate"
+  (change)="onPayDateChange()" />
+
                 </div>
               </div>
 

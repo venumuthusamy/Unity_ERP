@@ -3,6 +3,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'environments/environment';
+export interface PeriodStatus {
+  isSuccess: boolean;
+  isLocked: boolean;
+  periodName?: string;
+  message?: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +16,7 @@ import { environment } from 'environments/environment';
 export class AccountsPayableService {
 
   private baseUrl = environment.apiUrl + '/finance/ap';
-
+private baseUrl1 = environment.apiUrl + '/PeriodClose';
   constructor(private http: HttpClient) { }
 
   // INVOICES TAB
@@ -28,11 +34,16 @@ export class AccountsPayableService {
   }
 
   createPayment(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/payments`, payload);
+    return this.http.post<any>(`${this.baseUrl}/payments/create`, payload);
   }
 
   // 3-WAY MATCH TAB
   getMatchList(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/match`);
+  }
+   getPeriodStatus(date: string): Observable<PeriodStatus> {
+    return this.http.get<PeriodStatus>(`${this.baseUrl1}/status`, {
+      params: { date }
+    });
   }
 }

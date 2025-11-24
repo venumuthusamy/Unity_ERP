@@ -24,6 +24,7 @@ import { ReceiptCreateComponent } from './AR/Receipt/receipt-create/receipt-crea
 import { InvoiceCreateComponent } from './AR/Invoice/invoice-create/invoice-create.component';
 import { GeneralLdegerComponent } from './general-ldeger/general-ledgerlist/general-ldeger.component';
 import { AgingComponent } from './AR/Aging/aging/aging.component';
+import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.component';
 
 
 const routes: Routes = [
@@ -39,7 +40,7 @@ const routes: Routes = [
   { path: 'AR-receipt-create', component: ReceiptCreateComponent },
   { path: 'AR-receipt-edit/:id', component: ReceiptCreateComponent },
     { path: 'ledger', component: GeneralLdegerComponent },
-
+{ path: 'Period-close', component: PeriodCloseFxComponent },
 
 ];
 

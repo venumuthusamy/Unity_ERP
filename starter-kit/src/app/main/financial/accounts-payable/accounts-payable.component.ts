@@ -48,7 +48,8 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
 payInvSelectAll = false;
   supplierGroups: SupplierInvoiceGroup[] = [];
   expandedSupplierIds = new Set<number>();
-
+  isPeriodLocked = false;
+  currentPeriodName = '';
   // ----- Pagination: Invoices (supplier summary) -----
   invPage = 1;
   invPageSize = 10;
@@ -97,6 +98,7 @@ payInvSelectAll = false;
 
   // ---------------- LIFECYCLE ----------------
   ngOnInit(): void {
+    this.checkPeriodLockForDate(this.payDate);
     this.loadSuppliers();
     this.setTab('invoices');
   }
@@ -419,21 +421,33 @@ payInvSelectAll = false;
       });
     }
 
-    forkJoin(requests).subscribe({
-      next: (results: any[]) => {
-        const allOk = results.every(r => r?.isSuccess !== false);
-        if (allOk) {
-          Swal.fire('Success', 'Payment(s) posted', 'success');
-        } else {
-          Swal.fire('Warning', 'Some payments may have failed', 'warning');
-        }
+   forkJoin(requests).subscribe({
+  next: (results: any[]) => {
+    const allOk = results.every(r => r?.isSuccess !== false);
+    if (allOk) {
+      Swal.fire('Success', 'Payment(s) posted', 'success');
+    } else {
+      const firstErr = results.find(r => r?.isSuccess === false);
+      Swal.fire('Warning', firstErr?.message || 'Some payments may have failed', 'warning');
+    }
 
-        this.loadPayments();
-        this.loadInvoices();   // refresh outstanding in invoices tab
-        this.backToPaymentList();
-      },
-      error: () => Swal.fire('Error', 'Failed to post payments', 'error')
-    });
+    this.loadPayments();
+    this.loadInvoices();
+    this.backToPaymentList();
+  },
+  error: (err) => {
+    const msg = err?.error?.message || err?.message || 'Failed to post payments';
+
+    // if message from backend is about locked period, show clearly
+    if (msg.toLowerCase().includes('period') && msg.toLowerCase().includes('locked')) {
+      Swal.fire('Period Locked', msg, 'error');
+      this.checkPeriodLockForDate(this.payDate);
+    } else {
+      Swal.fire('Error', msg, 'error');
+    }
+  }
+});
+
   }
 
   resetPaymentForm(): void {
@@ -536,5 +550,25 @@ onInvoiceCheckboxChange(inv: any, checked: boolean): void {
   matchGoToPage(p: number): void {
     if (p < 1 || p > this.matchTotalPages) { return; }
     this.matchPage = p;
+  }
+  checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
+
+    this.apSvc.getPeriodStatus(dateStr).subscribe({
+      next: (res) => {
+        this.isPeriodLocked = !!res.isLocked;
+        this.currentPeriodName = res.periodName || '';
+      },
+      error: () => {
+        // if API fails, safer to treat as locked or show warning
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  // whenever user changes payment date, re-check
+  onPayDateChange(): void {
+    this.checkPeriodLockForDate(this.payDate);
   }
 }
