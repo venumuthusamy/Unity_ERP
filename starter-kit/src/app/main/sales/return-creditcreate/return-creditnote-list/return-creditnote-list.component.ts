@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { DatePipe } from '@angular/common';
 import Swal from 'sweetalert2';
@@ -30,23 +30,31 @@ export class ReturnCreditnoteListComponent implements OnInit {
   modalLines: any[] = [];
 
   // if you load reason master to resolve name in modal (optional)
-  
+
   dispositionMap = new Map<number, string>([
     [1, 'RESTOCK'],
     [2, 'SCRAP']
   ]);
   reasonList: any;
+  initialCnParam: string | null = null;
 
   constructor(
     private api: CreditNoteService,
     private router: Router,
     private datePipe: DatePipe,
     private StockissueService: StockIssueService,
+    private route: ActivatedRoute
   ) { }
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe(params => {
+      const cn = params.get('cn');
+      if (cn) {
+        this.initialCnParam = cn;
+      }
+    });
     this.loadList();
-    this.StockissueService.getAllStockissue().subscribe((res:any)=>{
+    this.StockissueService.getAllStockissue().subscribe((res: any) => {
       this.reasonList = res
     })
   }
@@ -70,11 +78,16 @@ export class ReturnCreditnoteListComponent implements OnInit {
           lineItems: r.lines ?? []
         }));
         this.tempData = [...this.rows];
+
+        if (this.initialCnParam) {
+          this.searchValue = this.initialCnParam;
+          this.filterUpdate(null);        // event can be null – see below
+        }
       },
       error: _ => Swal.fire({ icon: 'error', title: 'Failed', text: 'Load credit notes' })
     });
 
-    
+
   }
 
 
@@ -83,7 +96,7 @@ export class ReturnCreditnoteListComponent implements OnInit {
 
     const temp = this.tempData.filter(d => {
       const cnDate = this.datePipe.transform(d.creditNoteDate, 'dd-MM-yyyy')?.toLowerCase() || '';
-   
+
 
       return (
         (d.creditNoteNo?.toLowerCase().includes(val)) ||
@@ -136,7 +149,7 @@ export class ReturnCreditnoteListComponent implements OnInit {
   reasonName(id?: number | null) {
     debugger
     if (!id) return null;
-    return this.reasonList.data.find(x=>x.id == id).stockIssuesNames;
+    return this.reasonList.data.find(x => x.id == id).stockIssuesNames;
   }
   dispositionName(id?: number | null) {
     const key = id != null ? +id : 0;

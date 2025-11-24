@@ -4,6 +4,7 @@ import {
   ArInvoiceService,
   ArCustomerGroup
 } from '../invoice-service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-invoice-create',
@@ -24,7 +25,7 @@ export class InvoiceCreateComponent implements OnInit {
   totalCreditNote = 0;
   netOutstanding = 0;
 
-  constructor(private arService: ArInvoiceService) { }
+  constructor(private arService: ArInvoiceService, private router: Router  ) { }
 
   ngOnInit(): void {
     this.loadInvoices();
@@ -157,5 +158,15 @@ private buildGroups(rows: ArInvoiceListItem[]): void {
   printInvoice(row: ArInvoiceListItem): void {
     // TODO: hook to your SI print
     // this.router.navigate(['/sales/sales-invoice-print', row.invoiceId]);
+  }
+    openCreditNote(cn: ArInvoiceListItem): void {
+      debugger
+    const cnNo = cn.customerCreditNoteNo || cn.invoiceNo;
+    if (!cnNo) { return; }
+
+    this.router.navigate(
+      ['/Sales/Return-credit-list'],
+      { queryParams: { cn: cnNo } }   // e.g. ?cn=CN-000002
+    );
   }
 }
