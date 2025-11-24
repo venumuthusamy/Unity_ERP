@@ -42,6 +42,8 @@ import { BinComponent } from './bin/bin.component';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { DriverComponent } from './driver/driver.component';
 import { VehicleComponent } from './vehicle/vehicle.component';
+import { BankComponent } from './bank/create-bank/bank.component';
+import { ListBankComponent } from './bank/list-bank/list-bank.component';
 
 const routes: Routes = [
   { path: 'approval-level', component: ApprovalLevelComponent },
@@ -73,13 +75,17 @@ const routes: Routes = [
   { path: 'bin', component: BinComponent },
     { path: 'driver', component: DriverComponent },
     { path: 'vehicle', component: VehicleComponent },
+    { path: 'bank', component: BankComponent },
+     { path: 'bank-list', component: ListBankComponent },
+      { path: 'bank/edit/:id', component: BankComponent },
+
 ];
 
 @NgModule({
   declarations: [ApprovalLevelComponent, CountriesComponent, CitiesComponent, UomComponent, IncotermsComponent, FlagissueComponent, PaymentTermsComponent, CurrencyComponent,
     StatesComponent, ServiceComponent, CustomerGroupsComponent, SupplierGroupsComponent, LocationComponent, CreateLocationComponent,
     RegionsComponent, DeductionsComponent, IncomeComponent, DepartmentComponent, ItemsComponent, CreateitemsidebarComponent, WarehouseListComponent, WarehouseCreateComponent, RecurringComponent, TaxcodeComponent, CatagoryComponent, CoastingMethodComponent, StrategyComponent,
-    StockIssueComponent, BinComponent, DriverComponent,VehicleComponent
+    StockIssueComponent, BinComponent, DriverComponent,VehicleComponent, BankComponent, ListBankComponent
   ],
   imports: [
     CommonModule,
