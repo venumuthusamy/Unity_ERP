@@ -60,7 +60,8 @@ const routes: Routes = [
     ReceiptCreateComponent,
     InvoiceCreateComponent,
     GeneralLdegerComponent,
-    AgingComponent
+    AgingComponent,
+    PeriodCloseFxComponent
   ],
   imports: [
     CommonModule,
