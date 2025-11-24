@@ -392,7 +392,7 @@ private recalcHeaderFromLines(): void {
       supplierId: v.supplierId, 
       invoiceDate: this.toSqlDate(v.invoiceDate),
       amount: Number(v.amount),
-      tax: Number(v.tax),
+      tax: Number(this.taxAmount),
       currencyId: v.currencyId,
       status: action === 'HOLD' ? 1 : 2,
       linesJson: this.buildLinesJson(),

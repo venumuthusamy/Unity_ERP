@@ -1,0 +1,73 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
+.pagination .page-link {
+  color: #2E5F73;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #2E5F73;
+  border-color: #2E5F73;
+  color: #fff;
+}
+/* Make header row full brand colour */
+.gst-table thead th {
+  background-color: #2E5F73;
+  color: #fff;
+  border-bottom: none;
+}
+
+/* Align all cells vertically in the middle */
+.gst-table th,
+.gst-table td {
+  vertical-align: middle;
+  border-top: none;        /* optional: cleaner look */
+}
+
+/* Prevent date / doc no from breaking into multiple lines */
+.gst-table .text-nowrap {
+  white-space: nowrap;
+}
+
+/* Badge styling */
+.gst-type-badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.gst-type-sales {
+  background-color: #2E5F73;
+  color: #fff;
+}
+
+.gst-type-supplier {
+  background-color: #00c8ff;
+  color: #fff;
+}
+
+/* Pagination colours */
+.pagination .page-link {
+  color: #2E5F73;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #2E5F73;
+  border-color: #2E5F73;
+  color: #fff;
+}
+.gst-table-wrapper {
+  padding: 0;             /* removes inner padding */
+  margin: 0;              /* aligns with card edges */
+}
+
+.gst-pagination {
+  padding: 1rem;          /* consistent spacing */
+  background: #fff;
+}
+
+.gst-table thead th {
+  background-color: #2E5F73;
+  color: white;
+  white-space: nowrap;
+}
