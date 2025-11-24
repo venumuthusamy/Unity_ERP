@@ -22,4 +22,8 @@ private url = environment.apiUrl
      GetAllRecurring(): Observable<any> {
     return this.http.get<any>(this.url + JournalsAPiUrls.GetAllRecurring);
   }
+
+  postBatch(ids: number[]) {
+    return this.http.post<any>(this.url+JournalsAPiUrls.postBatch, { ids });
+  }
 }

@@ -22,6 +22,7 @@ import { ReceiptComponent } from './AR/Receipt/receipt/receipt.component';
 import { ARCombineComponent } from './AR/AR-Component/ar-combine/ar-combine.component';
 import { ReceiptCreateComponent } from './AR/Receipt/receipt-create/receipt-create.component';
 import { InvoiceCreateComponent } from './AR/Invoice/invoice-create/invoice-create.component';
+import { GeneralLdegerComponent } from './general-ldeger/general-ledgerlist/general-ldeger.component';
 
 
 
@@ -37,6 +38,7 @@ const routes: Routes = [
   { path: 'AR-receipt', component: ReceiptComponent },
   { path: 'AR-receipt-create', component: ReceiptCreateComponent },
   { path: 'AR-receipt-edit/:id', component: ReceiptCreateComponent },
+    { path: 'ledger', component: GeneralLdegerComponent },
 
 
 ];
@@ -55,7 +57,8 @@ const routes: Routes = [
     ReceiptComponent,
     ARCombineComponent,
     ReceiptCreateComponent,
-    InvoiceCreateComponent
+    InvoiceCreateComponent,
+    GeneralLdegerComponent
   ],
   imports: [
     CommonModule,

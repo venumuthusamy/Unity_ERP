@@ -13,7 +13,7 @@
               </h2>
             </div>
 
-            <!-- Row 1: Account / Journal Date / Type -->
+            <!-- Row 1 -->
             <div class="row gx-3 gy-3 journal-fields">
 
               <!-- Account -->
@@ -37,7 +37,7 @@
                 </ng-select>
               </div>
 
-              <!-- Journal Date -->
+              <!-- Date -->
               <div class="col-md-4 col-sm-6">
                 <label class="form-label mb-25">Journal Date</label>
                 <div class="journal-date-group">
@@ -47,9 +47,6 @@
                     [(ngModel)]="journalDate"
                     name="journalDate"
                     placeholder="dd/mm/yyyy" />
-                  <span class="journal-date-icon">
-                    <i data-feather="calendar"></i>
-                  </span>
                 </div>
               </div>
 
@@ -69,10 +66,9 @@
               </div>
             </div>
 
-            <!-- Row 2: Customer/Supplier + Debit + Credit -->
+            <!-- Row 2 -->
             <div class="row gx-3 gy-3 mt-1">
 
-              <!-- Customer -->
               <div class="col-md-4 col-sm-6" *ngIf="selectedType === 'Customer'">
                 <label class="form-label mb-25">Customer</label>
                 <ng-select
@@ -87,7 +83,6 @@
                 </ng-select>
               </div>
 
-              <!-- Supplier -->
               <div class="col-md-4 col-sm-6" *ngIf="selectedType === 'Supplier'">
                 <label class="form-label mb-25">Supplier</label>
                 <ng-select
@@ -125,159 +120,103 @@
               </div>
             </div>
 
-            <!-- Row 3: Description -->
-          <div class="row gx-3 gy-3 mt-1">
-  <div class="col-md-8 col-sm-12">
-    <label class="form-label mb-25">Description</label>
-    <textarea
-      class="form-control journal-input"
-      [(ngModel)]="description"
-      name="description"
-      rows="3"
-      placeholder="Description">
-    </textarea>
-  </div>
-</div>
+            <!-- Description -->
+            <div class="row gx-3 gy-3 mt-1">
+              <div class="col-md-8 col-sm-12">
+                <label class="form-label mb-25">Description</label>
+                <textarea
+                  class="form-control journal-input"
+                  [(ngModel)]="description"
+                  name="description"
+                  rows="3">
+                </textarea>
+              </div>
+            </div>
 
-            <!-- Row 4: Recurring Settings -->
-   <div class="row mt-3">
-  <div class="col-12">
-    <div class="recurring-card">
+            <!-- Recurring -->
+            <div class="row mt-3">
+              <div class="col-12">
+                <div class="recurring-card">
 
-      <!-- Checkbox + title -->
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <div class="d-flex align-items-center">
-          <div class="form-check mb-0">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="isRecurring"
-              [(ngModel)]="isRecurring"
-              name="isRecurring">
-            <label class="form-check-label ms-2" for="isRecurring">
-              Make this a recurring journal
-            </label>
-          </div>
-        </div>
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="form-check mb-0">
+                      <input class="form-check-input" type="checkbox" id="isRecurring" [(ngModel)]="isRecurring">
+                      <label class="form-check-label ms-2" for="isRecurring">Make this a recurring journal</label>
+                    </div>
+                    <small class="recurring-help d-none d-md-inline">Automatically create this journal on a schedule.</small>
+                  </div>
 
-        <small class="recurring-help d-none d-md-inline">
-          Automatically create this journal on a schedule.
-        </small>
-      </div>
+                  <div class="row gx-3 gy-2 mt-1" *ngIf="isRecurring">
 
-      <!-- Recurring fields row -->
-      <div class="row gx-3 gy-2 mt-1" *ngIf="isRecurring">
-        <!-- Frequency -->
-        <div class="col-md-3 col-sm-6">
-          <label class="recurring-label">Frequency</label>
-          <select
-            class="form-control journal-input"
-            [(ngModel)]="recurringFrequency"
-            name="recurringFrequency">
-            <option [ngValue]="null" disabled>Select frequency</option>
-            <option value="Daily">Daily</option>
-            <option value="Weekly">Weekly</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Yearly">Yearly</option>
-          </select>
-        </div>
+                    <!-- Frequency -->
+                    <div class="col-md-3 col-sm-6">
+                      <label class="recurring-label">Frequency</label>
+                      <select
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringFrequency">
 
-        <!-- Every -->
-        <div class="col-md-2 col-sm-6">
-          <label class="recurring-label">Every</label>
-          <div class="d-flex align-items-center">
-            <input
-              type="number"
-              min="1"
-              class="form-control journal-input text-right"
-              [(ngModel)]="recurringInterval"
-              name="recurringInterval"
-              placeholder="1" />
-          </div>
-        </div>
+                        <option [ngValue]="null" disabled>Select frequency</option>
+                        <option value="EveryMinute">Every 10 Minutes (TEST)</option> <!-- TEST MODE -->
+                        <option value="Daily">Daily</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option> <!-- NEW -->
+                        <option value="Yearly">Yearly</option>
 
-        <!-- Start Date -->
-        <div class="col-md-3 col-sm-6">
-          <label class="recurring-label">Start Date</label>
-          <div class="journal-date-group">
-            <input
-              type="date"
-              class="form-control journal-input"
-              [(ngModel)]="recurringStartDate"
-              name="recurringStartDate" />
-            <span class="journal-date-icon">
-              <i data-feather="calendar"></i>
-            </span>
-          </div>
-        </div>
+                      </select>
+                    </div>
 
-        <!-- Ends -->
-        <div class="col-md-2 col-sm-6">
-          <label class="recurring-label">Ends</label>
-          <select
-            class="form-control journal-input"
-            [(ngModel)]="recurringEndType"
-            name="recurringEndType">
-            <option value="NoEnd">Never</option>
-            <option value="EndByDate">On date</option>
-            <option value="EndByCount">After N times</option>
-          </select>
-        </div>
+                    <!-- Interval -->
+                    <div class="col-md-2 col-sm-6" *ngIf="recurringFrequency !== 'EveryMinute'">
+                      <label class="recurring-label">Every</label>
+                      <input type="number" min="1" class="form-control journal-input" [(ngModel)]="recurringInterval">
+                    </div>
 
-        <!-- End Date -->
-        <div class="col-md-2 col-sm-6" *ngIf="recurringEndType === 'EndByDate'">
-          <label class="recurring-label">End Date</label>
-          <div class="journal-date-group">
-            <input
-              type="date"
-              class="form-control journal-input"
-              [(ngModel)]="recurringEndDate"
-              name="recurringEndDate" />
-            <span class="journal-date-icon">
-              <i data-feather="calendar"></i>
-            </span>
-          </div>
-        </div>
+                    <!-- Start -->
+                    <div class="col-md-3 col-sm-6">
+                      <label class="recurring-label">Start Date</label>
+                      <input type="date" class="form-control journal-input" [(ngModel)]="recurringStartDate" />
+                    </div>
 
-        <!-- Occurrences -->
-        <div class="col-md-2 col-sm-6" *ngIf="recurringEndType === 'EndByCount'">
-          <label class="recurring-label">Occurrences</label>
-          <input
-            type="number"
-            min="1"
-            class="form-control journal-input text-right"
-            [(ngModel)]="recurringCount"
-            name="recurringCount"
-            placeholder="12" />
-        </div>
-      </div>
+                    <!-- Ends -->
+                    <div class="col-md-2 col-sm-6">
+                      <label class="recurring-label">Ends</label>
+                      <select class="form-control journal-input" [(ngModel)]="recurringEndType">
+                        <option value="NoEnd">Never</option>
+                        <option value="EndByDate">On date</option>
+                        <option value="EndByCount">After N times</option>
+                      </select>
+                    </div>
 
-    </div>
-  </div>
-</div>
+                    <!-- End Date -->
+                    <div class="col-md-2" *ngIf="recurringEndType === 'EndByDate'">
+                      <label class="recurring-label">End Date</label>
+                      <input type="date" class="form-control journal-input" [(ngModel)]="recurringEndDate" />
+                    </div>
+
+                    <!-- Count -->
+                    <div class="col-md-2" *ngIf="recurringEndType === 'EndByCount'">
+                      <label class="recurring-label">Occurrences</label>
+                      <input type="number" min="1" class="form-control journal-input" [(ngModel)]="recurringCount" />
+                    </div>
+
+                  </div>
+
+                </div>
+              </div>
+            </div>
 
             <!-- Buttons -->
-           <div class="row mt-3">
-  <div class="col-12 d-flex justify-content-end">
-    <button
-      type="button"
-      class="btn btn-outline-secondary mr-1"
-      (click)="onCancel()">
-      Cancel
-    </button>
+            <div class="row mt-3">
+              <div class="col-12 d-flex justify-content-end">
+                <button class="btn btn-outline-secondary mr-1" (click)="onCancel()">Cancel</button>
+                <button class="btn" [disabled]="isSaving" style="background:#2E5F73;color:white" (click)="onSubmit()">
+                  {{ isSaving ? 'Saving...' : 'Submit' }}
+                </button>
+              </div>
+            </div>
 
-    <button
-      type="button"
-      class="btn"
-      [disabled]="isSaving"
-      style="background-color:#2E5F73; color:#ffffff;"
-      (click)="onSubmit()">
-      {{ isSaving ? 'Saving...' : 'Submit' }}
-    </button>
-  </div>
-</div>
-
-          </div> <!-- card-body -->
+          </div>
         </div>
       </div>
     </div>
