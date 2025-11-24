@@ -5,6 +5,13 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { ReceiptService, ReceiptDetailDto } from '../receipt-service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 
+interface AllocationRow {
+  invoiceId: number;
+  invoiceNo: string;
+  allocatedAmount: number;
+  selected: boolean;
+}
+
 @Component({
   selector: 'app-receipt-create',
   templateUrl: './receipt-create.component.html',
@@ -29,17 +36,8 @@ export class ReceiptCreateComponent implements OnInit {
   amountReceived: number = 0;
 
   // ------- grid -------
-  /**
-   * each invoice row:
-   * {
-   *   id, invoiceNo, invoiceDate, amount,
-   *   paidBefore,   // paid before THIS receipt
-   * }
-   */
   invoices: any[] = [];
-
-  // allocation typed in this screen
-  allocations: { invoiceId: number; invoiceNo: string; allocatedAmount: number }[] = [];
+  allocations: AllocationRow[] = [];
 
   isSaving = false;
   customerList: any[] = [];
@@ -82,48 +80,51 @@ export class ReceiptCreateComponent implements OnInit {
   // LOAD EXISTING RECEIPT
   // ==========================
   private loadReceiptForEdit(id: number): void {
-  this.receiptService.getReceiptById(id).subscribe((dto: ReceiptDetailDto) => {
-    if (!dto) { return; }
+    this.receiptService.getReceiptById(id).subscribe((dto: ReceiptDetailDto) => {
+      if (!dto) { return; }
 
-    this.receiptId      = dto.id;
-    this.receiptNo      = dto.receiptNo;
-    this.customerId     = dto.customerId;
-    this.customerName   = dto.customerName;
-    this.receiptDate    = dto.receiptDate.toString().substring(0, 10);
-    this.paymentMode    = dto.paymentMode === 'BANK' ? 'BANK' : 'CASH';
-    this.selectedBankId = dto.bankId ?? null;
-    this.amountReceived = dto.amountReceived;
+      this.receiptId      = dto.id;
+      this.receiptNo      = dto.receiptNo;
+      this.customerId     = dto.customerId;
+      this.customerName   = dto.customerName;
+      this.receiptDate    = dto.receiptDate.toString().substring(0, 10);
+      this.paymentMode    = dto.paymentMode === 'BANK' ? 'BANK' : 'CASH';
+      this.selectedBankId = dto.bankId ?? null;
+      this.amountReceived = dto.amountReceived;
 
-    // current receipt allocations
-    this.allocations = (dto.allocations || []).map(a => ({
-      invoiceId:       a.invoiceId,
-      invoiceNo:       a.invoiceNo,
-      allocatedAmount: Number(a.allocatedAmount || 0)
-    }));
+      // current receipt allocations
+      this.allocations = (dto.allocations || []).map(a => {
+        const amt = Number(a.allocatedAmount || 0);
+        return {
+          invoiceId:       a.invoiceId,
+          invoiceNo:       a.invoiceNo,
+          allocatedAmount: amt,
+          selected:        amt > 0
+        };
+      });
 
-    // convert view values to "before this receipt"
-    this.invoices = (dto.allocations || []).map(a => {
-      const amount      = Number(a.amount || 0);
-      const openAfter   = Number(a.balance || 0);           // 796
-      const thisAlloc   = Number(a.allocatedAmount || 0);   // 100
+      // convert view values to "before this receipt"
+      this.invoices = (dto.allocations || []).map(a => {
+        const amount      = Number(a.amount || 0);
+        const openAfter   = Number(a.balance || 0);         // after this receipt
+        const thisAlloc   = Number(a.allocatedAmount || 0); // this receipt
 
-      const openBefore  = openAfter + thisAlloc;            // 896
-      const paidBefore  = amount - openBefore;              // 224
+        const openBefore  = openAfter + thisAlloc;
+        const paidBefore  = amount - openBefore;
 
-      return {
-        id:          a.invoiceId,
-        invoiceNo:   a.invoiceNo,
-        invoiceDate: a.invoiceDate,
-        amount,
-        balance:     openBefore,   // used by rowBalance()
-        paidBefore                   // not used directly but kept if needed
-      };
+        return {
+          id:          a.invoiceId,
+          invoiceNo:   a.invoiceNo,
+          invoiceDate: a.invoiceDate,
+          amount,
+          balance:     openBefore,
+          paidBefore
+        };
+      });
+
+      this.recalculateTotals();
     });
-
-    this.recalculateTotals();
-  });
-}
-
+  }
 
   // ==========================
   // CUSTOMER
@@ -146,7 +147,6 @@ export class ReceiptCreateComponent implements OnInit {
     if (!this.customerId) return;
 
     this.receiptService.getOpenInvoices(this.customerId).subscribe(res => {
-      // backend returns amount, paidAmount, balance (BEFORE this new receipt)
       const src = res || [];
 
       this.invoices = src.map((i: any) => ({
@@ -154,24 +154,27 @@ export class ReceiptCreateComponent implements OnInit {
         invoiceNo: i.invoiceNo,
         invoiceDate: i.invoiceDate,
         amount: Number(i.amount || 0),
-        paidBefore: Number(i.paidAmount || 0),   // history (receipts only)
-        balance: Number(i.balance || 0)       // includes credit notes
+        paidBefore: Number(i.paidAmount || 0),
+        balance: Number(i.balance || 0)
       }));
 
       // merge existing allocations if we are editing
       const existing = new Map<number, number>();
       this.allocations.forEach(a => existing.set(a.invoiceId, a.allocatedAmount));
 
-      this.allocations = this.invoices.map((i: any) => ({
-        invoiceId: i.id,
-        invoiceNo: i.invoiceNo,
-        allocatedAmount: existing.get(i.id) || 0
-      }));
+      this.allocations = this.invoices.map((i: any) => {
+        const amt = existing.get(i.id) || 0;
+        return {
+          invoiceId: i.id,
+          invoiceNo: i.invoiceNo,
+          allocatedAmount: amt,
+          selected: amt > 0
+        };
+      });
 
       this.recalculateTotals();
     });
   }
-
 
   // ==========================
   // HEADER EVENTS
@@ -196,6 +199,46 @@ export class ReceiptCreateComponent implements OnInit {
   }
 
   // ==========================
+  // MULTI-SELECT (CHECKBOXES)
+  // ==========================
+  get allSelected(): boolean {
+    return this.allocations.length > 0 && this.allocations.every(a => a.selected);
+  }
+
+  onHeaderCheckboxChange(checked: boolean): void {
+    this.allocations.forEach((a, i) => {
+      const inv = this.invoices[i];
+      a.selected = checked;
+
+      if (checked) {
+        const maxExtra = Number(inv.balance || 0);
+        a.allocatedAmount = maxExtra;
+      } else {
+        a.allocatedAmount = 0;
+      }
+    });
+
+    this.recalculateTotals();
+  }
+
+  onRowCheckboxChange(index: number, checked: boolean): void {
+    const inv = this.invoices[index];
+    const alloc = this.allocations[index];
+    if (!inv || !alloc) return;
+
+    alloc.selected = checked;
+
+    if (checked) {
+      const maxExtra = Number(inv.balance || 0);
+      alloc.allocatedAmount = maxExtra;
+    } else {
+      alloc.allocatedAmount = 0;
+    }
+
+    this.recalculateTotals();
+  }
+
+  // ==========================
   // ALLOCATE EVENTS
   // ==========================
   onAllocateChange(index: number): void {
@@ -206,26 +249,26 @@ export class ReceiptCreateComponent implements OnInit {
       return;
     }
 
-    const maxExtra = Number(inv.balance || 0);       // <- use balance from API
+    const maxExtra = Number(inv.balance || 0);
     let val = Number(alloc.allocatedAmount || 0);
 
     if (val < 0) val = 0;
     if (val > maxExtra) val = maxExtra;
 
     alloc.allocatedAmount = val;
+    alloc.selected = val > 0; // manual typing also controls checkbox
+
     this.recalculateTotals();
   }
 
-
   rowPaid(inv: any, index: number): number {
-    // amount - balance = everything already applied (receipts + credit notes)
     const base = Number(inv.amount || 0) - Number(inv.balance || 0);
     const extra = Number(this.allocations[index]?.allocatedAmount || 0);
     return +(base + extra).toFixed(2);
   }
 
   rowBalance(inv: any, index: number): number {
-    const openBal = Number(inv.balance || 0);                    // from API
+    const openBal = Number(inv.balance || 0);
     const extra = Number(this.allocations[index]?.allocatedAmount || 0);
     const bal = openBal - extra;
     return bal < 0 ? 0 : +bal.toFixed(2);
