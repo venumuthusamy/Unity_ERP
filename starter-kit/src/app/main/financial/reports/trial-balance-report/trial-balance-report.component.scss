@@ -1,0 +1,32 @@
+.trial-table thead tr th {
+  background-color: #2E5F73 !important;
+  color: #fff !important;
+}
+.reports-center {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 1rem;
+}
+
+.report-card {
+  border: 1px solid #e5edf1;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: #f9fbfc;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.report-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #2E5F73;
+}
+
+.report-subtitle {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
