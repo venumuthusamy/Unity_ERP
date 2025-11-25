@@ -11,10 +11,14 @@
                   style="color:#2E5F73; font-size:20px; font-weight:600;">
                 Journal
               </h2>
-
+  <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
               <div class="d-flex align-items-center">
                 <!-- New Journal (Solid Button) -->
-                <button
+                <!-- <button
                   type="button"
                   class="btn m-1 d-inline-flex align-items-center justify-content-center"
                   style="
@@ -31,8 +35,22 @@
                   (click)="newJournal()">
                   <i class="fas fa-plus-circle" style="font-size:14px;"></i>
                   <span>New Journal</span>
-                </button>
+                </button> -->
+                <button
+                  (click)="newJournal()"
+                  class="btn m-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Journal'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>New Journal</span>
+                  </button>
               </div>
+              
             </div>
 
             <!-- Filters row (optional) -->

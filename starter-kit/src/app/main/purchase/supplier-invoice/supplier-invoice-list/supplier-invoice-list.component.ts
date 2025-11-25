@@ -11,6 +11,7 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import Swal from 'sweetalert2';
 import { SupplierInvoiceService } from '../supplier-invoice.service';
 import * as feather from 'feather-icons';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
 interface ThreeWayMatch {
   poId: number;
@@ -32,7 +33,24 @@ interface ThreeWayMatch {
 
   pinMatch: boolean; // true = match, false = mismatch
 }
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
+// this matches what you showed
+export interface PeriodStatusResponseRaw {
+  isSuccess?: boolean;
+  isLocked?: boolean;
+  periodName?: string;
+  startDate?: string;
+  endDate?: string;
+  // in case backend later wraps in data
+  data?: PeriodStatusDto | null;
+}
 @Component({
   selector: 'app-supplier-invoice-list',
   templateUrl: './supplier-invoice-list.component.html',
@@ -69,13 +87,17 @@ export class SupplierInvoiceListComponent
   matchIssues: string[] = [];
    pinMismatchLabel: string | null = null;
   isPosting = false;
-
+  isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private api: SupplierInvoiceService,
-    private router: Router
+    private router: Router,
+     private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
+     const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadInvoices();
   }
 
@@ -86,7 +108,30 @@ export class SupplierInvoiceListComponent
   ngAfterViewChecked(): void {
     feather.replace();
   }
-
+    private checkPeriodLockForDate(dateStr: string): void {
+      if (!dateStr) { return; }
+  
+      this.periodService.getStatusForDateWithName(dateStr).subscribe({
+        next: (res: PeriodStatusDto | null) => {
+          this.isPeriodLocked = !!res?.isLocked;
+          this.currentPeriodName = res?.periodName || '';
+        },
+        error: () => {
+          // if fails, UI side don’t hard-lock; backend will still protect
+          this.isPeriodLocked = false;
+          this.currentPeriodName = '';
+        }
+      });
+    }
+private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   // ================= LOAD & SUMMARY =================
 
   loadInvoices(): void {
@@ -183,14 +228,26 @@ export class SupplierInvoiceListComponent
   // =============== NAVIGATION / CRUD ===============
 
   goToCreate(): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('Create Purchase Requests');
+      return;
+    }
     this.router.navigate(['/purchase/Create-SupplierInvoice']);
   }
 
   editInvoice(id: number): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     this.router.navigate(['/purchase/Edit-SupplierInvoice', id]);
   }
 
   deleteInvoice(id: number): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the supplier invoice.',

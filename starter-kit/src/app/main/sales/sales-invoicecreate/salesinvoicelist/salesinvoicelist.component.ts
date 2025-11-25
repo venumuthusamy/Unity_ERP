@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ApiResponse, SalesInvoiceService } from '../sales-invoice.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 type SiListRow = {
   id: number;
   invoiceNo: string;
@@ -25,6 +26,13 @@ type SiLine = {
   taxCodeId?: number | null;
   currencyId?: number | null;
 };
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 @Component({
   selector: 'app-salesinvoicelist',
   templateUrl: './salesinvoicelist.component.html',
@@ -46,16 +54,44 @@ rows: SiListRow[] = [];
   modalGrand = 0;
 
   loading = false;
-
+isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private si: SalesInvoiceService,
-    private router: Router
+    private router: Router,
+     private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
+       const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadList();
   }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   /** Calls controller: GET /salesinvoice/List */
   loadList(): void {
     this.loading = true;
@@ -95,11 +131,24 @@ rows: SiListRow[] = [];
 
   // ---- Row actions ----
   goToCreate() { 
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create Purchase Requests');
+      return;
+    }
     debugger
     this.router.navigate(['/Sales/sales-Invoice-create']); }
-  edit(id: number) { this.router.navigate(['/Sales/sales-invoice/edit', id]); }
+  edit(id: number) {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
+     this.router.navigate(['/Sales/sales-invoice/edit', id]); }
   print(id: number) { this.router.navigate(['/sales/sales-invoice/print', id]); }
  delete(id: number) {
+   if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
   Swal.fire({
     title: 'Delete this invoice?',
     text: 'This action cannot be undone.',

@@ -6,6 +6,7 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { DatePipe } from '@angular/common';
 import * as feather from 'feather-icons';
 import { SalesOrderService } from '../sales-order.service';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
 type SoLine = {
   id?: number;
@@ -38,7 +39,13 @@ type SoHeader = {
   subtotal?: number;
   grandTotal?: number;
 };
-
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 @Component({
   selector: 'app-sales-order-list',
   templateUrl: './sales-order-list.component.html',
@@ -75,6 +82,8 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     total: true,
     lockedQty: true
   };
+  isPeriodLocked = false;
+  currentPeriodName = '';
   getLinesColsCount(): number {
     return 1 + Object.values(this.lineCols).filter(Boolean).length; // 1 for Item
   }
@@ -82,16 +91,43 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   constructor(
     private salesOrderService: SalesOrderService,
     private router: Router,
-    private datePipe: DatePipe
+    private datePipe: DatePipe,
+     private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
+    const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadRequests();
     this.prefetchDraftsCount(); // show Drafts badge immediately
   }
   ngAfterViewInit(): void { feather.replace(); }
   ngAfterViewChecked(): void { feather.replace(); }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   // ---------- Data load ----------
   loadRequests(): void {
     this.salesOrderService.getSO().subscribe({
@@ -164,9 +200,23 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   }
 
   // ---------- Routing / CRUD ----------
-  openCreate(): void { this.router.navigate(['/Sales/Sales-Order-create']); }
-  editSO(row: SoHeader): void { this.router.navigateByUrl(`/Sales/Sales-Order-edit/${row.id}`); }
+  openCreate(): void { 
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create Purchase Requests');
+      return;
+    }
+    this.router.navigate(['/Sales/Sales-Order-create']); }
+  editSO(row: SoHeader): void { 
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
+    this.router.navigateByUrl(`/Sales/Sales-Order-edit/${row.id}`); }
   deletePO(id: number): void {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the Sales Order.',

@@ -52,6 +52,11 @@
                 entries
               </label>
             </div>
+             <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
           </div>
 
           <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
@@ -67,13 +72,26 @@
                   (search)="filterUpdate($event)" />
               </label>
 
-              <button
+              <!-- <button
                 (click)="goToCreate()"
                 class="btn m-1 d-inline-flex align-items-center"
                 style="background-color:#2E5F73; color:white; gap:4px;">
                 <i data-feather="plus-circle" class="w-4 h-4"></i>
                 <span>Add</span>
-              </button>
+              </button> -->
+              <button
+                  (click)="goToCreate()"
+                  class="btn m-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Purchase Request'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
             </div>
           </div>
         </div>
@@ -169,7 +187,7 @@
           <ngx-datatable-column name="Action" [width]="140">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <!-- Locked state when Posted to A/P -->
-              <ng-container *ngIf="+row.status === 3; else actionsEnabled">
+              <!-- <ng-container *ngIf="+row.status === 3; else actionsEnabled">
                 <i
                   class="fas fa-pen text-gray-300 cursor-not-allowed mr-2"
                   aria-disabled="true"
@@ -178,7 +196,16 @@
                   class="fas fa-trash text-gray-300 cursor-not-allowed"
                   aria-disabled="true"
                   title="Disabled for Posted"></i>
-              </ng-container>
+              </ng-container> -->
+<ng-container
+                  *ngIf="+row.status === 2 || +row.status === 3 || +row.status === 4 || isPeriodLocked; else actionsEnabled">
+                  <i
+                    class="fas fa-pen text-gray-300 mr-2"
+                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
+                  <i
+                    class="fas fa-trash text-gray-300"
+                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
+                </ng-container>
 
               <!-- Enabled state -->
               <ng-template #actionsEnabled>

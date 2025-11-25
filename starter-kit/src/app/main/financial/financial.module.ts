@@ -25,6 +25,7 @@ import { InvoiceCreateComponent } from './AR/Invoice/invoice-create/invoice-crea
 import { GeneralLdegerComponent } from './general-ldeger/general-ledgerlist/general-ldeger.component';
 import { AgingComponent } from './AR/Aging/aging/aging.component';
 import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.component';
+import { InvoiceEmailComponent } from './invoice-email/invoice-email.component';
 
 
 const routes: Routes = [
@@ -41,7 +42,7 @@ const routes: Routes = [
   { path: 'AR-receipt-edit/:id', component: ReceiptCreateComponent },
     { path: 'ledger', component: GeneralLdegerComponent },
 { path: 'Period-close', component: PeriodCloseFxComponent },
-
+{ path: 'Invoice-email', component: InvoiceEmailComponent },
 ];
 
 @NgModule({
@@ -61,7 +62,8 @@ const routes: Routes = [
     InvoiceCreateComponent,
     GeneralLdegerComponent,
     AgingComponent,
-    PeriodCloseFxComponent
+    PeriodCloseFxComponent,
+    InvoiceEmailComponent
   ],
   imports: [
     CommonModule,

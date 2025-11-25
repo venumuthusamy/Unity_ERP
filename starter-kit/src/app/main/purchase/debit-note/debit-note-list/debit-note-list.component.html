@@ -21,6 +21,11 @@
                                 entries
                             </label>
                         </div>
+                         <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
                     </div>
 
                     <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
@@ -31,11 +36,24 @@
                                     class="form-control ml-25" (keyup)="filterUpdate($event)"
                                     (search)="filterUpdate($event)" />
                             </label>
-                            <button id="Add" class="btn m-1" (click)="openCreate()"
+                            <!-- <button id="Add" class="btn m-1" (click)="openCreate()"
                                 style="background-color: #2E5F73; color: white;" rippleEffect>
                                 <i data-feather="plus" class="d-sm-none d-inline-block mr-0 mr-sm-1"></i>
                                 <span class="d-none d-sm-inline-block">Add</span>
-                            </button>
+                            </button> -->
+                            <button
+                  (click)="openCreate()"
+                  class="btn m-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Purchase Request'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
                         </div>
                     </div>
                 </div>
@@ -91,14 +109,15 @@
                         <ng-template let-row="row" ngx-datatable-cell-template>
 
                             <!-- Locked when status = 2 -->
-                            <ng-container *ngIf="+row.status === 2; else actionsEnabled">
-                                <i class="fas fa-pen text-gray-300 cursor-not-allowed mr-2" aria-disabled="true"
-                                    title="Cannot edit posted debit note">
-                                </i>
-                                <i class="fas fa-trash text-gray-300 cursor-not-allowed" aria-disabled="true"
-                                    title="Cannot delete posted debit note">
-                                </i>
-                            </ng-container>
+                            <ng-container
+                  *ngIf="+row.status === 2 || +row.status === 3 || +row.status === 4 || isPeriodLocked; else actionsEnabled">
+                  <i
+                    class="fas fa-pen text-gray-300 mr-2"
+                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
+                  <i
+                    class="fas fa-trash text-gray-300"
+                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
+                </ng-container>
 
                             <!-- Normal state -->
                             <ng-template #actionsEnabled>

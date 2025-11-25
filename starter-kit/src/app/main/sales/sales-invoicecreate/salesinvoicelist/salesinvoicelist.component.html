@@ -21,6 +21,11 @@
                 entries
               </label>
             </div>
+             <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
           </div>
 
           <!-- Search + buttons -->
@@ -39,13 +44,26 @@
                 />
               </label>
 
-              <button
+              <!-- <button
                 (click)="goToCreate()"
                 class="btn m-1 d-inline-flex align-items-center"
                 style="background-color:#2E5F73;color:white;gap:6px;">
                 <i class="fas fa-file-invoice"></i>
                 <span>Add</span>
-              </button>
+              </button> -->
+               <button
+                  (click)="goToCreate()"
+                  class="btn m-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Purchase Request'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
             </div>
           </div>
         </div>
@@ -93,15 +111,46 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Action" [width]="170">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <div class="actions">
-                <i class="fas fa-pen text-primary" (click)="edit(row.id)" title="Edit"></i>
-                <i class="fas fa-trash text-danger" (click)="delete(row.id)" title="Delete"></i>
-                <!-- <i class="fas fa-print text-secondary" (click)="print(row.id)" title="Print"></i> -->
-              </div>
-            </ng-template>
-          </ngx-datatable-column>
+         <ngx-datatable-column name="Action" [width]="170">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+
+    <!-- Locked state -->
+    <ng-container *ngIf="isRowLocked(row); else actionsEnabled">
+      <i class="fas fa-pen text-gray-300 mr-2" title="Disabled"></i>
+      <i class="fas fa-trash text-gray-300" title="Disabled"></i>
+      <!-- <i class="fas fa-print text-gray-300" title="Disabled"></i> -->
+    </ng-container>
+
+    <!-- Enabled state -->
+    <ng-template #actionsEnabled>
+      <i 
+        class="fas fa-pen text-primary mr-2" 
+        style="cursor: pointer;" 
+        (click)="edit(row.id)" 
+        title="Edit">
+      </i>
+
+      <i 
+        class="fas fa-trash text-danger mr-2" 
+        style="cursor: pointer;" 
+        (click)="delete(row.id)" 
+        title="Delete">
+      </i>
+
+      <!-- Optional print action -->
+      <!-- 
+      <i 
+        class="fas fa-print text-secondary" 
+        style="cursor: pointer;" 
+        (click)="print(row.id)" 
+        title="Print">
+      </i> 
+      -->
+    </ng-template>
+
+  </ng-template>
+</ngx-datatable-column>
+
         </ngx-datatable>
       </div>
     </section>
