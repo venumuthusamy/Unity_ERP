@@ -30,22 +30,45 @@ export class PeriodCloseFxComponent implements OnInit {
     this.loadPeriods();
   }
 
-  loadPeriods(): void {
-    this.periodService.getPeriods().subscribe({
-      next: (list) => {
-        this.periods = list || [];
-        if (this.periods.length) {
-          const last = this.periods[this.periods.length - 1];
-          this.selectedPeriodId = last.id;
-          this.onPeriodChange(this.selectedPeriodId);
+loadPeriods(): void {
+  this.periodService.getPeriods().subscribe({
+    next: (list) => {
+      this.periods = list || [];
+
+      if (this.periods.length) {
+        const today = new Date();
+
+        // Find period that includes today's date
+        const currentPeriod = this.periods.find(p => {
+          const start = new Date(p.startDate);
+          const end = new Date(p.endDate);
+          return today >= start && today <= end;
+        });
+
+        if (currentPeriod) {
+          this.selectedPeriodId = currentPeriod.id;
+        } else {
+          // fallback: pick the closest past period
+          const pastPeriods = this.periods.filter(p => new Date(p.endDate) < today);
+
+          if (pastPeriods.length > 0) {
+            const lastPast = pastPeriods[pastPeriods.length - 1];
+            this.selectedPeriodId = lastPast.id;
+          } else {
+            // fallback: first in list
+            this.selectedPeriodId = this.periods[0].id;
+          }
         }
-      },
-      error: err => {
-        console.error('Error loading periods', err);
-        Swal.fire('Error', 'Failed to load periods.', 'error');
+
+        this.onPeriodChange(this.selectedPeriodId);
       }
-    });
-  }
+    },
+    error: err => {
+      console.error('Error loading periods', err);
+      Swal.fire('Error', 'Failed to load periods.', 'error');
+    }
+  });
+}
 
   onPeriodChange(id: number | null): void {
     if (!id) {

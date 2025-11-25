@@ -15,19 +15,21 @@ import { PurchaseService } from 'app/main/purchase/purchase.service';
 import { PrDraftService } from '../../pr-draft.service';
 import { PurchaseAlertService } from '../../purchase-alert.service';
 
-// ⬇️ NEW: alerts service
-
+// 🔒 NEW: period lock service
+import {
+  PeriodCloseService,
+  PeriodStatusDto
+} from 'app/main/financial/period-close-fx/period-close-fx.service';
 
 type PurchaseAlert = {
   id: number;
   message: string;
-  // optional context the API might return
   itemId?: number;
   itemName?: string;
   requiredQty?: number;
   warehouseId?: number | null;
   supplierId?: number | null;
-  createdOn?: string; // ISO
+  createdOn?: string;
 };
 
 @Component({
@@ -36,7 +38,9 @@ type PurchaseAlert = {
   styleUrls: ['./purchase-request-list.component.scss'],
   encapsulation: ViewEncapsulation.None,
 })
-export class PurchaseRequestListComponent implements OnInit, AfterViewInit, AfterViewChecked {
+export class PurchaseRequestListComponent
+  implements OnInit, AfterViewInit, AfterViewChecked {
+
   @ViewChild(DatatableComponent) table!: DatatableComponent;
 
   // datatable + filters
@@ -56,19 +60,24 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   draftCount = 0;
   showDraftsModal = false;
 
-  // ⬇️ NEW: Alerts
+  // Alerts
   showAlertsPanel = false;
   alerts: PurchaseAlert[] = [];
-  alertCount = 0; // unread count badge
+  alertCount = 0;
 
   userId: string;
+
+  // 🔒 NEW: period lock flags
+  isPeriodLocked = false;
+  currentPeriodName = '';
 
   constructor(
     private purchaseService: PurchaseService,
     private draftSvc: PrDraftService,
     private router: Router,
-    // ⬇️ NEW
-    private alertSvc: PurchaseAlertService
+    private alertSvc: PurchaseAlertService,
+    // 🔒 NEW
+    private periodService: PeriodCloseService
   ) {
     this.userId = localStorage.getItem('id') || '';
   }
@@ -76,9 +85,12 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   // ============== Lifecycle ==============
 
   ngOnInit(): void {
+    // 🔒 check accounting period based on today's date
+    const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
+
     this.loadRequests();
     this.refreshDraftCount();
-    // ⬇️ NEW: load alerts once (you can add a manual refresh button)
     this.refreshAlerts();
   }
 
@@ -88,6 +100,34 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
 
   ngAfterViewChecked(): void {
     feather.replace();
+  }
+
+  // ============== Period Lock (NEW) ==============
+
+  private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
+
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
   }
 
   // ============== Main PR list ==============
@@ -138,14 +178,27 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   }
 
   editRequest(id: number): void {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     this.router.navigateByUrl(`/purchase/Edit-PurchaseRequest/${id}`);
   }
 
   goToCreate(): void {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create Purchase Requests');
+      return;
+    }
     this.router.navigate(['/purchase/Create-PurchaseRequest']);
   }
 
   deleteRequest(id: number): void {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
+
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the purchase request.',
@@ -171,7 +224,10 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
 
   openLinesModal(row: any): void {
     const lines = Array.isArray(row?.prLines) ? row.prLines : this.safeParse(row?.prLines);
-    const total = (lines || []).reduce((sum: number, l: any) => sum + (Number(l?.qty) || 0), 0);
+    const total = (lines || []).reduce(
+      (sum: number, l: any) => sum + (Number(l?.qty) || 0),
+      0
+    );
     this.modalLines = lines || [];
     this.modalTotalQty = total;
     this.showLinesModal = true;
@@ -212,7 +268,7 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
     });
   }
 
-  // ============== Alerts (NEW) ==============
+  // ============== Alerts ==============
 
   toggleAlerts(): void {
     this.showAlertsPanel = !this.showAlertsPanel;
@@ -222,6 +278,7 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   }
 
   closeAlerts()  { this.showAlertsPanel = false; }
+
   refreshAlerts(): void {
     this.alertSvc.getUnread().subscribe({
       next: (res: any) => {
@@ -240,11 +297,9 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
   acknowledgeAlert(a: PurchaseAlert): void {
     this.alertSvc.markRead(a.id).subscribe({
       next: () => {
-        // Remove from UI list and update badge
         this.alerts = this.alerts.filter(x => x.id !== a.id);
         this.alertCount = this.alerts.length;
 
-        // Friendly toast
         const msg = a?.message || 'Alert acknowledged';
         Swal.fire({
           icon: 'info',
@@ -252,10 +307,15 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
           text: msg,
           confirmButtonColor: '#2E5F73'
         });
-        this.showAlertsPanel = false; 
+        this.showAlertsPanel = false;
       },
       error: () => {
-        Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not mark alert as read', confirmButtonColor: '#2E5F73' });
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed',
+          text: 'Could not mark alert as read',
+          confirmButtonColor: '#2E5F73'
+        });
       }
     });
   }
@@ -272,10 +332,15 @@ export class PurchaseRequestListComponent implements OnInit, AfterViewInit, Afte
           text: 'You have cleared all shortage notifications.',
           confirmButtonColor: '#2E5F73'
         });
-        this.showAlertsPanel = false; 
+        this.showAlertsPanel = false;
       },
       error: () => {
-        Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not clear alerts', confirmButtonColor: '#2E5F73' });
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed',
+          text: 'Could not clear alerts',
+          confirmButtonColor: '#2E5F73'
+        });
       }
     });
   }

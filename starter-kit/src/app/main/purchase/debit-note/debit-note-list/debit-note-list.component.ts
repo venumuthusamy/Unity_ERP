@@ -6,7 +6,26 @@ import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
 import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
 import { DatePipe } from '@angular/common';
 import { DebitNoteService } from '../debit-note.service';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
+import * as feather from 'feather-icons';
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
+// this matches what you showed
+export interface PeriodStatusResponseRaw {
+  isSuccess?: boolean;
+  isLocked?: boolean;
+  periodName?: string;
+  startDate?: string;
+  endDate?: string;
+  // in case backend later wraps in data
+  data?: PeriodStatusDto | null;
+}
 @Component({
   selector: 'app-debit-note-list',
   templateUrl: './debit-note-list.component.html',
@@ -29,18 +48,53 @@ export class DebitNoteListComponent implements OnInit {
   showLinesModal = false;
   modalLines: any[] = [];
   modalTotal = 0;
-
+isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private debitNoteService: DebitNoteService,
     private router: Router,
     private _coreSidebarService: CoreSidebarService,
-    private datePipe: DatePipe
+    private datePipe: DatePipe,
+    private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
+     const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadRequests();
   }
+  ngAfterViewInit(): void {
+      feather.replace();
+    }
+  
+    ngAfterViewChecked(): void {
+      feather.replace();
+    }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
  loadRequests(): void {
   this.debitNoteService.getAll().subscribe({
     next: (res: any) => {
@@ -86,14 +140,26 @@ export class DebitNoteListComponent implements OnInit {
   }
 
   openCreate(): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create Purchase Requests');
+      return;
+    }
     this.router.navigate(['/purchase/create-debitnote']);
   }
 
   editDetails(row: any): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     this.router.navigate(['/purchase/edit-debitnote', row.id]);
   }
 
   deleteDetails(id: number): void {
+     if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the Debit Note.',

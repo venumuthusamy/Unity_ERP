@@ -118,6 +118,9 @@ export const menu: CoreMenu[] = [
        { id: 'AR', title: 'Accounts Receivable', translate: 'MENU.FINANCIAL.ACCCOUNTSRECEIVABLE', type: 'item', icon: 'circle', url: '/financial/AR' },
       { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable' },
       { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst' },
+    { id: 'period-close', title: 'Period Close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close' },
+    { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email' }
+    ]  
       { id: 'report', title: 'Report', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report' }
     ]
   },

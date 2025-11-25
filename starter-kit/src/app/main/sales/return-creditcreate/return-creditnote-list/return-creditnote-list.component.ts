@@ -6,8 +6,15 @@ import Swal from 'sweetalert2';
 import * as feather from 'feather-icons';
 import { CreditNoteService } from '../return-credit.service';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
-
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 @Component({
   selector: 'app-return-creditnote-list',
   templateUrl: './return-creditnote-list.component.html',
@@ -37,16 +44,20 @@ export class ReturnCreditnoteListComponent implements OnInit {
   ]);
   reasonList: any;
   initialCnParam: string | null = null;
-
+isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private api: CreditNoteService,
     private router: Router,
     private datePipe: DatePipe,
     private StockissueService: StockIssueService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private periodService: PeriodCloseService
   ) { }
 
   ngOnInit(): void {
+      const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.route.queryParamMap.subscribe(params => {
       const cn = params.get('cn');
       if (cn) {
@@ -58,7 +69,31 @@ export class ReturnCreditnoteListComponent implements OnInit {
       this.reasonList = res
     })
   }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   // Load all CNs
   loadList(): void {
     this.api.getCreditNote().subscribe({
@@ -158,10 +193,24 @@ export class ReturnCreditnoteListComponent implements OnInit {
   }
 
   // Actions
-  openCreate() { this.router.navigate(['/Sales/Return-credit-create']); }
-  edit(row: any) { this.router.navigate(['/Sales/Return-credit-edit', row.id]); }
+  openCreate() {
+      if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create Purchase Requests');
+      return;
+    }
+    this.router.navigate(['/Sales/Return-credit-create']); }
+  edit(row: any) { 
+      if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
+    this.router.navigate(['/Sales/Return-credit-edit', row.id]); }
 
   delete(id: number) {
+      if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('delete Purchase Requests');
+      return;
+    }
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the Credit Note.',

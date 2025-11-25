@@ -1,0 +1,72 @@
+<div class="content-wrapper p-0">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card shadow-sm p-2">
+
+        <!-- Top row -->
+        <div class="row">
+          <div class="col-md-3">
+            <label>Invoice</label>
+            <input class="form-control" [(ngModel)]="invoiceNo" readonly />
+          </div>
+
+          <div class="col-md-3">
+            <label>Template</label>
+            <select class="form-control"
+                    [(ngModel)]="selectedTemplate"
+                    (change)="onTemplateChange()">
+              <option [ngValue]="1">Standard</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 d-flex align-items-end justify-content-end">
+            <button class="btn btn-outline-secondary me-1">
+              <i class="far fa-file-pdf me-25"></i> Generate PDF
+            </button>
+            <button class="btn btn-outline-secondary me-1">
+              <i class="fas fa-link me-25"></i> Link User Email
+            </button>
+            <button class="btn btn-outline-secondary">
+              <i class="fab fa-microsoft me-25"></i> Sign in Microsoft 365
+            </button>
+          </div>
+        </div>
+
+        <!-- To / Cc -->
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <label>To</label>
+            <input class="form-control" [(ngModel)]="toEmail" />
+          </div>
+          <div class="col-md-6">
+            <label>Cc</label>
+            <input class="form-control" [(ngModel)]="ccEmail" />
+          </div>
+        </div>
+
+        <!-- Subject -->
+        <div class="mt-2">
+          <label>Subject</label>
+          <input class="form-control" [(ngModel)]="subject" />
+        </div>
+
+        <!-- Body -->
+        <div class="mt-2">
+          <label>Email Body (from Template)</label>
+          <textarea class="form-control" rows="8" [(ngModel)]="body"></textarea>
+        </div>
+
+        <!-- Bottom buttons -->
+        <div class="d-flex justify-content-end mt-3">
+          <button class="btn btn-outline-secondary me-2">
+            <i class="far fa-paper-plane me-25"></i> Send Test
+          </button>
+          <button class="btn btn-dark" (click)="send()">
+            <i class="far fa-paper-plane me-25"></i> Send via Microsoft 365
+          </button>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>

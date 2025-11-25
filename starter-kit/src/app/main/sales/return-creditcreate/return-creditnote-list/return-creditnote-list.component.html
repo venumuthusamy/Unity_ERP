@@ -20,6 +20,11 @@
                                 entries
                             </label>
                         </div>
+                         <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
                     </div>
 
                     <div class="col-md-6 col-12 d-flex justify-content-md-end">
@@ -33,10 +38,23 @@
                                 style="flex:0 0 320px; max-width:40vw;" />
 
                             <!-- Add -->
-                            <button (click)="openCreate()" class="btn d-inline-flex align-items-center flex-shrink-0"
+                            <!-- <button (click)="openCreate()" class="btn d-inline-flex align-items-center flex-shrink-0"
                                 style="background-color:#2E5F73; color:white; gap:4px;">
                                 <i data-feather="plus-circle" class="w-4 h-4"></i><span>Add</span>
-                            </button>
+                            </button> -->
+                              <button
+                  (click)="openCreate()"
+                  class="btn m-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Purchase Request'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
                         </div>
                     </div>
                 </div>

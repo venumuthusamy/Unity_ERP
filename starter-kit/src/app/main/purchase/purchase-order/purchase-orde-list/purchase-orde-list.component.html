@@ -3,94 +3,135 @@
     <!-- User List -->
     <section class="users-list-wrapper">
       <div class="card">
+
         <div class="row">
+          <!-- Title + page size -->
           <div class="col-md-6 col-12">
             <h4 class="card-text"
-              style="margin-left: 0.85rem; margin-top: 0.75rem;font-size: 1.25rem;font-weight: 600; color: #2E5F73;">PO
-              List</h4>
+                style="margin-left: 0.85rem; margin-top: 0.75rem;font-size: 1.25rem;font-weight: 600; color: #2E5F73;">
+              PO List
+            </h4>
             <div class="d-flex justify-content-between align-items-center m-1">
-              <label class="d-flex align-items-center">Show
+              <label class="d-flex align-items-center">
+                Show
                 <select class="form-control mx-25" [(ngModel)]="selectedOption">
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                  <option [ngValue]="100">100</option>
                 </select>
                 entries
               </label>
             </div>
+             <div *ngIf="isPeriodLocked"
+                 class="alert alert-warning py-1 px-2 mx-2 mb-2"
+                 style="font-size: 0.8rem;">
+              Period <strong>{{ currentPeriodName || 'current' }}</strong> is locked.
+            </div>
           </div>
-         <div class="col-md-6 col-12 d-flex justify-content-md-end">
-  <div class="d-flex align-items-center justify-content-md-end gap-2
-              flex-md-nowrap flex-wrap w-100">
 
-    <!-- Search FIRST, fixed basis so it doesn't collapse -->
-    <input [(ngModel)]="searchValue"
-           name="searchValue"
-           type="search"
-           class="form-control me-2 flex-shrink-0"
-           placeholder="Search"
-           (keyup)="filterUpdate($event)"
-           (search)="filterUpdate($event)"
-           style="flex:0 0 320px; max-width:40vw;" />
+          <!-- Search + Add + Reorder + Drafts -->
+          <div class="col-md-6 col-12 d-flex justify-content-md-end">
+            <div
+              class="d-flex align-items-center justify-content-md-end gap-2 flex-md-nowrap flex-wrap w-100">
 
-    <button (click)="openCreate()" class="btn d-inline-flex align-items-center flex-shrink-0"
-            style="background-color:#2E5F73; color:white; gap:4px;">
-      <i data-feather="plus-circle" class="w-4 h-4"></i><span>Add</span>
-    </button>
+              <!-- Search -->
+              <input [(ngModel)]="searchValue"
+                     name="searchValue"
+                     type="search"
+                     class="form-control me-2 flex-shrink-0"
+                     placeholder="Search"
+                     (keyup)="filterUpdate($event)"
+                     (search)="filterUpdate($event)"
+                     style="flex:0 0 320px; max-width:40vw;"/>
 
-   <button
-  (click)="openReorderDetails()"
-  class="btn d-inline-flex align-items-center position-relative flex-shrink-0"
-  style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;"
->
-  <span>Reorder</span>
-  <span
-    *ngIf="reorderCount > 0"
-    class="badge badge-pill badge-warning"
-    style="position:absolute; top:-6px; right:-6px;"
-  >
-    {{ displayReorderCount }}
-  </span>
-</button>
+              <!-- Add -->
+              <!-- <button
+                (click)="openCreate()"
+                class="btn d-inline-flex align-items-center flex-shrink-0"
+                style="background-color:#2E5F73; color:white; gap:4px;">
+                <i data-feather="plus-circle" class="w-4 h-4"></i>
+                <span>Add</span>
+              </button> -->
+<button
+                   (click)="openCreate()"
+                  class="btn mr-1 d-inline-flex align-items-center"
+                  style="background-color:#2E5F73;color:white;gap:6px;"
+                  [disabled]="isPeriodLocked"
+                  [attr.title]="isPeriodLocked
+                    ? (currentPeriodName
+                        ? 'Period ' + currentPeriodName + ' is locked'
+                        : 'Accounting period is locked')
+                    : 'Create Purchase Request'">
+                  <i data-feather="plus-circle" class="w-4 h-4"></i>
+                  <span>Add</span>
+                </button>
+              <!-- Reorder -->
+              <button
+                (click)="openReorderDetails()"
+                class="btn d-inline-flex align-items-center position-relative flex-shrink-0"
+                style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
+                <span>Reorder</span>
+                <span
+                  *ngIf="reorderCount > 0"
+                  class="badge badge-pill badge-warning"
+                  style="position:absolute; top:-6px; right:-6px;">
+                  {{ displayReorderCount }}
+                </span>
+              </button>
 
-
-    <div class="position-relative d-inline-block flex-shrink-0">
-      <button (click)="openDraftsModal()" class="btn d-inline-flex align-items-center"
-              style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
-        <i data-feather="file-text" class="w-4 h-4"></i><span>Drafts</span>
-      </button>
-      <span *ngIf="drafts?.length"
-            style="position:absolute; top:6px; right:12px; min-width:20px; height:20px; padding:0 6px;
-                   border-radius:999px; background:orange; color:#fff; display:flex; align-items:center;
-                   justify-content:center; font-size:12px; font-weight:700; line-height:1;">
-        {{ drafts.length }}
-      </span>
-    </div>
-
-  </div>
-</div>
-
+              <!-- Drafts -->
+              <div class="position-relative d-inline-block flex-shrink-0">
+                <button
+                  (click)="openDraftsModal()"
+                  class="btn d-inline-flex align-items-center"
+                  style="border:1px solid #2E5F73; color:#2E5F73; gap:6px; background:white;">
+                  <i data-feather="file-text" class="w-4 h-4"></i>
+                  <span>Drafts</span>
+                </button>
+                <span
+                  *ngIf="drafts?.length"
+                  style="position:absolute; top:6px; right:12px; min-width:20px; height:20px; padding:0 6px;
+                         border-radius:999px; background:orange; color:#fff; display:flex; align-items:center;
+                         justify-content:center; font-size:12px; font-weight:700; line-height:1;">
+                  {{ drafts.length }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-        <ngx-datatable class="bootstrap core-bootstrap" [rows]="rows" [rowHeight]="50" [headerHeight]="50"
-          [footerHeight]="50" [limit]="selectedOption" [columnMode]="'force'" [scrollbarH]="true" [reorderable]="true">
 
-          <!-- Expand/Collapse + FadeIn Column -->
-          <ngx-datatable-column [width]="50" [resizeable]="false" [sortable]="false" [draggable]="false"
+        <!-- ================== MAIN TABLE ================== -->
+        <ngx-datatable
+          class="bootstrap core-bootstrap"
+          [rows]="rows"
+          [rowHeight]="50"
+          [headerHeight]="50"
+          [footerHeight]="50"
+          [limit]="selectedOption"
+          [columnMode]="'force'"
+          [scrollbarH]="true"
+          [reorderable]="true">
+
+          <!-- View lines -->
+          <ngx-datatable-column
+            [width]="50"
+            [resizeable]="false"
+            [sortable]="false"
+            [draggable]="false"
             [canAutoResize]="false">
             <ng-template ngx-datatable-cell-template let-row="row">
-              <span (click)="openLinesModal(row)" title="View Details"
+              <span
+                (click)="openLinesModal(row)"
+                title="View Details"
                 style="cursor:pointer; font-size:18px; color:#2E5F73;">
                 <i class="fas fa-eye"></i>
               </span>
-
             </ng-template>
           </ngx-datatable-column>
+
           <ngx-datatable-column name="PO Number" prop="purchaseOrderNo" [width]="120"></ngx-datatable-column>
-
-
           <ngx-datatable-column name="Supplier Name" prop="supplierName" [width]="140"></ngx-datatable-column>
-
           <ngx-datatable-column name="Currency/FX" prop="currencyName" [width]="120"></ngx-datatable-column>
 
           <ngx-datatable-column name="PO Date" prop="poDate" [width]="120">
@@ -99,80 +140,86 @@
             </ng-template>
           </ngx-datatable-column>
 
-
-
           <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.deliveryDate | date:'dd-MM-yyyy' }}
             </ng-template>
           </ngx-datatable-column>
 
+          <!-- Status -->
           <ngx-datatable-column name="Status" prop="approvalStatus" [width]="120">
             <ng-template let-value="value" ngx-datatable-cell-template>
-              <div class="badge badge-pill text-center inline-flex items-center !px-3 !py-1 !leading-none" [ngClass]="{
-              'badge-secondary': value === 0,
-              'badge-warning'  : value === 1,
-              'badge-success'  : value === 2,
-              'badge-danger'   : value === 3
-            }" [style.backgroundColor]="(value === 3 || value === 4) ? 'red' : ''" style="cursor: default;">
-
+              <div
+                class="badge badge-pill text-center inline-flex items-center !px-3 !py-1 !leading-none"
+                [ngClass]="{
+                  'badge-secondary': value === 0,
+                  'badge-warning'  : value === 1,
+                  'badge-success'  : value === 2,
+                  'badge-danger'   : value === 3
+                }"
+                [style.backgroundColor]="(value === 3 || value === 4) ? 'red' : ''"
+                style="cursor: default;">
                 {{
-                value === 0 ? 'Draft' :
-                value === 1 ? 'Pending' :
-                value === 2 ? 'Approved' :
-                value === 3 ? 'Rejected' : 'Unknown'
-
+                  value === 0 ? 'Draft'   :
+                  value === 1 ? 'Pending' :
+                  value === 2 ? 'Approved':
+                  value === 3 ? 'Rejected': 'Unknown'
                 }}
               </div>
             </ng-template>
           </ngx-datatable-column>
 
-          <!-- Edit/Delete Actions -->
+          <!-- Edit/Delete -->
           <ngx-datatable-column name="Action" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <!-- Edit -->
-              <i class="fas fa-pen mr-2"
+              <i
+                class="fas fa-pen mr-2"
                 [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-success cursor-pointer'"
-                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'" [attr.aria-disabled]="isRowLocked(row)"
+                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
+                [attr.aria-disabled]="isRowLocked(row)"
                 (click)="!isRowLocked(row) && editPO(row)"
-                title="{{ isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Edit' }}">
+                [title]="isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Edit'">
               </i>
 
               <!-- Delete -->
-              <i class="fas fa-trash"
+              <i
+                class="fas fa-trash"
                 [ngClass]="isRowLocked(row) ? 'text-gray-300 cursor-not-allowed' : 'text-danger cursor-pointer'"
-                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'" [attr.aria-disabled]="isRowLocked(row)"
+                [style.pointer-events]="isRowLocked(row) ? 'none' : 'auto'"
+                [attr.aria-disabled]="isRowLocked(row)"
                 (click)="!isRowLocked(row) && deletePO(row.id)"
-                title="{{ isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Delete' }}">
+                [title]="isRowLocked(row) ? 'Disabled for approved/rejected PO' : 'Delete'">
               </i>
             </ng-template>
           </ngx-datatable-column>
-
-
         </ngx-datatable>
 
       </div>
     </section>
   </div>
-
 </div>
 
-<div *ngIf="showLinesModal" (click)="closeLinesModal()"
-  style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
+<!-- ================== PO LINES MODAL ================== -->
+<div *ngIf="showLinesModal"
+     (click)="closeLinesModal()"
+     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
 
-  <!-- Modal Card -->
-  <div (click)="$event.stopPropagation()"
+  <div
+    (click)="$event.stopPropagation()"
     style="width:800px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
 
-    <!-- Header -->
     <div
       style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
       <h3 style="margin:0; font-size:20px; line-height:1.2; font-weight:700; color:#374151;">PO Lines</h3>
-      <button (click)="closeLinesModal()" aria-label="Close"
-        style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
+      <button
+        (click)="closeLinesModal()"
+        aria-label="Close"
+        style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">
+        ×
+      </button>
     </div>
 
-    <!-- Body -->
     <div style="padding:16px 20px;">
       <div style="max-height:60vh; overflow:auto; border:1px solid #eef2f7; border-radius:10px;">
         <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
@@ -180,7 +227,6 @@
             <tr style="background:#2E5F73; color:#fff;">
               <th style="padding:10px 12px; text-align:left; font-weight:600;">PR NO</th>
               <th style="padding:10px 12px; text-align:left; font-weight:600;">Item Name</th>
-              <!-- <th style="padding:10px 12px; text-align:left; font-weight:600;">Budget</th> -->
               <th style="padding:10px 12px; text-align:left; font-weight:600;">Recurring</th>
               <th style="padding:10px 12px; text-align:left; font-weight:600;">TaxCode</th>
               <th style="padding:10px 12px; text-align:left; font-weight:600;">Location</th>
@@ -190,9 +236,11 @@
               <th style="padding:10px 12px; text-align:right; font-weight:600; width:120px;">Total</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr *ngFor="let l of modalLines; let i = index" [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
-              style="border-bottom:1px solid #f1f5f9;">
+            <tr *ngFor="let l of modalLines; let i = index"
+                [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
+                style="border-bottom:1px solid #f1f5f9;">
               <td
                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
                 {{ l.prNo || '-' }}
@@ -201,9 +249,6 @@
                 style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
                 {{ l.item || '-' }}
               </td>
-              <!-- <td style="padding:10px 12px;">
-                {{ l.budget || '-' }}
-              </td> -->
               <td style="padding:10px 12px;">
                 {{ l.recurring || '-' }}
               </td>
@@ -226,15 +271,19 @@
                 {{ l.total || 0 }}
               </td>
             </tr>
+
             <tr *ngIf="!modalLines?.length">
-              <td colspan="3" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>
+              <td colspan="9" style="padding:14px 12px; text-align:center; color:#6b7280;">
+                No lines
+              </td>
             </tr>
           </tbody>
 
           <tfoot *ngIf="modalLines?.length">
             <tr style="background:#f3f4f6; border-top:1px solid #e5e7eb;">
               <td colspan="8" style="padding:10px 12px; font-weight:700;">Total</td>
-              <td style="padding:10px 12px; text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">
+              <td
+                style="padding:10px 12px; text-align:right; font-weight:700; font-variant-numeric:tabular-nums;">
                 {{ modalTotal }}
               </td>
             </tr>
@@ -243,9 +292,10 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
-      <button (click)="closeLinesModal()"
+    <div
+      style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+      <button
+        (click)="closeLinesModal()"
         style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
         Close
       </button>
@@ -253,16 +303,24 @@
   </div>
 </div>
 
-<!-- Drafts Modal -->
-<div *ngIf="showDraftsModal" (click)="closeDraftsModal()"
-  style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
-  <div (click)="$event.stopPropagation()"
+<!-- =============== DRAFTS MODAL =============== -->
+<div *ngIf="showDraftsModal"
+     (click)="closeDraftsModal()"
+     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
+
+  <div
+    (click)="$event.stopPropagation()"
     style="width:820px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
     <div
       style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
       <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">Draft Purchase Orders</h3>
-      <button (click)="closeDraftsModal()" aria-label="Close"
-        style="border:0; background:transparent; font-size:22px; cursor:pointer; color:#6b7280;">×</button>
+      <button
+        (click)="closeDraftsModal()"
+        aria-label="Close"
+        style="border:0; background:transparent; font-size:22px; cursor:pointer; color:#6b7280;">
+        ×
+      </button>
     </div>
 
     <div style="padding:16px 20px;">
@@ -284,26 +342,34 @@
               <td style="padding:10px 12px;">{{ d.deliveryDate | date:'dd-MM-yyyy' }}</td>
               <td style="padding:10px 12px;">{{ d.remarks || '-' }}</td>
               <td style="padding:10px 12px; text-align:center;">
-                <button class="btn btn-sm" (click)="openDraft(d)"
+                <button
+                  class="btn btn-sm"
+                  (click)="openDraft(d)"
                   style="background:#7c3aed; color:#fff; border:none; border-radius:8px; padding:6px 10px; margin-right:8px;">
                   Open
                 </button>
-                <button class="btn btn-sm" (click)="deleteDraft(d.id)"
+                <button
+                  class="btn btn-sm"
+                  (click)="deleteDraft(d.id)"
                   style="background:#fff; color:#dc2626; border:1px solid #dc2626; border-radius:8px; padding:6px 10px;">
                   Delete
                 </button>
               </td>
             </tr>
             <tr *ngIf="!drafts?.length">
-              <td colspan="5" style="padding:14px 12px; text-align:center; color:#6b7280;">No drafts</td>
+              <td colspan="5" style="padding:14px 12px; text-align:center; color:#6b7280;">
+                No drafts
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
-      <button (click)="closeDraftsModal()"
+    <div
+      style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+      <button
+        (click)="closeDraftsModal()"
         style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
         Close
       </button>
@@ -311,19 +377,29 @@
   </div>
 </div>
 
-<!-- Reorder Modal -->
-<div *ngIf="showReorderModal" (click)="closeReorderModal()"
+<!-- =============== REORDER MODAL =============== -->
+<div *ngIf="showReorderModal"
+     (click)="closeReorderModal()"
      style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
-  <div (click)="$event.stopPropagation()"
-       style="width:860px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
-    <!-- Header -->
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
-      <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">Reorder Purchase Requests</h3>
 
-      <!-- local search inside modal -->
-      <input [(ngModel)]="reorderSearch" type="search" (input)="filterReorders()"
-             placeholder="Search PR No / Requester / Dept"
-             class="form-control" style="max-width:320px;">
+  <div
+    (click)="$event.stopPropagation()"
+    style="width:860px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
+    <!-- Header -->
+    <div
+      style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
+      <h3 style="margin:0; font-size:20px; font-weight:700; color:#374151;">
+        Reorder Purchase Requests
+      </h3>
+
+      <input
+        [(ngModel)]="reorderSearch"
+        type="search"
+        (input)="filterReorders()"
+        placeholder="Search PR No / Requester / Dept"
+        class="form-control"
+        style="max-width:320px;">
     </div>
 
     <!-- Body -->
@@ -340,19 +416,26 @@
               <th style="padding:8px 10px; width:160px; text-align:center;">Action</th>
             </tr>
           </thead>
-
           <tbody>
             <tr *ngFor="let r of reorderRows" style="background:#f9fafb;">
-              <td style="padding:10px 12px;">{{ r.purchaseRequestNo || r.prNo || '-' }}</td>
-              <td style="padding:10px 12px;">{{ r.requester || '-' }}</td>
-              <td style="padding:10px 12px;">{{ r.department || r.departmentName || '-' }}</td>
-              <td style="padding:10px 12px;">{{ r.deliveryDate | date:'dd-MM-yyyy' }}</td>
+              <td style="padding:10px 12px;">
+                {{ r.purchaseRequestNo || r.prNo || '-' }}
+              </td>
+              <td style="padding:10px 12px;">
+                {{ r.requester || '-' }}
+              </td>
+              <td style="padding:10px 12px;">
+                {{ r.department || r.departmentName || '-' }}
+              </td>
+              <td style="padding:10px 12px;">
+                {{ r.deliveryDate | date:'dd-MM-yyyy' }}
+              </td>
               <td style="padding:10px 12px;">Yes</td>
-
               <td style="padding:10px 12px; text-align:center;">
-                <button class="btn btn-sm"
-                        (click)="createFromReorder(r)"
-                        style="background:#2E5F73; color:#fff; border:none; border-radius:8px; padding:6px 10px;">
+                <button
+                  class="btn btn-sm"
+                  (click)="createFromReorder(r)"
+                  style="background:#2E5F73; color:#fff; border:none; border-radius:8px; padding:6px 10px;">
                   Create
                 </button>
               </td>
@@ -369,9 +452,11 @@
     </div>
 
     <!-- Footer -->
-    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
-      <button (click)="closeReorderModal()"
-              style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
+    <div
+      style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
+      <button
+        (click)="closeReorderModal()"
+        style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
         Close
       </button>
     </div>

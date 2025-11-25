@@ -11,6 +11,7 @@ import { ItemsService } from 'app/main/master/items/items.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
 // -------- Types for rows/lines (UI) ----------
 type DoRow = {
@@ -39,7 +40,13 @@ type DoLineRow = {
   qty: number;
   notes?: string | null;
 };
-
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 @Component({
   selector: 'app-deliveryorderlist',
   templateUrl: './deliveryorderlist.component.html',
@@ -65,7 +72,8 @@ export class DeliveryorderlistComponent implements OnInit, AfterViewInit, AfterV
   activeDo: DoRow | null = null;
   modalLines: DoLineRow[] = [];
   modalTotalQty = 0;
-
+isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private router: Router,
     private doSvc: DeliveryOrderService,
@@ -73,16 +81,43 @@ export class DeliveryorderlistComponent implements OnInit, AfterViewInit, AfterV
     private vehicleSvc: VehicleService,
     private itemsSvc: ItemsService,
     private uomSvc: UomService,
+    private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
+    const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadLookups();
     this.loadList();
   }
 
   ngAfterViewInit(): void { feather.replace(); }
   ngAfterViewChecked(): void { feather.replace(); }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   // ---------------- Lookups ----------------
   private loadLookups(): void {
     // Drivers
@@ -265,13 +300,26 @@ export class DeliveryorderlistComponent implements OnInit, AfterViewInit, AfterV
   }
 
   // ---------------- Actions ----------------
-  goToCreate() { this.router.navigate(['/Sales/Delivery-order-create']); }
+  goToCreate() {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
+    this.router.navigate(['/Sales/Delivery-order-create']); }
 
   editDo(id: number) {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     this.router.navigate(['/Sales/Delivery-order-edit', id]);
   }
 
   deleteDo(id: number) {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('edit Purchase Requests');
+      return;
+    }
     Swal.fire({
       icon: 'warning',
       title: 'Delete Delivery Order?',

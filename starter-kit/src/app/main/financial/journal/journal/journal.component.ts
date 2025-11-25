@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { JournalService } from '../journalservice/journal.service';
 import Swal from 'sweetalert2';
+import { PeriodCloseService } from '../../period-close-fx/period-close-fx.service';
 
 type JournalRow = {
   id: number;                 // 👈 NEW
@@ -13,7 +14,13 @@ type JournalRow = {
   recurringFrequency?: string | null;
   isPosted?: boolean;         // 👈 NEW (optional)
 };
-
+export interface PeriodStatusDto {
+  isLocked: boolean;
+  periodName?: string;
+  periodCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 @Component({
   selector: 'app-journal',
@@ -45,16 +52,44 @@ export class JournalComponent implements OnInit {
   totalCredit: number = 0;
 
   isLoading = false;
-
+isPeriodLocked = false;
+  currentPeriodName = '';
   constructor(
     private router: Router,
-    private journalService: JournalService
+    private journalService: JournalService,
+    private periodService: PeriodCloseService
   ) { }
 
   ngOnInit(): void {
+    const today = new Date().toISOString().substring(0, 10);
+    this.checkPeriodLockForDate(today);
     this.loadJournals();
   }
+private checkPeriodLockForDate(dateStr: string): void {
+    if (!dateStr) { return; }
 
+    this.periodService.getStatusForDateWithName(dateStr).subscribe({
+      next: (res: PeriodStatusDto | null) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.currentPeriodName = res?.periodName || '';
+      },
+      error: () => {
+        // if fails, UI side don’t hard-lock; backend will still protect
+        this.isPeriodLocked = false;
+        this.currentPeriodName = '';
+      }
+    });
+  }
+
+  private showPeriodLockedSwal(action: string): void {
+    Swal.fire(
+      'Period Locked',
+      this.currentPeriodName
+        ? `Period "${this.currentPeriodName}" is locked. You cannot ${action} in this period.`
+        : `Selected accounting period is locked. You cannot ${action}.`,
+      'warning'
+    );
+  }
   reload(): void {
     this.loadJournals();
   }
