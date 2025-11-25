@@ -2,3 +2,22 @@
   background-color: #2E5F73 !important;
   color: #fff !important;
 }
+
+.aging-filters {
+  gap: 1rem;                 // space between From / To / Customer groups
+}
+
+.aging-filter-item {
+  white-space: nowrap;
+}
+
+.aging-filter-label {
+  font-size: 0.85rem;
+  margin-right: 0.35rem;
+  color: #555;
+}
+
+.aging-filter-control {
+  width: 180px;              // same width for all controls
+}
+
