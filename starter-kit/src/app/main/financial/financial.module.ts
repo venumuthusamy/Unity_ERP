@@ -26,6 +26,7 @@ import { GeneralLdegerComponent } from './general-ldeger/general-ledgerlist/gene
 import { AgingComponent } from './AR/Aging/aging/aging.component';
 import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.component';
 import { InvoiceEmailComponent } from './invoice-email/invoice-email.component';
+import { TrialBalanceReportComponent } from './reports/trial-balance-report/trial-balance-report.component';
 
 
 const routes: Routes = [
@@ -43,6 +44,8 @@ const routes: Routes = [
     { path: 'ledger', component: GeneralLdegerComponent },
 { path: 'Period-close', component: PeriodCloseFxComponent },
 { path: 'Invoice-email', component: InvoiceEmailComponent },
+{ path: 'report', component: TrialBalanceReportComponent },
+
 ];
 
 @NgModule({
@@ -64,6 +67,7 @@ const routes: Routes = [
     AgingComponent,
     PeriodCloseFxComponent,
     InvoiceEmailComponent
+    TrialBalanceReportComponent
   ],
   imports: [
     CommonModule,
