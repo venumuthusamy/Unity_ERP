@@ -156,7 +156,6 @@
                         [(ngModel)]="recurringFrequency">
 
                         <option [ngValue]="null" disabled>Select frequency</option>
-                        <option value="EveryMinute">Every 10 Minutes (TEST)</option> <!-- TEST MODE -->
                         <option value="Daily">Daily</option>
                         <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
@@ -167,7 +166,7 @@
                     </div>
 
                     <!-- Interval -->
-                    <div class="col-md-2 col-sm-6" *ngIf="recurringFrequency !== 'EveryMinute'">
+                    <div class="col-md-2 col-sm-6">
                       <label class="recurring-label">Every</label>
                       <input type="number" min="1" class="form-control journal-input" [(ngModel)]="recurringInterval">
                     </div>
