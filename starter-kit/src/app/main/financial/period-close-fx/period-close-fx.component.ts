@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { PeriodCloseService, PeriodOption, PeriodStatus } from '../period-close-fx/period-close-fx.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-period-close-fx',
@@ -16,13 +17,12 @@ export class PeriodCloseFxComponent implements OnInit {
   isRunningFx = false;
   status: PeriodStatus | null = null;
 
-  // runtime flags
   get isLocked(): boolean {
     return !!this.status?.isLocked;
   }
 
-  // role info – normally auth serviceல இருந்து வரும்
-  isAdmin = true; // demo காக true-ஆ வைத்திருக்கிறேன்
+  // normally from auth service
+  isAdmin = true;
 
   constructor(private periodService: PeriodCloseService) { }
 
@@ -35,13 +35,15 @@ export class PeriodCloseFxComponent implements OnInit {
       next: (list) => {
         this.periods = list || [];
         if (this.periods.length) {
-          // default = latest (last item)
           const last = this.periods[this.periods.length - 1];
           this.selectedPeriodId = last.id;
           this.onPeriodChange(this.selectedPeriodId);
         }
       },
-      error: err => console.error('Error loading periods', err)
+      error: err => {
+        console.error('Error loading periods', err);
+        Swal.fire('Error', 'Failed to load periods.', 'error');
+      }
     });
   }
 
@@ -57,12 +59,14 @@ export class PeriodCloseFxComponent implements OnInit {
     this.periodService.getStatus(id).subscribe({
       next: s => {
         this.status = s;
-        // default FX date = period end date
         if (s && s.periodEndDate) {
           this.fxRevalDate = s.periodEndDate.substring(0, 10);
         }
       },
-      error: err => console.error('Error loading period status', err)
+      error: err => {
+        console.error('Error loading period status', err);
+        Swal.fire('Error', 'Failed to load period status.', 'error');
+      }
     });
   }
 
@@ -72,55 +76,91 @@ export class PeriodCloseFxComponent implements OnInit {
     }
 
     const targetLock = !this.status.isLocked;
-    if (!confirm(targetLock ? 'Lock this period?' : 'Unlock this period?')) {
-      return;
-    }
+    const title = targetLock ? 'Lock this period?' : 'Unlock this period?';
+    const text  = targetLock
+      ? 'After locking, posting in this period will be blocked.'
+      : 'After unlocking, users can post in this period again.';
 
-    this.isLocking = true;
+    Swal.fire({
+      title,
+      text,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: targetLock ? 'Yes, lock it' : 'Yes, unlock it',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    }).then(result => {
+      if (!result.isConfirmed) { return; }
 
-    this.periodService.setLock(this.selectedPeriodId, targetLock).subscribe({
-      next: s => {
-        this.status = s;
-        this.isLocking = false;
-      },
-      error: err => {
-        console.error('Error changing lock', err);
-        this.isLocking = false;
-      }
+      this.isLocking = true;
+
+      this.periodService.setLock(this.selectedPeriodId!, targetLock).subscribe({
+        next: s => {
+          this.status = s;
+          this.isLocking = false;
+
+          Swal.fire({
+            icon: 'success',
+            title: targetLock ? 'Period locked' : 'Period unlocked',
+            text: s.periodLabel
+              ? `Period "${s.periodLabel}" has been ${targetLock ? 'locked' : 'unlocked'}.`
+              : `Period has been ${targetLock ? 'locked' : 'unlocked'}.`
+          });
+        },
+        error: err => {
+          console.error('Error changing lock', err);
+          this.isLocking = false;
+          Swal.fire('Error', 'Failed to change period lock status.', 'error');
+        }
+      });
     });
   }
 
   runFxRevaluation(): void {
     if (!this.selectedPeriodId || !this.fxRevalDate) {
-      alert('Please choose period and FX Reval Date.');
+      Swal.fire('Missing data', 'Please choose a period and FX revaluation date.', 'warning');
       return;
     }
 
-    if (!confirm('Run FX revaluation for this period?')) {
-      return;
-    }
+    Swal.fire({
+      title: 'Run FX revaluation?',
+      text: 'This may take some time and will revalue foreign currency balances.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, run',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#2E5F73',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    }).then(result => {
+      if (!result.isConfirmed) { return; }
 
-    this.isRunningFx = true;
+      this.isRunningFx = true;
 
-    this.periodService.runFxReval({
-      periodId: this.selectedPeriodId,
-      fxDate: this.fxRevalDate
-    }).subscribe({
-      next: result => {
-        this.isRunningFx = false;
-        alert('FX Revaluation completed successfully.');
-      },
-      error: err => {
-        console.error('Error running FX revaluation', err);
-        this.isRunningFx = false;
-      }
+      this.periodService.runFxReval({
+        periodId: this.selectedPeriodId!,
+        fxDate: this.fxRevalDate
+      }).subscribe({
+        next: _ => {
+          this.isRunningFx = false;
+          Swal.fire('Done', 'FX Revaluation completed successfully.', 'success');
+        },
+        error: err => {
+          console.error('Error running FX revaluation', err);
+          this.isRunningFx = false;
+          Swal.fire('Error', 'Error occurred while running FX revaluation.', 'error');
+        }
+      });
     });
   }
 
   openTrialBalance(): void {
-    if (!this.selectedPeriodId) { return; }
-    // TB routeக்கு navigate பண்ணலாம் / report open பண்ணலாம்
-    // உதாரணம்:
+    if (!this.selectedPeriodId) {
+      Swal.fire('No period selected', 'Please select a period first.', 'info');
+      return;
+    }
     window.open(`/reports/trial-balance?periodId=${this.selectedPeriodId}`, '_blank');
   }
 }

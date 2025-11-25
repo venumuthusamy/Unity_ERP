@@ -8,13 +8,14 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { ColumnMode, DatatableComponent } from '@swimlane/ngx-datatable';
-import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
 import * as feather from 'feather-icons';
+import Swal from 'sweetalert2';
 
-// NEW: lookups for names
+import { PurchaseGoodreceiptService } from '../purchase-goodreceipt.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { StockAdjustmentService } from 'app/main/inventory/stock-adjustment/stock-adjustment.service';
 import { StrategyService } from 'app/main/master/strategies/strategy.service';
+import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
 interface GrnRow {
   id: number;
@@ -40,12 +41,10 @@ interface GrnRow {
   isFlagIssue: boolean;
   isPostInventory: boolean;
 
-  // surfaced fields
   qtyReceived?: number | null;
   qualityCheck?: string | null;
   batchSerial?: string | null;
 
-  // location/strategy
   warehouseId?: number | null;
   binId?: number | null;
   strategyId?: number | null;
@@ -72,52 +71,79 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
   rows: GrnRow[] = [];
   allRows: GrnRow[] = [];
 
-  // Image modal
+  // image viewer
   imageViewer: ViewerState = { open: false, src: null };
 
-  // Lines modal
+  // lines modal
   showLinesModal = false;
   modalLines: any[] = [];
-  modalHeader: { grnNo?: string; pono?: string; name?: string; receptionDate?: any } = { grnNo: '' };
+  modalHeader: {
+    grnNo?: string;
+    pono?: string;
+    name?: string;
+    receptionDate?: any;
+  } = { grnNo: '' };
 
-  // ======== name caches ========
+  // lookups
   private warehouseNameMap = new Map<number, string>();
   private strategyNameMap = new Map<number, string>();
-  private binsByWarehouse = new Map<number, Map<number, string>>(); // whId -> (binId -> binName)
+  private binsByWarehouse = new Map<number, Map<number, string>>();
   private warehousesLoaded = false;
   private strategiesLoaded = false;
+
+  // 🔒 period lock
+  isPeriodLocked = false;
+  periodName = '';
 
   constructor(
     private grnService: PurchaseGoodreceiptService,
     private router: Router,
-    // NEW services
     private warehouseService: WarehouseService,
     private stockService: StockAdjustmentService,
-    private strategyService: StrategyService
+    private strategyService: StrategyService,
+    private periodLock: PeriodCloseService
   ) {}
 
+  // ---------- lifecycle ----------
   ngOnInit(): void {
-    // preload names (best-effort)
     this.loadWarehouses();
     this.loadStrategies();
-
     this.loadGrns();
+    this.checkPeriodLockForToday();
   }
 
   ngAfterViewInit(): void {
     this.refreshFeatherIcons();
   }
 
-  // ---------------- UI helpers ----------------
-  refreshFeatherIcons(): void {
+  private refreshFeatherIcons(): void {
     setTimeout(() => feather.replace(), 0);
   }
 
-  // ---------------- Data load -----------------
+  // ---------- period lock ----------
+  private checkPeriodLockForToday(): void {
+    const today = new Date().toISOString().substring(0, 10); // yyyy-MM-dd
+
+    this.periodLock.getStatusForDateWithName(today).subscribe({
+      next: status => {
+        this.isPeriodLocked = !!status?.isLocked;
+        this.periodName = status?.periodName || '';
+      },
+      error: () => {
+        this.isPeriodLocked = false;
+        this.periodName = '';
+      }
+    });
+  }
+
+  // ---------- data load ----------
   private loadGrns(): void {
     this.grnService.getAllDetails().subscribe({
       next: (res: any) => {
-        const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const list: any[] = Array.isArray(res)
+          ? res
+          : (Array.isArray(res?.data) ? res.data : []);
+
         const normalized = (list || []).map<GrnRow>((g: any) => ({
           id: g.id ?? g.ID ?? null,
           receptionDate: g.receptionDate ?? g.ReceptionDate ?? null,
@@ -142,12 +168,10 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
           isFlagIssue: this.truthy(g.isFlagIssue ?? g.IsFlagIssue ?? false),
           isPostInventory: this.truthy(g.isPostInventory ?? g.IsPostInventory ?? false),
 
-          // extras
           qtyReceived: g.qtyReceived ?? g.QtyReceived ?? null,
           qualityCheck: g.qualityCheck ?? g.QualityCheck ?? null,
           batchSerial: g.batchSerial ?? g.BatchSerial ?? null,
 
-          // names if the list payload already contains them
           warehouseId: g.warehouseId ?? g.WarehouseId ?? null,
           binId: g.binId ?? g.BinId ?? null,
           strategyId: g.strategyId ?? g.StrategyId ?? null,
@@ -168,13 +192,19 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // collapse same GRN into one list row
+  /** collapse multiple detail lines into one row per GRN+status */
   private collapseByGrn(rows: GrnRow[]): GrnRow[] {
     const map = new Map<string, { base: GrnRow; items: Set<string> }>();
+
     for (const r of rows) {
-      const key = `${r.grnNo}__${this.truthy(r.isFlagIssue)}__${this.truthy(r.isPostInventory)}`;
+      const key = `${r.grnNo}__${this.truthy(r.isFlagIssue)}__${this.truthy(
+        r.isPostInventory
+      )}`;
       if (!map.has(key)) {
-        map.set(key, { base: { ...r }, items: new Set<string>([r.itemName?.trim() || '']) });
+        map.set(key, {
+          base: { ...r },
+          items: new Set<string>([r.itemName?.trim() || ''])
+        });
       } else {
         const bucket = map.get(key)!;
         if (!bucket.base.name && r.name) bucket.base.name = r.name;
@@ -186,14 +216,23 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     return Array.from(map.values()).map(({ base, items }) => {
       const list = [...items].filter(Boolean);
       const summary = list.join(', ');
-      return { ...base, itemName: list.length > 1 ? `${summary} (${list.length})` : (summary || base.itemName) };
+      return {
+        ...base,
+        itemName:
+          list.length > 1
+            ? `${summary} (${list.length})`
+            : (summary || base.itemName)
+      };
     });
   }
 
-  // ---------------- Search ----------------
+  // ---------- search ----------
   filterUpdate(event: Event): void {
-    const val = (event.target as HTMLInputElement).value?.toLowerCase().trim() ?? '';
+    const val = (event.target as HTMLInputElement).value
+      ?.toLowerCase()
+      .trim() ?? '';
     this.searchValue = val;
+
     if (!val) {
       this.rows = this.collapseByGrn(this.allRows);
       if (this.table) this.table.offset = 0;
@@ -214,9 +253,8 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.refreshFeatherIcons();
   }
 
-  // ---------------- Eye modal ----------------
+  // ---------- lines modal ----------
   openLinesModal(row: GrnRow): void {
-    this.refreshFeatherIcons();
     if (!row?.grnNo) return;
 
     this.modalHeader = {
@@ -229,20 +267,22 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     this.modalLines = [];
     this.showLinesModal = true;
 
-    // prefer cached items for this GRN+status
-    const sameGrnRows = this.allRows.filter(r => (r.grnNo || '') === (row.grnNo || ''));
-    const sameStatusRows = sameGrnRows.filter(r =>
-      this.truthy(r.isPostInventory) === this.truthy(row.isPostInventory) &&
-      this.truthy(r.isFlagIssue) === this.truthy(row.isFlagIssue)
+    const sameGrnRows = this.allRows.filter(
+      r => (r.grnNo || '') === (row.grnNo || '')
+    );
+    const sameStatusRows = sameGrnRows.filter(
+      r =>
+        this.truthy(r.isPostInventory) === this.truthy(row.isPostInventory) &&
+        this.truthy(r.isFlagIssue) === this.truthy(row.isFlagIssue)
     );
 
     if (sameStatusRows.length) {
       this.modalLines = sameStatusRows.map(r => this.toModalLine(r, r.name));
-      this.fillMissingNamesForModalLines(); // ensure names shown
+      this.fillMissingNamesForModalLines();
       return;
     }
 
-    // fallback: get the full GRN and build one line
+    // fallback: call API
     this.grnService.getByIdGRN(row.id).subscribe({
       next: (res: any) => {
         const data = res?.data ?? res ?? {};
@@ -254,18 +294,15 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
           lines = [];
         }
 
-        // If you want to show all lines in the modal, use lines.map(...).
-        // If you want only one similar line, keep pickOneLine:
         const picked = this.pickOneLine(lines, row);
         if (!picked.supplierName) picked.supplierName = row.name ?? '';
 
-        // show all lines (usually preferred in a "Lines" modal)
-        this.modalLines = (lines.length ? lines : [picked]).map(l => this.toModalLine(l, row.name));
-
+        this.modalLines = (lines.length ? lines : [picked]).map(l =>
+          this.toModalLine(l, row.name)
+        );
         this.fillMissingNamesForModalLines();
       },
       error: () => {
-        // graceful fallback
         this.modalLines = [this.toModalLine(row, row.name)];
         this.fillMissingNamesForModalLines();
       }
@@ -279,6 +316,7 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
   private toModalLine(src: any, fallbackName?: string) {
     const timeDate = this.parseTime(src.time);
+
     return {
       itemName: src.itemName ?? src.itemText ?? src.item ?? '',
       item: src.item ?? '',
@@ -302,7 +340,6 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
       qualityCheck: src.qualityCheck ?? src.QualityCheck ?? null,
       batchSerial: src.batchSerial ?? src.BatchSerial ?? null,
 
-      // IDs + names (names may be missing initially)
       warehouseId: this.toNum(src.warehouseId ?? src.WarehouseId),
       binId: this.toNum(src.binId ?? src.BinId),
       strategyId: this.toNum(src.strategyId ?? src.StrategyId),
@@ -312,40 +349,39 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     };
   }
 
-  // -------- name resolution for modal lines --------
+  // ---------- name resolution ----------
   private fillMissingNamesForModalLines(): void {
-    // try to fill from caches immediately
-    for (const l of this.modalLines) {
-      if (!l.warehouseName && l.warehouseId && this.warehouseNameMap.has(l.warehouseId)) {
-        l.warehouseName = this.warehouseNameMap.get(l.warehouseId)!;
-      }
-      if (!l.strategyName && l.strategyId && this.strategyNameMap.has(l.strategyId)) {
-        l.strategyName = this.strategyNameMap.get(l.strategyId)!;
-      }
-    }
+    this.applyWarehouseNames();
+    this.applyStrategyNames();
 
-    // collect which warehouses we need bin names for
     const whToBinsNeeded = new Map<number, Set<number>>();
     for (const l of this.modalLines) {
       if (l.warehouseId && l.binId && !l.binName) {
-        if (!whToBinsNeeded.has(l.warehouseId)) whToBinsNeeded.set(l.warehouseId, new Set<number>());
+        if (!whToBinsNeeded.has(l.warehouseId)) {
+          whToBinsNeeded.set(l.warehouseId, new Set<number>());
+        }
         whToBinsNeeded.get(l.warehouseId)!.add(l.binId);
       }
     }
 
-    // if any warehouse names missing and we didn’t preload, try once
-    if (!this.warehousesLoaded) this.loadWarehouses(() => this.applyWarehouseNames());
+    if (!this.warehousesLoaded) {
+      this.loadWarehouses(() => this.applyWarehouseNames());
+    }
+    if (!this.strategiesLoaded) {
+      this.loadStrategies(() => this.applyStrategyNames());
+    }
 
-    // if any strategy names missing and we didn’t preload, try once
-    if (!this.strategiesLoaded) this.loadStrategies(() => this.applyStrategyNames());
-
-    // fetch bins only for the warehouses that appear in modal
     whToBinsNeeded.forEach((needBinIds, whId) => {
       this.ensureBinsLoaded(whId, () => {
         const map = this.binsByWarehouse.get(whId);
         if (!map) return;
         for (const l of this.modalLines) {
-          if (l.warehouseId === whId && l.binId && !l.binName && map.has(l.binId)) {
+          if (
+            l.warehouseId === whId &&
+            l.binId &&
+            !l.binName &&
+            map.has(l.binId)
+          ) {
             l.binName = map.get(l.binId)!;
           }
         }
@@ -355,7 +391,11 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
   private applyWarehouseNames(): void {
     for (const l of this.modalLines) {
-      if (!l.warehouseName && l.warehouseId && this.warehouseNameMap.has(l.warehouseId)) {
+      if (
+        !l.warehouseName &&
+        l.warehouseId &&
+        this.warehouseNameMap.has(l.warehouseId)
+      ) {
         l.warehouseName = this.warehouseNameMap.get(l.warehouseId)!;
       }
     }
@@ -363,50 +403,78 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
   private applyStrategyNames(): void {
     for (const l of this.modalLines) {
-      if (!l.strategyName && l.strategyId && this.strategyNameMap.has(l.strategyId)) {
+      if (
+        !l.strategyName &&
+        l.strategyId &&
+        this.strategyNameMap.has(l.strategyId)
+      ) {
         l.strategyName = this.strategyNameMap.get(l.strategyId)!;
       }
     }
   }
 
-  // -------- preload name maps --------
+  // ---------- preload maps ----------
   private loadWarehouses(after?: () => void) {
-    if (this.warehousesLoaded && after) return after();
+    if (this.warehousesLoaded && after) {
+      after();
+      return;
+    }
+
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
         const arr = res?.data ?? res ?? [];
         for (const w of arr) {
           const id = Number(w.id ?? w.Id);
-          const name = String(w.name ?? w.warehouseName ?? w.WarehouseName ?? '');
+          const name = String(
+            w.name ?? w.warehouseName ?? w.WarehouseName ?? ''
+          );
           if (id && name) this.warehouseNameMap.set(id, name);
         }
         this.warehousesLoaded = true;
         if (after) after();
       },
-      error: () => { this.warehousesLoaded = true; if (after) after(); }
+      error: () => {
+        this.warehousesLoaded = true;
+        if (after) after();
+      }
     });
   }
 
   private loadStrategies(after?: () => void) {
-    if (this.strategiesLoaded && after) return after();
+    if (this.strategiesLoaded && after) {
+      after();
+      return;
+    }
+
     this.strategyService.getStrategy().subscribe({
       next: (res: any) => {
         const arr = res?.data ?? res ?? [];
         for (const s of arr) {
           const id = Number(s.id ?? s.Id);
-          const name = String(s.strategyName ?? s.name ?? s.StrategyName ?? '');
+          const name = String(
+            s.strategyName ?? s.name ?? s.StrategyName ?? ''
+          );
           if (id && name) this.strategyNameMap.set(id, name);
         }
         this.strategiesLoaded = true;
         if (after) after();
       },
-      error: () => { this.strategiesLoaded = true; if (after) after(); }
+      error: () => {
+        this.strategiesLoaded = true;
+        if (after) after();
+      }
     });
   }
 
   private ensureBinsLoaded(warehouseId: number, after?: () => void) {
-    if (!warehouseId) { if (after) after(); return; }
-    if (this.binsByWarehouse.has(warehouseId)) { if (after) after(); return; }
+    if (!warehouseId) {
+      if (after) after();
+      return;
+    }
+    if (this.binsByWarehouse.has(warehouseId)) {
+      if (after) after();
+      return;
+    }
 
     this.stockService.GetBinDetailsbywarehouseID(warehouseId).subscribe({
       next: (res: any) => {
@@ -420,11 +488,13 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
         this.binsByWarehouse.set(warehouseId, map);
         if (after) after();
       },
-      error: () => { if (after) after(); }
+      error: () => {
+        if (after) after();
+      }
     });
   }
 
-  // ---------------- misc helpers ----------------
+  // ---------- misc helpers ----------
   private toNumberOrNull(v: any): number | null {
     if (v === null || v === undefined || v === '') return null;
     const n = Number(v);
@@ -451,13 +521,17 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
 
   private pickOneLine(lines: any[], row: GrnRow) {
     return (
-      lines.find(l => (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '')) ||
-      lines.find(l =>
-        (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '') &&
-        (String(l.storageType ?? '') === String(row.storageType ?? '') ||
-         String(l.surfaceTemp ?? '') === String(row.surfaceTemp ?? ''))
+      lines.find(
+        l => (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '')
       ) ||
-      lines[0] || {}
+      lines.find(
+        l =>
+          (l.itemCode ?? l.item ?? '') === (row.itemCode ?? '') &&
+          (String(l.storageType ?? '') === String(row.storageType ?? '') ||
+           String(l.surfaceTemp ?? '') === String(row.surfaceTemp ?? ''))
+      ) ||
+      lines[0] ||
+      {}
     );
   }
 
@@ -477,16 +551,51 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     document.body.style.overflow = '';
   }
 
-  @HostListener('document:keydown.escape') handleEsc(): void {
+  @HostListener('document:keydown.escape')
+  handleEsc(): void {
     if (this.imageViewer.open) this.closeImage();
     if (this.showLinesModal) this.closeLinesModal();
   }
 
   goToCreateGRN(): void {
+    if (this.isPeriodLocked) {
+      Swal.fire(
+        'Period Locked',
+        this.periodName
+          ? `Period "${this.periodName}" is locked. You cannot create GRNs in this period.`
+          : 'Selected period is locked. You cannot create GRNs.',
+        'warning'
+      );
+      return;
+    }
     this.router.navigate(['/purchase/createpurchasegoodreceipt']);
   }
 
-  editGRN(id: any) {
+  onEdit(row: GrnRow): void {
+    if (row.isPostInventory) {
+      Swal.fire(
+        'Not Allowed',
+        'This GRN is already posted to inventory.',
+        'info'
+      );
+      return;
+    }
+
+    if (this.isPeriodLocked) {
+      Swal.fire(
+        'Period Locked',
+        this.periodName
+          ? `Period "${this.periodName}" is locked. You cannot edit GRNs in this period.`
+          : 'Selected period is locked. You cannot edit GRNs.',
+        'warning'
+      );
+      return;
+    }
+
+    this.editGRN(row.id);
+  }
+
+  editGRN(id: any): void {
     this.router.navigateByUrl(`/purchase/edit-purchasegoodreceipt/${id}`);
   }
 
@@ -518,7 +627,8 @@ export class PurchaseGoodreceiptlistComponent implements OnInit, AfterViewInit {
     if (t === 'Flagged') return 'badge-warning';
     return 'badge-danger';
   }
-    private coerceTimeText(v: any): string | null {
+
+  private coerceTimeText(v: any): string | null {
     if (!v) return null;
     const d = this.parseTime(v);
     if (!d) return null;
