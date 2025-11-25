@@ -5,15 +5,16 @@
 
         <!-- Header -->
         <div class="card-header d-flex justify-content-between align-items-center">
-         
+
 
           <div class="d-flex align-items-center">
-            <span class="me-50">As of</span>
-            <input type="date"
-                   class="form-control"
-                   style="width: 180px"
-                   [(ngModel)]="asOfDate"
-                   (change)="onDateChange()" />
+            <span class="me-50">From</span>
+            <input type="date" class="form-control me-50" style="width: 160px" [(ngModel)]="fromDate"
+              (change)="onFilterChange()" />
+
+            <span class="me-50 ms-1">To</span>
+            <input type="date" class="form-control" style="width: 160px" [(ngModel)]="toDate"
+              (change)="onFilterChange()" />
           </div>
         </div>
 
@@ -34,7 +35,7 @@
             <tbody>
               <tr *ngFor="let r of rows" (click)="openDetail(r)" style="cursor: pointer;">
                 <td>{{ r.customerName }}</td>
-                <td class="text-end">{{ r.bucket0_30  | number : '1.2-2' }}</td>
+                <td class="text-end">{{ r.bucket0_30 | number : '1.2-2' }}</td>
                 <td class="text-end">{{ r.bucket31_60 | number : '1.2-2' }}</td>
                 <td class="text-end">{{ r.bucket61_90 | number : '1.2-2' }}</td>
                 <td class="text-end">{{ r.bucket90Plus | number : '1.2-2' }}</td>
@@ -60,8 +61,8 @@
                   <th>Invoice</th>
                   <th>Date</th>
                   <th>Due</th>
-                  <th class="text-end">Age</th>
-                  <th class="text-end">Bucket</th>
+                  <th class="text-end">OverDue Days</th>
+                  <!-- <th class="text-end">Bucket</th> -->
                   <th class="text-end">Original</th>
                   <th class="text-end">Paid</th>
                   <th class="text-end">Credit</th>
@@ -74,10 +75,10 @@
                   <td>{{ d.invoiceDate | date }}</td>
                   <td>{{ d.dueDate | date }}</td>
                   <td class="text-end">{{ d.ageDays }}</td>
-                  <td class="text-end">{{ d.bucketName }}</td>
+                  <!-- <td class="text-end">{{ d.bucketName }}</td> -->
                   <td class="text-end">{{ d.originalAmount | number : '1.2-2' }}</td>
-                  <td class="text-end">{{ d.paidAmount     | number : '1.2-2' }}</td>
-                  <td class="text-end">{{ d.creditAmount   | number : '1.2-2' }}</td>
+                  <td class="text-end">{{ d.paidAmount | number : '1.2-2' }}</td>
+                  <td class="text-end">{{ d.creditAmount | number : '1.2-2' }}</td>
                   <td class="text-end fw-bold">{{ d.balance | number : '1.2-2' }}</td>
                 </tr>
               </tbody>
@@ -96,4 +97,3 @@
     </section>
   </div>
 </div>
-

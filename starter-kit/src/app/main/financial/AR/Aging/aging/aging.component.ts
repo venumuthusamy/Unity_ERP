@@ -11,8 +11,9 @@ import { ArAgingService } from '../aging-service';
 export class AgingComponent implements OnInit {
 
 
-  
-  asOfDate: string = new Date().toISOString().substring(0, 10);
+
+  fromDate: string;
+  toDate: string;
 
   rows: ArAgingSummary[] = [];
   detailRows: ArAgingInvoice[] = [];
@@ -21,7 +22,13 @@ export class AgingComponent implements OnInit {
   isDetailOpen = false;
   selectedCustomerName = '';
 
-  constructor(private agingService: ArAgingService) {}
+  constructor(private agingService: ArAgingService) {
+    const today = new Date();
+    this.toDate = today.toISOString().substring(0, 10);
+
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    this.fromDate = firstOfMonth.toISOString().substring(0, 10);
+  }
 
   ngOnInit(): void {
     this.loadSummary();
@@ -29,7 +36,7 @@ export class AgingComponent implements OnInit {
 
   loadSummary(): void {
     this.isLoading = true;
-    this.agingService.getSummary(this.asOfDate).subscribe({
+    this.agingService.getSummary(this.fromDate, this.toDate).subscribe({
       next: res => {
         this.rows = res.data || [];
         this.isLoading = false;
@@ -38,7 +45,7 @@ export class AgingComponent implements OnInit {
     });
   }
 
-  onDateChange(): void {
+  onFilterChange(): void {
     this.loadSummary();
     if (this.isDetailOpen) {
       this.isDetailOpen = false;
@@ -50,7 +57,7 @@ export class AgingComponent implements OnInit {
     this.selectedCustomerName = row.customerName;
     this.isDetailOpen = true;
 
-    this.agingService.getCustomerInvoices(row.customerId, this.asOfDate)
+    this.agingService.getCustomerInvoices(row.customerId, this.fromDate, this.toDate)
       .subscribe(res => {
         this.detailRows = res.data || [];
       });
