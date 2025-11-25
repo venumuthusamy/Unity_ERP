@@ -36,7 +36,8 @@ export const locale = {
         ACCOUNTPAYABLE: 'Account Payable',
          TAX: 'tax-gst' ,    
           LEDGER: 'ledger' ,
-          PERIODCLOSE:'Period-close'  
+          PERIODCLOSE:'Period-close',
+          Report:'Report' 
       },
 
       BUSINESSPARTNERS: {
