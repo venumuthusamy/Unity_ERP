@@ -19,6 +19,10 @@ export class TrialBalanceReportComponent implements OnInit {
   totalCredit = 0;
   isLoading = false;
 
+  detailRows: any[] = [];
+  detailLoading = false;
+  selectedHead: any = null;
+
   constructor(private reportsService: ReportsService) { }
 
   ngOnInit(): void {
@@ -49,6 +53,29 @@ export class TrialBalanceReportComponent implements OnInit {
     });
   }
 
+  openDetail(row: TrialBalance) {
+  this.selectedHead = row;
+  this.detailLoading = true;
+
+  const body = {
+    headId: row.headId,
+    fromDate: this.fromDate,
+    toDate: this.toDate,
+    companyId: this.companyId
+  };
+
+  this.reportsService.getTrialBalanceDetail(body).subscribe({
+    next: (res: any) => {
+      this.detailRows = res.data || [];
+      this.detailLoading = false;
+      // show modal or expand panel
+    },
+    error: () => {
+      this.detailRows = [];
+      this.detailLoading = false;
+    }
+  });
+}
 }
 
 
