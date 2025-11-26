@@ -15,4 +15,7 @@ export class ReportsService {
     getTrialBalance(filter: any): Observable<any> {
         return this.http.post(`${this.url+this.baseUrl}/trial-balance`, filter);
     }
+    getTrialBalanceDetail(filter: any): Observable<any> {
+        return this.http.post(`${this.url+this.baseUrl}/trial-balance-detail`, filter);
+    }
 }
