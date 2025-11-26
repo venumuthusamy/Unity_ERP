@@ -66,7 +66,7 @@ const routes: Routes = [
     GeneralLdegerComponent,
     AgingComponent,
     PeriodCloseFxComponent,
-    InvoiceEmailComponent
+    InvoiceEmailComponent,
     TrialBalanceReportComponent
   ],
   imports: [

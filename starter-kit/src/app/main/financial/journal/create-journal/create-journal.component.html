@@ -13,8 +13,29 @@
               </h2>
             </div>
 
-            <!-- Row 1 -->
+            <!-- ================= ROW 1: Item, Account, Journal Date ================= -->
             <div class="row gx-3 gy-3 journal-fields">
+
+              <!-- Item -->
+              <div class="col-md-4 col-sm-6">
+                <label class="form-label mb-25">Item</label>
+                <ng-select
+                  class="w-100 journal-select"
+                  [items]="ItemList"
+                  bindLabel="itemName"
+                  [(ngModel)]="selectedItem"
+                  name="selectedItem"
+                  [clearable]="true"
+                  placeholder="Select item"
+                  (change)="onItemChange($event)">
+                  <ng-template ng-option-tmp let-item="item">
+                    {{ item.itemCode }} - {{ item.itemName }}
+                  </ng-template>
+                  <ng-template ng-label-tmp let-item="item">
+                    {{ item.itemCode }} - {{ item.itemName }}
+                  </ng-template>
+                </ng-select>
+              </div>
 
               <!-- Account -->
               <div class="col-md-4 col-sm-6">
@@ -37,7 +58,7 @@
                 </ng-select>
               </div>
 
-              <!-- Date -->
+              <!-- Journal Date -->
               <div class="col-md-4 col-sm-6">
                 <label class="form-label mb-25">Journal Date</label>
                 <div class="journal-date-group">
@@ -49,6 +70,10 @@
                     placeholder="dd/mm/yyyy" />
                 </div>
               </div>
+            </div>
+
+            <!-- ================= ROW 2: Type, Debit, Credit ================= -->
+            <div class="row gx-3 gy-3 mt-1">
 
               <!-- Type -->
               <div class="col-md-4 col-sm-6">
@@ -62,38 +87,6 @@
                   name="selectedType"
                   [clearable]="true"
                   placeholder="Select type">
-                </ng-select>
-              </div>
-            </div>
-
-            <!-- Row 2 -->
-            <div class="row gx-3 gy-3 mt-1">
-
-              <div class="col-md-4 col-sm-6" *ngIf="selectedType === 'Customer'">
-                <label class="form-label mb-25">Customer</label>
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="CustomerList"
-                  bindLabel="customerName"
-                  bindValue="id"
-                  [(ngModel)]="selectedCustomerId"
-                  name="selectedCustomerId"
-                  [clearable]="true"
-                  placeholder="Select customer">
-                </ng-select>
-              </div>
-
-              <div class="col-md-4 col-sm-6" *ngIf="selectedType === 'Supplier'">
-                <label class="form-label mb-25">Supplier</label>
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="SupplierList"
-                  bindLabel="name"
-                  bindValue="id"
-                  [(ngModel)]="selectedSupplierId"
-                  name="selectedSupplierId"
-                  [clearable]="true"
-                  placeholder="Select supplier">
                 </ng-select>
               </div>
 
@@ -120,8 +113,56 @@
               </div>
             </div>
 
-            <!-- Description -->
+            <!-- ================= ROW 3: Customer/Supplier + Description (ONLY 2 FIELDS) ================= -->
             <div class="row gx-3 gy-3 mt-1">
+
+              <!-- Customer / Supplier (same column) -->
+              <div class="col-md-4 col-sm-12">
+                <label class="form-label mb-25">
+                  <!-- label changes based on type -->
+                  <ng-container [ngSwitch]="selectedType">
+                    <span *ngSwitchCase="'Supplier'">Supplier</span>
+                    <span *ngSwitchDefault>Customer</span>
+                  </ng-container>
+                </label>
+
+                <ng-container [ngSwitch]="selectedType">
+                  <!-- Customer -->
+                  <ng-select
+                    *ngSwitchCase="'Customer'"
+                    class="w-100 journal-select"
+                    [items]="CustomerList"
+                    bindLabel="customerName"
+                    bindValue="id"
+                    [(ngModel)]="selectedCustomerId"
+                    name="selectedCustomerId"
+                    [clearable]="true"
+                    placeholder="Select customer">
+                  </ng-select>
+
+                  <!-- Supplier -->
+                  <ng-select
+                    *ngSwitchCase="'Supplier'"
+                    class="w-100 journal-select"
+                    [items]="SupplierList"
+                    bindLabel="name"
+                    bindValue="id"
+                    [(ngModel)]="selectedSupplierId"
+                    name="selectedSupplierId"
+                    [clearable]="true"
+                    placeholder="Select supplier">
+                  </ng-select>
+
+                  <!-- If no type selected, just an empty disabled box -->
+                  <input
+                    *ngSwitchDefault
+                    class="form-control journal-input"
+                    placeholder="Select type first"
+                    disabled />
+                </ng-container>
+              </div>
+
+              <!-- Description -->
               <div class="col-md-8 col-sm-12">
                 <label class="form-label mb-25">Description</label>
                 <textarea
@@ -133,7 +174,7 @@
               </div>
             </div>
 
-            <!-- Recurring -->
+            <!-- ================= RECURRING SECTION ================= -->
             <div class="row mt-3">
               <div class="col-12">
                 <div class="recurring-card">
@@ -143,7 +184,9 @@
                       <input class="form-check-input" type="checkbox" id="isRecurring" [(ngModel)]="isRecurring">
                       <label class="form-check-label ms-2" for="isRecurring">Make this a recurring journal</label>
                     </div>
-                    <small class="recurring-help d-none d-md-inline">Automatically create this journal on a schedule.</small>
+                    <small class="recurring-help d-none d-md-inline">
+                      Automatically create this journal on a schedule.
+                    </small>
                   </div>
 
                   <div class="row gx-3 gy-2 mt-1" *ngIf="isRecurring">
@@ -154,33 +197,40 @@
                       <select
                         class="form-control journal-input"
                         [(ngModel)]="recurringFrequency">
-
                         <option [ngValue]="null" disabled>Select frequency</option>
                         <option value="Daily">Daily</option>
                         <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
-                        <option value="Quarterly">Quarterly</option> <!-- NEW -->
+                        <option value="Quarterly">Quarterly</option>
                         <option value="Yearly">Yearly</option>
-
                       </select>
                     </div>
 
                     <!-- Interval -->
                     <div class="col-md-2 col-sm-6">
                       <label class="recurring-label">Every</label>
-                      <input type="number" min="1" class="form-control journal-input" [(ngModel)]="recurringInterval">
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringInterval">
                     </div>
 
                     <!-- Start -->
                     <div class="col-md-3 col-sm-6">
                       <label class="recurring-label">Start Date</label>
-                      <input type="date" class="form-control journal-input" [(ngModel)]="recurringStartDate" />
+                      <input
+                        type="date"
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringStartDate" />
                     </div>
 
                     <!-- Ends -->
                     <div class="col-md-2 col-sm-6">
                       <label class="recurring-label">Ends</label>
-                      <select class="form-control journal-input" [(ngModel)]="recurringEndType">
+                      <select
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringEndType">
                         <option value="NoEnd">Never</option>
                         <option value="EndByDate">On date</option>
                         <option value="EndByCount">After N times</option>
@@ -190,13 +240,20 @@
                     <!-- End Date -->
                     <div class="col-md-2" *ngIf="recurringEndType === 'EndByDate'">
                       <label class="recurring-label">End Date</label>
-                      <input type="date" class="form-control journal-input" [(ngModel)]="recurringEndDate" />
+                      <input
+                        type="date"
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringEndDate" />
                     </div>
 
                     <!-- Count -->
                     <div class="col-md-2" *ngIf="recurringEndType === 'EndByCount'">
                       <label class="recurring-label">Occurrences</label>
-                      <input type="number" min="1" class="form-control journal-input" [(ngModel)]="recurringCount" />
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control journal-input"
+                        [(ngModel)]="recurringCount" />
                     </div>
 
                   </div>
@@ -205,7 +262,7 @@
               </div>
             </div>
 
-            <!-- Buttons -->
+            <!-- ================= BUTTONS ================= -->
             <div class="row mt-3">
               <div class="col-12 d-flex justify-content-end">
                 <button class="btn btn-outline-secondary mr-1" (click)="onCancel()">Cancel</button>
