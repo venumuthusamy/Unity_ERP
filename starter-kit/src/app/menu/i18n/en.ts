@@ -37,7 +37,7 @@ export const locale = {
          TAX: 'tax-gst' ,    
           LEDGER: 'ledger' ,
           PERIODCLOSE:'Period-close',
-          INVOICEEMAIL:'InvoiceEmail'  
+          INVOICEEMAIL:'InvoiceEmail' , 
           Report:'Report' 
       },
 

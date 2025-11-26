@@ -449,48 +449,76 @@ private postOneRowToInventory(row: any, index: number) {
     document.body.style.overflow = '';
   }
 
-  private updateRowAndPersist(
-    rowIndex: number,
-    changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
-    onSuccess?: () => void
-  ) {
-    if (!this.generatedGRN?.id) return;
+private updateRowAndPersist(
+  rowIndex: number,
+  changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
+  onSuccess?: () => void
+) {
+  if (!this.generatedGRN?.id) return;
 
-    const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
-    const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
-      i === rowIndex
-        ? {
-            ...r,
-            isFlagIssue: Object.prototype.hasOwnProperty.call(changes, 'isFlagIssue') ? !!changes.isFlagIssue : !!r.isFlagIssue,
-            isPostInventory: Object.prototype.hasOwnProperty.call(changes, 'isPostInventory') ? !!changes.isPostInventory : !!r.isPostInventory,
-            flagIssueId: Object.prototype.hasOwnProperty.call(changes, 'flagIssueId') ? (changes.flagIssueId ?? null) : (r.flagIssueId ?? null)
-          }
-        : r
-    );
+  const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
+  const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
+    i === rowIndex
+      ? {
+          ...r,
+          isFlagIssue: Object.prototype.hasOwnProperty.call(changes, 'isFlagIssue')
+            ? !!changes.isFlagIssue
+            : !!r.isFlagIssue,
+          isPostInventory: Object.prototype.hasOwnProperty.call(changes, 'isPostInventory')
+            ? !!changes.isPostInventory
+            : !!r.isPostInventory,
+          flagIssueId: Object.prototype.hasOwnProperty.call(changes, 'flagIssueId')
+            ? (changes.flagIssueId ?? null)
+            : (r.flagIssueId ?? null)
+        }
+      : r
+  );
 
-    this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
+  this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
 
-    const body = { id: this.generatedGRN.id, GrnNo: this.generatedGRN.grnNo || '', GRNJSON: JSON.stringify(rows) };
-    const anySvc: any = this.purchaseGoodReceiptService as any;
+  // 🔹 ReceptionDate also included in payload
+  const receptionDateValue =
+    this.receiptDate
+      ? new Date(this.receiptDate)   // form date -> Date object
+      : new Date();                  // fallback: today
 
-    const call$ =
-      typeof anySvc.UpdateFlagIssues === 'function'
-        ? anySvc.UpdateFlagIssues(body)
-        : typeof anySvc.updateGRN === 'function'
-          ? anySvc.updateGRN({ ...body, grnJson: body.GRNJSON })
-          : null;
+  const body: any = {
+    id: this.generatedGRN.id,
+    GrnNo: this.generatedGRN.grnNo || '',
+    GRNJSON: JSON.stringify(rows),
+    ReceptionDate: receptionDateValue      // 🔴 <-- NEW
+  };
 
-    if (!call$) return;
+  const anySvc: any = this.purchaseGoodReceiptService as any;
 
-    call$.subscribe({
-      next: () => { if (onSuccess) onSuccess(); },
-      error: (err) => {
-        this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
-        console.error('Update failed', err);
-        alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
-      }
-    });
-  }
+  const call$ =
+    typeof anySvc.UpdateFlagIssues === 'function'
+      ? anySvc.UpdateFlagIssues(body)      // expects GrnNo / GRNJSON / ReceptionDate
+      : typeof anySvc.updateGRN === 'function'
+        ? anySvc.updateGRN({
+            ...body,
+            // some APIs use camelCase – give both shapes
+            grnNo: body.GrnNo,
+            grnJson: body.GRNJSON,
+            receptionDate: body.ReceptionDate
+          })
+        : null;
+
+  if (!call$) return;
+
+  call$.subscribe({
+    next: () => {
+      if (onSuccess) onSuccess();
+    },
+    error: (err) => {
+      // revert rows if API fail
+      this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
+      console.error('Update failed', err);
+      alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
+    }
+  });
+}
+
 
   /* ====== Click handlers ====== */
   onPostInventoryRow(row: any, index: number) {
