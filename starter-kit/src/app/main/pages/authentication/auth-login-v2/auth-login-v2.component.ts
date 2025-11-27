@@ -87,9 +87,11 @@ export class AuthLoginV2Component implements OnInit {
       return;
     }else{
       this.authService.userLogin(this.loginForm.value).subscribe((res :any)=>{
+        debugger
       localStorage.setItem("username",this.loginForm.value.username)
       localStorage.setItem("token",res.token)
       localStorage.setItem("id",res.userId)
+      localStorage.setItem("email",res.email)
       
       this._router.navigate(['/']);
       
