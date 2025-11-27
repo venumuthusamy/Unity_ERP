@@ -42,82 +42,89 @@
         </div>
 
         <!-- Table -->
-        <ngx-datatable
-          #table
-          class="bootstrap core-bootstrap coa-table"
-          [rows]="displayRows"
-          [rowHeight]="40"
-          [headerHeight]="50"
-          [footerHeight]="50"
-          [limit]="selectedOption"
-          [columnMode]="'flex'"
-          [scrollbarH]="false"
-          [reorderable]="true">
+<!-- Table -->
+<ngx-datatable
+  #table
+  class="bootstrap core-bootstrap coa-table"
+  [rows]="displayRows"
+  [rowHeight]="40"
+  [headerHeight]="50"
+  [footerHeight]="50"
+  [limit]="selectedOption"
+  [columnMode]="'flex'"
+  [scrollbarH]="false"
+  [reorderable]="true">
 
-          <!-- Head Code -->
-          <ngx-datatable-column name="HEAD CODE" [flexGrow]="1">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <span class="coa-code">{{ row.headCode }}</span>
-            </ng-template>
-          </ngx-datatable-column>
+  <!-- Head Code -->
+  <ngx-datatable-column name="HEAD CODE" [flexGrow]="1">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <span class="coa-code">{{ row.headCode }}</span>
+    </ng-template>
+  </ngx-datatable-column>
 
-          <!-- Head Name (tree) -->
-          <ngx-datatable-column name="HEAD NAME" [flexGrow]="2">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <div class="d-flex align-items-center">
+  <!-- Head Name (tree) -->
+  <ngx-datatable-column name="HEAD NAME" [flexGrow]="2">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <div class="d-flex align-items-center">
+        <span [style.paddingLeft.px]="row.level * 20"></span>
 
-                <!-- indentation -->
-                <span [style.paddingLeft.px]="row.level * 20"></span>
+        <button
+          *ngIf="row.hasChildren"
+          type="button"
+          class="btn btn-link p-0 mr-25"
+          (click)="toggleRow(row)"
+          title="Expand / Collapse">
+          <i class="fa"
+             [ngClass]="row.$$expanded ? 'fa-minus-square' : 'fa-plus-square'"></i>
+        </button>
 
-                <!-- expand / collapse icon -->
-                <button
-                  *ngIf="row.hasChildren"
-                  type="button"
-                  class="btn btn-link p-0 mr-25"
-                  (click)="toggleRow(row)"
-                  title="Expand / Collapse">
-                  <i class="fa"
-                     [ngClass]="row.$$expanded ? 'fa-minus-square' : 'fa-plus-square'"></i>
-                </button>
+        <span *ngIf="!row.hasChildren"
+              style="display:inline-block; width:18px;"></span>
 
-                <!-- spacer when no children -->
-                <span *ngIf="!row.hasChildren"
-                      style="display:inline-block; width:18px;"></span>
+        <span class="ml-25">{{ row.headName }}</span>
+      </div>
+    </ng-template>
+  </ngx-datatable-column>
 
-                <!-- name text -->
-                <span class="ml-25">{{ row.headName }}</span>
-              </div>
-            </ng-template>
-          </ngx-datatable-column>
+  <!-- Opening Balance -->
+  <ngx-datatable-column name="OPENING BALANCE" [flexGrow]="1">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <div class="amount text-right">
+        {{ row.openingBalance | number:'1.0-0' }}
+      </div>
+    </ng-template>
+  </ngx-datatable-column>
 
-          <!-- Opening Balance -->
-          <ngx-datatable-column name="OPENING BALANCE" [flexGrow]="1">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <div class="amount text-right">
-                {{ row.openingBalance | number:'1.0-0' }}
-              </div>
-            </ng-template>
-          </ngx-datatable-column>
+  <!-- Debit -->
+  <ngx-datatable-column name="DEBIT" [flexGrow]="1">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <div class="amount text-right">
+        {{ row.debit | number:'1.0-0' }}
+      </div>
+    </ng-template>
+  </ngx-datatable-column>
 
-          <!-- Received -->
-          <ngx-datatable-column name="RECEIVED" [flexGrow]="1">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <div class="amount text-right">
-                {{ row.received | number:'1.0-0' }}
-              </div>
-            </ng-template>
-          </ngx-datatable-column>
+  <!-- Credit -->
+  <ngx-datatable-column name="CREDIT" [flexGrow]="1">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <div class="amount text-right">
+        {{ row.credit | number:'1.0-0' }}
+      </div>
+    </ng-template>
+  </ngx-datatable-column>
 
-          <!-- Balance -->
-          <ngx-datatable-column name="BALANCE" [flexGrow]="1">
-            <ng-template let-row="row" ngx-datatable-cell-template>
-              <div class="amount text-right">
-                {{ row.balance | number:'1.0-0' }}
-              </div>
-            </ng-template>
-          </ngx-datatable-column>
+  <!-- Balance (hide for Asset tree except AR/AP control) -->
+  <ngx-datatable-column name="BALANCE" [flexGrow]="1">
+    <ng-template let-row="row" ngx-datatable-cell-template>
+      <div class="amount text-right">
+        <ng-container >
+          {{ row.balance | number:'1.0-0' }}
+        </ng-container>
+      </div>
+    </ng-template>
+  </ngx-datatable-column>
 
-        </ngx-datatable>
+</ngx-datatable>
 
         <div *ngIf="isLoading" class="p-2 text-center text-muted">Loading…</div>
       </div>

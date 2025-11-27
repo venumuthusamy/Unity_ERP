@@ -10,6 +10,7 @@ import { ItemsService } from 'app/main/master/items/items.service';
 import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
 import { SupplierService } from '../supplier/supplier.service';
 import { CountriesService } from 'app/main/master/countries/countries.service';
+import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 
 /* =========================
    Types
@@ -20,6 +21,17 @@ type Currency = { id: number; currencyName: string; currencyCode?: string; isAct
 type Incoterm = { id: number; incotermsName: string; code?: string; name?: string; isActive?: boolean };
 type Item = { id: number; itemName: string; isActive?: boolean };
 type StatusOption = { id: number; name: 'Active' | 'Inactive' | 'On Hold' };
+
+type BudgetLine = {
+  id: number;
+  headCode: number | string;
+  headLevel: number;
+  headName: string;
+  headType?: string;
+  headCodeName?: string | null;
+  isGl?: boolean | null;
+  isTransaction?: boolean | null;
+};
 
 interface SupplierModel {
   id?: number;
@@ -42,6 +54,9 @@ interface SupplierModel {
     swift: string;
     branch: string;
   };
+
+  /** Budget line / COA id */
+  budgetLineId: number | null;
 }
 
 /** We keep both base64 (for API) and dataUrl (for preview) — NO blob: */
@@ -71,7 +86,7 @@ export class CreatesuppliersComponent implements OnInit {
   /* =========================
      Master lists / selections
   ========================= */
-  CountryList: Country[] = []
+  CountryList: Country[] = [];
   filteredCountry: Country[] = [];
   selectedCountry: Country | null = null;
 
@@ -90,6 +105,13 @@ export class CreatesuppliersComponent implements OnInit {
   rows: Item[] = [];
   filteredItems: Item[] = [];
   preferredItems: Item[] = [];
+
+  // Budget line / chart of account
+  BudgetList: BudgetLine[] = [];
+  BudgetFiltered: BudgetLine[] = [];
+  BudgetSearch = '';
+  budgetDropdownOpen = false;
+  selectedBudget: BudgetLine | null = null;
 
   /* =========================
      UI helpers
@@ -136,7 +158,8 @@ export class CreatesuppliersComponent implements OnInit {
     email: '',
     phone: '',
     address: '',
-    bank: { name: '', acc: '', swift: '', branch: '' }
+    bank: { name: '', acc: '', swift: '', branch: '' },
+    budgetLineId: null
   };
 
   /* =========================
@@ -153,7 +176,8 @@ export class CreatesuppliersComponent implements OnInit {
     private _SupplierService: SupplierService,
     private CurrencyService: CurrencyService,
     private incotermsService: IncotermsService,
-    private itemsService: ItemsService
+    private itemsService: ItemsService,
+    private _chartOfAccountService: ChartofaccountService
   ) {}
 
   /* =========================
@@ -176,10 +200,12 @@ export class CreatesuppliersComponent implements OnInit {
         error: (err) => console.error('Init failed', err)
       });
 
-    this._countriesService.getCountry().subscribe((res:any)=>{
+    this._countriesService.getCountry().subscribe((res: any) => {
       this.CountryList = (res?.data ?? []).filter((x: any) => x.isActive);
       this.filteredCountry = [...this.CountryList];
-    })
+    });
+
+    this.loadBudgetLine();
   }
 
   /* =========================
@@ -192,7 +218,7 @@ export class CreatesuppliersComponent implements OnInit {
       incoterms: this.incotermsService.getAllIncoterms(),
       items: this.itemsService.getAllItem()
     }).pipe(
-      switchMap(({terms, currencies, incoterms, items }) => {        
+      switchMap(({ terms, currencies, incoterms, items }) => {
 
         this.PaymentTermsList = (terms?.data ?? []).filter((x: any) => x.isActive === true);
         this.filteredTerms = [...this.PaymentTermsList];
@@ -208,6 +234,27 @@ export class CreatesuppliersComponent implements OnInit {
       })
     );
   }
+
+  /* =========================
+     Load Budget / Chart of Account
+  ========================= */
+loadBudgetLine() {
+  this._chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
+    const data: BudgetLine[] = res?.data ?? [];
+
+    // ✅ Show everything that comes from API (Asset, Liabilities, Equity, Income, Expense, children)
+    this.BudgetList = data;
+
+    // if you want to exclude only totally inactive rows:
+    // this.BudgetList = data.filter((x: any) => x.isActive !== false);
+
+    this.BudgetFiltered = [...this.BudgetList];
+
+    // sync selection if editing
+    this.syncSelectedBudgetFromId();
+  });
+}
+
 
   /* =========================
      GET BY ID (Hydrate)
@@ -251,7 +298,8 @@ export class CreatesuppliersComponent implements OnInit {
         acc: item.bankAcc ?? '',
         swift: item.bankSwift ?? '',
         branch: item.bankBranch ?? ''
-      }
+      },
+      budgetLineId: item.budgetLineId ?? item.BudgetLineId ?? null
     };
 
     // Dropdown selections from IDs
@@ -277,6 +325,9 @@ export class CreatesuppliersComponent implements OnInit {
       ? (this.incotermsList.find(x => x.id === this.supplier.incotermsId) || null)
       : null;
     this.incotermSearch = this.selectedIncoterm?.incotermsName ?? '';
+
+    // Budget line selection (if BudgetList already loaded)
+    this.syncSelectedBudgetFromId();
 
     // Preferred Items from CSV
     const csv = (item.itemID ?? item.ItemID ?? '').toString().trim();
@@ -385,6 +436,23 @@ export class CreatesuppliersComponent implements OnInit {
     });
   }
 
+  /** Sync selectedBudget & BudgetSearch from supplier.budgetLineId */
+  private syncSelectedBudgetFromId() {
+    const id = this.supplier?.budgetLineId;
+    if (!id || !this.BudgetList.length) {
+      if (!id) {
+        this.selectedBudget = null;
+        this.BudgetSearch = '';
+      }
+      return;
+    }
+
+    this.selectedBudget = this.BudgetList.find(x => x.id === id) || null;
+    this.BudgetSearch = this.selectedBudget
+      ? `${this.selectedBudget.headCode} - ${this.selectedBudget.headName}`
+      : '';
+  }
+
   /* =========================
      Grid helper (used by HTML)
   ========================= */
@@ -401,21 +469,21 @@ export class CreatesuppliersComponent implements OnInit {
   trackByIndex(index: number) { return index; }
 
   /* =========================
-     Terms / Currency / Incoterms / Status
+     Country / Terms / Currency / Incoterms / Status
   ========================= */
-   filterCountry() {
+  filterCountry() {
     const q = (this.countrySearch || '').toLowerCase();
     this.filteredCountry = this.CountryList.filter(t =>
       t.countryName.toLowerCase().includes(q)
     );
   }
   selectCountry(t: Country) {
-    debugger
     this.selectedCountry = t;
     this.countrySearch = t.countryName;
     this.supplier.countryId = t.id;
     this.countryDropdownOpen = false;
   }
+
   filterTerms() {
     const q = (this.termsSearch || '').toLowerCase();
     this.filteredTerms = this.PaymentTermsList.filter(t =>
@@ -466,6 +534,24 @@ export class CreatesuppliersComponent implements OnInit {
     this.statusSearch = s.name;
     this.supplier.statusId = s.id;
     this.statusDropdownOpen = false;
+  }
+
+  /* =========================
+     Budget Line dropdown
+  ========================= */
+  filterBudget() {
+    const q = (this.BudgetSearch || '').toLowerCase();
+    this.BudgetFiltered = this.BudgetList.filter(b =>
+      (b.headName || '').toLowerCase().includes(q) ||
+      String(b.headCode || '').toLowerCase().includes(q)
+    );
+  }
+
+  selectBudget(b: BudgetLine) {
+    this.selectedBudget = b;
+    this.BudgetSearch = `${b.headCode} - ${b.headName}`;
+    this.supplier.budgetLineId = b.id;
+    this.budgetDropdownOpen = false;
   }
 
   /* =========================
@@ -543,7 +629,7 @@ export class CreatesuppliersComponent implements OnInit {
   /* =========================
      Save  (fileUrl = base64 ONLY)
   ========================= */
- save() {
+  save() {
     const preferredItemIds = (this.preferredItems ?? []).map(p => p.id).join(',');
 
     // Build docs with base64
@@ -576,6 +662,8 @@ export class CreatesuppliersComponent implements OnInit {
       currencyId: this.supplier.currencyId ?? null,
       incotermsId: this.supplier.incotermsId ?? null,
 
+      budgetLineId: this.supplier.budgetLineId ?? null,   // 👈 budget id to API
+
       itemID: preferredItemIds,
       ComplianceDocuments: JSON.stringify(complianceDocsForApi),
 
@@ -589,8 +677,8 @@ export class CreatesuppliersComponent implements OnInit {
     };
 
     console.log(payload);
-    
-    // 👇 insert if new, update if existing
+
+    // insert if new, update if existing
     const request$ = payload.id && payload.id > 0
       ? this._SupplierService.updateSupplier(payload)
       : this._SupplierService.insertSupplier(payload);
@@ -620,13 +708,12 @@ export class CreatesuppliersComponent implements OnInit {
     });
   }
 
-
   /* =========================
      Reset
   ========================= */
   new() {
     this.supplier = {
-      id:0,
+      id: 0,
       name: '',
       code: '',
       statusId: 1,
@@ -640,7 +727,8 @@ export class CreatesuppliersComponent implements OnInit {
       email: '',
       phone: '',
       address: '',
-      bank: { name: '', acc: '', swift: '', branch: '' }
+      bank: { name: '', acc: '', swift: '', branch: '' },
+      budgetLineId: null
     };
 
     this.selectedStatus = this.statuses[0];
@@ -649,6 +737,8 @@ export class CreatesuppliersComponent implements OnInit {
     this.selectedTerm = null;       this.termsSearch = '';
     this.selectedCurrency = null;   this.currencySearch = '';
     this.selectedIncoterm = null;   this.incotermSearch = '';
+
+    this.selectedBudget = null;     this.BudgetSearch = '';
 
     this.preferredItems = []; this.preferredText = ''; this.filteredItems = [];
 
