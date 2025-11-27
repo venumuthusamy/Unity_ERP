@@ -74,23 +74,33 @@ export class GeneralLdegerComponent implements OnInit {
     this.service.GetGeneralLedger().subscribe({
       next: (res: any) => {
 
-        const flat: CoaFlat[] = (res.data || []).map((x: any) => ({
-          id: Number(x.headId ?? 0),
-          headCode: Number(x.headCode ?? 0),
-          headName: String(x.headName ?? ''),
-          parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
+        const flat: CoaFlat[] = (res.data || []).map((x: any) => {
+          const headName = String(x.headName ?? '').trim();
 
-          headType: String(x.headType ?? ''),
-          rootHeadType: String(x.rootHeadType ?? ''),
+          // mark AR/AP control heads (you can tweak this condition if needed)
+          const isControl =
+            !!x.isControl ||
+            headName === 'Account Payable' ||
+            headName.startsWith('Account Receivable');
 
-          openingBalance: x.openingBalance == null ? 0 : Number(x.openingBalance),
-          debit: x.debit == null ? 0 : Number(x.debit),
-          credit: x.credit == null ? 0 : Number(x.credit),
-          balance: x.balance == null ? 0 : Number(x.balance),
+          return {
+            id: Number(x.headId ?? 0),
+            headCode: Number(x.headCode ?? 0),
+            headName,
+            parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
 
-          isControl: !!x.isControl,
-          isActive: x.isActive ?? true
-        }));
+            headType: String(x.headType ?? ''),
+            rootHeadType: String(x.rootHeadType ?? ''),
+
+            openingBalance: x.openingBalance == null ? 0 : Number(x.openingBalance),
+            debit: x.debit == null ? 0 : Number(x.debit),
+            credit: x.credit == null ? 0 : Number(x.credit),
+            balance: x.balance == null ? 0 : Number(x.balance),
+
+            isControl,
+            isActive: x.isActive ?? true
+          };
+        });
 
         const flatActive = flat.filter(r => !!r.isActive);
 
@@ -137,6 +147,7 @@ export class GeneralLdegerComponent implements OnInit {
               parent.children.push(node);
               parent.hasChildren = true;
             } else {
+              // parent not found → treat as root
               roots.push(node);
             }
           }
@@ -174,7 +185,7 @@ export class GeneralLdegerComponent implements OnInit {
     });
   }
 
-  // ===== aggregate CHILDREN ONLY (for collapsed parent display) =====
+  // ===== aggregate CHILDREN (used for parents & collapsed headings) =====
   private computeChildrenAggregate(node: CoaNode): {
     opening: number; debit: number; credit: number; balance: number;
   } {
@@ -189,21 +200,27 @@ export class GeneralLdegerComponent implements OnInit {
     let balance = 0;
 
     node.children.forEach(ch => {
+      // child own values
       const childOwnOpening = ch.ownOpening ?? 0;
       const childOwnDebit   = ch.ownDebit ?? 0;
       const childOwnCredit  = ch.ownCredit ?? 0;
       const childOwnBalance = ch.ownBalance ?? 0;
 
+      // always add child's own row
       opening += childOwnOpening;
       debit   += childOwnDebit;
       credit  += childOwnCredit;
       balance += childOwnBalance;
 
-      const subAgg = this.computeChildrenAggregate(ch);
-      opening += subAgg.opening;
-      debit   += subAgg.debit;
-      credit  += subAgg.credit;
-      balance += subAgg.balance;
+      // if child is control (Account Payable / AR),
+      // DO NOT add its children again (its own row already summary)
+      if (!ch.isControl) {
+        const subAgg = this.computeChildrenAggregate(ch);
+        opening += subAgg.opening;
+        debit   += subAgg.debit;
+        credit  += subAgg.credit;
+        balance += subAgg.balance;
+      }
     });
 
     return { opening, debit, credit, balance };
@@ -214,24 +231,43 @@ export class GeneralLdegerComponent implements OnInit {
     const out: CoaNode[] = [];
 
     const visit = (node: CoaNode) => {
+      const hasChildren = node.hasChildren && node.children.length > 0;
 
-      if (node.hasChildren) {
+      if (hasChildren) {
+        const agg = this.computeChildrenAggregate(node);
+
         if (node.$$expanded) {
-          // expanded → show own backend values
-          node.openingBalance = node.ownOpening;
-          node.debit          = node.ownDebit;
-          node.credit         = node.ownCredit;
-          node.balance        = node.ownBalance;
+          if (node.isControl) {
+            // 🔹 Account Payable / AR expanded → show 0, children show detail
+            node.openingBalance = 0;
+            node.debit          = 0;
+            node.credit         = 0;
+            node.balance        = 0;
+          } else {
+            // normal heading expanded → own backend values
+            node.openingBalance = node.ownOpening;
+            node.debit          = node.ownDebit;
+            node.credit         = node.ownCredit;
+            node.balance        = node.ownBalance;
+          }
         } else {
-          // collapsed → show children total only
-          const agg = this.computeChildrenAggregate(node);
-          node.openingBalance = agg.opening;
-          node.debit          = agg.debit;
-          node.credit         = agg.credit;
-          node.balance        = agg.balance;
+          if (node.isControl) {
+            // 🔹 Account Payable / AR collapsed → show OWN summary
+            // (Opening = total credit, Debit = total debit, Balance = OB - Debit)
+            node.openingBalance = node.ownOpening;
+            node.debit          = node.ownDebit;
+            node.credit         = node.ownCredit;
+            node.balance        = node.ownBalance;
+          } else {
+            // other headings collapsed → aggregate from children
+            node.openingBalance = agg.opening;
+            node.debit          = agg.debit;
+            node.credit         = agg.credit;
+            node.balance        = agg.balance;
+          }
         }
       } else {
-        // leaf → always own
+        // leaf → always own backend values
         node.openingBalance = node.ownOpening;
         node.debit          = node.ownDebit;
         node.credit         = node.ownCredit;
@@ -240,7 +276,7 @@ export class GeneralLdegerComponent implements OnInit {
 
       out.push(node);
 
-      if (node.hasChildren && node.$$expanded) {
+      if (hasChildren && node.$$expanded) {
         node.children.forEach(ch => visit(ch));
       }
     };
