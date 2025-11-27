@@ -3,23 +3,48 @@
     <section class="users-list-wrapper">
       <div class="card shadow-sm p-2">
 
-        <!-- Top row -->
+        <!-- Top row: DocType + Invoice + Template + Actions -->
         <div class="row">
+
+          <!-- Document Type -->
           <div class="col-md-3">
-            <label>Invoice</label>
-            <input class="form-control" [(ngModel)]="invoiceNo" readonly />
+            <label>Document Type</label>
+            <select class="form-control"
+                    [(ngModel)]="docType"
+                    (change)="onDocTypeChange()">
+              <option [ngValue]="'SI'">Sales Invoice</option>
+              <option [ngValue]="'PIN'">Supplier Invoice</option>
+            </select>
           </div>
 
+          <!-- Invoice dropdown (filtered by docType) -->
+          <div class="col-md-3">
+            <label>{{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }}</label>
+            <select class="form-control"
+                    [(ngModel)]="selectedInvoiceId"
+                    (change)="onInvoiceChange()">
+              <option [ngValue]="null">
+                -- Select {{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }} --
+              </option>
+              <option *ngFor="let inv of invoiceList" [ngValue]="inv.id">
+                {{ inv.invoiceNo }} - {{ inv.partyName }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Template -->
           <div class="col-md-3">
             <label>Template</label>
             <select class="form-control"
                     [(ngModel)]="selectedTemplate"
                     (change)="onTemplateChange()">
               <option [ngValue]="1">Standard</option>
+              <!-- later you can bind *ngFor templates here -->
             </select>
           </div>
 
-          <div class="col-md-6 d-flex align-items-end justify-content-end">
+          <!-- Action buttons -->
+          <!-- <div class="col-md-3 d-flex align-items-end justify-content-end">
             <button class="btn btn-outline-secondary me-1">
               <i class="far fa-file-pdf me-25"></i> Generate PDF
             </button>
@@ -29,13 +54,21 @@
             <button class="btn btn-outline-secondary">
               <i class="fab fa-microsoft me-25"></i> Sign in Microsoft 365
             </button>
-          </div>
+          </div> -->
         </div>
+
+        <!-- Show chosen invoice no (read-only) -->
+        <!-- <div class="row mt-2">
+          <div class="col-md-3">
+            <label>Invoice No</label>
+            <input class="form-control" [(ngModel)]="invoiceNo" readonly />
+          </div>
+        </div> -->
 
         <!-- To / Cc -->
         <div class="row mt-2">
           <div class="col-md-6">
-            <label>To</label>
+            <label>To ({{ partyLabel }} Email)</label>
             <input class="form-control" [(ngModel)]="toEmail" />
           </div>
           <div class="col-md-6">
@@ -62,7 +95,7 @@
             <i class="far fa-paper-plane me-25"></i> Send Test
           </button>
           <button class="btn btn-dark" (click)="send()">
-            <i class="far fa-paper-plane me-25"></i> Send via Microsoft 365
+            <i class="far fa-paper-plane me-25"></i> Send via Email
           </button>
         </div>
 
