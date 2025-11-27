@@ -5,6 +5,7 @@ import {
   ArCustomerGroup
 } from '../invoice-service';
 import { Router } from '@angular/router';
+import feather from 'feather-icons';
 
 @Component({
   selector: 'app-invoice-create',
@@ -30,6 +31,10 @@ export class InvoiceCreateComponent implements OnInit {
   ngOnInit(): void {
     this.loadInvoices();
   }
+  ngAfterViewInit() {
+    feather.replace();
+}
+
 
   loadInvoices(): void {
     debugger

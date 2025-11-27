@@ -119,6 +119,23 @@
               <div *ngIf="(contactNumberRef.touched || accountDetailsForm.submitted) && contactNumberRef.invalid"
                    class="invalid-feedback d-block">Contact Number must be <b>10 digits</b> only!</div>
             </div>
+                <!-- Budget Line -->
+            <div class="form-group col-md-4">
+              <label class="form-label" for="budget-line">Budget Line</label>
+              <select id="budget-line" class="form-control" name="budgetLine" [(ngModel)]="budgetLine"
+                #budgetLineRef="ngModel" required
+                [class.is-invalid]="(budgetLineRef.touched || accountDetailsForm.submitted) && budgetLineRef.invalid">
+                <option value="">Select Budget Line</option>
+                <option *ngFor="let line of parentHeadList" [value]="line.value">
+                  {{ line.label }}
+                </option>
+              </select>
+
+              <div *ngIf="(budgetLineRef.touched || accountDetailsForm.submitted) && budgetLineRef.invalid"
+                class="invalid-feedback d-block">
+                This field is required!
+              </div>
+            </div>
           </div>
 
           <div class="d-flex justify-content-between wizard-actions">
