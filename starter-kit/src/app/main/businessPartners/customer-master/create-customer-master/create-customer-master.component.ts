@@ -12,6 +12,7 @@ import { CountriesService } from 'app/main/master/countries/countries.service';
 import { ApprovallevelService } from 'app/main/master/approval-level/approvallevel.service';
 import { CustomerMasterService } from '../customer-master.service';
 import { environment } from 'environments/environment';
+import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 
 @Component({
   selector: 'app-create-customer-master',
@@ -51,6 +52,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
   TDEmailVar = '';
   TDContactNumberVar = '';
   TDCreditAmountVar: number | null = null;
+  budgetLine: number | null = null;
 
   // --- Wizard ---
   currentIndex = 0;
@@ -61,6 +63,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
 
   // --- Lock KYC when already approved ---
   isKycLocked = false;
+  parentHeadList: Array<{ value: number; label: string }> = [];
 
   constructor(
     private _customerGroupService: CustomerGroupsService,
@@ -70,7 +73,8 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
     private _approvalLevelService: ApprovallevelService,
     private _customerService: CustomerMasterService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+     private coaService: ChartofaccountService,
   ) {}
 
   // ---------------- INIT ----------------
@@ -79,7 +83,8 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
     this.loadPaymentTerms();
     this.loadCountries();
     this.loadApprovalLevel();
-
+    this.loadAccountHeads()
+    
     // Detect edit mode by :id
     this.route.paramMap.subscribe(pm => {
       const id = Number(pm.get('id'));
@@ -89,6 +94,26 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
         this.loadForEdit(id);
       }
     });
+  }
+   loadAccountHeads(): void {
+    this.coaService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullPath(head, data)
+      }));
+    });
+  }
+
+  /** Build breadcrumb like: Parent >> Child >> This */
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    let current = all.find((x: any) => x.id === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.id === current.parentHead);
+    }
+    return path;
   }
 
   ngAfterViewInit(): void {
@@ -196,6 +221,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
         this.selectedCountryId    = d.countryId ?? null;
         this.selectedLocationId   = d.locationId ?? null;
         this.selectedGroupId      = d.customerGroupId ?? null;
+        this.budgetLine      = d.budgetLineId ?? null;
         this.selectedTermId       = d.paymentTermId ?? null;
 
         // FIX: API returns "approvedBy": "1" (string)
@@ -243,6 +269,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
     formData.append('PointOfContactPerson', this.TDContactPersonVar || '');
     formData.append('Email', this.TDEmailVar || '');
     formData.append('CustomerGroupId', (this.selectedGroupId ?? '').toString());
+    formData.append('BudgetLineId', (this.budgetLine ?? '').toString());
     formData.append('PaymentTermId', (this.selectedTermId ?? '').toString());
     formData.append('CreditAmount', (this.TDCreditAmountVar ?? 0).toString());
     formData.append('CreatedBy', '1'); // TODO: current user

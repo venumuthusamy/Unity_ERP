@@ -126,3 +126,33 @@ $brand: #2e5f73;
   color: #6c757d;        // muted grey
   margin-top: -2px;      // tighten spacing
 }
+/* Base summary card style */
+.ar-summary-row .summary-card {
+  border-radius: 1rem;
+  padding: 0.9rem 1.25rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+  background-color: #ffffff; // fallback
+}
+
+/* 1st card – Total Invoice Amount */
+.ar-summary-row > div:nth-child(1) .summary-card {
+  background-color: #fff7ed;   // light orange
+}
+
+/* 2nd card – Total Paid */
+.ar-summary-row > div:nth-child(2) .summary-card {
+  background-color: #ecfdf3;   // light green
+}
+
+/* 3rd card – Total Credit Notes */
+.ar-summary-row > div:nth-child(3) .summary-card {
+  background-color: #eff6ff;   // light blue
+}
+
+/* 4th card – Net Outstanding */
+.ar-summary-row > div:nth-child(4) .summary-card {
+  background-color: #eef2ff;   // light violet
+}
+.summary-card .value {
+  gap: 0.35rem;   // works because we set d-flex
+}

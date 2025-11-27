@@ -5,39 +5,47 @@
                 <div class="card-body">
 
                     <!-- ===== Header summary cards ===== -->
-                    <div class="row mb-1">
+                    <div class="row mb-1 ar-summary-row">
+                        <!-- Total Invoice Amount -->
                         <div class="col-md-3 col-6 mb-2">
                             <div class="summary-card">
                                 <div class="label">TOTAL INVOICE AMOUNT</div>
-                                <div class="value text-warning">
-                                    {{ totalInvoiceAmount | number: '1.2-2' }}
+                                <div class="value text-warning d-flex align-items-center">
+                                    <i data-feather="file-text" class="font-medium-4 me-50"></i>
+                                    <span>{{ totalInvoiceAmount | number: '1.2-2' }}</span>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Total Paid -->
                         <div class="col-md-3 col-6 mb-2">
                             <div class="summary-card">
                                 <div class="label">TOTAL PAID</div>
-                                <div class="value text-success">
-                                    {{ totalPaid | number: '1.2-2' }}
+                                <div class="value text-success d-flex align-items-center">
+                                    <i data-feather="credit-card" class="font-medium-4 me-50"></i>
+                                    <span>{{ totalPaid | number: '1.2-2' }}</span>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Total Credit Notes -->
                         <div class="col-md-3 col-6 mb-2">
                             <div class="summary-card">
                                 <div class="label">TOTAL CREDIT NOTES</div>
-                                <div class="value text-info">
-                                    {{ totalCreditNote | number: '1.2-2' }}
+                                <div class="value text-info d-flex align-items-center">
+                                    <i data-feather="file-minus" class="font-medium-4 me-50"></i>
+                                    <span>{{ totalCreditNote | number: '1.2-2' }}</span>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Net Outstanding -->
                         <div class="col-md-3 col-6 mb-2">
                             <div class="summary-card">
                                 <div class="label">NET OUTSTANDING</div>
-                                <div class="value text-primary">
-                                    {{ netOutstanding | number: '1.2-2' }}
+                                <div class="value text-primary d-flex align-items-center">
+                                    <i data-feather="dollar-sign" class="font-medium-4 me-50"></i>
+                                    <span>{{ netOutstanding | number: '1.2-2' }}</span>
                                 </div>
                             </div>
                         </div>

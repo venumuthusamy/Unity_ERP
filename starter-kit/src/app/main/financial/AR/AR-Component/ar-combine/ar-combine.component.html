@@ -1,19 +1,21 @@
 <div class="content-wrapper container-xxl p-0">
   <div class="content-body">
-    <div class="card ar-card">
+    <!-- add ap-card to reuse AP background / padding -->
+    <div class="card ar-card ap-card">
+
       <!-- HEADER -->
       <div class="card-header d-flex justify-content-between align-items-center py-1">
         <h4 class="mb-0 ar-title">Accounts Receivable (AR)</h4>
       </div>
 
       <!-- TABS -->
-      <ul class="nav nav-tabs ar-tabs mb-1" role="tablist">
+      <!-- add ap-tabs so the tab strip looks like AP -->
+      <ul class="nav nav-tabs ar-tabs ap-tabs mb-1" role="tablist">
         <li class="nav-item" (click)="setTab('invoices')">
           <a
             class="nav-link"
             [class.active]="activeTab === 'invoices'"
-            href="javascript:void(0);"
-          >
+            href="javascript:void(0);">
             Invoices
           </a>
         </li>
@@ -22,8 +24,7 @@
           <a
             class="nav-link"
             [class.active]="activeTab === 'receipts'"
-            href="javascript:void(0);"
-          >
+            href="javascript:void(0);">
             Receipts
           </a>
         </li>
@@ -32,18 +33,18 @@
           <a
             class="nav-link"
             [class.active]="activeTab === 'aging'"
-            href="javascript:void(0);"
-          >
+            href="javascript:void(0);">
             Aging
           </a>
         </li>
       </ul>
 
       <!-- TAB CONTENT -->
-      <div class="card-body ar-body">
+      <!-- (optional) add ap-body if you have one for AP -->
+      <div class="card-body ar-body ap-body">
         <app-invoice-create *ngIf="activeTab === 'invoices'"></app-invoice-create>
-        <app-receipt *ngIf="activeTab === 'receipts'"></app-receipt>
-        <app-aging *ngIf="activeTab === 'aging'"></app-aging>
+        <app-receipt        *ngIf="activeTab === 'receipts'"></app-receipt>
+        <app-aging          *ngIf="activeTab === 'aging'"></app-aging>
       </div>
     </div>
   </div>
