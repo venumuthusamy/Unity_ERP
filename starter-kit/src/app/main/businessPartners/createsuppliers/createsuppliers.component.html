@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <!-- Row 1 -->
+    <!-- Row 1 : Basic -->
     <div [ngClass]="gridColsClass(4)">
       <div>
         <label class="text-xs font-medium text-gray-600">Supplier Name *</label>
@@ -19,6 +19,8 @@
           placeholder="e.g., FreshFoods Pte Ltd"
         />
       </div>
+
+      <!-- Country -->
       <div class="relative">
         <label class="text-xs font-medium text-gray-600">Country</label>
         <div class="relative">
@@ -86,6 +88,7 @@
         </div>
       </div>
 
+      <!-- Lead Time -->
       <div>
         <label class="text-xs font-medium text-gray-600">Lead Time (days)</label>
         <input
@@ -100,7 +103,7 @@
       </div>
     </div>
 
-    <!-- Row 2 -->
+    <!-- Row 2 : Terms / Currency / Tax / Incoterms -->
     <div [ngClass]="gridColsClass(4)">
       <!-- Payment Terms -->
       <div class="relative">
@@ -170,6 +173,7 @@
         </ul>
       </div>
 
+      <!-- Tax Reg -->
       <div>
         <label class="text-xs font-medium text-gray-600">Tax Reg No</label>
         <input
@@ -214,8 +218,43 @@
       </div>
     </div>
 
-    <!-- Row 3 -->
+    <!-- Row 3 : Budget Line + Contact + Email + Phone -->
     <div [ngClass]="gridColsClass(4)">
+      <!-- Budget Line / Account -->
+      <div class="relative">
+        <label class="text-xs font-medium text-gray-600">Budget Line / Account</label>
+        <div class="relative">
+          <input
+            type="text"
+            [(ngModel)]="BudgetSearch"
+            (input)="filterBudget()"
+            (focus)="budgetDropdownOpen = true"
+            placeholder="Search account..."
+            class="w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring"
+            style="border-color:#0e3a4c"
+          />
+          <button
+            type="button"
+            (click)="budgetDropdownOpen = !budgetDropdownOpen"
+            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-1 text-xs"
+          >▼</button>
+        </div>
+
+        <ul
+          *ngIf="budgetDropdownOpen && BudgetFiltered.length"
+          class="absolute top-full left-0 right-0 bg-white border rounded-md mt-1 shadow z-10 max-h-40 overflow-y-auto"
+        >
+          <li
+            *ngFor="let b of BudgetFiltered"
+            (click)="selectBudget(b)"
+            class="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+          >
+            {{ b.headCode }} - {{ b.headName }}
+          </li>
+        </ul>
+      </div>
+
+      <!-- Contact Name -->
       <div>
         <label class="text-xs font-medium text-gray-600">Contact Name</label>
         <input
@@ -224,6 +263,7 @@
         />
       </div>
 
+      <!-- Email -->
       <div>
         <label class="text-xs font-medium text-gray-600">Email</label>
         <input
@@ -233,6 +273,7 @@
         />
       </div>
 
+      <!-- Phone -->
       <div>
         <label class="text-xs font-medium text-gray-600">Phone</label>
         <input
@@ -240,7 +281,10 @@
           [(ngModel)]="supplier.phone"
         />
       </div>
+    </div>
 
+    <!-- Row 4 : Preferred Items + Address -->
+    <div [ngClass]="gridColsClass(2)">
       <!-- Preferred Items -->
       <div>
         <label class="text-xs font-medium text-gray-600">Preferred Items</label>
@@ -280,10 +324,8 @@
           </ul>
         </div>
       </div>
-    </div>
 
-    <!-- Address -->
-    <div [ngClass]="gridColsClass(1)">
+      <!-- Address -->
       <div>
         <label class="text-xs font-medium text-gray-600">Address</label>
         <textarea
@@ -368,64 +410,63 @@
           </div>
 
           <!-- Upload -->
-          <!-- Upload -->
-<!-- Upload -->
-<!-- Upload -->
-<div class="min-w-0">
-  <label class="text-xs font-medium text-gray-600">Upload</label>
+          <div class="min-w-0">
+            <label class="text-xs font-medium text-gray-600">Upload</label>
 
-  <div class="flex items-center gap-3">
-    <!-- Hidden native input -->
-    <input
-      type="file"
-      [id]="'file_' + i"
-      (change)="onFileSelected($event, i)"
-      class="sr-only"
-      multiple
-    />
+            <div class="flex items-center gap-3">
+              <!-- Hidden native input -->
+              <input
+                type="file"
+                [id]="'file_' + i"
+                (change)="onFileSelected($event, i)"
+                class="sr-only"
+                multiple
+              />
 
-    <!-- Button -->
-    <label
-      [attr.for]="'file_' + i"
-      class="inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium text-white cursor-pointer"
-      style="background-color:#0e3a4c; min-width:120px;"
-    >
-      Choose file
-    </label>
+              <!-- Button -->
+              <label
+                [attr.for]="'file_' + i"
+                class="inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium text-white cursor-pointer"
+                style="background-color:#0e3a4c; min-width:120px;"
+              >
+                Choose file
+              </label>
 
-    <!-- Filenames (THIS ROW ONLY) -->
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 max-w-[360px]">
-      <ng-container *ngIf="d.files?.length; else noneChosen">
-        <ng-container *ngFor="let f of d.files; let k = index">
-          <a
-            *ngIf="f['previewUrl']"
-            [href]="f['previewUrl']"
-            [attr.download]="f.name"
-            class="underline text-sm text-gray-600 truncate max-w-[150px]"
-            [title]="f.name"
-          >
-            {{ f.name }}
-          </a>
-          <span *ngIf="!f['previewUrl']" class="text-sm text-gray-600 truncate max-w-[150px]">
-            {{ f.name }}
-          </span>
+              <!-- Filenames -->
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 max-w-[360px]">
+                <ng-container *ngIf="d.files?.length; else noneChosen">
+                  <ng-container *ngFor="let f of d.files; let k = index">
+                    <a
+                      *ngIf="f['dataUrl']"
+                      [href]="f['dataUrl']"
+                      [attr.download]="f.name"
+                      class="underline text-sm text-gray-600 truncate max-w-[150px]"
+                      [title]="f.name"
+                    >
+                      {{ f.name }}
+                    </a>
+                    <span *ngIf="!f['dataUrl']" class="text-sm text-gray-600 truncate max-w-[150px]">
+                      {{ f.name }}
+                    </span>
 
-          <!-- optional per-file remove -->
-          <button type="button" class="text-xs text-gray-500 hover:text-red-600"
-                  (click)="removeFile(i, k)">×</button>
-        </ng-container>
-      </ng-container>
+                    <button
+                      type="button"
+                      class="text-xs text-gray-500 hover:text-red-600"
+                      (click)="removeFile(i, k)"
+                    >
+                      ×
+                    </button>
+                  </ng-container>
+                </ng-container>
 
-      <ng-template #noneChosen>
-        <span class="text-sm text-gray-400">No file chosen</span>
-      </ng-template>
-    </div>
-  </div>
-</div>
+                <ng-template #noneChosen>
+                  <span class="text-sm text-gray-400">No file chosen</span>
+                </ng-template>
+              </div>
+            </div>
+          </div>
 
-
-
-          <!-- Remove -->
+          <!-- Remove row -->
           <div class="flex items-end justify-end">
             <button
               class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 border border-transparent"
