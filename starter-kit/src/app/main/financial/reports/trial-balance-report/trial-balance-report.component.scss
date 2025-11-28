@@ -49,14 +49,16 @@
   border-radius: 18px;
   background: #ffffff; /* overridden per card below */
   box-shadow: 0 4px 14px rgba(20, 47, 66, 0.06);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-    border: 1px solid #e5edf1  !important;
+  border: 1px solid #d4dde8;   // base border
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .tb-summary-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(20, 47, 66, 0.14);
+  border-color: #b8c4d8;       // slightly darker on hover
 }
+
 
 /* round icon circle on left */
 .tb-summary-icon {
@@ -96,47 +98,53 @@
 }
 
 /* --- Card specific colours (light like AR/AP) --- */
+/* --- Card specific colours (match Aging / AR cards) --- */
 
-/* Opening Debit – soft green */
+/* 1) Opening Debit  -> peach / orange */
 .tb-card-opening-debit {
-  background: #eefcf4;
+  background: #fff3e8;                 /* light peach card */
+  border-color: #ffd7b8;
 }
 .tb-card-opening-debit .tb-summary-icon {
-  background: #d7f6e3;
+  background: #ffe0c2;                 /* peach circle */
 }
 .tb-card-opening-debit .tb-summary-value {
-  color: #1f8b4d;
+  color: #f97316;                      /* orange text */
 }
 
-/* Opening Credit – soft blue */
+/* 2) Opening Credit -> mint / green */
 .tb-card-opening-credit {
-  background: #edf6ff;
+  background: #ecfdf3;                 /* mint card */
+  border-color: #bbf7d0;
 }
 .tb-card-opening-credit .tb-summary-icon {
-  background: #d7e8ff;
+  background: #bbf7d0;                 /* mint circle */
 }
 .tb-card-opening-credit .tb-summary-value {
-  color: #1f6fb4;
+  color: #16a34a;                      /* green text */
 }
 
-/* Closing Debit – soft orange */
+/* 3) Closing Debit -> soft yellow */
 .tb-card-closing-debit {
-  background: #fff6ea;
+  background: #fef9c3;                 /* pale yellow card */
+  border-color: #fde68a;
 }
 .tb-card-closing-debit .tb-summary-icon {
-  background: #ffe3c4;
+  background: #fde68a;                 /* yellow circle */
 }
 .tb-card-closing-debit .tb-summary-value {
-  color: #c47a1c;
+  color: #ca8a04;                      /* amber text */
 }
 
-/* Closing Credit – soft red/pink */
+/* 4) Closing Credit -> lavender / indigo */
 .tb-card-closing-credit {
-  background: #ffeef0;
+  background: #eef2ff;                 /* light lavender card */
+  border-color: #e0e7ff;
 }
 .tb-card-closing-credit .tb-summary-icon {
-  background: #ffd6db;
+  background: #e0e7ff;                 /* lavender circle */
 }
 .tb-card-closing-credit .tb-summary-value {
-  color: #d64545;
+  color: #4f46e5;                      /* indigo text */
 }
+

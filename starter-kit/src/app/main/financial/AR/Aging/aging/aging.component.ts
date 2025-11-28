@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { ArAgingInvoice, ArAgingSummary } from './aging-model';
 import { ArAgingService } from '../aging-service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
@@ -9,7 +9,7 @@ import feather from 'feather-icons';
   templateUrl: './aging.component.html',
   styleUrls: ['./aging.component.scss']
 })
-export class AgingComponent implements OnInit {
+export class AgingComponent implements OnInit, AfterViewInit {
 
   fromDate: string;
   toDate: string;
@@ -25,7 +25,6 @@ export class AgingComponent implements OnInit {
   isDetailOpen = false;
   selectedCustomerName = '';
 
-  // 🔹 NEW: totals for AR cards (same idea as AP)
   totalOutstandingAll = 0;
   total0_30 = 0;
   total31_60 = 0;
@@ -45,11 +44,13 @@ export class AgingComponent implements OnInit {
     this.loadSummary();
     this.loadCustomers();
   }
-  ngAfterViewInit() {
-    feather.replace(); // ✅ Required to render the icons
+
+  ngAfterViewInit(): void {
+    // first pass, in case anything is already visible
+    feather.replace();
   }
 
-  // 🔹 load aging summary
+  // load aging summary
   loadSummary(): void {
     this.isLoading = true;
     this.agingService.getSummary(this.fromDate, this.toDate).subscribe({
@@ -57,19 +58,23 @@ export class AgingComponent implements OnInit {
         this.rows = res.data || [];
         this.isLoading = false;
 
-        // re-apply filter and recalc totals
         this.applyCustomerFilter();
+
+        // 🔹 run after Angular has rendered the *ngIf block
+        setTimeout(() => feather.replace(), 0);
       },
       error: _ => {
         this.isLoading = false;
         this.rows = [];
         this.filteredRows = [];
         this.recalculateTotals(); // clear cards
+
+        setTimeout(() => feather.replace(), 0);
       }
     });
   }
 
-  // 🔹 load customers only once for dropdown
+  // rest of your code unchanged...
   loadCustomers(): void {
     this._customerMasterService.GetAllCustomerDetails()
       .subscribe((res: any) => {
@@ -85,7 +90,6 @@ export class AgingComponent implements OnInit {
     }
   }
 
-  // 🔹 filter rows by customer and update totals
   private applyCustomerFilter(): void {
     if (this.selectedCustomerId == null) {
       this.filteredRows = this.rows;
@@ -94,11 +98,9 @@ export class AgingComponent implements OnInit {
         r => r.customerId === this.selectedCustomerId
       );
     }
-
     this.recalculateTotals();
   }
 
-  // 🔹 NEW: calculate totals for AR cards
   private recalculateTotals(): void {
     const src = this.filteredRows || [];
 
@@ -124,6 +126,7 @@ export class AgingComponent implements OnInit {
     this.applyCustomerFilter();
     this.isDetailOpen = false;
     this.detailRows = [];
+    setTimeout(() => feather.replace(), 0);
   }
 
   openDetail(row: ArAgingSummary): void {
@@ -135,9 +138,10 @@ export class AgingComponent implements OnInit {
       this.fromDate,
       this.toDate
     )
-      .subscribe(res => {
-        this.detailRows = res.data || [];
-      });
+    .subscribe(res => {
+      this.detailRows = res.data || [];
+      setTimeout(() => feather.replace(), 0);
+    });
   }
 
   closeDetail(): void {
