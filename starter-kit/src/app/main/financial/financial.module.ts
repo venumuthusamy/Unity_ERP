@@ -28,6 +28,8 @@ import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.compon
 import { InvoiceEmailComponent } from './invoice-email/invoice-email.component';
 import { TrialBalanceReportComponent } from './reports/trial-balance-report/trial-balance-report.component';
 import { ProfitlossReportComponent } from './profitloss-report/profitloss-report-list/profitloss-report.component';
+import { BalanceSheetComponent } from './balance-sheet/balance-sheet/balance-sheet.component';
+import { FinancereportsComponent } from './financereports/financereports.component';
 
 
 
@@ -48,6 +50,8 @@ const routes: Routes = [
 { path: 'Invoice-email', component: InvoiceEmailComponent },
 { path: 'report', component: TrialBalanceReportComponent },
 { path: 'profitloss', component: ProfitlossReportComponent },
+{ path: 'balance-sheet', component: BalanceSheetComponent },
+{ path: 'finance-report', component: FinancereportsComponent }
 
 ];
 
@@ -71,7 +75,9 @@ const routes: Routes = [
     PeriodCloseFxComponent,
     InvoiceEmailComponent,
     TrialBalanceReportComponent,
-    ProfitlossReportComponent
+    ProfitlossReportComponent,
+    BalanceSheetComponent,
+    FinancereportsComponent
   ],
   imports: [
     CommonModule,
