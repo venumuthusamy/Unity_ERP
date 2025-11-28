@@ -44,12 +44,14 @@
   border-radius: 18px;
   background: #ffffff; /* overridden per card below */
   box-shadow: 0 4px 14px rgba(20, 47, 66, 0.05);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid #d4dde8;   // 🔹 added border
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .ap-summary-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(20, 47, 66, 0.12);
+  border-color: #b8c4d8;       // 🔹 slightly stronger border on hover (optional)
 }
 
 /* --- round icon --- */
@@ -87,42 +89,58 @@
   color: #2e5f73;
 }
 
-/* ===== Card-specific colors (card bg + circle) ===== */
 
-/* Total Payable */
+
+/* ===== Card-specific colors (MATCH INVOICE / AR STYLE) ===== */
+
+/* 1) Total Payable  -> peach / orange */
 .ap-card-total {
-  background: #fff5f5;              /* light red card */
+  background: #fff3e8;                 /* light peach card */
+  border-color: #ffd7b8;
 }
 .ap-card-total .ap-summary-icon {
-  background: #ffe5e5;              /* red circle */
+  background: #ffe0c2;                 /* peach circle */
 }
 .ap-card-total .ap-summary-value {
-  color: #e55353;
+  color: #f97316;                      /* orange text */
 }
 
-/* 0–30 days */
+/* 2) 0–30 days -> mint / green */
 .ap-card-030 {
-  background: #f2f7ff;              /* light blue card */
+  background: #ecfdf3;                 /* mint card */
+  border-color: #bbf7d0;
 }
 .ap-card-030 .ap-summary-icon {
-  background: #e7f2ff;              /* blue circle */
+  background: #bbf7d0;                 /* mint circle */
+}
+.ap-card-030 .ap-summary-value {
+  color: #16a34a;                      /* green text */
 }
 
-/* 31–60 days */
+/* 3) 31–60 days -> soft yellow */
 .ap-card-3160 {
-  background: #fffaf0;              /* light yellow card */
+  background: #fef9c3;                 /* pale yellow card */
+  border-color: #fde68a;
 }
 .ap-card-3160 .ap-summary-icon {
-  background: #fff2cc;              /* yellow circle */
+  background: #fde68a;                 /* yellow circle */
+}
+.ap-card-3160 .ap-summary-value {
+  color: #ca8a04;                      /* amber text */
 }
 
-/* 61–90 & 90+ */
+/* 4) 61–90 & 90+ -> lavender / indigo */
 .ap-card-90 {
-  background: #fff3ee;              /* light orange card */
+  background: #eef2ff;                 /* light lavender card */
+  border-color: #e0e7ff;
 }
 .ap-card-90 .ap-summary-icon {
-  background: #ffe3d8;              /* orange circle */
+  background: #e0e7ff;                 /* lavender circle */
 }
+.ap-card-90 .ap-summary-value {
+  color: #4f46e5;                      /* indigo text */
+}
+
 
 /* ===== Panels & tables ===== */
 
