@@ -12,6 +12,71 @@
         </div>
 
         <div class="card-body pt-1">
+          <!-- ===== TB SUMMARY CARDS (NEW) ===== -->
+          <!-- ===== TB SUMMARY CARDS (NEW AP/AR STYLE) ===== -->
+          <div class="row tb-summary-row mb-2">
+            <!-- Opening Debit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-opening-debit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Opening Debit</div>
+                  <div class="tb-summary-value">
+                    {{ totalOpeningDebit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opening Credit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-opening-credit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Opening Credit</div>
+                  <div class="tb-summary-value">
+                    {{ totalOpeningCredit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closing Debit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-closing-debit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Closing Debit</div>
+                  <div class="tb-summary-value">
+                    {{ totalClosingDebit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closing Credit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-closing-credit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Closing Credit</div>
+                  <div class="tb-summary-value">
+                    {{ totalClosingCredit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
 
           <!-- Filters -->
           <div class="row mb-2">

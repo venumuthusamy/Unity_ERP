@@ -1,0 +1,190 @@
+/* ===== Card container ===== */
+.ap-card {
+  border-radius: 18px;
+  border: 0;
+  background: #f9fbfd;
+}
+
+.ap-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2e5f73;
+}
+
+/* ===== Filters ===== */
+.ap-filters {
+  gap: 0.75rem;
+}
+
+.ap-filter-item {
+  margin-right: 0.75rem;
+}
+
+.ap-filter-label {
+  font-size: 0.8rem;
+  margin-right: 0.35rem;
+  font-weight: 500;
+  color: #6b7a8a;
+}
+
+.ap-filter-control {
+  min-width: 150px;
+}
+
+/* ===== Summary cards (top) ===== */
+
+.ap-summary-row {
+  margin-top: 1rem;
+}
+
+.ap-summary-card {
+  display: flex;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: #ffffff; /* overridden per card below */
+  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ap-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20, 47, 66, 0.12);
+}
+
+/* --- round icon --- */
+.ap-summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;          /* circle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+  background: rgba(46, 95, 115, 0.06); /* default light circle */
+}
+
+.ap-summary-icon i {
+  width: 20px;
+  height: 20px;
+}
+
+.ap-summary-content {
+  flex: 1;
+}
+
+.ap-summary-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7c8895;
+  margin-bottom: 0.15rem;
+}
+
+.ap-summary-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #2e5f73;
+}
+
+/* ===== Card-specific colors (card bg + circle) ===== */
+
+/* Total Payable */
+.ap-card-total {
+  background: #fff5f5;              /* light red card */
+}
+.ap-card-total .ap-summary-icon {
+  background: #ffe5e5;              /* red circle */
+}
+.ap-card-total .ap-summary-value {
+  color: #e55353;
+}
+
+/* 0–30 days */
+.ap-card-030 {
+  background: #f2f7ff;              /* light blue card */
+}
+.ap-card-030 .ap-summary-icon {
+  background: #e7f2ff;              /* blue circle */
+}
+
+/* 31–60 days */
+.ap-card-3160 {
+  background: #fffaf0;              /* light yellow card */
+}
+.ap-card-3160 .ap-summary-icon {
+  background: #fff2cc;              /* yellow circle */
+}
+
+/* 61–90 & 90+ */
+.ap-card-90 {
+  background: #fff3ee;              /* light orange card */
+}
+.ap-card-90 .ap-summary-icon {
+  background: #ffe3d8;              /* orange circle */
+}
+
+/* ===== Panels & tables ===== */
+
+.ap-panel {
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.04);
+  overflow: hidden;
+}
+
+.ap-panel-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eef1f6;
+  font-weight: 600;
+  color: #2e5f73;
+  font-size: 0.95rem;
+}
+
+.ap-panel-body {
+  padding: 0.75rem 1rem 0.75rem 1rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.ap-table thead th {
+  background-color: #2e5f73;
+  color: #ffffff;
+  font-size: 0.8rem;
+  border-bottom: 0;
+}
+
+.ap-table tbody td {
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+.ap-row-click {
+  cursor: pointer;
+}
+
+.ap-row-click:hover {
+  background-color: #f5f7fa;
+}
+
+/* Detail section */
+.ap-detail .ap-panel-body {
+  max-height: 280px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 767.98px) {
+  .ap-panel-body {
+    max-height: none;
+  }
+
+  .ap-summary-card {
+    padding: 0.75rem 0.8rem;
+  }
+
+  .ap-summary-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 0.6rem;
+  }
+}

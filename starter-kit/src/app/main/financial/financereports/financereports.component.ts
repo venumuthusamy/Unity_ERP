@@ -24,4 +24,8 @@ export class FinancereportsComponent implements OnInit {
   goToGstReport(): void {
  this.router.navigate(['financial/Gst-report']);
 }
+
+goToAging(): void {
+ this.router.navigate(['financial/aging']);
+}
 }
