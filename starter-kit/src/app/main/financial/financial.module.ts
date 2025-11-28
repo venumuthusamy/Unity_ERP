@@ -27,6 +27,8 @@ import { AgingComponent } from './AR/Aging/aging/aging.component';
 import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.component';
 import { InvoiceEmailComponent } from './invoice-email/invoice-email.component';
 import { TrialBalanceReportComponent } from './reports/trial-balance-report/trial-balance-report.component';
+import { ProfitlossReportComponent } from './profitloss-report/profitloss-report-list/profitloss-report.component';
+
 
 
 const routes: Routes = [
@@ -45,6 +47,7 @@ const routes: Routes = [
 { path: 'Period-close', component: PeriodCloseFxComponent },
 { path: 'Invoice-email', component: InvoiceEmailComponent },
 { path: 'report', component: TrialBalanceReportComponent },
+{ path: 'profitloss', component: ProfitlossReportComponent },
 
 ];
 
@@ -67,7 +70,8 @@ const routes: Routes = [
     AgingComponent,
     PeriodCloseFxComponent,
     InvoiceEmailComponent,
-    TrialBalanceReportComponent
+    TrialBalanceReportComponent,
+    ProfitlossReportComponent
   ],
   imports: [
     CommonModule,

@@ -38,7 +38,8 @@ export const locale = {
           LEDGER: 'ledger' ,
           PERIODCLOSE:'Period-close',
           INVOICEEMAIL:'InvoiceEmail' , 
-          Report:'Report' 
+          Report:'Report',
+          PROFITLOSS:'Profitloss' 
       },
 
       BUSINESSPARTNERS: {
