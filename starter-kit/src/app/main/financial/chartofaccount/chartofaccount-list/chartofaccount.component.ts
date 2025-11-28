@@ -1,29 +1,31 @@
-// chartofaccount.component.ts
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import Swal from 'sweetalert2';
-// If your service path differs, update the import:
-import { ChartofaccountService } from '../chartofaccount.service';
-import { CoreConfigService } from '@core/services/config.service';
-import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
-// import { DatatableComponent } from '@swimlane/ngx-datatable'; // optional strong typing
 
-/** Raw flat shape from API */
+import { ChartofaccountService } from '../chartofaccount.service';
+import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.service';
+
+/** Raw shape from API */
 interface CoaFlat {
   id: number;
   headCode: number;
   headName: string;
   openingBalance: number;
   balance: number;
-  parentHead?: number | null; // parent = Id of parent row
+  parentHead?: number | null;
   isActive?: boolean;
 }
 
-/** Node used by table (parent with children) */
+/** Tree node used in UI */
 interface CoaNode extends CoaFlat {
-  children: CoaFlat[];
+  level: number;           // 0 = root, 1 = child, 2 = grand-child...
+  children: CoaNode[];
   hasChildren: boolean;
-  $$expanded?: boolean;
+  expanded: boolean;
 }
 
 @Component({
@@ -33,161 +35,200 @@ interface CoaNode extends CoaFlat {
   encapsulation: ViewEncapsulation.None
 })
 export class ChartofaccountComponent implements OnInit {
-  // @ViewChild(DatatableComponent) table!: DatatableComponent;
+
   @ViewChild('table') table: any;
 
   headervalue = 'Chart of Accounts';
-  selectedOption = 10;          // page size (ngx-datatable [limit])
+  selectedOption = 10;
   searchValue = '';
   isLoading = false;
+
   selectedCoaId: number | null = null;
-  /** Parents only (each can have children) */
-  rows: CoaNode[] = [];
-  /** Bound to datatable (filtered rows) */
+
+  /** Root nodes (Asset, Liabilities, Equity, Income, Expense) */
+  roots: CoaNode[] = [];
+
+  /** All nodes flat – handy for search */
+  allNodes: CoaNode[] = [];
+
+  /** Bound to ngx-datatable */
   displayRows: CoaNode[] = [];
 
   constructor(
-    private router: Router,
     private service: ChartofaccountService,
-    private _coreSidebarService: CoreSidebarService,
+    private _coreSidebarService: CoreSidebarService
   ) { }
 
   ngOnInit(): void {
     this.load();
   }
 
-  /** Fetch and build parent->children structure */
- load(): void {
-  this.isLoading = true;
-  this.service.getAllChartOfAccount().subscribe({
-    next: (res: any) => {
-      const flat: CoaFlat[] = (res.data || []).map(x => ({
-        id: Number(x.id),
-        headCode: Number(x.headCode ?? 0),
-        headName: String(x.headName ?? ''),
-        openingBalance: Number(x.openingBalance ?? 0),
-        balance: Number(x.balance ?? 0),
-        parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
-        isActive: x.isActive ?? true
-      }));
+  // ============================================================
+  // LOAD + BUILD TREE
+  // ============================================================
+  load(): void {
+    this.isLoading = true;
 
-      // ✅ Only keep active rows (both parents and children)
-      const flatActive = flat.filter(r => !!r.isActive);
+    this.service.getAllChartOfAccount().subscribe({
+      next: (res: any) => {
+        const flat: CoaFlat[] = (res.data || []).map((x: any) => ({
+          id: Number(x.id),
+          headCode: Number(x.headCode ?? 0),
+          headName: String(x.headName ?? ''),
+          openingBalance: Number(x.openingBalance ?? 0),
+          balance: Number(x.balance ?? 0),
+          parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
+          isActive: x.isActive ?? true
+        }));
 
-      // Group children by parent Id (ACTIVE ONLY)
-      const childrenByParent = new Map<number, CoaFlat[]>();
-      flatActive.forEach(r => {
-        const p = Number(r.parentHead || 0);
-        if (!p) return;
-        if (!childrenByParent.has(p)) childrenByParent.set(p, []);
-        childrenByParent.get(p)!.push(r);
-      });
+        const flatActive = flat.filter(r => !!r.isActive);
 
-      // Parents are active rows with parentHead 0 / null
-      this.rows = flatActive
-        .filter(r => !r.parentHead || r.parentHead === 0)
-        .sort((a, b) => a.headCode - b.headCode)
-        .map(p => {
-          const kids = (childrenByParent.get(p.id) || []).sort((a, b) => a.headCode - b.headCode);
-          return {
-            ...p,
-            children: kids,
-            hasChildren: kids.length > 0
-          } as CoaNode;
+        // 1) make node map
+        const byId = new Map<number, CoaNode>();
+        flatActive.forEach(f => {
+          byId.set(f.id, {
+            ...f,
+            level: 0,
+            children: [],
+            hasChildren: false,
+            expanded: false      // used in template
+          });
         });
 
-      this.displayRows = [...this.rows];
-      this.isLoading = false;
-    },
-    error: (err) => {
-      this.isLoading = false;
-      Swal.fire({
-        icon: 'error',
-        title: 'Failed to load Chart of Accounts',
-        text: this.errMsg(err),
-        confirmButtonColor: '#d33'
-      });
-    }
-  });
-}
+        // 2) wire parent/children
+        const roots: CoaNode[] = [];
+        byId.forEach(node => {
+          const pId = Number(node.parentHead || 0);
+          if (!pId) {
+            // root level
+            roots.push(node);
+          } else {
+            const parent = byId.get(pId);
+            if (parent) {
+              node.level = parent.level + 1;
+              parent.children.push(node);
+              parent.hasChildren = true;
+            } else {
+              // parent not found → treat as root
+              roots.push(node);
+            }
+          }
+        });
 
+        // 3) sort tree by headCode
+        const sortRecursively = (n: CoaNode) => {
+          n.children.sort((a, b) => a.headCode - b.headCode);
+          n.children.forEach(sortRecursively);
+        };
+        roots.sort((a, b) => a.headCode - b.headCode);
+        roots.forEach(sortRecursively);
 
-  /** Expand/collapse a parent row */
-  toggleRow(row: CoaNode) {
-    if (!row.hasChildren || !this.table) return;
-    this.table.rowDetail.toggleExpandRow(row);
+        this.roots = roots;
+        this.allNodes = Array.from(byId.values());
+
+        // initial visible rows – only roots (collapsed)
+        this.rebuildVisibleRows();
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.isLoading = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to load Chart of Accounts',
+          text: this.errMsg(err),
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
   }
 
-  /** Search across code/name/balances; keeps matching children under parents */
+  // ============================================================
+  // EXPAND / COLLAPSE
+  // ============================================================
+  toggleNode(node: CoaNode): void {
+    if (!node.hasChildren) { return; }
+    node.expanded = !node.expanded;
+    this.rebuildVisibleRows();
+  }
+
+  /** Build displayRows from roots based on expanded flags */
+  private rebuildVisibleRows(): void {
+    const rows: CoaNode[] = [];
+
+    const addNode = (n: CoaNode) => {
+      rows.push(n);
+      if (n.expanded) {
+        n.children.forEach(addNode);
+      }
+    };
+
+    this.roots.forEach(addNode);
+    this.displayRows = rows;
+  }
+
+  // ============================================================
+  // SEARCH
+  // ============================================================
   filterUpdate(): void {
     const term = (this.searchValue || '').toLowerCase().trim();
+
     if (!term) {
-      this.displayRows = [...this.rows];
+      // clear search → show tree again
+      this.rebuildVisibleRows();
       return;
     }
 
-    const contains = (v?: string | number) => (v ?? '').toString().toLowerCase().includes(term);
+    const contains = (v?: string | number) =>
+      (v ?? '').toString().toLowerCase().includes(term);
 
-    this.displayRows = this.rows
-      .map(parent => {
-        const parentMatch =
-          contains(parent.headCode) ||
-          contains(parent.headName) ||
-          contains(parent.openingBalance) ||
-          contains(parent.balance);
-
-        const filteredChildren = parent.children.filter(c =>
-          contains(c.headCode) ||
-          contains(c.headName) ||
-          contains(c.openingBalance) ||
-          contains(c.balance)
-        );
-
-        return {
-          ...parent,
-          children: filteredChildren,
-          hasChildren: filteredChildren.length > 0
-        } as CoaNode;
-      })
-      .filter(p => p.hasChildren || (
-        contains(p.headCode) ||
-        contains(p.headName) ||
-        contains(p.openingBalance) ||
-        contains(p.balance)
-      ));
+    // flat search result (no tree expand)
+    this.displayRows = this.allNodes
+      .filter(n =>
+        contains(n.headCode) ||
+        contains(n.headName) ||
+        contains(n.openingBalance) ||
+        contains(n.balance)
+      )
+      .sort((a, b) => a.headCode - b.headCode);
   }
 
-
+  // ============================================================
+  // EDIT / DELETE
+  // ============================================================
   edit(id: number): void {
-    this.selectedCoaId = id;                             // pass id to child
-    this._coreSidebarService.getSidebarRegistry('app-chartofaccountcreate').toggleOpen(); // open sidebar
+    this.selectedCoaId = id;
+    this._coreSidebarService
+      .getSidebarRegistry('app-chartofaccountcreate')
+      .toggleOpen();
   }
 
   onChildSaved(): void {
-    this.load();                                          // refresh list
-    this.selectedCoaId = null;                            // reset (optional)
+    this.load();
+    this.selectedCoaId = null;
   }
 
-confirmDeleteCoa(data: any) {
-  Swal.fire({
-    title: 'Confirm Delete',
-    text: 'Are you sure you want to delete this item?',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Delete',
-    cancelButtonText: 'Cancel',
-    buttonsStyling: false,
-    customClass: {
-      confirmButton: 'btn btn-danger',
-      cancelButton: 'btn btn-primary ml-2'   // ← blue
-    }
-  }).then(r => { if (r.isConfirmed) this.deleteCoa(data); });
-}
+  confirmDeleteCoa(id: number): void {
+    Swal.fire({
+      title: 'Confirm Delete',
+      text: 'Are you sure you want to delete this item?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      buttonsStyling: false,
+      customClass: {
+        confirmButton: 'btn btn-danger',
+        cancelButton: 'btn btn-primary ml-2'
+      }
+    }).then(r => {
+      if (r.isConfirmed) {
+        this.deleteCoa(id);
+      }
+    });
+  }
 
-
-  // Actual delete call
-  deleteCoa(item: any) {
-    this.service.deleteChartOfAccount(item.id).subscribe({
+  private deleteCoa(id: number): void {
+    this.service.deleteChartOfAccount(id).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -195,25 +236,27 @@ confirmDeleteCoa(data: any) {
           text: 'Chart of Account deleted successfully.',
           confirmButtonColor: '#3085d6'
         });
-        this.load(); // refresh your table
+        this.load();
       },
       error: (err) => {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: this.errMsg?.(err) || 'Failed to delete Chart of Account.',
+          text: this.errMsg(err) || 'Failed to delete Chart of Account.',
           confirmButtonColor: '#d33'
         });
       }
     });
   }
 
-
-
+  // ============================================================
+  // HELPERS
+  // ============================================================
   private errMsg(err: any): string {
     return err?.error?.message || err?.message || 'Please try again.';
   }
-  toggleSidebar(name): void {
+
+  toggleSidebar(name: string): void {
     this._coreSidebarService.getSidebarRegistry(name).toggleOpen();
   }
 }
