@@ -1,0 +1,43 @@
+<div class="content-wrapper container-xxl p-0">
+  <div class="content-body">
+    <!-- add ap-card to reuse AP background / padding -->
+    <div class="card ar-card ap-card">
+
+      <!-- HEADER -->
+      <div class="card-header d-flex justify-content-between align-items-center py-1">
+        <h4 class="mb-0 ar-title">AR/AP  Aging</h4>
+      </div>
+
+      <!-- TABS -->
+      <!-- add ap-tabs so the tab strip looks like AP -->
+      <ul class="nav nav-tabs ar-tabs ap-tabs mb-1" role="tablist">
+
+        <li class="nav-item" (click)="setTab('ar-aging')">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'ar-aging'"
+            href="javascript:void(0);">
+            AR Aging
+          </a>
+        </li>
+
+        <li class="nav-item" (click)="setTab('ap-aging')">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'ap-aging'"
+            href="javascript:void(0);">
+            AP Aging
+          </a>
+        </li>
+      </ul>
+
+      <!-- TAB CONTENT -->
+      <!-- (optional) add ap-body if you have one for AP -->
+      <div class="card-body ar-body ap-body">
+        <app-aging  *ngIf="activeTab === 'ar-aging'"></app-aging>
+        <app-ap-aging *ngIf="activeTab === 'ap-aging'"></app-ap-aging>
+      </div>
+    </div>
+  </div>
+</div>
+

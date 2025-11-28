@@ -31,7 +31,8 @@ import { ProfitlossReportComponent } from './profitloss-report/profitloss-report
 import { BalanceSheetComponent } from './balance-sheet/balance-sheet/balance-sheet.component';
 import { FinancereportsComponent } from './financereports/financereports.component';
 import { GstReportComponent } from './gst-report/gst-report/gst-report.component';
-
+import { APAgingComponent } from './reports/ap-aging/ap-aging.component';
+import { ArApAgingComponent } from './reports/ar/ap-aging/ap-aging.component';
 
 
 const routes: Routes = [
@@ -54,7 +55,7 @@ const routes: Routes = [
 { path: 'balance-sheet', component: BalanceSheetComponent },
 { path: 'finance-report', component: FinancereportsComponent },
 { path: 'Gst-report', component: GstReportComponent },
-
+{ path: 'aging', component: ArApAgingComponent }
 ];
 
 @NgModule({
@@ -80,7 +81,9 @@ const routes: Routes = [
     ProfitlossReportComponent,
     BalanceSheetComponent,
     FinancereportsComponent,
-    GstReportComponent
+    GstReportComponent,
+    APAgingComponent,
+    ArApAgingComponent
   ],
   imports: [
     CommonModule,

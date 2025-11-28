@@ -1,10 +1,12 @@
+/* ========== EXISTING TABLE + FILTERS (kept) ========== */
+
 .aging-table thead tr th {
   background-color: #2E5F73 !important;
   color: #fff !important;
 }
 
 .aging-filters {
-  gap: 1rem;                 // space between From / To / Customer groups
+  gap: 1rem;
 }
 
 .aging-filter-item {
@@ -18,6 +20,106 @@
 }
 
 .aging-filter-control {
-  width: 180px;              // same width for all controls
+  width: 180px;
 }
 
+/* ========== AR SUMMARY CARDS (same feel as AP) ========== */
+
+.ar-summary-row {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ar-summary-card {
+  display: flex;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: #ffffff; /* overridden per card below */
+  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ar-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20, 47, 66, 0.12);
+}
+
+/* round icon holder */
+.ar-summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+  background: rgba(46, 95, 115, 0.06); /* default, overridden below */
+}
+
+/* feather replaces <i> with <svg>, so style svg */
+.ar-summary-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #2e5f73;
+}
+
+.ar-summary-content {
+  flex: 1;
+}
+
+.ar-summary-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7c8895;
+  margin-bottom: 0.15rem;
+}
+
+.ar-summary-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #2e5f73;
+}
+
+/* ========== Card-specific colours (card bg + circle) ========== */
+
+/* Total Outstanding */
+.ar-card-total {
+  background: #fff5f5;             /* light red card */
+}
+.ar-card-total .ar-summary-icon {
+  background: #ffe5e5;             /* red circle */
+}
+.ar-card-total .ar-summary-value {
+  color: #e55353;
+}
+
+/* 0–30 days */
+.ar-card-030 {
+  background: #f2f7ff;             /* light blue card */
+}
+.ar-card-030 .ar-summary-icon {
+  background: #e7f2ff;             /* blue circle */
+}
+
+/* 31–60 days */
+.ar-card-3160 {
+  background: #fffaf0;             /* light yellow card */
+}
+.ar-card-3160 .ar-summary-icon {
+  background: #fff2cc;             /* yellow circle */
+}
+
+/* 61–90 & 90+ */
+.ar-card-90 {
+  background: #fff3ee;             /* light orange card */
+}
+.ar-card-90 .ar-summary-icon {
+  background: #ffe3d8;             /* orange circle */
+}
+
+/* Optional: table row hover to match AP */
+.aging-table tbody tr:hover {
+  background-color: #f5f7fa;
+}

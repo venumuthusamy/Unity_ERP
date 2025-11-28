@@ -2,6 +2,7 @@
   background-color: #2E5F73 !important;
   color: #fff !important;
 }
+
 .reports-center {
   border-top: 1px solid #e5e5e5;
   padding-top: 1rem;
@@ -32,4 +33,110 @@
 
 .tb-account-col {
   white-space: nowrap;      /* no line break */
+}
+
+/* ===== TB SUMMARY CARDS – AP/AR STYLE ===== */
+
+.tb-summary-row {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tb-summary-card {
+  display: flex;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: #ffffff; /* overridden per card below */
+  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid #e5edf1  !important;
+}
+
+.tb-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20, 47, 66, 0.14);
+}
+
+/* round icon circle on left */
+.tb-summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+  background: rgba(46, 95, 115, 0.08); /* default, per-card overrides below */
+}
+
+/* feather turns <i> into <svg>, so style svg */
+.tb-summary-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #2e5f73;
+}
+
+.tb-summary-content {
+  flex: 1;
+}
+
+.tb-summary-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.15rem;
+  color: #7c8895;
+}
+
+.tb-summary-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #2e5f73;
+}
+
+/* --- Card specific colours (light like AR/AP) --- */
+
+/* Opening Debit – soft green */
+.tb-card-opening-debit {
+  background: #eefcf4;
+}
+.tb-card-opening-debit .tb-summary-icon {
+  background: #d7f6e3;
+}
+.tb-card-opening-debit .tb-summary-value {
+  color: #1f8b4d;
+}
+
+/* Opening Credit – soft blue */
+.tb-card-opening-credit {
+  background: #edf6ff;
+}
+.tb-card-opening-credit .tb-summary-icon {
+  background: #d7e8ff;
+}
+.tb-card-opening-credit .tb-summary-value {
+  color: #1f6fb4;
+}
+
+/* Closing Debit – soft orange */
+.tb-card-closing-debit {
+  background: #fff6ea;
+}
+.tb-card-closing-debit .tb-summary-icon {
+  background: #ffe3c4;
+}
+.tb-card-closing-debit .tb-summary-value {
+  color: #c47a1c;
+}
+
+/* Closing Credit – soft red/pink */
+.tb-card-closing-credit {
+  background: #ffeef0;
+}
+.tb-card-closing-credit .tb-summary-icon {
+  background: #ffd6db;
+}
+.tb-card-closing-credit .tb-summary-value {
+  color: #d64545;
 }

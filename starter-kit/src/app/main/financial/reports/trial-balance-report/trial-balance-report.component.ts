@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ReportsService } from './report-service';
 import { TrialBalance } from '../trial-balance-model';
+import feather from 'feather-icons';
 
 interface TbNode extends TrialBalance {
   parentHead: number | null;
@@ -44,6 +45,9 @@ export class TrialBalanceReportComponent implements OnInit {
   constructor(private reportsService: ReportsService) { }
 
   ngOnInit(): void { }
+   ngAfterViewInit() {
+      feather.replace(); // ✅ Required to render the icons
+    }
 
   // ================== RUN TB ==================
   runTB(): void {
