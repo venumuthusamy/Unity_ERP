@@ -23,8 +23,15 @@
   border-radius: 1.25rem;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  border-bottom: 3px solid transparent;
+
+  /* 🔹 light outline on top / left / right */
+  border: 1px solid #e5e7eb;
+
+  /* 🔹 bottom alone 3px (colour will come from modifier class) */
+  border-bottom-width: 3px;
+  border-bottom-color: transparent;
 }
+
 
 .summary-icon {
   width: 52px;
