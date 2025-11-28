@@ -20,4 +20,8 @@ export class FinancereportsComponent implements OnInit {
   goToBalanceSheet(): void {
  this.router.navigate(['financial/balance-sheet']);
 }
+
+  goToGstReport(): void {
+ this.router.navigate(['financial/Gst-report']);
+}
 }

@@ -30,6 +30,7 @@ import { TrialBalanceReportComponent } from './reports/trial-balance-report/tria
 import { ProfitlossReportComponent } from './profitloss-report/profitloss-report-list/profitloss-report.component';
 import { BalanceSheetComponent } from './balance-sheet/balance-sheet/balance-sheet.component';
 import { FinancereportsComponent } from './financereports/financereports.component';
+import { GstReportComponent } from './gst-report/gst-report/gst-report.component';
 
 
 
@@ -51,7 +52,8 @@ const routes: Routes = [
 { path: 'report', component: TrialBalanceReportComponent },
 { path: 'profitloss', component: ProfitlossReportComponent },
 { path: 'balance-sheet', component: BalanceSheetComponent },
-{ path: 'finance-report', component: FinancereportsComponent }
+{ path: 'finance-report', component: FinancereportsComponent },
+{ path: 'Gst-report', component: GstReportComponent },
 
 ];
 
@@ -77,7 +79,8 @@ const routes: Routes = [
     TrialBalanceReportComponent,
     ProfitlossReportComponent,
     BalanceSheetComponent,
-    FinancereportsComponent
+    FinancereportsComponent,
+    GstReportComponent
   ],
   imports: [
     CommonModule,
