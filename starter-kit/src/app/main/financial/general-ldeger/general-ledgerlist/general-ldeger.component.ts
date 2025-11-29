@@ -17,18 +17,18 @@ interface CoaFlat {
   credit: number;
   balance: number;
 
-  isControl: boolean;   // AR/AP control
+  isControl: boolean;
   isActive?: boolean;
 }
 
 interface CoaNode extends CoaFlat {
-  // original backend values
+  // ORIGINAL backend values
   ownOpening: number;
   ownDebit: number;
   ownCredit: number;
   ownBalance: number;
 
-  // current display values
+  // CURRENT display values
   openingBalance: number;
   debit: number;
   credit: number;
@@ -59,12 +59,23 @@ export class GeneralLdegerComponent implements OnInit {
   roots: CoaNode[] = [];
   displayRows: CoaNode[] = [];
 
-  constructor(
-    private service: GeneralLedgerService
-  ) { }
+  constructor(private service: GeneralLedgerService) {}
 
   ngOnInit(): void {
     this.load();
+  }
+
+  // ===== COMMON BALANCE FORMULA =====
+  private calcBalance(opening: number, debit: number, credit: number, rootHeadType: string): number {
+    const t = (rootHeadType || '').toUpperCase();
+
+    // Asset / Expense → Debit nature
+    if (t === 'ASSET' || t === 'EXPENSE') {
+      return opening + debit - credit;
+    }
+
+    // Liability / Equity / Income → Credit nature
+    return opening - debit + credit;
   }
 
   // ================= LOAD DATA =================
@@ -73,15 +84,20 @@ export class GeneralLdegerComponent implements OnInit {
 
     this.service.GetGeneralLedger().subscribe({
       next: (res: any) => {
-
         const flat: CoaFlat[] = (res.data || []).map((x: any) => {
           const headName = String(x.headName ?? '').trim();
+          const rootHeadType = String(x.rootHeadType ?? '');
 
-          // mark AR/AP control heads (you can tweak this condition if needed)
           const isControl =
             !!x.isControl ||
-            headName === 'Account Payable' ||
+            headName === 'Accounts Payable' ||
             headName.startsWith('Account Receivable');
+
+          const opening = x.openingBalance == null ? 0 : Number(x.openingBalance);
+          const debit   = x.debit           == null ? 0 : Number(x.debit);
+          const credit  = x.credit          == null ? 0 : Number(x.credit);
+
+          const balance = this.calcBalance(opening, debit, credit, rootHeadType);
 
           return {
             id: Number(x.headId ?? 0),
@@ -90,12 +106,12 @@ export class GeneralLdegerComponent implements OnInit {
             parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
 
             headType: String(x.headType ?? ''),
-            rootHeadType: String(x.rootHeadType ?? ''),
+            rootHeadType,
 
-            openingBalance: x.openingBalance == null ? 0 : Number(x.openingBalance),
-            debit: x.debit == null ? 0 : Number(x.debit),
-            credit: x.credit == null ? 0 : Number(x.credit),
-            balance: x.balance == null ? 0 : Number(x.balance),
+            openingBalance: opening,
+            debit,
+            credit,
+            balance,
 
             isControl,
             isActive: x.isActive ?? true
@@ -107,7 +123,7 @@ export class GeneralLdegerComponent implements OnInit {
         const nodesById = new Map<number, CoaNode>();
         const nodesByCode = new Map<number, CoaNode>();
 
-        // create nodes with own* values
+        // ---------- create nodes ----------
         flatActive.forEach(f => {
           const node: CoaNode = {
             ...f,
@@ -115,13 +131,15 @@ export class GeneralLdegerComponent implements OnInit {
             ownDebit: f.debit,
             ownCredit: f.credit,
             ownBalance: f.balance,
+
             openingBalance: f.openingBalance,
             debit: f.debit,
             credit: f.credit,
             balance: f.balance,
+
             children: [],
             hasChildren: false,
-            $$expanded: false,
+            $$expanded: false,   // initial: collapsed
             level: 0,
             parent: null
           };
@@ -131,29 +149,25 @@ export class GeneralLdegerComponent implements OnInit {
 
         const roots: CoaNode[] = [];
 
-        // link parents / children
+        // 🔴 ParentHead IS HEADCODE → link ONLY by headCode
         nodesById.forEach(node => {
           const p = node.parentHead ?? 0;
 
-          if (p === 0) {
+          if (!p) {
             roots.push(node);
           } else {
-            const parentById = nodesById.get(p);
-            const parentByCode = nodesByCode.get(p);
-            const parent = parentById ?? parentByCode;
-
+            const parent = nodesByCode.get(p);
             if (parent) {
               node.parent = parent;
               parent.children.push(node);
               parent.hasChildren = true;
             } else {
-              // parent not found → treat as root
               roots.push(node);
             }
           }
         });
 
-        // sort & set level
+        // ---------- sort & set level ----------
         const sortAndSetLevel = (list: CoaNode[], level: number) => {
           list.sort((a, b) => a.headCode - b.headCode);
           list.forEach(n => {
@@ -165,11 +179,10 @@ export class GeneralLdegerComponent implements OnInit {
         };
         sortAndSetLevel(roots, 0);
 
+        // all parents collapsed initially
+        roots.forEach(r => r.$$expanded = false);
+
         this.roots = roots;
-
-        // initial collapsed
-        this.roots.forEach(r => (r.$$expanded = false));
-
         this.rebuildDisplayRows();
         this.isLoading = false;
       },
@@ -185,43 +198,37 @@ export class GeneralLdegerComponent implements OnInit {
     });
   }
 
-  // ===== aggregate CHILDREN (used for parents & collapsed headings) =====
+  // ===== aggregate CHILDREN =====
   private computeChildrenAggregate(node: CoaNode): {
     opening: number; debit: number; credit: number; balance: number;
   } {
-
     if (!node.children || node.children.length === 0) {
       return { opening: 0, debit: 0, credit: 0, balance: 0 };
     }
 
     let opening = 0;
-    let debit = 0;
-    let credit = 0;
-    let balance = 0;
+    let debit   = 0;
+    let credit  = 0;
 
     node.children.forEach(ch => {
-      // child own values
       const childOwnOpening = ch.ownOpening ?? 0;
-      const childOwnDebit   = ch.ownDebit ?? 0;
-      const childOwnCredit  = ch.ownCredit ?? 0;
-      const childOwnBalance = ch.ownBalance ?? 0;
+      const childOwnDebit   = ch.ownDebit   ?? 0;
+      const childOwnCredit  = ch.ownCredit  ?? 0;
 
-      // always add child's own row
       opening += childOwnOpening;
       debit   += childOwnDebit;
       credit  += childOwnCredit;
-      balance += childOwnBalance;
 
-      // if child is control (Account Payable / AR),
-      // DO NOT add its children again (its own row already summary)
       if (!ch.isControl) {
         const subAgg = this.computeChildrenAggregate(ch);
         opening += subAgg.opening;
         debit   += subAgg.debit;
         credit  += subAgg.credit;
-        balance += subAgg.balance;
       }
     });
+
+    // balance based on aggregated opening/debit/credit
+    const balance = this.calcBalance(opening, debit, credit, node.rootHeadType);
 
     return { opening, debit, credit, balance };
   }
@@ -237,41 +244,44 @@ export class GeneralLdegerComponent implements OnInit {
         const agg = this.computeChildrenAggregate(node);
 
         if (node.$$expanded) {
-          if (node.isControl) {
-            // 🔹 Account Payable / AR expanded → show 0, children show detail
-            node.openingBalance = 0;
-            node.debit          = 0;
-            node.credit         = 0;
-            node.balance        = 0;
-          } else {
-            // normal heading expanded → own backend values
-            node.openingBalance = node.ownOpening;
-            node.debit          = node.ownDebit;
-            node.credit         = node.ownCredit;
-            node.balance        = node.ownBalance;
-          }
+          // expanded → show own values
+          node.openingBalance = node.ownOpening;
+          node.debit          = node.ownDebit;
+          node.credit         = node.ownCredit;
+          node.balance        = this.calcBalance(
+            node.ownOpening,
+            node.ownDebit,
+            node.ownCredit,
+            node.rootHeadType
+          );
         } else {
-          if (node.isControl) {
-            // 🔹 Account Payable / AR collapsed → show OWN summary
-            // (Opening = total credit, Debit = total debit, Balance = OB - Debit)
-            node.openingBalance = node.ownOpening;
-            node.debit          = node.ownDebit;
-            node.credit         = node.ownCredit;
-            node.balance        = node.ownBalance;
-          } else {
-            // other headings collapsed → aggregate from children
-            node.openingBalance = agg.opening;
-            node.debit          = agg.debit;
-            node.credit         = agg.credit;
-            node.balance        = agg.balance;
-          }
+          // collapsed → show aggregate
+          // 👉 if aggregated opening is 0 but credit > 0,
+          //    treat child total credit as opening balance
+          const openingForDisplay =
+            agg.opening !== 0 ? agg.opening : agg.credit;
+
+          node.openingBalance = openingForDisplay;
+          node.debit          = agg.debit;
+          node.credit         = agg.credit;
+          node.balance        = this.calcBalance(
+            openingForDisplay,
+            agg.debit,
+            agg.credit,
+            node.rootHeadType
+          );
         }
       } else {
-        // leaf → always own backend values
+        // leaf → always own values
         node.openingBalance = node.ownOpening;
         node.debit          = node.ownDebit;
         node.credit         = node.ownCredit;
-        node.balance        = node.ownBalance;
+        node.balance        = this.calcBalance(
+          node.ownOpening,
+          node.ownDebit,
+          node.ownCredit,
+          node.rootHeadType
+        );
       }
 
       out.push(node);
