@@ -41,12 +41,13 @@
           <!-- Parent Head (Replaced p-dropdown with normal select) -->
           <div class="form-group">
             <label class="form-label">Parent Head</label>
-            <select class="form-control" formControlName="parentHead" (change)="onChangeParentHead($event)">
-              <option value="0">-- Choose Parent Head --</option>
-              <option *ngFor="let head of parentHeadList" [value]="head.value">
-                {{ head.label }}
-              </option>
-            </select>
+           <select class="form-control" formControlName="parentHead" (change)="onChangeParentHead($event)">
+  <option value="0">-- Choose Parent Head --</option>
+  <option *ngFor="let head of parentHeadList" [value]="head.value">
+    {{ head.label }}
+  </option>
+</select>
+
           </div>
 
           <!-- P Head Name -->

@@ -66,81 +66,94 @@ export class ChartofaccountComponent implements OnInit {
   // ============================================================
   // LOAD + BUILD TREE
   // ============================================================
-  load(): void {
-    this.isLoading = true;
+ load(): void {
+  this.isLoading = true;
 
-    this.service.getAllChartOfAccount().subscribe({
-      next: (res: any) => {
-        const flat: CoaFlat[] = (res.data || []).map((x: any) => ({
-          id: Number(x.id),
-          headCode: Number(x.headCode ?? 0),
-          headName: String(x.headName ?? ''),
-          openingBalance: Number(x.openingBalance ?? 0),
-          balance: Number(x.balance ?? 0),
-          parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
-          isActive: x.isActive ?? true
-        }));
+  this.service.getAllChartOfAccount().subscribe({
+    next: (res: any) => {
+      const flat: CoaFlat[] = (res.data || []).map((x: any) => ({
+        id: Number(x.id),
+        headCode: Number(x.headCode ?? 0),
+        headName: String(x.headName ?? ''),
+        openingBalance: Number(x.openingBalance ?? 0),
+        balance: Number(x.balance ?? 0),
+        // NOTE: this is *parent head code* from DB
+        parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
+        isActive: x.isActive ?? true
+      }));
 
-        const flatActive = flat.filter(r => !!r.isActive);
+      const flatActive = flat.filter(r => !!r.isActive);
 
-        // 1) make node map
-        const byId = new Map<number, CoaNode>();
-        flatActive.forEach(f => {
-          byId.set(f.id, {
-            ...f,
-            level: 0,
-            children: [],
-            hasChildren: false,
-            expanded: false      // used in template
-          });
-        });
+      // ===== 1) build node maps =====
+      const byId = new Map<number, CoaNode>();
+      const byCode = new Map<number, CoaNode>();   // key by headCode
 
-        // 2) wire parent/children
-        const roots: CoaNode[] = [];
-        byId.forEach(node => {
-          const pId = Number(node.parentHead || 0);
-          if (!pId) {
-            // root level
-            roots.push(node);
-          } else {
-            const parent = byId.get(pId);
-            if (parent) {
-              node.level = parent.level + 1;
-              parent.children.push(node);
-              parent.hasChildren = true;
-            } else {
-              // parent not found → treat as root
-              roots.push(node);
-            }
-          }
-        });
-
-        // 3) sort tree by headCode
-        const sortRecursively = (n: CoaNode) => {
-          n.children.sort((a, b) => a.headCode - b.headCode);
-          n.children.forEach(sortRecursively);
+      flatActive.forEach(f => {
+        const node: CoaNode = {
+          ...f,
+          level: 0,
+          children: [],
+          hasChildren: false,
+          expanded: false
         };
-        roots.sort((a, b) => a.headCode - b.headCode);
-        roots.forEach(sortRecursively);
+        byId.set(node.id, node);
+        byCode.set(node.headCode, node);          // 👈 key is HeadCode
+      });
 
-        this.roots = roots;
-        this.allNodes = Array.from(byId.values());
+      // ===== 2) wire parent / children using headCode =====
+      const roots: CoaNode[] = [];
 
-        // initial visible rows – only roots (collapsed)
-        this.rebuildVisibleRows();
-        this.isLoading = false;
-      },
-      error: (err) => {
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'Failed to load Chart of Accounts',
-          text: this.errMsg(err),
-          confirmButtonColor: '#d33'
-        });
-      }
-    });
-  }
+      byCode.forEach(node => {
+        const pCode = Number(node.parentHead || 0); // parent HEAD CODE
+        if (!pCode) {
+          // ROOT (Assets, Liabilities, Equity, Income…)
+          roots.push(node);
+        } else {
+          const parent = byCode.get(pCode);        // find by HEAD CODE
+          if (parent) {
+            parent.children.push(node);
+            parent.hasChildren = true;
+          } else {
+            // parent not found → treat as root
+            roots.push(node);
+          }
+        }
+      });
+
+      // ===== 3) assign levels from roots =====
+      const setLevel = (n: CoaNode, level: number) => {
+        n.level = level;
+        n.children.forEach(child => setLevel(child, level + 1));
+      };
+      roots.forEach(r => setLevel(r, 0));
+
+      // ===== 4) sort tree by headCode =====
+      const sortRecursively = (n: CoaNode) => {
+        n.children.sort((a, b) => a.headCode - b.headCode);
+        n.children.forEach(sortRecursively);
+      };
+      roots.sort((a, b) => a.headCode - b.headCode);
+      roots.forEach(sortRecursively);
+
+      this.roots = roots;
+      this.allNodes = Array.from(byId.values());
+
+      // initial visible rows – only roots (collapsed)
+      this.rebuildVisibleRows();
+      this.isLoading = false;
+    },
+    error: (err) => {
+      this.isLoading = false;
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to load Chart of Accounts',
+        text: this.errMsg(err),
+        confirmButtonColor: '#d33'
+      });
+    }
+  });
+}
+
 
   // ============================================================
   // EXPAND / COLLAPSE

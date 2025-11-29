@@ -80,6 +80,7 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
   }
 
   private loadById(id: number): void {
+    debugger
     if (!this.addForm) return;
     this.chartOfAccountService.getByIdChartOfAccount(id).subscribe({
       next: (res: any) => {
@@ -143,30 +144,34 @@ public resetForm(): void {
 }
 
 
-  // ---------------- Data needed for dropdown ----------------
-  loadAccountHeads(): void {
-    this.chartOfAccountService.getAllChartOfAccount().subscribe({
-      next: (res: any) => {
-        this.accountHeads = res?.data || [];
-        this.parentHeadList = this.accountHeads.map((head: any) => ({
-          value: head.id,
-          label: this.buildFullPath(head)
-        }));
-      },
-      error: (err) => this.alert('error', 'Failed to load heads', this.errMsg(err))
-    });
-  }
+loadAccountHeads(): void {
+  this.chartOfAccountService.getAllChartOfAccount().subscribe({
+    next: (res: any) => {
+      this.accountHeads = res?.data || [];
 
-  /** Build breadcrumb like: Parent >> Child >> This */
-  buildFullPath(item: any): string {
-    let path = item.headName;
-    let current = this.accountHeads.find((x: any) => x.id === item.parentHead);
-    while (current) {
-      path = `${current.headName} >> ${path}`;
-      current = this.accountHeads.find((x: any) => x.id === current.parentHead);
-    }
-    return path;
+      // value is HEAD CODE (same as ParentHead in DB)
+      this.parentHeadList = this.accountHeads.map((head: any) => ({
+        value: head.headCode,            // 👈 change here
+        label: this.buildFullPath(head)
+      }));
+    },
+    error: (err) => this.alert('error', 'Failed to load heads', this.errMsg(err))
+  });
+}
+
+
+ buildFullPath(item: any): string {
+  let path = item.headName;
+  // ParentHead in DB is parent HEAD CODE
+  let current = this.accountHeads.find((x: any) => x.headCode === item.parentHead);
+
+  while (current) {
+    path = `${current.headName} >> ${path}`;
+    current = this.accountHeads.find((x: any) => x.headCode === current.parentHead);
   }
+  return path;
+}
+
 
   // ---------------- Form auto values ----------------
   onChangeHeadName(_: any): void {
@@ -189,58 +194,55 @@ public resetForm(): void {
   }
 
   onChangeParentHead(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    const parentId = parseInt(value, 10);
-    this.addForm.patchValue({ parentHead: parentId });
+  const value = (event.target as HTMLSelectElement).value;
+  const parentCode = parseInt(value, 10);     // this is HEAD CODE
+  this.addForm.patchValue({ parentHead: parentCode });
 
-    // reset to top-level
-    if (!parentId) {
-      this.addForm.patchValue({
-        pHeadName: 'COA',
-        headLevel: 1,
-        headType: 'A',
-        headCode: (this.accountHeads.filter(i => Number(i.headLevel) === 1).length || 0) + 1
-      });
-      return;
-    }
-
-    const parent = this.accountHeads.find(p => p.id === parentId);
-    if (!parent) return;
-
-    const parentCode = (parent.headCode ?? '').toString();
-    const parentLevel = Number(parent.headLevel);
-
-    // children exactly one level below this parent
-    const childCodes: string[] = this.accountHeads
-      .filter(acc =>
-        (acc.headCode ?? '').toString().startsWith(parentCode) &&
-        Number(acc.headLevel) === parentLevel + 1
-      )
-      .map(acc => (acc.headCode ?? '').toString());
-
-    const suffixes = childCodes
-      .map(code => parseInt(code.substring(parentCode.length) || '0', 10))
-      .filter(n => !isNaN(n))
-      .sort((a, b) => a - b);
-
-    const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
-
-    // keep suffix padding consistent with siblings (min 2)
-    const maxSuffixLen = Math.max(
-      2,
-      ...childCodes.map(code => Math.max(0, code.length - parentCode.length))
-    );
-
-    const seqStr = String(nextSeq).padStart(maxSuffixLen, '0');
-    const newHeadCode = parentCode + seqStr;
-
+  // reset to top-level
+  if (!parentCode) {
     this.addForm.patchValue({
-      pHeadName: parent.headName,
-      headLevel: parentLevel + 1,
-      headType: parent.headType,
-      headCode: newHeadCode
+      pHeadName: 'COA',
+      headLevel: 1,
+      headType: 'A',
+      headCode: (this.accountHeads.filter(i => Number(i.headLevel) === 1).length || 0) + 1
     });
+    return;
   }
+
+  const parent = this.accountHeads.find(p => p.headCode === parentCode);  // 👈 change
+  if (!parent) return;
+
+  const parentCodeStr = (parent.headCode ?? '').toString();
+  const parentLevel = Number(parent.headLevel);
+
+  const childCodes: string[] = this.accountHeads
+    .filter(acc =>
+      (acc.headCode ?? '').toString().startsWith(parentCodeStr) &&
+      Number(acc.headLevel) === parentLevel + 1
+    )
+    .map(acc => (acc.headCode ?? '').toString());
+
+  const suffixes = childCodes
+    .map(code => parseInt(code.substring(parentCodeStr.length) || '0', 10))
+    .filter(n => !isNaN(n))
+    .sort((a, b) => a - b);
+
+  const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
+  const maxSuffixLen = Math.max(
+    2,
+    ...childCodes.map(code => Math.max(0, code.length - parentCodeStr.length))
+  );
+  const seqStr = String(nextSeq).padStart(maxSuffixLen, '0');
+  const newHeadCode = parentCodeStr + seqStr;
+
+  this.addForm.patchValue({
+    pHeadName: parent.headName,
+    headLevel: parentLevel + 1,
+    headType: parent.headType,
+    headCode: newHeadCode
+  });
+}
+
 
   // ---------------- Submit ----------------
   onSubmit(): void {
