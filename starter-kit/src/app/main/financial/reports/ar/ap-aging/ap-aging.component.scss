@@ -1,41 +1,46 @@
 @import '@core/scss/angular/libs/datatables.component.scss';
 @import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
 
 $brand: #2E5F73;
 
 /* ---------- Title ---------- */
 .ar-title {
-  margin: 0.5rem 0;
-  font-size: 1.25rem;
+  margin: 0.25rem 0;
+  font-size: 1.1rem;
   font-weight: 600;
   color: $brand;
 }
 
-/* ---------- Card ---------- */
+/* ---------- Card (tighter) ---------- */
 .ar-card {
-  margin-top: 0.5rem;
-
+  margin-top: 0.25rem;
   background: #f7f9fb;
   border-radius: 1rem;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-  padding: 0.75rem 1.5rem;
+  padding: 0.25rem 1.25rem 0.75rem;
 
   .card-header {
-    padding-top: 0.5rem;
-    padding-bottom: 0;          // tight under title
+    padding-top: 0.25rem;
+    padding-bottom: 0;
     border-bottom: none;
-    margin-bottom: 0.2rem;      // small gap before tabs
+    margin-bottom: 0.2rem; // small gap before tabs
+  }
+
+  .card-body {
+    padding: 0.35rem 0 0.5rem 0;
   }
 
   .ar-body {
-    padding-top: 0.4rem;        // small gap under tabs
+    padding-top: 0.25rem;
   }
 }
 
-/* ====== Fancy AR Tabs (same look as AP, slightly closer to header) ====== */
+/* ====== AR Tabs – same style as AP, just tighter margin ====== */
 .ar-card .ap-tabs {
-  margin-top: 0.3rem;           // smaller than AP (sits closer to header)
-  margin-bottom: 0.15rem;       // small gap before content
+  margin-top: 0.35rem;                 // 🔹 smaller than AP (0.9rem)
+  margin-bottom: 0.1rem;
   padding: 0.4rem;
   border: 0;
   border-radius: 999px;
@@ -45,10 +50,10 @@ $brand: #2E5F73;
   align-items: center;
   gap: 0.35rem;
   position: relative;
-  border-bottom: none;
+  border-bottom: none;                 // remove default nav-tabs border
 }
 
-/* subtle border around the whole chip group */
+/* subtle border around chip group */
 .ar-card .ap-tabs::before {
   content: '';
   position: absolute;
@@ -119,7 +124,7 @@ $brand: #2E5F73;
   transform: scale(1.4);
 }
 
-/* Tiny underline under active tab (inside the pill) */
+/* Tiny underline under active tab */
 .ar-card .ap-tabs .nav-link.active::after {
   content: '';
   position: absolute;
@@ -131,7 +136,7 @@ $brand: #2E5F73;
   background-color: rgba(46, 95, 115, 0.3);
 }
 
-/* Ensure no default border from .ar-tabs */
+/* Just to be safe: no bottom border from .ar-tabs */
 .ar-tabs {
   border-bottom: none;
 }

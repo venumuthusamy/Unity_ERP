@@ -7,14 +7,13 @@ import { FinanceReportApiUrls } from 'Urls/FinanceReportAPIUrls';
 @Injectable({
   providedIn: 'root'
 })
-export class ProfitlossService {
+export class BalanceSheetService {
 
-  private url = environment.apiUrl;
-  
-    constructor(private http: HttpClient) {}
-  
-    GetProfitLossDetails(): Observable<any> {
-      return this.http.get<any[]>(this.url + FinanceReportApiUrls.GetProfitLossDetails);
-    }
-  
+ private url = environment.apiUrl;
+   
+     constructor(private http: HttpClient) {}
+   
+     GetBalanceSheetDetails(): Observable<any> {
+       return this.http.get<any[]>(this.url + FinanceReportApiUrls.GetBalanceSheetDetails);
+     }
 }

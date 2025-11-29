@@ -12,6 +12,71 @@
         </div>
 
         <div class="card-body pt-1">
+          <!-- ===== TB SUMMARY CARDS (NEW) ===== -->
+          <!-- ===== TB SUMMARY CARDS (NEW AP/AR STYLE) ===== -->
+          <div class="row tb-summary-row mb-2">
+            <!-- Opening Debit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-opening-debit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Opening Debit</div>
+                  <div class="tb-summary-value">
+                    {{ totalOpeningDebit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opening Credit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-opening-credit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Opening Credit</div>
+                  <div class="tb-summary-value">
+                    {{ totalOpeningCredit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closing Debit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-closing-debit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Closing Debit</div>
+                  <div class="tb-summary-value">
+                    {{ totalClosingDebit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closing Credit -->
+            <div class="col-md-3 col-6 mb-1">
+              <div class="tb-summary-card tb-card-closing-credit">
+                <div class="tb-summary-icon">
+                  <i data-feather="credit-card"></i>
+                </div>
+                <div class="tb-summary-content">
+                  <div class="tb-summary-label">Closing Credit</div>
+                  <div class="tb-summary-value">
+                    {{ totalClosingCredit | number:'1.2-2' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
 
           <!-- Filters -->
           <div class="row mb-2">
@@ -54,7 +119,7 @@
 
                   <!-- MAIN ROW (group or leaf) -->
                   <tr (click)="onRowClick(r)" style="cursor:pointer;">
-                    <td>
+                    <td class="tb-account-col">
                       <!-- indent by level -->
                       <span [style.padding-left.px]="r.level * 20"></span>
 
@@ -128,84 +193,6 @@
 
             </table>
           </div>
-
-          <!-- Reports Center (your existing cards) ... -->
-          <!-- ====================== Reports Center ====================== -->
-          <div class="reports-center mt-3">
-            <h5 class="mb-2" style="font-weight:600;color:#2E5F73;">Reports Center</h5>
-
-            <div class="row g-2">
-
-              <!-- Profit & Loss -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">Profit &amp; Loss</div>
-                  <div class="report-subtitle">Reports &gt; Profit and Loss</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/profit-loss']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-              <!-- Balance Sheet -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">Balance Sheet</div>
-                  <div class="report-subtitle">Reports &gt; Balance Sheet</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/balance-sheet']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-              <!-- AR/AP Aging -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">AR/AP Aging</div>
-                  <div class="report-subtitle">Reports &gt; Aging</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/aging']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-              <!-- GST Detail Report -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">GST Detail Report</div>
-                  <div class="report-subtitle">Reports &gt; GST &gt; Detail</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/gst-detail']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-              <!-- Collections Forecast -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">Collections Forecast</div>
-                  <div class="report-subtitle">Reports &gt; AR</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/collections']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-              <!-- Daybook -->
-              <div class="col-md-4 col-sm-6 mb-2">
-                <div class="report-card">
-                  <div class="report-title">Daybook</div>
-                  <div class="report-subtitle">Reports &gt; Transaction</div>
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/finance/reports/daybook']">
-                    Open
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-          <!-- =================== /Reports Center =================== -->
-
         </div>
       </div>
     </section>

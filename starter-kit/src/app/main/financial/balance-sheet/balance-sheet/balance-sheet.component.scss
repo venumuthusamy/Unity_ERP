@@ -11,9 +11,12 @@
   color: #2E5F73;
 }
 
-/* ===== Top summary cards ===== */
-.pl-summary-row {
-  margin-bottom: 1.5rem;
+/* ===================================================== */
+/* TOP SUMMARY CARDS  (Total Liabilities / Total Assets) */
+/* ===================================================== */
+
+.bs-summary-row {
+  margin-bottom: 1.25rem;
 }
 
 .summary-card {
@@ -21,17 +24,12 @@
   align-items: center;
   padding: 0.9rem 1.15rem;
   border-radius: 1.25rem;
-  background: #ffffff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-
-  /* 🔹 light outline on top / left / right */
-  border: 1px solid #e5e7eb;
-
-  /* 🔹 bottom alone 3px (colour will come from modifier class) */
-  border-bottom-width: 3px;
-  border-bottom-color: transparent;
+  background: #ffffff;                 /* full color remove – always white */
+  border: 1px solid #cbd5e1;           /* dark-ish outline */
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;                    /* bottom color bar inside card */
 }
-
 
 .summary-icon {
   width: 52px;
@@ -53,52 +51,55 @@
   color: #6b7280;
 }
 
+
+
 .summary-value {
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
 }
 
-/* different colors like sample image */
-.summary-expense {
-  border-bottom-color: #fecaca;
-}
+/* 🔴 Liabilities card – darker pink */
+.bs-liab-card {
+  border-bottom: 4px solid #f97373;     /* bottom la color */
 
-.summary-sales {
-  border-bottom-color: #fed7aa;
-}
+  .summary-icon {
+    background: #fef2f2;
+    svg {
+      stroke: #f97373;
+    }
+  }
 
-.summary-profit {
-  border-bottom-color: #bbf7d0;
-}
-
-.summary-icon-expense {
-  background: #fef2f2;
-  svg {
-    stroke: #f97373;
+  .summary-value {
+    color: #b91c1c;
   }
 }
 
-.summary-icon-sales {
-  background: #fff7ed;
-  svg {
-    stroke: #fb923c;
+/* 🟢 Assets card – darker green */
+.bs-asset-card {
+  border-bottom: 4px solid #22c55e;
+
+  .summary-icon {
+    background: #ecfdf5;
+    svg {
+      stroke: #22c55e;
+    }
+  }
+
+  .summary-value {
+    color: #16a34a;
   }
 }
-
-.summary-icon-profit {
-  background: #ecfdf5;
-  svg {
-    stroke: #22c55e;
-  }
-}
-
 /* ===== Two-column list style ===== */
 .pl-column {
   padding: 0.25rem 0.5rem;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-/* ===== Column header (Purchase / Sales) ===== */
+/* ===== Column header (Liabilities / Assets) ===== */
 .pl-column-header {
   display: flex;
   align-items: center;
@@ -112,7 +113,7 @@
     color: #1f4b5f;
     display: inline-block;
     padding-bottom: 0.2rem;
-    border-bottom: 2px solid #1f4b5f; /* underline */
+    border-bottom: 2px solid #1f4b5f;
   }
 }
 
@@ -122,17 +123,18 @@
   color: #111827;
 }
 
-/* 👉 UL made flex column so total can sit at the bottom */
+/* UL takes remaining height in column */
 .pl-list {
   list-style: none;
   padding: 0;
   margin: 0;
-  border-radius: 1rem;
+  border-radius: 1rem 1rem 0 0;
   background-color: #fafafa;
 
   display: flex;
   flex-direction: column;
-  min-height: 230px; /* tweak this if needed for perfect alignment */
+  flex: 1 1 auto;
+  min-height: 230px;
 }
 
 .pl-item {
@@ -200,34 +202,32 @@
   color: #111827;
 }
 
-/* ===== Total row base style ===== */
-/* margin-top:auto pushes this row to the bottom of .pl-list */
+/* ===== Total row (bottom) ===== */
 .pl-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
   font-weight: 700;
-  margin-top: auto;
-
-  .pl-name {
-    font-weight: 700;
-  }
+  border-radius: 0 0 1rem 1rem;
+  border-top: 1px solid transparent;
 }
 
-/* 🔴 Purchase total – pink like Total Expense card */
 .pl-total-purchase {
   background-color: #fff5f5;
-  border-top: 1px solid #fed7d7;
+  border-top-color: #fed7d7;
 
   .pl-amount {
     color: #f97373;
   }
 }
 
-/* 🟢 Sales total – green */
 .pl-total-sales {
-  background-color: #ecfdf5; /* very light green */
-  border-top: 1px solid #bbf7d0;
+  background-color: #ecfdf5;
+  border-top-color: #bbf7d0;
 
   .pl-amount {
-    color: #16a34a; /* green text */
+    color: #16a34a;
   }
 }
 
@@ -248,10 +248,6 @@
 
 /* Mobile tweaks */
 @media (max-width: 767.98px) {
-  .summary-card {
-    margin-bottom: 0.4rem;
-  }
-
   .pl-item {
     padding: 0.55rem 0.7rem;
   }
@@ -262,5 +258,9 @@
 
   .vertical-divider {
     display: none;
+  }
+
+  .pl-list {
+    min-height: 0;
   }
 }

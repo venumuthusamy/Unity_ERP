@@ -28,7 +28,11 @@ import { PeriodCloseFxComponent } from './period-close-fx/period-close-fx.compon
 import { InvoiceEmailComponent } from './invoice-email/invoice-email.component';
 import { TrialBalanceReportComponent } from './reports/trial-balance-report/trial-balance-report.component';
 import { ProfitlossReportComponent } from './profitloss-report/profitloss-report-list/profitloss-report.component';
-
+import { BalanceSheetComponent } from './balance-sheet/balance-sheet/balance-sheet.component';
+import { FinancereportsComponent } from './financereports/financereports.component';
+import { GstReportComponent } from './gst-report/gst-report/gst-report.component';
+import { APAgingComponent } from './reports/ap-aging/ap-aging.component';
+import { ArApAgingComponent } from './reports/ar/ap-aging/ap-aging.component';
 
 
 const routes: Routes = [
@@ -48,7 +52,10 @@ const routes: Routes = [
 { path: 'Invoice-email', component: InvoiceEmailComponent },
 { path: 'report', component: TrialBalanceReportComponent },
 { path: 'profitloss', component: ProfitlossReportComponent },
-
+{ path: 'balance-sheet', component: BalanceSheetComponent },
+{ path: 'finance-report', component: FinancereportsComponent },
+{ path: 'Gst-report', component: GstReportComponent },
+{ path: 'aging', component: ArApAgingComponent }
 ];
 
 @NgModule({
@@ -71,7 +78,12 @@ const routes: Routes = [
     PeriodCloseFxComponent,
     InvoiceEmailComponent,
     TrialBalanceReportComponent,
-    ProfitlossReportComponent
+    ProfitlossReportComponent,
+    BalanceSheetComponent,
+    FinancereportsComponent,
+    GstReportComponent,
+    APAgingComponent,
+    ArApAgingComponent
   ],
   imports: [
     CommonModule,

@@ -39,7 +39,7 @@ export const locale = {
           PERIODCLOSE:'Period-close',
           INVOICEEMAIL:'InvoiceEmail' , 
           Report:'Report',
-          PROFITLOSS:'Profitloss' 
+          FinanceReport:'finance-report' 
       },
 
       BUSINESSPARTNERS: {

@@ -28,7 +28,7 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
 
   // ===== API CALL & MAPPING =====
   loadProfitlossDetails() {
-    this._profitlossService.GetGeneralLedger().subscribe((res: any) => {
+    this._profitlossService.GetProfitLossDetails().subscribe((res: any) => {
       this.ProfitlossList = res?.data || [];
 
       // Left side – Purchase Accounts
