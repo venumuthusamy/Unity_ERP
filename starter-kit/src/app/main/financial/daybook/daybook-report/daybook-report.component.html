@@ -1,0 +1,178 @@
+<div class="content-wrapper container-xxl p-0">
+  <div class="content-body">
+    <section class="users-list-wrapper">
+      <div class="card shadow-sm daybook-card">
+        <div class="card-body pb-1">
+
+          <!-- ===== TOP SUMMARY CARDS ===== -->
+
+<div class="row pl-summary-row">
+
+  <!-- Total Debit -->
+  <div class="col-md-4 col-12 mb-1">
+    <div class="summary-card summary-expense">
+      <div class="summary-icon summary-icon-expense">
+        <i data-feather="arrow-down-right"></i>
+      </div>
+
+      <!-- NEW WRAPPER -->
+      <div class="summary-main">
+        <div class="summary-label">Total Debit</div>
+        <div class="summary-value">
+          ₹ {{ totalDebit | number : '1.2-2' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Credit -->
+  <div class="col-md-4 col-12 mb-1">
+    <div class="summary-card summary-sales">
+      <div class="summary-icon summary-icon-sales">
+        <i data-feather="arrow-up-right"></i>
+      </div>
+
+      <div class="summary-main">
+        <div class="summary-label">Total Credit</div>
+        <div class="summary-value">
+          ₹ {{ totalCredit | number : '1.2-2' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Net Movement -->
+  <div class="col-md-4 col-12 mb-1">
+    <div class="summary-card summary-profit">
+      <div class="summary-icon summary-icon-profit">
+        <i data-feather="dollar-sign"></i>
+      </div>
+
+      <div class="summary-main">
+        <div class="summary-label">Net Movement</div>
+        <div class="summary-value">
+          ₹ {{ netMovementAbs | number : '1.2-2' }}
+          <span class="summary-chip">
+            {{ netMovementType }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+          <!-- ===== DAYBOOK TABLE CARD ===== -->
+          <div class="db-table-wrapper mt-1">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h4 class="mb-0 db-title">Daybook Transactions</h4>
+
+              <div class="d-flex align-items-center db-view-toggle">
+                <span class="mr-50 text-muted small">View:</span>
+
+                <button type="button"
+                        class="btn btn-sm db-toggle-btn"
+                        [class.active]="viewMode === 'detailed'"
+                        (click)="setViewMode('detailed')">
+                  Detailed
+                </button>
+
+                <button type="button"
+                        class="btn btn-sm db-toggle-btn ml-50"
+                        [class.active]="viewMode === 'summary'"
+                        (click)="setViewMode('summary')">
+                  Summary
+                </button>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="db-table-scroll">
+              <table class="table db-table mb-0">
+                <thead >
+                  <tr>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="10%">Date</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="12%">Voucher No</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="12%">Type</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="18%">Account</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="24%">Reference</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="9%" class="text-right">Debit</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="9%" class="text-right">Credit</th>
+                    <th  style=" background-color: #2E5F73;color: #ffffff;" width="12%" class="text-right">Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let v of vouchers">
+                    <td class="align-middle">
+                      <div class="db-date-main">{{ v.date | date : 'yyyy-MM-dd' }}</div>
+                    </td>
+
+                    <td class="align-middle">
+                      <span class="db-voucher-no">{{ v.voucherNo }}</span>
+                    </td>
+
+                    <td class="align-middle">
+                      <span class="badge badge-pill db-type-pill"
+                            [ngClass]="v.typeClass">
+                        {{ v.type }}
+                      </span>
+                    </td>
+
+                    <td class="align-middle">
+                      <div class="db-account-name">{{ v.account }}</div>
+                    </td>
+
+                    <td class="align-middle">
+                      <div class="db-reference text-muted">
+                        {{ v.reference }}
+                      </div>
+                    </td>
+
+                    <td class="align-middle text-right">
+                      <span *ngIf="v.debit; else dash">
+                        ₹ {{ v.debit | number : '1.2-2' }}
+                      </span>
+                      <ng-template #dash>-</ng-template>
+                    </td>
+
+                    <td class="align-middle text-right">
+                      <span *ngIf="v.credit; else dash2">
+                        ₹ {{ v.credit | number : '1.2-2' }}
+                      </span>
+                      <ng-template #dash2>-</ng-template>
+                    </td>
+
+                    <td class="align-middle text-right">
+                      <span class="db-running-balance">
+                        ₹ {{ v.runningBalance | number : '1.2-2' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="d-flex justify-content-between align-items-center mt-1 pt-1 db-footer">
+              <div class="text-muted small">
+                Showing {{ vouchers.length }} vouchers •
+                Debit and credit totals must match for the day.
+              </div>
+
+              <button type="button"
+                      class="btn btn-sm btn-primary db-print-btn"
+                      (click)="onPrintDaybook()">
+                Print Daybook
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
