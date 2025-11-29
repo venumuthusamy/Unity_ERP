@@ -1,12 +1,19 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+@import '@core/scss/angular/libs/select.component.scss';
+@import '@core/scss/angular/libs/sweet-alerts.component.scss';
+
+/* ===== PAGE WRAPPER ===== */
+
 .forecast-page {
+  padding: 1.25rem 1.5rem 1.5rem 1.5rem;
   background: #f3f4f6;
-  border-radius: 1.5rem;
-  padding: 1.25rem 1.5rem;
 }
 
 .forecast-title {
   font-weight: 600;
   color: #2E5F73;
+  font-size: 1.1rem;
 }
 
 .forecast-subtitle {
@@ -14,89 +21,150 @@
   color: #6b7280;
 }
 
+/* ===== FILTERS CARD ===== */
+
 .filters-card {
-  border: none;
   border-radius: 1.25rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: none;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
 }
 
 .filter-label {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #6b7280;
+  margin-bottom: 0.15rem;
 }
 
 .legend-row {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #6b7280;
+}
 
-  .legend-item {
-    margin-right: 1rem;
-    display: inline-flex;
-    align-items: center;
-  }
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1rem;
 }
 
 .legend-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  display: inline-block;
   margin-right: 0.35rem;
-
-  &-high { background: #16a34a; }
-  &-medium { background: #facc15; }
-  &-low { background: #f97316; }
 }
 
-.kpi-row .kpi-card {
+.legend-dot-high {
+  background: #22c55e;
+}
+.legend-dot-medium {
+  background: #f59e0b;
+}
+.legend-dot-low {
+  background: #ef4444;
+}
+
+/* ===== KPI ROW – SAME STYLE AS TRIAL BALANCE CARDS ===== */
+
+.kpi-row {
+  margin-bottom: 1rem;
+}
+
+/* base card (similar to .tb-summary-card) */
+.kpi-card {
   background: #ffffff;
   border-radius: 1.25rem;
-  padding: 0.9rem 1.1rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  padding: 0.9rem 1.15rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  border-top: 3px solid transparent;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-height: 92px;
 }
 
 .kpi-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .kpi-value {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
+  margin-bottom: 0.25rem;
 }
 
 .kpi-pill {
-  margin-top: 0.35rem;
-  align-self: flex-start;
-  padding: 0.1rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  background: #e5f0f5;
-  color: #1f2933;
+  font-weight: 500;
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
+/* red pill for overdue */
 .pill-alert {
   background: #fee2e2;
   color: #b91c1c;
 }
 
+/* === COLOR VARIANTS – MATCH TB TONE === */
+
+/* Total Outstanding – like TB closing debit (soft yellow) */
+.kpi-total {
+  background: #fffdf2;
+  border-top-color: #facc6b;
+}
+
+/* Overdue > 30 Days – like TB opening debit (soft orange / red) */
+.kpi-overdue {
+  background: #fff5f5;
+  border-top-color: #f97373;
+}
+
+.kpi-overdue .kpi-value {
+  color: #dc2626; /* strong red */
+}
+
+/* Expected in next 30 days – like TB opening credit (soft green) */
+.kpi-next30 {
+  background: #f2fff9;
+  border-top-color: #34d399;
+}
+
+.kpi-next30 .kpi-value {
+  color: #059669;
+}
+
+/* Weighted probability – like TB closing credit (soft blue/purple) */
+.kpi-probability {
+  background: #f5f7ff;
+  border-top-color: #4f46e5;
+}
+
+.kpi-probability .kpi-value {
+  color: #1d4ed8;
+}
+
+/* ===== TABLE CARD ===== */
+
 .table-card,
 .detail-card {
   border-radius: 1.25rem;
   border: none;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
 }
 
 .table-title {
-  font-size: 0.95rem;
   font-weight: 600;
-  color: #2E5F73;
+  color: #374151;
+  font-size: 0.95rem;
 }
 
 .forecast-table thead tr th {
@@ -104,7 +172,7 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: #6b7280;
-  border-bottom-width: 1px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .forecast-table tbody tr td {
@@ -112,27 +180,15 @@
   vertical-align: middle;
 }
 
-/* make summary row hover */
-.forecast-table tbody tr:hover {
-  background-color: #f3f4ff;
-}
+/* Aging bucket pill in table */
+
 .aging-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 0.1rem 0.55rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  background: #e5f0ff;
-  color: #1e3a8a;
   font-weight: 500;
-}
-
-.detail-card {
-  border-radius: 1.25rem;
-  border: none;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-.detail-footer {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 0.4rem;
+  background: #eef2ff;
+  color: #4f46e5;
 }
