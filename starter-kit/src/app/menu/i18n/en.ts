@@ -39,8 +39,7 @@ export const locale = {
           PERIODCLOSE:'Period-close',
           INVOICEEMAIL:'InvoiceEmail' , 
           Report:'Report',
-          FinanceReport:'finance-report',
-          DayBook:'daybook', 
+          FinanceReport:'finance-report', 
       },
 
       BUSINESSPARTNERS: {

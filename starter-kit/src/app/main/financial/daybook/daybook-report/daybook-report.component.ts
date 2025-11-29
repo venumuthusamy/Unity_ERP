@@ -1,15 +1,42 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
 import feather from 'feather-icons';
+import {
+  DaybookRequestDto,
+  DaybookResponseDto,
+  DaybookService
+} from '../daybook-service/daybook.service';
+import { Router } from '@angular/router';
+
+// For display label
+type DaybookType =
+  | 'Journal'
+  | 'Bank Receipt'
+  | 'Bank Payment'
+  | 'Sales Invoice'
+  | 'Credit Note'
+  | 'Customer Receipt'
+  | 'Supplier Invoice'
+  | 'Supplier Payment'
+  | 'Supplier Debit Note'
+  | string;
+
 interface DaybookVoucher {
   date: Date;
   voucherNo: string;
-  type: 'Journal' | 'Bank Receipt' | 'Bank Payment';
-  typeClass?: string;          // extra css class for badge color
+  type: DaybookType;
+  typeClass?: string;          // css class for badge
   account: string;
-  reference: string;
   debit?: number;
   credit?: number;
   runningBalance: number;
+}
+
+interface DaybookSummaryRow {
+  label: string;
+  totalDebit: number;
+  totalCredit: number;
+  netAbs: number;
+  netType: 'Dr' | 'Cr';
 }
 
 @Component({
@@ -17,9 +44,10 @@ interface DaybookVoucher {
   templateUrl: './daybook-report.component.html',
   styleUrls: ['./daybook-report.component.scss']
 })
-export class DaybookReportComponent implements OnInit,AfterViewInit {
+export class DaybookReportComponent implements OnInit, AfterViewInit {
 
   vouchers: DaybookVoucher[] = [];
+  summaryRows: DaybookSummaryRow[] = [];
 
   totalDebit = 0;
   totalCredit = 0;
@@ -29,46 +57,125 @@ export class DaybookReportComponent implements OnInit,AfterViewInit {
 
   viewMode: 'detailed' | 'summary' = 'detailed';
 
-  constructor() { }
+  // modal + loading
+  isFilterModalOpen = true;   // open on route load
+  loading = false;
+  filter = {
+    fromDate: '',
+    toDate: ''
+  };
+
+  constructor(
+    private daybookService: DaybookService,
+    private router: Router
+  ) { }
 
   ngOnInit(): void {
-    // --- demo data (same as your screenshot) ---
-    this.vouchers = [
-      {
-        date: new Date(2025, 10, 28),            // month index 10 = November
-        voucherNo: 'MJ-2025-0008',
-        type: 'Journal',
-        typeClass: 'db-type-journal',
-        account: 'Rent Expense',
-        reference: 'November office rent',
-        debit: 45000,
-        runningBalance: 45000
-      },
-      {
-        date: new Date(2025, 10, 28),
-        voucherNo: 'BR-2025-0121',
-        type: 'Bank Receipt',
-        typeClass: 'db-type-receipt',
-        account: 'Gowtham Traders',
-        reference: 'Collection against SI-2025-0042',
-        credit: 32000,
-        runningBalance: 13000
-      },
-      {
-        date: new Date(2025, 10, 28),
-        voucherNo: 'BP-2025-0095',
-        type: 'Bank Payment',
-        typeClass: 'db-type-payment',
-        account: 'FBH Distributors',
-        reference: 'Payment for PIN-2025-0019',
-        debit: 28000,
-        runningBalance: 41000
-      }
-    ];
-
-    this.calculateTotals();
+    // wait for filter submit
   }
 
+  ngAfterViewInit(): void {
+    setTimeout(() => feather.replace());
+  }
+
+  // =========================================================
+  //  API CALL
+  // =========================================================
+  private loadDaybook(): void {
+    const payload: DaybookRequestDto = {
+      fromDate: this.filter.fromDate,
+      toDate: this.filter.toDate
+      // companyId: 1
+    };
+
+    this.loading = true;
+    this.vouchers = [];
+    this.summaryRows = [];
+
+    this.daybookService.getDaybook(payload).subscribe({
+      next: (res) => {
+        const rows: DaybookResponseDto[] = res.data ?? [];
+
+        this.vouchers = rows.map(r => this.mapApiToVoucher(r));
+        this.calculateTotals();
+        this.loading = false;
+        this.isFilterModalOpen = false;
+
+        setTimeout(() => feather.replace());
+      },
+      error: (err) => {
+        console.error('Daybook load error', err);
+        this.loading = false;
+      }
+    });
+  }
+
+  private mapApiToVoucher(r: DaybookResponseDto): DaybookVoucher {
+    let typeClass = '';
+    let type: DaybookType;
+
+    switch (r.voucherType) {
+      case 'MJ':
+        type = 'Journal';
+        typeClass = 'db-type-journal';
+        break;
+
+      case 'AR-RCPT':
+      case 'ARREC':
+        type = 'Customer Receipt';
+        typeClass = 'db-type-receipt';
+        break;
+
+      case 'SI':
+      case 'ARINV':
+        type = 'Sales Invoice';
+        typeClass = 'db-type-sales';
+        break;
+
+      case 'CN':
+      case 'ARCN':
+        type = 'Credit Note';
+        typeClass = 'db-type-cn';
+        break;
+
+      case 'PIN':
+        type = 'Supplier Invoice';
+        typeClass = 'db-type-pin';
+        break;
+
+      case 'SPAY':
+      case 'SP-AP':
+        type = 'Supplier Payment';
+        typeClass = 'db-type-payment';
+        break;
+
+      case 'SDN':
+      case 'DN-AP':
+        type = 'Supplier Debit Note';
+        typeClass = 'db-type-sdn';
+        break;
+
+      default:
+        type = r.voucherType;
+        typeClass = 'db-type-journal';
+        break;
+    }
+
+    return {
+      date: new Date(r.transDate),
+      voucherNo: r.voucherNo,
+      type,
+      typeClass,
+      account: r.accountHeadName,
+      debit: r.debit || undefined,
+      credit: r.credit || undefined,
+      runningBalance: r.runningBalance
+    };
+  }
+
+  // =========================================================
+  //  TOTALS + SUMMARY
+  // =========================================================
   private calculateTotals(): void {
     this.totalDebit = this.vouchers.reduce((sum, v) => sum + (v.debit || 0), 0);
     this.totalCredit = this.vouchers.reduce((sum, v) => sum + (v.credit || 0), 0);
@@ -76,22 +183,60 @@ export class DaybookReportComponent implements OnInit,AfterViewInit {
     this.netMovement = this.totalDebit - this.totalCredit;
     this.netMovementAbs = Math.abs(this.netMovement);
     this.netMovementType = this.netMovement >= 0 ? 'Dr' : 'Cr';
+
+    // ---- build summary by type for SUMMARY VIEW ----
+    const temp: { [label: string]: { totalDebit: number; totalCredit: number } } = {};
+
+    for (const v of this.vouchers) {
+      const key = v.type || 'Others';
+      if (!temp[key]) {
+        temp[key] = { totalDebit: 0, totalCredit: 0 };
+      }
+      temp[key].totalDebit += v.debit || 0;
+      temp[key].totalCredit += v.credit || 0;
+    }
+
+    this.summaryRows = Object.keys(temp).map(label => {
+      const d = temp[label].totalDebit;
+      const c = temp[label].totalCredit;
+      const net = d - c;
+      return {
+        label,
+        totalDebit: d,
+        totalCredit: c,
+        netAbs: Math.abs(net),
+        netType: net >= 0 ? 'Dr' : 'Cr'
+      };
+    });
   }
 
+  // =========================================================
+  //  VIEW & PRINT
+  // =========================================================
   setViewMode(mode: 'detailed' | 'summary'): void {
     this.viewMode = mode;
-    // later you can change table columns/rows based on mode
   }
 
   onPrintDaybook(): void {
-    // hook your print / export logic here
     window.print();
   }
 
-
-    ngAfterViewInit(): void {
-      // initial render (top cards icons)
-      setTimeout(() => feather.replace());
+  // =========================================================
+  //  MODAL EVENTS
+  // =========================================================
+  onApplyFilter(): void {
+    if (!this.filter.fromDate || !this.filter.toDate) {
+      return;
     }
-  
+    this.loadDaybook();
+  }
+
+  onCancelFilter(): void {
+    this.isFilterModalOpen = false;
+    this.router.navigate(['financial/finance-report']);
+  }
+
+  openFilterAgain(): void {
+    this.isFilterModalOpen = true;
+  }
 }
