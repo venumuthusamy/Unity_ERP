@@ -34,7 +34,7 @@ import { GstReportComponent } from './gst-report/gst-report/gst-report.component
 import { APAgingComponent } from './reports/ap-aging/ap-aging.component';
 import { ArApAgingComponent } from './reports/ar/ap-aging/ap-aging.component';
 import { DaybookReportComponent } from './daybook/daybook-report/daybook-report.component';
-
+import { CollectionForecastComponent } from './reports/collection-forecast/collection-forecast.component';
 
 const routes: Routes = [
   { path: 'ChartOfAccount', component: ChartofaccountComponent },
@@ -58,6 +58,7 @@ const routes: Routes = [
 { path: 'Gst-report', component: GstReportComponent },
 { path: 'aging', component: ArApAgingComponent },
 { path: 'daybook', component: DaybookReportComponent },
+{ path: 'forecast', component: CollectionForecastComponent },
 ];
 
 @NgModule({
@@ -86,7 +87,8 @@ const routes: Routes = [
     GstReportComponent,
     APAgingComponent,
     ArApAgingComponent,
-    DaybookReportComponent
+    DaybookReportComponent,
+    CollectionForecastComponent
   ],
   imports: [
     CommonModule,
