@@ -1,0 +1,138 @@
+.forecast-page {
+  background: #f3f4f6;
+  border-radius: 1.5rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.forecast-title {
+  font-weight: 600;
+  color: #2E5F73;
+}
+
+.forecast-subtitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.filters-card {
+  border: none;
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.legend-row {
+  font-size: 0.75rem;
+  color: #6b7280;
+
+  .legend-item {
+    margin-right: 1rem;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 0.35rem;
+
+  &-high { background: #16a34a; }
+  &-medium { background: #facc15; }
+  &-low { background: #f97316; }
+}
+
+.kpi-row .kpi-card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.kpi-pill {
+  margin-top: 0.35rem;
+  align-self: flex-start;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  background: #e5f0f5;
+  color: #1f2933;
+}
+
+.pill-alert {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.table-card,
+.detail-card {
+  border-radius: 1.25rem;
+  border: none;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.table-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2E5F73;
+}
+
+.forecast-table thead tr th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+  border-bottom-width: 1px;
+}
+
+.forecast-table tbody tr td {
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+/* make summary row hover */
+.forecast-table tbody tr:hover {
+  background-color: #f3f4ff;
+}
+.aging-pill {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  background: #e5f0ff;
+  color: #1e3a8a;
+  font-weight: 500;
+}
+
+.detail-card {
+  border-radius: 1.25rem;
+  border: none;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.detail-footer {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.4rem;
+}

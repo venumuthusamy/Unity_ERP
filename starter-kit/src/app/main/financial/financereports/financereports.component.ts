@@ -33,4 +33,7 @@ goToAging(): void {
   goToDayBook(): void {
  this.router.navigate(['financial/daybook']);
 }
+goToCollectionReport(){
+   this.router.navigate(['financial/forecast']);
+}
 }
