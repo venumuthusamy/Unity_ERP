@@ -1,15 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { InvoiceEmailService } from './invoice-email.service';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-invoice-email',
   templateUrl: './invoice-email.component.html',
-  styleUrls: ['./invoice-email.component.scss']
+  styleUrls: ['./invoice-email.component.scss'],
+  encapsulation:ViewEncapsulation.None
 })
 export class InvoiceEmailComponent implements OnInit {
 
-  // SI = Sales Invoice, PIN = Supplier Invoice
+  // 'SI' = Sales Invoice, 'PIN' = Supplier Invoice
   docType: 'SI' | 'PIN' = 'SI';
 
   // invoice dropdown data
@@ -19,7 +20,7 @@ export class InvoiceEmailComponent implements OnInit {
   // document info
   invoiceNo = '';
   partyName = '';
-  partyLabel = 'Customer'; // or 'Supplier' based on docType
+  partyLabel = 'Customer'; // Customer / Supplier
 
   // email info
   selectedTemplate = 1;
@@ -28,17 +29,21 @@ export class InvoiceEmailComponent implements OnInit {
   subject = '';
   body = '';
 
+  // loading flag
+  isSending = false;
+
   constructor(private emailService: InvoiceEmailService) {}
 
   ngOnInit(): void {
     this.partyLabel = this.docType === 'SI' ? 'Customer' : 'Supplier';
     this.loadInvoiceList();
-    // template is static "Standard" for now, so just load template when needed
   }
 
-  // when Sales Invoice / Supplier Invoice changes
+  // change SI / PIN
   onDocTypeChange(): void {
     this.partyLabel = this.docType === 'SI' ? 'Customer' : 'Supplier';
+
+    // reset form
     this.selectedInvoiceId = null;
     this.invoiceNo = '';
     this.partyName = '';
@@ -50,14 +55,14 @@ export class InvoiceEmailComponent implements OnInit {
     this.loadInvoiceList();
   }
 
-  // get invoices based on docType
+  // load invoice dropdown based on docType
   loadInvoiceList(): void {
     this.emailService.getInvoiceList(this.docType).subscribe(list => {
       this.invoiceList = list || [];
     });
   }
 
-  // when user selects an invoice in dropdown
+  // when invoice selected
   onInvoiceChange(): void {
     if (!this.selectedInvoiceId) {
       this.invoiceNo = '';
@@ -69,25 +74,22 @@ export class InvoiceEmailComponent implements OnInit {
       return;
     }
 
-    // Call API to get full info (customer/supplier + email)
     this.emailService.getInvoiceInfo(this.docType, this.selectedInvoiceId)
       .subscribe(info => {
-        // expected: { invoiceNo, partyName, email, ccEmail }
+        // expected: { id, invoiceNo, partyName, email, ccEmail, amount ... }
         this.invoiceNo = info.invoiceNo;
         this.partyName = info.partyName;
         this.toEmail = info.email || '';
         this.ccEmail = info.ccEmail || '';
 
-        // now apply template for this invoice
+        // apply template
         this.loadTemplate();
       });
   }
 
-  // get subject/body from template and replace {{InvoiceNo}}
+  // get subject/body from template ({{InvoiceNo}}, {{PartyName}})
   loadTemplate(): void {
-    if (!this.selectedTemplate || !this.invoiceNo) {
-      return;
-    }
+    if (!this.selectedTemplate || !this.invoiceNo) return;
 
     this.emailService.getTemplate(this.selectedTemplate, this.docType)
       .subscribe(t => {
@@ -102,67 +104,52 @@ export class InvoiceEmailComponent implements OnInit {
   }
 
   onTemplateChange(): void {
-    // Re-apply template for selected invoice
     if (this.invoiceNo) {
       this.loadTemplate();
     }
   }
 
-  // send(): void {
-  //   const dto = {
-  //     docType: this.docType,          // 'SI' or 'PIN'
-  //     invoiceId: this.selectedInvoiceId,
-  //     invoiceNo: this.invoiceNo,
-  //     toEmail: this.toEmail,
-  //     ccEmail: this.ccEmail,
-  //     subject: this.subject,
-  //     body: this.body,
-  //     templateId: this.selectedTemplate
-  //   };
+ send(): void {
+  const invoiceId = this.selectedInvoiceId;
+  if (!invoiceId) { /* Swal warning ... */ return; }
+  if (!this.toEmail) { /* Swal warning ... */ return; }
 
-  //   this.emailService.sendEmail(dto).subscribe(res => {
-  //     alert(res.message || 'Email sent');
-  //   });
-  // }
-  send() {
-  const loginEmail = localStorage.getItem('email'); // 👈 your login email key
-  const loginName  = localStorage.getItem('username');  // optional
+  const loginEmail = localStorage.getItem('email') || 'venumuthusamy@gmail.com';
+  const loginName  = localStorage.getItem('username') || 'Unity ERP';
 
   const payload = {
-    fromEmail: loginEmail,                      // FROM = login user
+    fromEmail: loginEmail,
     fromName: loginName,
-
-    toEmail: this.toEmail,          // TO = user entered
-     toName:this.partyName,            
-
-    subject: `Invoice ${this.invoiceNo}`,
-    bodyHtml: `<p>Dear ${this.partyName || ''},</p>
-               <p>Please find attached invoice ${this.invoiceNo}.</p>`,
-
-    fileName: `${this.invoiceNo}.pdf`
+    toEmail: this.toEmail,
+    toName: this.partyName,
+    subject: this.subject,
+    bodyHtml: this.body,
+    fileName: `${this.invoiceNo}.pdf`,
+    invoiceNo: this.invoiceNo
   };
 
- this.emailService.sendEmail(payload).subscribe({
-  next: (res: any) => {
-    const ok = res?.success ?? res?.Success ?? false;
+  this.isSending = true;
 
-    Swal.fire({
-      icon: ok ? 'success' : 'error',
-      title: ok ? 'Email sent' : 'Failed to send',
-      text: res?.message || (ok ? 'Email sent successfully.' : 'Something went wrong.'),
-      confirmButtonColor: '#2E5F73'
-    });
-  },
-  error: (err) => {
-    
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Unable to send email. Please try again.',
-      confirmButtonColor: '#2E5F73'
-    });
-  }
-});
+  this.emailService.sendEmail(this.docType, invoiceId, payload).subscribe({
+    next: res => {
+      this.isSending = false;
+      Swal.fire({
+        icon: res.success ? 'success' : 'info',
+        title: res.success ? 'Email Sent' : 'Notice',
+        text: res.message || 'Invoice email processed.',
+        confirmButtonColor: '#2E5F73'
+      });
+    },
+    error: err => {
+      console.error(err);
+      this.isSending = false;
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to send invoice email.',
+        confirmButtonColor: '#e3342f'
+      });
+    }
+  });
 }
-
 }

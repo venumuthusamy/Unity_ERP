@@ -30,7 +30,20 @@ export class InvoiceEmailService {
   }
 
   // 4) Send email
-  sendEmail(dto: any) {
-    return this.http.post<any>(`${this.base}/send`, dto);
-  }
+  // sendEmail(dto: any) {
+  //   return this.http.post<any>(`${this.base}/send`, dto);
+  // }
+  // email.service.ts
+// invoice-email.service.ts
+sendEmail(docType: 'SI' | 'PIN', invoiceId: number, payload: any) {
+  debugger
+  const endpoint = docType === 'SI' ? 'sales' : 'pin';   // 👈 choose API path
+
+  return this.http.post<any>(
+    `${this.base}/${endpoint}/${invoiceId}`,
+    payload
+  );
+}
+
+
 }
