@@ -1,0 +1,270 @@
+@import '@core/scss/angular/libs/datatables.component.scss';
+@import '@core/scss/base/pages/app-user.scss';
+
+.daybook-card {
+  border-radius: 1.5rem;
+  border: none;
+  background: #f5f7fb;
+}
+
+/* ===== Summary cards ===== */
+
+.db-summary-row {
+  margin-bottom: 1.25rem;
+}
+
+.db-summary-card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.db-summary-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 0.4rem;
+}
+
+.db-summary-value .db-amount {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.db-amount-net {
+  color: #059669; /* net movement green */
+}
+
+.db-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+}
+
+.db-tag-dr {
+  background: #e0f2fe;
+  color: #2563eb;
+}
+
+.db-tag-cr {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.db-net-tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.db-voucher-pill {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* ===== Table header + body ===== */
+
+.db-table-wrapper {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  padding: 1.1rem 1.25rem 1.1rem 1.25rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.db-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.db-view-toggle .db-toggle-btn {
+  border-radius: 999px;
+  padding: 0.2rem 0.9rem;
+  font-size: 0.75rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b7280;
+}
+
+.db-view-toggle .db-toggle-btn.active {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.db-table-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+}
+
+.db-table thead th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.db-table tbody td {
+  font-size: 0.82rem;
+  border-top: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.db-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.db-date-main {
+  font-weight: 500;
+  color: #111827;
+}
+
+.db-voucher-no {
+  font-weight: 500;
+  color: #111827;
+}
+
+.db-account-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.db-reference {
+  font-size: 0.8rem;
+}
+
+.db-running-balance {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* type pills */
+
+.db-type-pill {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.85rem;
+}
+
+.db-type-journal {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.db-type-receipt {
+  background: #ecfdf3;
+  color: #059669;
+}
+
+.db-type-payment {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* footer */
+
+.db-footer {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.db-print-btn {
+  border-radius: 999px;
+  padding: 0.35rem 1.3rem;
+  font-size: 0.8rem;
+}
+
+.pl-summary-row {
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  padding: 0.9rem 1.15rem;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+
+  /* 🔹 light outline on top / left / right */
+  border: 1px solid #e5e7eb;
+
+  /* 🔹 bottom alone 3px (colour will come from modifier class) */
+  border-bottom-width: 3px;
+  border-bottom-color: transparent;
+}
+
+
+.summary-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.85rem;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.summary-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* different colors like sample image */
+.summary-expense {
+  border-bottom-color: #fecaca;
+}
+
+.summary-sales {
+  border-bottom-color: #fed7aa;
+}
+
+.summary-profit {
+  border-bottom-color: #bbf7d0;
+}
+
+.summary-icon-expense {
+  background: #fef2f2;
+  svg {
+    stroke: #f97373;
+  }
+}
+
+.summary-icon-sales {
+  background: #fff7ed;
+  svg {
+    stroke: #fb923c;
+  }
+}
+
+.summary-icon-profit {
+  background: #ecfdf5;
+  svg {
+    stroke: #22c55e;
+  }
+}
+
