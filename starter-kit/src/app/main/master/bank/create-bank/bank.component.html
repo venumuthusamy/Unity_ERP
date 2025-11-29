@@ -131,6 +131,30 @@
                   </div>
                 </div>
 
+                <!-- Row 3.1: Budget Line -->
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label class="form-label" for="budget-line">Budget Line</label>
+                    <select id="budget-line"
+                            class="form-control"
+                            name="budgetLine"
+                            [(ngModel)]="bank.budgetLineId"
+                            #budgetLineRef="ngModel"
+                            required
+                            [class.is-invalid]="budgetLineRef.touched && budgetLineRef.invalid">
+                      <option value="">Select Budget Line</option>
+                      <option *ngFor="let line of parentHeadList" [value]="line.value">
+                        {{ line.label }}
+                      </option>
+                    </select>
+
+                    <div *ngIf="budgetLineRef.touched && budgetLineRef.invalid"
+                         class="invalid-feedback d-block">
+                      This field is required!
+                    </div>
+                  </div>
+                </div>
+
                 <hr class="my-2">
 
                 <!-- Row 4: Contacts (3 fields) -->

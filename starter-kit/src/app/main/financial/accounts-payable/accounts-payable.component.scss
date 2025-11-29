@@ -439,18 +439,24 @@ $brand: #2E5F73;
   background: rgba(46, 95, 115, 0.08);
 }
 
+/* LABEL – smaller */
 .ap-summary-text .label {
-  font-size: 0.78rem;
-  text-transform: uppercase;
+  font-size: 0.65rem;        /* was 0.75rem or more */
+  font-weight: 600;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: #6b7280;
-  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* VALUE – slightly smaller as well (optional) */
 .ap-summary-text .value {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 0.95rem;        /* was ~1.05rem */
+  font-weight: 600;
 }
+
 
 /* light background tints per card */
 .ap-summary-total {

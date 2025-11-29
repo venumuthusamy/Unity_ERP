@@ -4,6 +4,7 @@ import { CurrencyService } from '../../currency/currency.service';
 import { CountriesService } from '../../countries/countries.service';
 import { BankService } from '../bank-service/bank.service';
 import Swal from 'sweetalert2';
+import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 
 @Component({
   selector: 'app-bank',
@@ -25,7 +26,8 @@ export class BankComponent implements OnInit {
     primaryContact: '',
     contactEmail: '',
     contactPhone: '',
-    address: ''
+    address: '',
+   budgetLineId: null,
   };
 
   accountTypes: any[] = [
@@ -41,19 +43,22 @@ export class BankComponent implements OnInit {
   isSaving = false;
   isEdit = false;
   bankId: number | null = null;
-
+ parentHeadList: Array<{ value: number; label: string }> = [];
+  budgetLine: number | null = null;
   constructor(
     private _currencyService: CurrencyService,
     private _countryService: CountriesService,
     private _bankService: BankService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+     private coaService: ChartofaccountService,
   ) {}
 
   // ------------------------------------
   // INIT
   // ------------------------------------
   ngOnInit(): void {
+    this.loadAccountHeads();
     const idParam = this.route.snapshot.paramMap.get('id');
 
     if (idParam) {
@@ -88,6 +93,7 @@ export class BankComponent implements OnInit {
   // LOAD BANK FOR EDIT
   // ------------------------------------
   loadBankById(id: number): void {
+    debugger
     this._bankService.getByIdBank(id).subscribe((res: any) => {
       const d = res?.data;
       if (!d) return;
@@ -107,7 +113,8 @@ export class BankComponent implements OnInit {
         primaryContact: d.primaryContact || '',
         contactEmail: d.email || '',
         contactPhone: d.contactNo || '',
-        address: d.address || ''
+        address: d.address || '',
+        budgetLineId : d.budgetLineId ?? null
       };
     });
   }
@@ -172,6 +179,7 @@ onSave(): void {
     email: this.bank.contactEmail,
     contactNo: this.bank.contactPhone,
     address: this.bank.address,
+    budgetLine: this.bank.budgetLineId,
     isActive: true
   };
 
@@ -209,6 +217,22 @@ onSave(): void {
     });
   }
 }
-
-
+  loadAccountHeads(): void {
+    this.coaService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullPath(head, data)
+      }));
+    });
+  }
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    let current = all.find((x: any) => x.id === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.id === current.parentHead);
+    }
+    return path;
+  }
 }
