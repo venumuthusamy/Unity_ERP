@@ -11,30 +11,37 @@
 
             <div class="card-body">
               <!-- 🔹 TAB STRIP WRAPPER -->
-              <div class="tax-tab-strip">
-                <ul ngbNav #nav="ngbNav" class="nav nav-pills tax-tabs">
-                  <li ngbNavItem>
-                    <a ngbNavLink>Tax Codes</a>
-                    <ng-template ngbNavContent>
-                      <app-finance-taxcodes></app-finance-taxcodes>
-                    </ng-template>
-                  </li>
+          <div class="tax-tab-strip">
+  <ul
+    ngbNav
+    #nav="ngbNav"
+    class="nav ap-tabs tax-tabs"
+  >
+    <li ngbNavItem>
+      <a ngbNavLink>Tax Codes</a>
+      <ng-template ngbNavContent>
+        <app-finance-taxcodes></app-finance-taxcodes>
+      </ng-template>
+    </li>
 
-                  <li ngbNavItem>
-                    <a ngbNavLink>GST F5 Returns</a>
-                    <ng-template ngbNavContent>
-                      <app-finance-gstreturns></app-finance-gstreturns>
-                    </ng-template>
-                  </li>
+    <li ngbNavItem>
+      <a ngbNavLink>GST F5 Returns</a>
+      <ng-template ngbNavContent>
+        <app-finance-gstreturns></app-finance-gstreturns>
+      </ng-template>
+    </li>
 
-                  <li ngbNavItem>
-                    <a ngbNavLink>GST Details</a>
-                    <ng-template ngbNavContent>
-                      <app-finance-gstdetails></app-finance-gstdetails>
-                    </ng-template>
-                  </li>
-                </ul>
-              </div>
+    <li ngbNavItem>
+      <a ngbNavLink>GST Details</a>
+      <ng-template ngbNavContent>
+        <app-finance-gstdetails></app-finance-gstdetails>
+      </ng-template>
+    </li>
+  </ul>
+
+  <!-- if you use ngbNavOutlet, keep it here -->
+  <!-- <div [ngbNavOutlet]="nav" class="mt-1"></div> -->
+</div>
 
               <div [ngbNavOutlet]="nav" class="mt-2"></div>
             </div>

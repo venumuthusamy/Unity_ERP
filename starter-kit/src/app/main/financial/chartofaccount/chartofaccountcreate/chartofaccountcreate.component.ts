@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+  SimpleChanges
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
@@ -12,7 +20,7 @@ import { CoreSidebarService } from '@core/components/core-sidebar/core-sidebar.s
 })
 export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
   @Output() onDepartmentChange = new EventEmitter<any>();
-  @Input() editId: number | null = null;   // used by sidebar flow
+  @Input() editId: number | null = null; // used by sidebar flow
 
   addForm!: FormGroup;
   isEditMode = false;
@@ -20,8 +28,12 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
   /** used by routed flow (/edit/:id) */
   private chartOfAccountId: number | null = null;
 
+  // full COA list from backend
   accountHeads: any[] = [];
+
+  // used for Parent Head dropdown / datalist
   parentHeadList: Array<{ value: number; label: string }> = [];
+  selectedParentHeadLabel = '';
 
   constructor(
     private fb: FormBuilder,
@@ -36,7 +48,7 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
     this.initForm();
     this.loadAccountHeads();
 
-    // Routed flow support (if you navigate to /edit/:id). If you only use sidebar, this is harmless.
+    // Routed flow support (if you navigate to /edit/:id)
     this.route.paramMap.subscribe(params => {
       const idParam = params.get('id');
       this.chartOfAccountId = idParam ? parseInt(idParam, 10) : null;
@@ -56,7 +68,7 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
     this.addForm = this.fb.group({
       headName: [null, Validators.required],
       headCode: [{ value: null, disabled: true }],
-      parentHead: [0],
+      parentHead: [0], // stores PARENT HEAD CODE
       pHeadName: [{ value: null, disabled: true }],
       headLevel: [{ value: null, disabled: true }],
       headType: [{ value: null, disabled: true }],
@@ -80,15 +92,15 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
   }
 
   private loadById(id: number): void {
-    debugger
     if (!this.addForm) return;
+
     this.chartOfAccountService.getByIdChartOfAccount(id).subscribe({
       next: (res: any) => {
         const d = res?.data || {};
         this.addForm.patchValue({
           headName: d.headName ?? null,
           headCode: d.headCode ?? null,
-          parentHead: d.parentHead ?? 0,
+          parentHead: d.parentHead ?? 0, // PARENT HEAD CODE
           pHeadName: d.pHeadName ?? null,
           headLevel: d.headLevel ?? null,
           headType: d.headType ?? null,
@@ -96,12 +108,16 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
           isGI: !!d.isGI,
           headCodeName: d.headCodeName ?? null
         });
+
+        // try to sync label (in case parentHeadList is already loaded)
+        this.syncSelectedParentHeadLabel();
       },
-      error: (err) => this.alert('error', 'Failed to load record', this.errMsg(err))
+      error: err =>
+        this.alert('error', 'Failed to load record', this.errMsg(err))
     });
   }
 
-   enterCreateDefaults(): void {
+  enterCreateDefaults(): void {
     if (!this.addForm) return;
     this.addForm.reset({
       headName: null,
@@ -114,135 +130,177 @@ export class ChartOfAccountCreateComponent implements OnInit, OnChanges {
       isGI: false,
       headCodeName: null
     });
+    this.selectedParentHeadLabel = '';
   }
 
-toggleModal(name: string): void {
-  const sidebar = this._coreSidebarService.getSidebarRegistry(name);
-  sidebar.toggleOpen();
+  toggleModal(name: string): void {
+    const sidebar = this._coreSidebarService.getSidebarRegistry(name);
+    sidebar.toggleOpen();
 
-  // If closing, reset the form
-  if (!sidebar.open) {
+    // If closing, reset the form
+    if (!sidebar.open) {
+      this.enterCreateDefaults();
+    }
+  }
+
+  public resetForm(): void {
+    if (!this.addForm) return;
     this.enterCreateDefaults();
+    this.isEditMode = false;
+    this.chartOfAccountId = null;
   }
-}
-// chartofaccountcreate.component.ts (only the new method shown)
-public resetForm(): void {
-  if (!this.addForm) return;
-  this.addForm.reset({
-    headName: null,
-    headCode: null,
-    parentHead: 0,
-    pHeadName: null,
-    headLevel: null,
-    headType: null,
-    isTransaction: false,
-    isGI: false,
-    headCodeName: null
-  });
-  this.isEditMode = false;
-  this.chartOfAccountId = null;
-}
 
+  // ---------------- Load COA / Parent Heads ----------------
+  loadAccountHeads(): void {
+    this.chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
 
-loadAccountHeads(): void {
-  this.chartOfAccountService.getAllChartOfAccount().subscribe({
-    next: (res: any) => {
-      this.accountHeads = res?.data || [];
+      this.accountHeads = data;
 
-      // value is HEAD CODE (same as ParentHead in DB)
-      this.parentHeadList = this.accountHeads.map((head: any) => ({
-        value: head.headCode,            // 👈 change here
-        label: this.buildFullPath(head)
+      // value = HEAD CODE (since parentHead in DB is parent headCode)
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.headCode),
+        label: this.buildFullPath(head, data)
       }));
-    },
-    error: (err) => this.alert('error', 'Failed to load heads', this.errMsg(err))
-  });
-}
 
-
- buildFullPath(item: any): string {
-  let path = item.headName;
-  // ParentHead in DB is parent HEAD CODE
-  let current = this.accountHeads.find((x: any) => x.headCode === item.parentHead);
-
-  while (current) {
-    path = `${current.headName} >> ${path}`;
-    current = this.accountHeads.find((x: any) => x.headCode === current.parentHead);
+      this.syncSelectedParentHeadLabel();
+    });
   }
-  return path;
-}
 
+  private syncSelectedParentHeadLabel(): void {
+    if (!this.addForm) return;
+    const parentCode = Number(this.addForm.get('parentHead')?.value || 0);
+    if (!parentCode) {
+      this.selectedParentHeadLabel = '';
+      return;
+    }
+    const match = this.parentHeadList.find(
+      h => Number(h.value) === parentCode
+    );
+    this.selectedParentHeadLabel = match ? match.label : '';
+  }
 
-  // ---------------- Form auto values ----------------
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    // ParentHead in DB is parent HEAD CODE
+    let current = all.find((x: any) => x.headCode === item.parentHead);
+
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.headCode === current.parentHead);
+    }
+
+    return path;
+  }
+
+  // ---------------- Auto values ----------------
+
+  /** For TOP-LEVEL nodes (no Parent Head) when user types Head Name */
   onChangeHeadName(_: any): void {
-    // only compute for top-level when parentHead is 0
-    const parentId = Number(this.addForm.get('parentHead')?.value || 0);
-    if (parentId !== 0) return;
+    const parentCode = Number(this.addForm.get('parentHead')?.value || 0);
+    if (parentCode !== 0) return; // child node → ignore here
+    this.applyTopLevelDefaults();
+  }
 
-    const levelOneItems = this.accountHeads.filter((i: any) => Number(i.headLevel) === 1);
+  /** common logic for top-level generation */
+  private applyTopLevelDefaults(): void {
+    const levelOneItems = this.accountHeads.filter(
+      (i: any) => Number(i.headLevel) === 1
+    );
     const nextCode = (levelOneItems?.length || 0) + 1;
 
     this.addForm.patchValue({
-      headCode: nextCode,
       pHeadName: 'COA',
       headLevel: 1,
       headType: 'A',
+      headCode: nextCode,
       isTransaction: false,
       isGI: false,
       headCodeName: null
     });
   }
 
-  onChangeParentHead(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value;
-  const parentCode = parseInt(value, 10);     // this is HEAD CODE
-  this.addForm.patchValue({ parentHead: parentCode });
+  /**
+   * Called when user types / chooses a Parent Head from the single input (with datalist)
+   */
+  onParentHeadInput(label: string): void {
+    this.selectedParentHeadLabel = label || '';
 
-  // reset to top-level
-  if (!parentCode) {
-    this.addForm.patchValue({
-      pHeadName: 'COA',
-      headLevel: 1,
-      headType: 'A',
-      headCode: (this.accountHeads.filter(i => Number(i.headLevel) === 1).length || 0) + 1
-    });
-    return;
+    const trimmed = (label || '').trim().toLowerCase();
+
+    // clear selection → go back to top level defaults
+    if (!trimmed) {
+      this.addForm.patchValue({ parentHead: 0 });
+      this.applyTopLevelDefaults();
+      return;
+    }
+
+    // find parent by label
+    const selected = this.parentHeadList.find(
+      h => h.label.toLowerCase() === trimmed
+    );
+
+    if (!selected) {
+      // user typed something not exactly matching any label → do nothing
+      return;
+    }
+
+    const parentCode = Number(selected.value || 0);
+    this.addForm.patchValue({ parentHead: parentCode });
+    this.applyParentHeadSelection(parentCode);
   }
 
-  const parent = this.accountHeads.find(p => p.headCode === parentCode);  // 👈 change
-  if (!parent) return;
+  /** common logic to compute child HeadCode / level / type from parentCode */
+  private applyParentHeadSelection(parentCode: number): void {
+    if (!parentCode) {
+      this.applyTopLevelDefaults();
+      return;
+    }
 
-  const parentCodeStr = (parent.headCode ?? '').toString();
-  const parentLevel = Number(parent.headLevel);
+    const parent = this.accountHeads.find(
+      (p: any) => Number(p.headCode) === parentCode
+    );
+    if (!parent) return;
 
-  const childCodes: string[] = this.accountHeads
-    .filter(acc =>
-      (acc.headCode ?? '').toString().startsWith(parentCodeStr) &&
-      Number(acc.headLevel) === parentLevel + 1
-    )
-    .map(acc => (acc.headCode ?? '').toString());
+    const parentCodeStr = String(parent.headCode ?? '');
+    const parentLevel = Number(parent.headLevel);
 
-  const suffixes = childCodes
-    .map(code => parseInt(code.substring(parentCodeStr.length) || '0', 10))
-    .filter(n => !isNaN(n))
-    .sort((a, b) => a - b);
+    // all existing children one level below parent
+    const childCodes: string[] = this.accountHeads
+      .filter(
+        (acc: any) =>
+          String(acc.headCode ?? '').startsWith(parentCodeStr) &&
+          Number(acc.headLevel) === parentLevel + 1
+      )
+      .map((acc: any) => String(acc.headCode ?? ''));
 
-  const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
-  const maxSuffixLen = Math.max(
-    2,
-    ...childCodes.map(code => Math.max(0, code.length - parentCodeStr.length))
-  );
-  const seqStr = String(nextSeq).padStart(maxSuffixLen, '0');
-  const newHeadCode = parentCodeStr + seqStr;
+    // calculate next sequence
+    const suffixes = childCodes
+      .map(code =>
+        parseInt(code.substring(parentCodeStr.length) || '0', 10)
+      )
+      .filter(n => !isNaN(n))
+      .sort((a, b) => a - b);
 
-  this.addForm.patchValue({
-    pHeadName: parent.headName,
-    headLevel: parentLevel + 1,
-    headType: parent.headType,
-    headCode: newHeadCode
-  });
-}
+    const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
 
+    // decide padding length (at least 2 digits)
+    const maxSuffixLen = Math.max(
+      2,
+      ...childCodes.map(code =>
+        Math.max(0, code.length - parentCodeStr.length)
+      )
+    );
+    const seqStr = String(nextSeq).padStart(maxSuffixLen, '0');
+    const newHeadCode = parentCodeStr + seqStr;
+
+    this.addForm.patchValue({
+      pHeadName: parent.headName,
+      headLevel: parentLevel + 1,
+      headType: parent.headType,
+      headCode: newHeadCode
+    });
+  }
 
   // ---------------- Submit ----------------
   onSubmit(): void {
@@ -263,28 +321,30 @@ loadAccountHeads(): void {
 
     if (this.isEditMode && effectiveId) {
       // Update
-       payload.id = effectiveId; 
-      this.chartOfAccountService.updateChartOfAccount(effectiveId, payload).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Updated Successfully',
-            text: 'Chart Of Account has been updated successfully.',
-            confirmButtonColor: '#28a745'
-          }).then(() => {
-            this.toggleModal('app-chartofaccountcreate');  // close sidebar
-            this.onDepartmentChange.emit();                // notify parent to reload
-          });
-        },
-        error: (err) => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Update Failed',
-            text: this.errMsg(err),
-            confirmButtonColor: '#dc3545'
-          });
-        }
-      });
+      payload.id = effectiveId;
+      this.chartOfAccountService
+        .updateChartOfAccount(effectiveId, payload)
+        .subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Updated Successfully',
+              text: 'Chart Of Account has been updated successfully.',
+              confirmButtonColor: '#28a745'
+            }).then(() => {
+              this.toggleModal('app-chartofaccountcreate'); // close sidebar
+              this.onDepartmentChange.emit(); // notify parent to reload
+            });
+          },
+          error: err => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Update Failed',
+              text: this.errMsg(err),
+              confirmButtonColor: '#dc3545'
+            });
+          }
+        });
     } else {
       // Create
       this.chartOfAccountService.createChartOfAccount(payload).subscribe({
@@ -295,12 +355,12 @@ loadAccountHeads(): void {
             text: 'Chart Of Account has been created successfully.',
             confirmButtonColor: '#28a745'
           }).then(() => {
-            this.toggleModal('app-chartofaccountcreate');  // close sidebar
-            this.onDepartmentChange.emit();                // notify parent to reload
-            this.enterCreateDefaults();                    // reset if sidebar stays open
+            this.toggleModal('app-chartofaccountcreate'); // close sidebar
+            this.onDepartmentChange.emit(); // notify parent to reload
+            this.enterCreateDefaults(); // reset if sidebar stays open
           });
         },
-        error: (err) => {
+        error: err => {
           Swal.fire({
             icon: 'error',
             title: 'Creation Failed',
@@ -322,6 +382,8 @@ loadAccountHeads(): void {
   }
 
   private errMsg(err: any): string {
-    return err?.error?.message || err?.message || 'An error occurred. Please try again.';
+    return (
+      err?.error?.message || err?.message || 'An error occurred. Please try again.'
+    );
   }
 }
