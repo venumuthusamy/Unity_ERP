@@ -27,7 +27,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
   // --- Edit mode ---
   editMode = false;
   editingId: number | null = null;
-
+customersCache: any[] = [];
   // --- Files & previews ---
   files: any = { drivingLicence: null, utilityBill: null, bankStatement: null, acra: null };
   preview: any = { drivingLicence: null, utilityBill: null, bankStatement: null, acra: null };
@@ -84,7 +84,7 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
     this.loadCountries();
     this.loadApprovalLevel();
     this.loadAccountHeads()
-    
+    this.loadExistingCustomers();
     // Detect edit mode by :id
     this.route.paramMap.subscribe(pm => {
       const id = Number(pm.get('id'));
@@ -95,6 +95,45 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
       }
     });
   }
+  private loadExistingCustomers(): void {
+  this._customerService.getAllCustomerMaster().subscribe((res: any) => {
+    if (res?.data && Array.isArray(res.data)) {
+      this.customersCache = res.data;
+    } else if (Array.isArray(res)) {
+      this.customersCache = res;
+    } else {
+      this.customersCache = [];
+    }
+  });
+}
+private findDuplicateCustomer(): any | null {
+  const name = (this.TDNameVar || '').trim().toLowerCase();
+  const countryId = this.selectedCountryId;
+  const locationId = this.selectedLocationId;
+
+  if (!name || !countryId || !locationId || !Array.isArray(this.customersCache)) {
+    return null;
+  }
+
+  return this.customersCache.find((c: any) => {
+    const cName       = (c.customerName || c.CustomerName || '').trim().toLowerCase();
+    const cCountryId  = Number(c.countryId ?? c.CountryId);
+    const cLocationId = Number(c.locationId ?? c.LocationId);
+    const cId         = Number(c.customerId ?? c.CustomerId ?? c.id ?? c.Id);
+
+    // ignore current record in edit mode
+    if (this.editMode && this.editingId && cId === this.editingId) {
+      return false;
+    }
+
+    return (
+      cName === name &&
+      cCountryId === Number(countryId) &&
+      cLocationId === Number(locationId)
+    );
+  }) || null;
+}
+
    loadAccountHeads(): void {
     this.coaService.getAllChartOfAccount().subscribe((res: any) => {
       const data = (res?.data || []).filter((x: any) => x.isActive === true);
@@ -108,10 +147,10 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
   /** Build breadcrumb like: Parent >> Child >> This */
   private buildFullPath(item: any, all: any[]): string {
     let path = item.headName;
-    let current = all.find((x: any) => x.id === item.parentHead);
+    let current = all.find((x: any) => x.headCode === item.parentHead);
     while (current) {
       path = `${current.headName} >> ${path}`;
-      current = all.find((x: any) => x.id === current.parentHead);
+      current = all.find((x: any) => x.headCode === current.parentHead);
     }
     return path;
   }
@@ -188,6 +227,91 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
     reader.onload = () => this.preview[type] = reader.result;
     reader.readAsDataURL(file);
   }
+  nextFromAccountDetails(form: NgForm) {
+  // 1) Validate Step 1 form
+  if (form && !form.valid) {
+    form.control.markAllAsTouched();
+    return;
+  }
+
+  // 2) Duplicate check (CustomerName + Country + Location)
+  const duplicate = this.findDuplicateCustomer();
+
+  if (duplicate && !this.editMode) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Duplicate Record Found',
+      html: `
+        Customer <b>${this.TDNameVar}</b> already exists for the selected
+        Country and Location.<br/><br/>
+        Do you want to <b>load & update</b> that existing customer instead?
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, load & update',
+      cancelButtonText: 'No, continue new'
+    }).then(result => {
+      if (result.isConfirmed) {
+        const dupId = Number(duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id);
+        if (dupId) {
+          this.editMode  = true;
+          this.editingId = dupId;
+          this.loadForEdit(dupId);    // load existing data into the wizard
+          // Optionally jump directly to step 2 or 3; here we stay on step 1 so user can see data.
+        }
+      } else {
+        // user wants to continue as NEW anyway → go to next step
+        this.stepper.next();
+      }
+    });
+
+    return; // stop here until Swal resolved
+  }
+
+  // 3) No duplicate → normal next
+  this.stepper.next();
+}
+
+nextFromPersonalInfo(form: NgForm) {
+  // 1) Validate Step 2 form
+  if (form && !form.valid) {
+    form.control.markAllAsTouched();
+    return;
+  }
+
+  // 2) Duplicate check (CustomerName + Country + Location)
+  const duplicate = this.findDuplicateCustomer();
+
+  if (duplicate && !this.editMode) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Duplicate Record Found',
+      html: `
+        Customer <b>${this.TDNameVar}</b> already exists for the selected
+        Country and Location.<br/><br/>
+        Do you want to update that existing customer instead?
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, load & update',
+      cancelButtonText: 'No, stay here'
+    }).then(result => {
+      if (result.isConfirmed) {
+        const dupId = Number(duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id);
+        if (dupId) {
+          this.editMode  = true;
+          this.editingId = dupId;
+          this.loadForEdit(dupId);   // load existing record into wizard
+          // optionally move to KYC step:
+          this.stepper.to(3);        // step index is 1-based in bs-stepper (1,2,3)
+        }
+      }
+    });
+
+    return; // stop normal navigation
+  }
+
+  // 3) If no duplicate → normal Next to KYC
+  this.stepper.next();
+}
 
   // ------------- WIZARD -------------
   next(form?: NgForm) {
@@ -253,6 +377,34 @@ export class CreateCustomerMasterComponent implements AfterViewInit, OnInit {
 
   // ------------- SUBMIT (CREATE / UPDATE) -------------
   onSubmit() {
+     const duplicate = this.findDuplicateCustomer();
+
+  if (duplicate && !this.editMode) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Duplicate Record Found',
+      html: `
+        Customer <b>${this.TDNameVar}</b> already exists for the selected
+        Country and Location.<br/><br/>
+        Do you want to update that existing customer instead?
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, load & update',
+      cancelButtonText: 'No, cancel'
+    }).then(result => {
+      if (result.isConfirmed) {
+        const dupId = Number(duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id);
+        if (dupId) {
+          this.editMode  = true;
+          this.editingId = dupId;
+          this.loadForEdit(dupId);   // load existing record into wizard
+        }
+      }
+    });
+
+    return;  // stop create call
+  }
+
     const formData = new FormData();
   if (this.editingKycId) {
     formData.append('KycId', this.editingKycId.toString());

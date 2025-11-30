@@ -142,9 +142,12 @@
             <button type="button" class="btn-wiz btn-prev-wiz" (click)="prev()" [disabled]="isFirstStep">
               <i data-feather="arrow-left-circle"></i><span>Previous</span>
             </button>
-            <button type="button" class="btn-wiz btn-next-wiz" (click)="next(accountDetailsForm)">
-              <span>Next</span><i data-feather="arrow-right-circle"></i>
-            </button>
+           <button type="button"
+        class="btn-wiz btn-next-wiz"
+        (click)="nextFromAccountDetails(accountDetailsForm)">
+  <span>Next</span><i data-feather="arrow-right-circle"></i>
+</button>
+
           </div>
         </form>
       </div>
@@ -186,9 +189,10 @@
             <button type="button" class="btn-wiz btn-prev-wiz" (click)="prev()">
               <i data-feather="arrow-left-circle"></i><span>Previous</span>
             </button>
-            <button type="button" class="btn-wiz btn-next-wiz" (click)="next(personalInfoForm)">
-              <span>Next</span><i data-feather="arrow-right-circle"></i>
-            </button>
+           <button type="button" class="btn-wiz btn-next-wiz" (click)="nextFromPersonalInfo(personalInfoForm)">
+  <span>Next</span><i data-feather="arrow-right-circle"></i>
+</button>
+
           </div>
         </form>
       </div>
@@ -284,8 +288,10 @@
               <i data-feather="arrow-left-circle"></i><span>Previous</span>
             </button>
             <button type="button" class="btn-wiz btn-submit-wiz" (click)="onSubmit()">
-              <span>Submit</span><i data-feather="check-circle"></i>
-            </button>
+  <span>{{ editMode ? 'Update' : 'Submit' }}</span>
+  <i data-feather="check-circle"></i>
+</button>
+
           </div>
         </form>
       </div>
