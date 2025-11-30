@@ -132,6 +132,7 @@
           <tr>
             <th style="min-width:220px">Item</th>
             <th style="min-width:220px">Description</th>
+            <th style="min-width:220px">BudgetLine</th>
             <th style="min-width:120px">UOM</th>
             <th class="text-center" style="min-width:80px">Qty</th>
             <th class="text-center" style="min-width:120px">Unit Price</th>
@@ -186,6 +187,18 @@
                      (change)="onCellChanged(r)"
                      [ngModelOptions]="{standalone:true}"
                      placeholder="Description">
+            </td>
+               <!-- Budget -->
+            <td>
+            <select
+              id="budget-line"
+              class="form-control"
+              [(ngModel)]="r.budgetLineId"
+              required
+            >
+              <option value="" disabled selected>Select Budget Line</option>
+              <option *ngFor="let line of parentHeadList" [value]="line.value">{{ line.label }}</option>
+            </select>
             </td>
 
             <!-- UOM -->

@@ -46,6 +46,7 @@ export interface SiCreateLine {
   lineAmount?: number;
   taxAmount?: number;          // <<-- for save() mapping
   description?: string | null;
+  budgetLineId?: number; 
 }
 
 export interface SiCreateRequest {
@@ -126,6 +127,7 @@ export class SalesInvoiceService {
       taxCodeId?: number | null;
       lineAmount?: number;
       description?: string | null;
+      budgetLineId: number
     }
   ): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(
