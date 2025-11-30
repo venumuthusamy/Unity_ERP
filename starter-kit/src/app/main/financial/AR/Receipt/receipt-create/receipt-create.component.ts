@@ -4,6 +4,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 
 import { ReceiptService, ReceiptDetailDto } from '../receipt-service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
+import { BankService } from 'app/main/master/bank/bank-service/bank.service';
 
 interface AllocationRow {
   invoiceId: number;
@@ -30,7 +31,7 @@ export class ReceiptCreateComponent implements OnInit {
   receiptDate: string;
 
   paymentMode: 'CASH' | 'BANK' = 'CASH';
-  banks: { id: number; name: string }[] = [];
+  banks: any
   selectedBankId: number | null = null;
 
   amountReceived: number = 0;
@@ -48,18 +49,17 @@ export class ReceiptCreateComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private _customerMasterService: CustomerMasterService,
+    private _bankService: BankService,
   ) {
     const today = new Date();
     this.receiptDate = today.toISOString().substring(0, 10);
   }
 
   ngOnInit(): void {
-    // temp static banks
-    this.banks = [
-      { id: 1, name: 'HDFC Bank A/C' },
-      { id: 2, name: 'SBI Current A/C' },
-      { id: 3, name: 'ICICI Bank A/C' }
-    ];
+
+    this._bankService.getAllBank().subscribe((res: any) => {
+      this.banks = res.data || [];
+    });
 
     this._customerMasterService.GetAllCustomerDetails().subscribe((res: any) => {
       this.customerList = res.data || [];
