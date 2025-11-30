@@ -96,10 +96,10 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
   /** Build breadcrumb like: Parent >> Child >> This */
   private buildFullPath(item: any, all: any[]): string {
     let path = item.headName;
-    let current = all.find((x: any) => x.id === item.parentHead);
+    let current = all.find((x: any) => x.headCode === item.parentHead);
     while (current) {
       path = `${current.headName} >> ${path}`;
-      current = all.find((x: any) => x.id === current.parentHead);
+      current = all.find((x: any) => x.headCode === current.parentHead);
     }
     return path;
   }
