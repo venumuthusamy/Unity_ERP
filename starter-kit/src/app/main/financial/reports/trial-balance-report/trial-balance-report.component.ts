@@ -50,85 +50,113 @@ export class TrialBalanceReportComponent implements OnInit {
     }
 
   // ================== RUN TB ==================
-  runTB(): void {
-    const body = {
-      fromDate: this.fromDate,
-      toDate: this.toDate,
-      companyId: this.companyId
-    };
+ // ================== RUN TB ==================
+// ================== RUN TB ==================
+runTB(): void {
+  const body = {
+    fromDate: this.fromDate,
+    toDate: this.toDate,
+    companyId: this.companyId
+  };
 
-    this.isLoading = true;
-    this.selectedHead = null;
-    this.detailRows = [];
+  this.isLoading = true;
+  this.selectedHead = null;
+  this.detailRows = [];
 
-    this.reportsService.getTrialBalance(body).subscribe({
-      next: (res: any) => {
-        this.rawRows = res.data || [];
+  this.reportsService.getTrialBalance(body).subscribe({
+    next: (res: any) => {
+      this.rawRows = res.data || [];
 
-        // 1. build nodes dictionary
-        const map = new Map<number, TbNode>();
+      // 1. build nodes dictionary (keyed by HEAD CODE)
+      const mapByCode = new Map<string, TbNode>();  // <-- key = headCode
 
-        this.rawRows.forEach((r: any) => {
-          const node: TbNode = {
-            ...r,
-            parentHead: r.parentHead ?? null,
-            level: 0,
-            expanded: false,
-            isLeaf: true,
-            children: []
-          };
-          map.set(node.headId, node);
-        });
+      this.rawRows.forEach((r: any) => {
+        const node: TbNode = {
+          ...r,
+          parentHead: r.parentHead ?? null,   // parent HEAD CODE from API
+          level: 0,
+          expanded: false,
+          isLeaf: true,
+          children: []
+        };
 
-        // 2. build tree (parent/children, level)
-        const roots: TbNode[] = [];
-        map.forEach(node => {
-          if (node.parentHead && map.has(node.parentHead)) {
-            const parent = map.get(node.parentHead)!;
-            parent.children.push(node);
-            parent.isLeaf = false;
-            node.level = parent.level + 1;
-          } else {
-            // no parent -> root head (Asset, Liabilities, etc.)
-            roots.push(node);
-          }
-        });
+        mapByCode.set(String(node.headCode), node);
+      });
 
-        // sort children by headCode for each node
-        map.forEach(n => {
+      // 2. build tree using headCode -> parentHead (also headCode)
+      const roots: TbNode[] = [];
+
+      mapByCode.forEach(node => {
+        const parentCode =
+          node.parentHead !== null && node.parentHead !== 0
+            ? String(node.parentHead)
+            : '';
+
+        if (parentCode && mapByCode.has(parentCode)) {
+          const parent = mapByCode.get(parentCode)!;
+          parent.children.push(node);
+          parent.isLeaf = false;
+          node.level = parent.level + 1;
+        } else {
+          // no parentCode or parent not in result => root node
+          roots.push(node);
+        }
+      });
+
+      // 3. sort children + roots by headCode
+      mapByCode.forEach(n => {
+        if (n.children?.length) {
           n.children.sort((a, b) => a.headCode.localeCompare(b.headCode));
-        });
-        roots.sort((a, b) => a.headCode.localeCompare(b.headCode));
+        }
+      });
+      roots.sort((a, b) => a.headCode.localeCompare(b.headCode));
 
-        this.roots = roots;
+      this.roots = roots;
 
-        // 3. recompute parent totals = sum of children (so no double count)
-        this.roots.forEach(r => this.recalcTotalsRecursive(r));
+      // 4. recompute parent totals from children (no double counting)
+      this.roots.forEach(r => this.recalcTotalsRecursive(r));
 
-        // 4. rebuild flat display rows (respect expanded flags)
-        // keep all collapsed by default so they show accumulated totals
-        this.roots.forEach(r => (r.expanded = false));
-        this.rebuildDisplayRows();
-        // 5. compute grand totals using only leaf accounts
-        const leafNodes: TbNode[] = [];
-        this.collectLeaves(this.roots, leafNodes);
+      // 5. build flat list (all parents collapsed by default)
+      this.roots.forEach(r => (r.expanded = false));
+      this.rebuildDisplayRows();
 
-        this.totalOpeningDebit = leafNodes.reduce((s, n) => s + (n.openingDebit || 0), 0);
-        this.totalOpeningCredit = leafNodes.reduce((s, n) => s + (n.openingCredit || 0), 0);
-        this.totalClosingDebit = leafNodes.reduce((s, n) => s + (n.closingDebit || 0), 0);
-        this.totalClosingCredit = leafNodes.reduce((s, n) => s + (n.closingCredit || 0), 0);
+      // 6. grand totals = only leaf accounts
+      const leafNodes: TbNode[] = [];
+      this.collectLeaves(this.roots, leafNodes);
 
-        this.isLoading = false;
-      },
-      error: () => {
-        this.roots = [];
-        this.displayRows = [];
-        this.totalOpeningDebit = this.totalOpeningCredit =
-          this.totalClosingDebit = this.totalClosingCredit = 0;
-        this.isLoading = false;
-      }
-    });
-  }
+      this.totalOpeningDebit = leafNodes.reduce(
+        (s, n) => s + (n.openingDebit || 0),
+        0
+      );
+      this.totalOpeningCredit = leafNodes.reduce(
+        (s, n) => s + (n.openingCredit || 0),
+        0
+      );
+      this.totalClosingDebit = leafNodes.reduce(
+        (s, n) => s + (n.closingDebit || 0),
+        0
+      );
+      this.totalClosingCredit = leafNodes.reduce(
+        (s, n) => s + (n.closingCredit || 0),
+        0
+      );
+
+      this.isLoading = false;
+    },
+    error: () => {
+      this.roots = [];
+      this.displayRows = [];
+      this.totalOpeningDebit =
+        this.totalOpeningCredit =
+        this.totalClosingDebit =
+        this.totalClosingCredit =
+          0;
+      this.isLoading = false;
+    }
+  });
+}
+
+
 
   // recursively sum children into parent
   private recalcTotalsRecursive(node: TbNode): void {
