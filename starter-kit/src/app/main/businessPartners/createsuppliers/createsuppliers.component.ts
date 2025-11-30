@@ -28,7 +28,7 @@ type BudgetLine = {
   headLevel: number;
   headName: string;
   headType?: string;
-  headCodeName?: string | null;
+  headCodeName?: string | null;   // full breadcrumb text
   isGl?: boolean | null;
   isTransaction?: boolean | null;
 };
@@ -61,17 +61,17 @@ interface SupplierModel {
 
 /** We keep both base64 (for API) and dataUrl (for preview) — NO blob: */
 interface ComplianceFile {
-  name: string;        // display name
-  base64: string;      // pure base64 ONLY (what we send as fileUrl)
-  mimeType: string;    // e.g., image/png
-  size: number;        // bytes
-  dataUrl: string;     // "data:<mime>;base64,<...>" for preview
+  name: string;
+  base64: string;
+  mimeType: string;
+  size: number;
+  dataUrl: string;
 }
 
 interface ComplianceDoc {
   name: string;
   number: string | null;
-  expiry: string | null; // yyyy-mm-dd for <input type="date">
+  expiry: string | null; // yyyy-mm-dd
   files: ComplianceFile[];
 }
 
@@ -163,7 +163,7 @@ export class CreatesuppliersComponent implements OnInit {
   };
 
   /* =========================
-     Compliance docs (multiple rows, multiple files per row)
+     Compliance docs
   ========================= */
   docs: ComplianceDoc[] = [
     { name: '', number: '', expiry: null, files: [] }
@@ -219,7 +219,6 @@ export class CreatesuppliersComponent implements OnInit {
       items: this.itemsService.getAllItem()
     }).pipe(
       switchMap(({ terms, currencies, incoterms, items }) => {
-
         this.PaymentTermsList = (terms?.data ?? []).filter((x: any) => x.isActive === true);
         this.filteredTerms = [...this.PaymentTermsList];
 
@@ -238,23 +237,62 @@ export class CreatesuppliersComponent implements OnInit {
   /* =========================
      Load Budget / Chart of Account
   ========================= */
-loadBudgetLine() {
-  this._chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
-    const data: BudgetLine[] = res?.data ?? [];
+  loadBudgetLine(): void {
+    this._chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
 
-    // ✅ Show everything that comes from API (Asset, Liabilities, Equity, Income, Expense, children)
-    this.BudgetList = data;
+      // normalise + build breadcrumb
+      this.BudgetList = data.map((head: any) => {
+        const headCode = Number(head.headCode ?? head.HeadCode ?? 0);
+        const headLevel = Number(head.headLevel ?? head.HeadLevel ?? 0);
+        const headName = String(head.headName ?? head.HeadName ?? '');
+        const headType = String(head.headType ?? head.HeadType ?? '');
+        const path = this.buildFullPath(
+          { headCode, parentHead: head.parentHead ?? head.ParentHead, headName },
+          data
+        );
+        const headCodeName = `${headCode} - ${path}`;
 
-    // if you want to exclude only totally inactive rows:
-    // this.BudgetList = data.filter((x: any) => x.isActive !== false);
+        return {
+          id: Number(head.id ?? head.Id ?? 0),
+          headCode,
+          headLevel,
+          headName,
+          headType,
+          headCodeName,
+          isGl: head.isGl ?? head.IsGl ?? null,
+          isTransaction: head.isTransaction ?? head.IsTransaction ?? null
+        } as BudgetLine;
+      });
 
-    this.BudgetFiltered = [...this.BudgetList];
+      this.BudgetFiltered = [...this.BudgetList];
 
-    // sync selection if editing
-    this.syncSelectedBudgetFromId();
-  });
-}
+      // if editing existing supplier, sync selected budget text
+      this.syncSelectedBudgetFromId();
+    });
+  }
 
+  /** Build breadcrumb like: Parent >> Child >> This */
+  private buildFullPath(item: any, all: any[]): string {
+    let path = String(item.headName ?? '').trim();
+    let parentCode = Number(item.parentHead ?? 0);
+
+    while (parentCode) {
+      const current = all.find((x: any) =>
+        Number(x.headCode ?? x.HeadCode ?? 0) === parentCode
+      );
+      if (!current) break;
+
+      const name = String(current.headName ?? current.HeadName ?? '').trim();
+      if (name) {
+        path = `${name} >> ${path}`;
+      }
+
+      parentCode = Number(current.parentHead ?? current.ParentHead ?? 0);
+    }
+
+    return path;
+  }
 
   /* =========================
      GET BY ID (Hydrate)
@@ -277,7 +315,6 @@ loadBudgetLine() {
     const item = (api?.data && Array.isArray(api.data) ? api.data[0] : api?.data) ?? api;
     if (!item) return;
 
-    // Supplier fields
     this.supplier = {
       id: item.id,
       name: item.name ?? '',
@@ -302,7 +339,6 @@ loadBudgetLine() {
       budgetLineId: item.budgetLineId ?? item.BudgetLineId ?? null
     };
 
-    // Dropdown selections from IDs
     this.selectedStatus = this.statuses.find(x => x.id === this.supplier.statusId) ?? this.statuses[0];
     this.statusSearch = this.selectedStatus.name;
 
@@ -326,10 +362,8 @@ loadBudgetLine() {
       : null;
     this.incotermSearch = this.selectedIncoterm?.incotermsName ?? '';
 
-    // Budget line selection (if BudgetList already loaded)
     this.syncSelectedBudgetFromId();
 
-    // Preferred Items from CSV
     const csv = (item.itemID ?? item.ItemID ?? '').toString().trim();
     if (csv) {
       const ids = csv.split(',').map((v: string) => +v.trim()).filter((n: number) => !Number.isNaN(n));
@@ -340,7 +374,6 @@ loadBudgetLine() {
     this.preferredText = '';
     this.filteredItems = [];
 
-    // Compliance docs — normalize into our base64 model
     const rawDocs = item.complianceDocuments ?? item.ComplianceDocuments;
     this.docs = this.parseComplianceDocsToBase64Model(rawDocs);
     if (!this.docs.length) {
@@ -348,13 +381,6 @@ loadBudgetLine() {
     }
   }
 
-  /** Convert incoming docs (string/array) into our base64 model.
-   *  Handles:
-   *   - fileUrl starting with "data:"  -> extract base64
-   *   - fileUrl that LOOKS like base64 -> keep base64
-   *   - fileUrl starting with "blob:"  -> cannot resolve; leave base64 empty (legacy rows)
-   *   - http(s) URL                    -> preview via link; base64 empty
-   */
   private parseComplianceDocsToBase64Model(raw: any): ComplianceDoc[] {
     if (!raw) return [];
     let arr: any[] = [];
@@ -371,28 +397,23 @@ loadBudgetLine() {
         let mimeType = f?.mimeType || 'application/octet-stream';
 
         if (url.startsWith('data:')) {
-          // data:<mime>;base64,<payload>
           const comma = url.indexOf(',');
           base64 = comma >= 0 ? url.substring(comma + 1) : '';
           const m = url.match(/^data:([^;]+);base64,/i);
           if (m) mimeType = m[1];
           dataUrl = url;
         } else if (/^[A-Za-z0-9+/=]+$/.test(url) && url.length > 40) {
-          // looks like pure base64
           base64 = url;
           dataUrl = `data:${mimeType};base64,${base64}`;
         } else if (url.startsWith('blob:')) {
-          // legacy bad value: no way to recover base64 from blob URL
           base64 = '';
-          dataUrl = ''; // (could show url as text link, but not useful for preview)
+          dataUrl = '';
         } else {
-          // regular http(s) URL; keep as preview link if you like
           base64 = '';
           dataUrl = url;
         }
 
         const size = typeof f?.size === 'number' ? f.size : 0;
-
         return { name, base64, mimeType, size, dataUrl };
       });
 
@@ -449,12 +470,13 @@ loadBudgetLine() {
 
     this.selectedBudget = this.BudgetList.find(x => x.id === id) || null;
     this.BudgetSearch = this.selectedBudget
-      ? `${this.selectedBudget.headCode} - ${this.selectedBudget.headName}`
+      ? (this.selectedBudget.headCodeName ||
+         `${this.selectedBudget.headCode} - ${this.selectedBudget.headName}`)
       : '';
   }
 
   /* =========================
-     Grid helper (used by HTML)
+     Grid helper
   ========================= */
   gridColsClass(cols: number) {
     switch (cols) {
@@ -542,14 +564,13 @@ loadBudgetLine() {
   filterBudget() {
     const q = (this.BudgetSearch || '').toLowerCase();
     this.BudgetFiltered = this.BudgetList.filter(b =>
-      (b.headName || '').toLowerCase().includes(q) ||
-      String(b.headCode || '').toLowerCase().includes(q)
+      (b.headCodeName || `${b.headCode} - ${b.headName}`).toLowerCase().includes(q)
     );
   }
 
   selectBudget(b: BudgetLine) {
     this.selectedBudget = b;
-    this.BudgetSearch = `${b.headCode} - ${b.headName}`;
+    this.BudgetSearch = b.headCodeName || `${b.headCode} - ${b.headName}`;
     this.supplier.budgetLineId = b.id;
     this.budgetDropdownOpen = false;
   }
@@ -590,7 +611,7 @@ loadBudgetLine() {
   }
 
   /* =========================
-     File Upload (MULTIPLE per row, BASE64 ONLY)
+     File Upload
   ========================= */
   async onFileSelected(event: Event, rowIndex: number): Promise<void> {
     const input = event.target as HTMLInputElement;
@@ -599,7 +620,7 @@ loadBudgetLine() {
     const files = Array.from(input.files);
     for (const file of files) {
       try {
-        const dataUrl = await this.readFileAsDataURL(file); // "data:<mime>;base64,<payload>"
+        const dataUrl = await this.readFileAsDataURL(file);
         const commaIdx = dataUrl.indexOf(',');
         const base64 = commaIdx >= 0 ? dataUrl.substring(commaIdx + 1) : '';
         const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/i);
@@ -607,10 +628,10 @@ loadBudgetLine() {
 
         const entry: ComplianceFile = {
           name: file.name,
-          base64,            // pure base64 ONLY
+          base64,
           mimeType,
           size: file.size,
-          dataUrl            // used for preview/download in UI
+          dataUrl
         };
         this.docs[rowIndex].files.push(entry);
       } catch (err) {
@@ -619,7 +640,7 @@ loadBudgetLine() {
       }
     }
 
-    input.value = ''; // allow re-selecting same files
+    input.value = '';
   }
 
   removeFile(rowIndex: number, fileIndex: number): void {
@@ -627,19 +648,18 @@ loadBudgetLine() {
   }
 
   /* =========================
-     Save  (fileUrl = base64 ONLY)
+     Save
   ========================= */
   save() {
     const preferredItemIds = (this.preferredItems ?? []).map(p => p.id).join(',');
 
-    // Build docs with base64
     const complianceDocsForApi = this.docs.map(d => ({
       name: (d.name || '').trim(),
       number: d.number ?? null,
       expiry: this.ymdToIso(d.expiry),
       files: d.files.map(f => ({
         fileName: f.name,
-        fileUrl: f.base64,      // only base64 (no blob, no data: prefix)
+        fileUrl: f.base64,
         mimeType: f.mimeType,
         size: f.size
       }))
@@ -662,7 +682,7 @@ loadBudgetLine() {
       currencyId: this.supplier.currencyId ?? null,
       incotermsId: this.supplier.incotermsId ?? null,
 
-      budgetLineId: this.supplier.budgetLineId ?? null,   // 👈 budget id to API
+      budgetLineId: this.supplier.budgetLineId ?? null,
 
       itemID: preferredItemIds,
       ComplianceDocuments: JSON.stringify(complianceDocsForApi),
@@ -678,7 +698,6 @@ loadBudgetLine() {
 
     console.log(payload);
 
-    // insert if new, update if existing
     const request$ = payload.id && payload.id > 0
       ? this._SupplierService.updateSupplier(payload)
       : this._SupplierService.insertSupplier(payload);
@@ -692,7 +711,7 @@ loadBudgetLine() {
             icon: 'success',
             allowOutsideClick: false
           });
-          if (payload.id === 0) this.new(); // reset only for new
+          if (payload.id === 0) this.new();
         } else {
           Swal.fire('Info', res?.message ?? 'Could not save supplier', 'info');
         }
@@ -741,7 +760,6 @@ loadBudgetLine() {
     this.selectedBudget = null;     this.BudgetSearch = '';
 
     this.preferredItems = []; this.preferredText = ''; this.filteredItems = [];
-
     this.docs = [{ name: '', number: '', expiry: null, files: [] }];
   }
 }
