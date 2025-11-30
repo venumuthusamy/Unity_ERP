@@ -8,32 +8,31 @@ import { Router } from '@angular/router';
 })
 export class FinancereportsComponent implements OnInit {
 
-  constructor(private router : Router) { }
+  constructor(private router: Router) {}
 
-  ngOnInit(): void {
+  ngOnInit(): void {}
+
+  goToProfitLoss(): void {
+    this.router.navigate(['/financial/profitloss']);
   }
 
-    goToProfitLoss(): void {
- this.router.navigate(['financial/profitloss']);
-}
-
   goToBalanceSheet(): void {
- this.router.navigate(['financial/balance-sheet']);
-}
+    this.router.navigate(['/financial/balance-sheet']);
+  }
 
   goToGstReport(): void {
- this.router.navigate(['financial/Gst-report']);
-}
+    this.router.navigate(['/financial/Gst-report']);
+  }
 
-goToAging(): void {
- this.router.navigate(['financial/aging']);
-}
-
+  goToAging(): void {
+    this.router.navigate(['/financial/aging']);
+  }
 
   goToDayBook(): void {
- this.router.navigate(['financial/daybook']);
-}
-goToCollectionReport(){
-   this.router.navigate(['financial/forecast']);
-}
+    this.router.navigate(['/financial/daybook']);
+  }
+
+  goToCollectionReport(): void {
+    this.router.navigate(['/financial/forecast']);
+  }
 }
