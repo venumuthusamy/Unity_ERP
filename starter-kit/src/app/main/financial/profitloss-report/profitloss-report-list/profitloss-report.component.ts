@@ -15,14 +15,13 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
   salesAccounts: any[] = [];
   ProfitlossList: any[] = [];
 
-  constructor(private _profitlossService: ProfitlossService) { }
+  constructor(private _profitlossService: ProfitlossService) {}
 
   ngOnInit(): void {
     this.loadProfitlossDetails();
   }
 
   ngAfterViewInit(): void {
-    // initial render (top cards icons)
     setTimeout(() => feather.replace());
   }
 
@@ -31,29 +30,36 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
     this._profitlossService.GetProfitLossDetails().subscribe((res: any) => {
       this.ProfitlossList = res?.data || [];
 
-      // Left side – Purchase Accounts
+      // 🔹 LEFT – Purchase Accounts (HIDE 0.00)
       this.purchaseAccounts = this.ProfitlossList
-        .filter((x: any) => x.purchase && x.purchase !== 0)
+        .filter((x: any) =>
+          x.purchase !== null &&
+          x.purchase !== undefined &&
+          Number(x.purchase) !== 0               // <- remove all 0.00
+        )
         .map((x: any) => ({
           name: x.headName,
-          amount: x.purchase,
+          amount: Number(x.purchase),
           code: x.headCode,
           avatarText: this.getInitials(x.headName),
           avatarColor: this.getAvatarColor(x.headName)
         }));
 
-      // Right side – Sales Accounts
+      // 🔹 RIGHT – Sales Accounts (HIDE 0.00)
       this.salesAccounts = this.ProfitlossList
-        .filter((x: any) => x.sales && x.sales !== 0)
+        .filter((x: any) =>
+          x.sales !== null &&
+          x.sales !== undefined &&
+          Number(x.sales) !== 0                  // <- remove all 0.00
+        )
         .map((x: any) => ({
           name: x.headName,
-          amount: x.sales,
+          amount: Number(x.sales),
           code: x.headCode,
           avatarText: this.getInitials(x.headName),
           avatarColor: this.getAvatarColor(x.headName)
         }));
 
-      // icons for new rows
       setTimeout(() => feather.replace());
     });
   }
@@ -63,7 +69,7 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
     if (!name) { return ''; }
     const parts = name.trim().split(' ');
     if (parts.length === 1) {
-      return parts[0].substring(0, 2).toUpperCase();   // "Laptop" -> "LA"
+      return parts[0].substring(0, 2).toUpperCase();
     }
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
@@ -78,7 +84,7 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
     return colors[index];
   }
 
-  // ===== Totals & summary cards =====
+  // ===== Totals & summary cards (only non-zero rows counted) =====
   get purchaseTotal(): number {
     return this.purchaseAccounts.reduce(
       (sum: number, x: any) => sum + (x.amount || 0),
@@ -102,12 +108,10 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
   }
 
   get netProfit(): number {
-    // same as sum of netProfit from API, but simpler:
     return this.salesTotal - this.purchaseTotal;
   }
 
   get netProfitClass(): string {
     return this.netProfit >= 0 ? 'text-success' : 'text-danger';
   }
-
 }
