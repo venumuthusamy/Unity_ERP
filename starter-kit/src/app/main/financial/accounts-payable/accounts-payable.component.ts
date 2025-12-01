@@ -1,3 +1,7 @@
+// ============================================================
+//  ACCOUNTS PAYABLE COMPONENT - FULL
+// ============================================================
+
 import {
   Component,
   OnInit,
@@ -31,12 +35,19 @@ type SupplierInvoiceGroup = {
 })
 export class AccountsPayableComponent implements OnInit, AfterViewInit {
 
+  // ---------------- TAB CONTROL ----------------
   activeTab: ApTab = 'invoices';
 
-  // SUPPLIERS
-  suppliers: any[] = [];
+  // ---------------- SUPPLIERS ----------------
+  suppliers: Array<{ id: number; name: string }> = [];
 
-  // INVOICES TAB
+  // ---------------- BANK ACCOUNTS ----------------
+  bankAccounts: any[] = [];
+  selectedBankId: number | null = null;
+  bankAvailableBalance: number | null = null;
+  bankBalanceAfterPayment: number | null = null;
+
+  // ---------------- INVOICES TAB ----------------
   invoices: any[] = [];
   private allInvoices: any[] = [];
   invoiceSearch = '';
@@ -45,35 +56,35 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   totalInvPaid = 0;
   totalInvOutstanding = 0;
   totalInvDebitNote = 0;
-payInvSelectAll = false;
+
   supplierGroups: SupplierInvoiceGroup[] = [];
   expandedSupplierIds = new Set<number>();
-  isPeriodLocked = false;
-  currentPeriodName = '';
-  // ----- Pagination: Invoices (supplier summary) -----
+
+  // Pagination for supplier summary
   invPage = 1;
   invPageSize = 10;
 
-  // PAYMENTS TAB
+  // ---------------- PAYMENTS TAB ----------------
   payments: any[] = [];
   showPaymentForm = false;
 
-  // ----- Pagination: Payments list -----
+  // Payments list pagination
   payListPage = 1;
   payListPageSize = 10;
 
   paySupplierId: number | null = null;
-  supplierInvoicesAll: any[] = [];   // open invoices for selected supplier
+  supplierInvoicesAll: any[] = [];
 
-  // ----- Pagination: Supplier invoices in payment screen -----
+  // Open invoices pagination
   payInvPage = 1;
   payInvPageSize = 10;
 
   payDate: string;
-  payMethodId: number = 2;           // Bank Transfer
+  payMethodId = 2;   // default Bank Transfer
   payReference = '';
-  payAmount: number = 0;             // auto from selected invoices (editable)
+  payAmount = 0;
   payNotes = '';
+  payInvSelectAll = false;
   amountEditedManually = false;
 
   supTotalInvoice = 0;
@@ -81,12 +92,15 @@ payInvSelectAll = false;
   supTotalDebitNote = 0;
   supTotalNetOutstanding = 0;
 
-  // MATCH TAB
+  // ---------------- MATCH TAB ----------------
   matchRows: any[] = [];
 
-  // ----- Pagination: 3-way match -----
   matchPage = 1;
   matchPageSize = 10;
+
+  // Period lock
+  isPeriodLocked = false;
+  currentPeriodName = '';
 
   constructor(
     private apSvc: AccountsPayableService,
@@ -96,10 +110,13 @@ payInvSelectAll = false;
     this.payDate = today.toISOString().substring(0, 10);
   }
 
-  // ---------------- LIFECYCLE ----------------
+  // =====================================================
+  //  LIFECYCLE
+  // =====================================================
   ngOnInit(): void {
     this.checkPeriodLockForDate(this.payDate);
     this.loadSuppliers();
+    this.loadBankAccounts();
     this.setTab('invoices');
   }
 
@@ -107,7 +124,9 @@ payInvSelectAll = false;
     feather.replace();
   }
 
-  // ---------------- TABS ----------------
+  // =====================================================
+  //  TABS
+  // =====================================================
   setTab(tab: ApTab): void {
     this.activeTab = tab;
 
@@ -116,29 +135,102 @@ payInvSelectAll = false;
     } else if (tab === 'payments') {
       this.showPaymentForm = false;
       this.loadPayments();
-      this.cancelPayment(); // reset form state
+      this.cancelPayment();
     } else if (tab === 'match') {
       this.loadMatch();
     }
   }
 
-  // ---------------- COMMON ----------------
+  // =====================================================
+  //  SUPPLIERS
+  // =====================================================
   loadSuppliers(): void {
     this.supplierSvc.GetAllSupplier().subscribe({
       next: (res: any) => {
-        this.suppliers = res?.data || res || [];
+        const raw = res?.data || res || [];
+        this.suppliers = (raw || []).map((s: any) => ({
+          id: s.id || s.Id,
+          name: s.name || s.supplierName || s.SupplierName
+        }));
       },
       error: () => Swal.fire('Error', 'Failed to load suppliers', 'error')
     });
   }
 
-  // ---------------- INVOICES TAB ----------------
+  // =====================================================
+  //  BANK ACCOUNTS
+  // =====================================================
+  loadBankAccounts(): void {
+    this.apSvc.getBankAccounts().subscribe({
+      next: (res: any) => {
+        // Expecting: { bankId, bankName, headCode, availableBalance }
+        this.bankAccounts = res?.data || res || [];
+      },
+      error: () => Swal.fire('Error', 'Failed to load bank accounts', 'error')
+    });
+  }
+
+ onBankChange(): void {
+  const bank = this.bankAccounts.find(x => x.id === this.selectedBankId);
+  this.bankAvailableBalance = bank?.availableBalance || 0;
+  this.recalcBankBalanceAfterPayment();
+}
+
+
+  // Method change (Cash / Bank / Cheque / Other)
+  onMethodChange(): void {
+    if (this.payMethodId === 2 || this.payMethodId === 3) {
+      // bank transfer or cheque → bank dropdown is visible
+      this.onBankChange();
+    } else {
+      // Cash / Other → clear bank selection and balances
+      this.selectedBankId = null;
+      this.bankAvailableBalance = null;
+      this.bankBalanceAfterPayment = null;
+    }
+  }
+
+  // Calculate "After Payment" balance
+  recalcBankBalanceAfterPayment(): void {
+    if (this.bankAvailableBalance == null) {
+      this.bankBalanceAfterPayment = null;
+      return;
+    }
+    const amt = Number(this.payAmount || 0);
+    this.bankBalanceAfterPayment = this.bankAvailableBalance - amt;
+  }
+
+  // When user types amount manually
+  onAmountInputChange(): void {
+    this.amountEditedManually = true;
+    this.recalcBankBalanceAfterPayment();
+  }
+
+  // When user selects invoices (auto calc amount)
+  recalcSelectedAmount(): void {
+    if (this.amountEditedManually) return;
+
+    let total = 0;
+    this.supplierInvoicesAll.forEach(x => {
+      if (x.isSelected) {
+        total += Number(x.outstandingAmount || 0);
+      }
+    });
+
+    this.payAmount = total;
+    this.recalcBankBalanceAfterPayment();
+  }
+
+  // =====================================================
+  //  INVOICES TAB
+  // =====================================================
   loadInvoices(): void {
     this.apSvc.getApInvoices().subscribe({
       next: (res: any) => {
         const rows = res?.data || res || [];
         this.allInvoices = rows;
         this.invoices = [...rows];
+
         this.calcInvoiceTotals();
         this.buildSupplierGroups();
       },
@@ -153,10 +245,10 @@ payInvSelectAll = false;
     this.totalInvDebitNote = 0;
 
     this.invoices.forEach(i => {
-      this.totalInvAmount      += Number(i.grandTotal        || 0);
-      this.totalInvPaid        += Number(i.paidAmount        || 0);
+      this.totalInvAmount      += Number(i.grandTotal || 0);
+      this.totalInvPaid        += Number(i.paidAmount || 0);
       this.totalInvOutstanding += Number(i.outstandingAmount || 0);
-      this.totalInvDebitNote   += Number(i.debitNoteAmount   || 0);
+      this.totalInvDebitNote   += Number(i.debitNoteAmount || 0);
     });
   }
 
@@ -183,15 +275,10 @@ payInvSelectAll = false;
         map.set(supplierId, grp);
       }
 
-      const grand = Number(inv.grandTotal        || 0);
-      const paid  = Number(inv.paidAmount        || 0);
-      const dn    = Number(inv.debitNoteAmount   || 0);
-      const os    = Number(inv.outstandingAmount || 0);
-
-      grp.totalGrandTotal  += grand;
-      grp.totalPaid        += paid;
-      grp.totalDebitNote   += dn;
-      grp.totalOutstanding += os;
+      grp.totalGrandTotal  += Number(inv.grandTotal || 0);
+      grp.totalPaid        += Number(inv.paidAmount || 0);
+      grp.totalDebitNote   += Number(inv.debitNoteAmount || 0);
+      grp.totalOutstanding += Number(inv.outstandingAmount || 0);
       grp.invoices.push(inv);
     }
 
@@ -200,11 +287,11 @@ payInvSelectAll = false;
     );
 
     this.expandedSupplierIds.clear();
-    this.invPage = 1; // reset pagination
+    this.invPage = 1;
   }
 
   filterInvoices(event: any): void {
-    const val = (event.target.value || '').toLowerCase();
+    const val = event?.target?.value?.toLowerCase() || '';
     this.invoiceSearch = val;
 
     if (!val) {
@@ -223,18 +310,16 @@ payInvSelectAll = false;
     this.buildSupplierGroups();
   }
 
-  toggleSupplierExpand(supplierId: number): void {
-    if (this.expandedSupplierIds.has(supplierId)) {
-      this.expandedSupplierIds.delete(supplierId);
-    } else {
-      this.expandedSupplierIds.add(supplierId);
-    }
+  toggleSupplierExpand(id: number): void {
+    if (this.expandedSupplierIds.has(id)) this.expandedSupplierIds.delete(id);
+    else this.expandedSupplierIds.add(id);
   }
 
-  isSupplierExpanded(supplierId: number): boolean {
-    return this.expandedSupplierIds.has(supplierId);
+  isSupplierExpanded(id: number): boolean {
+    return this.expandedSupplierIds.has(id);
   }
 
+  // INVOICE STATUS PILL
   getInvoiceStatusTextByAmounts(row: any): string {
     const paid = Number(row.paidAmount || 0);
     const dn   = Number(row.debitNoteAmount || 0);
@@ -247,29 +332,29 @@ payInvSelectAll = false;
 
   getInvoiceStatusClassByAmounts(row: any): string {
     const txt = this.getInvoiceStatusTextByAmounts(row);
-    switch (txt) {
-      case 'Paid':    return 'badge-success';
-      case 'Partial': return 'badge-warning';
-      default:        return 'badge-danger';
-    }
+    if (txt === 'Paid') return 'badge-success';
+    if (txt === 'Partial') return 'badge-warning';
+    return 'badge-danger';
   }
 
-  // ----- Pagination helpers: Invoices (supplier summary) -----
+  // Pagination (Suppliers)
   get invTotalPages(): number {
-    return Math.max(1, Math.ceil((this.supplierGroups?.length || 0) / this.invPageSize));
+    return Math.max(1, Math.ceil((this.supplierGroups.length || 0) / this.invPageSize));
   }
 
   get pagedSupplierGroups(): SupplierInvoiceGroup[] {
     const start = (this.invPage - 1) * this.invPageSize;
-    return (this.supplierGroups || []).slice(start, start + this.invPageSize);
+    return this.supplierGroups.slice(start, start + this.invPageSize);
   }
 
   invGoToPage(p: number): void {
-    if (p < 1 || p > this.invTotalPages) { return; }
+    if (p < 1 || p > this.invTotalPages) return;
     this.invPage = p;
   }
 
-  // ---------------- PAYMENTS TAB ----------------
+  // =====================================================
+  //  PAYMENTS TAB
+  // =====================================================
   loadPayments(): void {
     this.apSvc.getPayments().subscribe({
       next: (res: any) => {
@@ -282,7 +367,7 @@ payInvSelectAll = false;
 
   openNewPayment(): void {
     this.showPaymentForm = true;
-    this.cancelPayment(); // reset data but keep tab
+    this.cancelPayment();
   }
 
   backToPaymentList(): void {
@@ -302,96 +387,102 @@ payInvSelectAll = false;
     this.supTotalPaid = 0;
     this.supTotalDebitNote = 0;
     this.supTotalNetOutstanding = 0;
+    this.payInvSelectAll = false;
     this.amountEditedManually = false;
     this.payInvPage = 1;
-    this.payInvSelectAll = false;
   }
 
+  // Supplier change in Payment form
   onPaySupplierChange(): void {
     this.payAmount = 0;
     this.amountEditedManually = false;
+    this.supplierInvoicesAll = [];
     this.supTotalInvoice = 0;
     this.supTotalPaid = 0;
     this.supTotalDebitNote = 0;
     this.supTotalNetOutstanding = 0;
-    this.supplierInvoicesAll = [];
-    this.payInvPage = 1;
     this.payInvSelectAll = false;
+    this.payInvPage = 1;
 
     if (!this.paySupplierId) return;
 
     this.apSvc.getApInvoicesBySupplier(this.paySupplierId).subscribe({
       next: (res: any) => {
-        const rawRows = res?.data || res || [];
+        const raw = res?.data || res || [];
 
-        // only invoices which still have outstanding
-        const rows = rawRows
+        const rows = raw
           .filter((x: any) => Number(x.outstandingAmount || 0) > 0)
           .map((x: any) => ({ ...x, isSelected: false }));
 
         this.supplierInvoicesAll = rows;
 
-        rows.forEach((x: any) => {
-          const inv  = Number(x.grandTotal        || 0);
-          const paid = Number(x.paidAmount        || 0);
-          const dn   = Number(x.debitNoteAmount   || 0);
-          const os   = Number(x.outstandingAmount || 0);
-
-          this.supTotalInvoice        += inv;
-          this.supTotalPaid           += paid;
-          this.supTotalDebitNote      += dn;
-          this.supTotalNetOutstanding += os;
+        rows.forEach(x => {
+          this.supTotalInvoice        += Number(x.grandTotal || 0);
+          this.supTotalPaid           += Number(x.paidAmount || 0);
+          this.supTotalDebitNote      += Number(x.debitNoteAmount || 0);
+          this.supTotalNetOutstanding += Number(x.outstandingAmount || 0);
         });
+
+        // Reset amount and bank balance calc
+        this.payAmount = 0;
+        this.recalcBankBalanceAfterPayment();
       },
-      error: () => Swal.fire('Error', 'Failed to load invoices for supplier', 'error')
+      error: () => Swal.fire('Error', 'Failed to load supplier invoices', 'error')
     });
   }
 
-  // onInvoiceCheckboxChange(inv: any, checked: boolean): void {
-  //   inv.isSelected = checked;
-  //   this.recalcSelectedAmount();
-  // }
-
-  recalcSelectedAmount(): void {
-    // if user already edited manually, don't override their value
-    if (this.amountEditedManually) {
-      return;
-    }
-
-    let total = 0;
-    for (const x of this.supplierInvoicesAll || []) {
-      if (x.isSelected) {
-        total += Number(x.outstandingAmount || 0);
-      }
-    }
-    this.payAmount = total;
+  // Checkboxes
+  onSelectAllInvoicesChange(checked: boolean): void {
+    this.payInvSelectAll = checked;
+    this.supplierInvoicesAll.forEach(x => x.isSelected = checked);
+    this.amountEditedManually = false;
+    this.recalcSelectedAmount();
   }
 
-  onAmountInputChange(): void {
-    this.amountEditedManually = true;
+  onInvoiceCheckboxChange(inv: any, checked: boolean): void {
+    inv.isSelected = checked;
+    this.payInvSelectAll = this.supplierInvoicesAll.every(x => x.isSelected);
+    this.recalcSelectedAmount();
   }
 
+  // Get Payment Method Name for list tab
+  getPaymentMethodName(id?: number): string {
+    switch (id) {
+      case 1: return 'Cash';
+      case 2: return 'Bank Transfer';
+      case 3: return 'Cheque';
+      case 4: return 'Other';
+      default: return 'Other';
+    }
+  }
+
+  // POST PAYMENT
   postPayment(): void {
     if (!this.paySupplierId) {
       Swal.fire('Warning', 'Select supplier', 'warning');
       return;
     }
 
-    const selected = (this.supplierInvoicesAll || []).filter(x => x.isSelected);
-    if (!selected.length) {
+    const selected = this.supplierInvoicesAll.filter(x => x.isSelected);
+    if (selected.length === 0) {
       Swal.fire('Warning', 'Select at least one invoice', 'warning');
       return;
     }
 
     if (!this.payAmount || this.payAmount <= 0) {
-      Swal.fire('Warning', 'Amount is zero – select invoice(s) or enter amount', 'warning');
+      Swal.fire('Warning', 'Amount is zero', 'warning');
+      return;
+    }
+
+    // If method is bank transfer/cheque → bank is mandatory
+    if ((this.payMethodId === 2 || this.payMethodId === 3) && !this.selectedBankId) {
+      Swal.fire('Warning', 'Select Bank Account', 'warning');
       return;
     }
 
     let requests: any[] = [];
 
     if (selected.length === 1) {
-      // Single invoice: use the amount entered in the field
       const inv = selected[0];
       const payload = {
         supplierInvoiceId: inv.id,
@@ -399,15 +490,16 @@ payInvSelectAll = false;
         paymentDate: this.payDate,
         paymentMethodId: this.payMethodId,
         referenceNo: this.payReference,
-        amount: this.payAmount,   // <- take from field
+        amount: this.payAmount,
         notes: this.payNotes,
+        bankAccountId: this.selectedBankId,
+         bankId: this.selectedBankId,
         createdBy: 1
       };
       requests = [this.apSvc.createPayment(payload)];
     } else {
-      // Multiple invoices: pay full OS for each selected invoice
-      requests = selected.map(inv => {
-        const payload = {
+      requests = selected
+        .map(inv => ({
           supplierInvoiceId: inv.id,
           supplierId: this.paySupplierId,
           paymentDate: this.payDate,
@@ -415,41 +507,58 @@ payInvSelectAll = false;
           referenceNo: this.payReference,
           amount: inv.outstandingAmount,
           notes: this.payNotes,
+          bankAccountId: this.selectedBankId,
+           bankId: this.selectedBankId,
           createdBy: 1
-        };
-        return this.apSvc.createPayment(payload);
-      });
+        }))
+        .map(payload => this.apSvc.createPayment(payload));
     }
 
-   forkJoin(requests).subscribe({
-  next: (results: any[]) => {
-    const allOk = results.every(r => r?.isSuccess !== false);
-    if (allOk) {
-      Swal.fire('Success', 'Payment(s) posted', 'success');
-    } else {
-      const firstErr = results.find(r => r?.isSuccess === false);
-      Swal.fire('Warning', firstErr?.message || 'Some payments may have failed', 'warning');
-    }
+    forkJoin(requests).subscribe({
+      next: (results: any[]) => {
+        const allOk = results.every(r => r?.isSuccess !== false);
 
-    this.loadPayments();
-    this.loadInvoices();
-    this.backToPaymentList();
-  },
-  error: (err) => {
-    const msg = err?.error?.message || err?.message || 'Failed to post payments';
+        if (allOk) {
+          Swal.fire('Success', 'Payment(s) posted', 'success');
 
-    // if message from backend is about locked period, show clearly
-    if (msg.toLowerCase().includes('period') && msg.toLowerCase().includes('locked')) {
-      Swal.fire('Period Locked', msg, 'error');
-      this.checkPeriodLockForDate(this.payDate);
-    } else {
-      Swal.fire('Error', msg, 'error');
+          // Optional: call backend to update bank balance if you keep it in a separate table
+         if (this.selectedBankId && this.bankBalanceAfterPayment != null) {
+  const payload = {
+    bankHeadId: this.selectedBankId,
+    newBalance: this.bankBalanceAfterPayment
+  };
+  this.apSvc.updateBankBalance(payload).subscribe({
+    error: () => {
+      // optional – ignore or show warning
     }
+   
+  });
+   this.loadBankAccounts();
+}
+
+        } else {
+          const err = results.find(r => r?.isSuccess === false);
+          Swal.fire('Warning', err?.message || 'Some payments failed', 'warning');
+        }
+
+        this.loadPayments();
+        this.loadInvoices();
+        this.backToPaymentList();
+      },
+      error: err => {
+        const msg = err?.error?.message || err?.message || 'Payment failed';
+
+        if (msg.toLowerCase().includes('locked')) {
+          Swal.fire('Period Locked', msg, 'error');
+          this.checkPeriodLockForDate(this.payDate);
+        } else {
+          Swal.fire('Error', msg, 'error');
+        }
+      }
+    });
   }
-});
 
-  }
-
+  // RESET PAYMENT FORM
   resetPaymentForm(): void {
     const today = new Date().toISOString().substring(0, 10);
     this.payDate = today;
@@ -458,67 +567,44 @@ payInvSelectAll = false;
     this.payAmount = 0;
     this.payNotes = '';
     this.amountEditedManually = false;
-    this.payInvSelectAll = false;
-  }
-onSelectAllInvoicesChange(checked: boolean): void {
-  this.payInvSelectAll = checked;
-  const list = this.supplierInvoicesAll || [];
-
-  list.forEach(x => x.isSelected = checked);
-
-  // User didn't type manually now – we recalc from selection
-  this.amountEditedManually = false;
-  this.recalcSelectedAmount();
-}
-onInvoiceCheckboxChange(inv: any, checked: boolean): void {
-  inv.isSelected = checked;
-
-  const list = this.supplierInvoicesAll || [];
-  this.payInvSelectAll = list.length > 0 && list.every(x => x.isSelected);
-
-  this.recalcSelectedAmount();
-}
-
-  getPaymentMethodName(id?: number): string {
-    switch (id) {
-      case 1: return 'Cash';
-      case 2: return 'Bank Transfer';
-      case 3: return 'Cheque';
-      default: return 'Other';
-    }
+    this.selectedBankId = null;
+    this.bankAvailableBalance = null;
+    this.bankBalanceAfterPayment = null;
   }
 
-  // ----- Pagination helpers: Payments list -----
+  // Pagination: Payments list
   get payListTotalPages(): number {
-    return Math.max(1, Math.ceil((this.payments?.length || 0) / this.payListPageSize));
+    return Math.max(1, Math.ceil((this.payments.length || 0) / this.payListPageSize));
   }
 
   get pagedPayments(): any[] {
     const start = (this.payListPage - 1) * this.payListPageSize;
-    return (this.payments || []).slice(start, start + this.payListPageSize);
+    return this.payments.slice(start, start + this.payListPageSize);
   }
 
   payListGoToPage(p: number): void {
-    if (p < 1 || p > this.payListTotalPages) { return; }
+    if (p < 1 || p > this.payListTotalPages) return;
     this.payListPage = p;
   }
 
-  // ----- Pagination helpers: Supplier invoices in payment screen -----
+  // Pagination: Supplier invoices in payment form
   get payInvTotalPages(): number {
-    return Math.max(1, Math.ceil((this.supplierInvoicesAll?.length || 0) / this.payInvPageSize));
+    return Math.max(1, Math.ceil((this.supplierInvoicesAll.length || 0) / this.payInvPageSize));
   }
 
   get pagedSupplierInvoices(): any[] {
     const start = (this.payInvPage - 1) * this.payInvPageSize;
-    return (this.supplierInvoicesAll || []).slice(start, start + this.payInvPageSize);
+    return this.supplierInvoicesAll.slice(start, start + this.payInvPageSize);
   }
 
   payInvGoToPage(p: number): void {
-    if (p < 1 || p > this.payInvTotalPages) { return; }
+    if (p < 1 || p > this.payInvTotalPages) return;
     this.payInvPage = p;
   }
 
-  // ---------------- 3-WAY MATCH TAB ----------------
+  // =====================================================
+  //  MATCH TAB
+  // =====================================================
   loadMatch(): void {
     this.apSvc.getMatchList().subscribe({
       next: (res: any) => {
@@ -531,44 +617,48 @@ onInvoiceCheckboxChange(inv: any, checked: boolean): void {
 
   matchStatusClass(status: string): string {
     if (!status) return 'badge-secondary';
-    const lower = status.toLowerCase();
-    if (lower === 'matched') return 'badge-success';
-    if (lower === 'warning') return 'badge-warning';
+    if (status.toLowerCase() === 'matched') return 'badge-success';
+    if (status.toLowerCase() === 'warning') return 'badge-warning';
     return 'badge-danger';
   }
 
-  // ----- Pagination helpers: 3-way match -----
   get matchTotalPages(): number {
-    return Math.max(1, Math.ceil((this.matchRows?.length || 0) / this.matchPageSize));
+    return Math.max(1, Math.ceil((this.matchRows.length || 0) / this.matchPageSize));
   }
 
   get pagedMatchRows(): any[] {
     const start = (this.matchPage - 1) * this.matchPageSize;
-    return (this.matchRows || []).slice(start, start + this.matchPageSize);
+    return this.matchRows.slice(start, start + this.matchPageSize);
   }
 
   matchGoToPage(p: number): void {
-    if (p < 1 || p > this.matchTotalPages) { return; }
+    if (p < 1 || p > this.matchTotalPages) return;
     this.matchPage = p;
   }
+
+  // =====================================================
+  //  PERIOD LOCK
+  // =====================================================
   checkPeriodLockForDate(dateStr: string): void {
-    if (!dateStr) { return; }
+    if (!dateStr) return;
 
     this.apSvc.getPeriodStatus(dateStr).subscribe({
-      next: (res) => {
+      next: res => {
         this.isPeriodLocked = !!res.isLocked;
         this.currentPeriodName = res.periodName || '';
       },
       error: () => {
-        // if API fails, safer to treat as locked or show warning
         this.isPeriodLocked = false;
         this.currentPeriodName = '';
       }
     });
   }
 
-  // whenever user changes payment date, re-check
   onPayDateChange(): void {
     this.checkPeriodLockForDate(this.payDate);
   }
+  onPayListPageSizeChange(size: number): void {
+  this.payListPageSize = +size;   // ensure number
+  this.payListPage = 1;           // reset to first page
+}
 }

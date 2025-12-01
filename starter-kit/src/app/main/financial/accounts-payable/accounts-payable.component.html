@@ -140,7 +140,6 @@
                     <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Invoice Count</th>
                     <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Amount</th>
                     <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Paid</th>
-                    <!-- Debit Note column removed here -->
                     <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Outstanding</th>
                   </tr>
                 </thead>
@@ -175,13 +174,12 @@
                       <td class="text-right">
                         {{ g.totalPaid | number:'1.2-2' }}
                       </td>
-                      <!-- debit total removed from summary -->
                       <td class="text-right text-brand font-weight-bold">
                         {{ g.totalOutstanding | number:'1.2-2' }}
                       </td>
                     </tr>
 
-                    <!-- Detail table: invoices + separate debit note row (under amount) -->
+                    <!-- Detail table: invoices + separate debit note row -->
                     <tr *ngIf="isSupplierExpanded(g.supplierId)">
                       <td colspan="6" class="p-0">
                         <div class="ap-inner-wrap">
@@ -222,7 +220,7 @@
                                   </td>
                                 </tr>
 
-                                <!-- Debit note row (separate line, shown under amount) -->
+                                <!-- Debit note row -->
                                 <tr *ngIf="inv.debitNoteAmount > 0" class="ap-dn-row">
                                   <td>
                                     <span *ngIf="inv.debitNoteNo">
@@ -305,15 +303,14 @@
             <div class="ap-table-wrap" *ngIf="!showPaymentForm">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <h6 class="sub-title mb-0">Supplier Payments</h6>
-               <button
-  type="button"
-  class="btn btn-brand"
-  (click)="openNewPayment()"
-  [disabled]="isPeriodLocked">
-  <i class="fas fa-plus mr-25"></i>
-  New Payment
-</button>
-
+                <button
+                  type="button"
+                  class="btn btn-brand"
+                  (click)="openNewPayment()"
+                  [disabled]="isPeriodLocked">
+                  <i class="fas fa-plus mr-25"></i>
+                  New Payment
+                </button>
               </div>
 
               <div class="table-responsive">
@@ -383,7 +380,7 @@
 
             <!-- CREATE MODE -->
             <div class="ap-form-row row" *ngIf="showPaymentForm">
-              <!-- Header + Back button (only back to payments list) -->
+              <!-- Header + Back button -->
               <div class="col-12 d-flex justify-content-between align-items-center mb-1">
                 <h6 class="sub-title mb-0">New Supplier Payment</h6>
                 <button
@@ -399,16 +396,19 @@
               <div class="col-md-3 col-12">
                 <div class="form-group">
                   <label>Supplier <span class="text-danger">*</span></label>
-                  <select
-                    class="form-control"
+
+                  <!-- SEARCHABLE SUPPLIER DROPDOWN -->
+                  <ng-select
                     [(ngModel)]="paySupplierId"
                     name="paySupplier"
+                    [items]="suppliers"
+                    bindLabel="name"
+                    bindValue="id"
+                    [searchable]="true"
+                    [clearable]="true"
+                    placeholder="Search supplier"
                     (change)="onPaySupplierChange()">
-                    <option [ngValue]="null">-- Select Supplier --</option>
-                    <option *ngFor="let s of suppliers" [ngValue]="s.id">
-                      {{ s.name || s.supplierName }}
-                    </option>
-                  </select>
+                  </ng-select>
                 </div>
               </div>
 
@@ -434,12 +434,11 @@
                 <div class="form-group">
                   <label>Date</label>
                   <input
-  type="date"
-  class="form-control"
-  [(ngModel)]="payDate"
-  name="payDate"
-  (change)="onPayDateChange()" />
-
+                    type="date"
+                    class="form-control"
+                    [(ngModel)]="payDate"
+                    name="payDate"
+                    (change)="onPayDateChange()" />
                 </div>
               </div>
 
@@ -450,7 +449,8 @@
                   <select
                     class="form-control"
                     [(ngModel)]="payMethodId"
-                    name="payMethod">
+                    name="payMethod"
+                    (change)="onMethodChange()">
                     <option [ngValue]="1">Cash</option>
                     <option [ngValue]="2">Bank Transfer</option>
                     <option [ngValue]="3">Cheque</option>
@@ -459,7 +459,36 @@
                 </div>
               </div>
 
-              <!-- Amount (auto from checkboxes but editable) -->
+              <!-- Bank (only for Bank Transfer / Cheque) -->
+              <div class="col-md-3 col-12 mt-1" *ngIf="payMethodId === 2 || payMethodId === 3">
+                <div class="form-group">
+                  <label>Bank Account <span class="text-danger">*</span></label>
+
+                  <select
+                    class="form-control"
+                    [(ngModel)]="selectedBankId"
+                    name="bankAccount"
+                    (change)="onBankChange()">
+                    <option [ngValue]="null">-- Select Bank --</option>
+                    <option *ngFor="let b of bankAccounts" [ngValue]="b.id">
+                      {{ b.headName }} 
+                    </option>
+                  </select>
+
+                  <div class="mt-25 text-muted small" *ngIf="bankAvailableBalance !== null">
+                    <div>
+                      Available:
+                      <strong>{{ bankAvailableBalance | number:'1.2-2' }}</strong>
+                    </div>
+                    <div *ngIf="payAmount > 0">
+                      After Payment:
+                      <strong>{{ bankBalanceAfterPayment | number:'1.2-2' }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Amount -->
               <div class="col-md-2 col-12 mt-1">
                 <div class="form-group">
                   <label>Amount <span class="text-danger">*</span></label>
@@ -522,73 +551,73 @@
               <div class="col-12 mt-1" *ngIf="supplierInvoicesAll.length">
                 <div class="table-responsive ap-table-wrap">
                   <table class="table mb-0 ap-table">
-                  <thead>
-  <tr>
-    <th style="background-color:#2E5F73; color:#ffffff;" class="text-center align-middle">
-      <input
-        type="checkbox"
-        [(ngModel)]="payInvSelectAll"
-        (ngModelChange)="onSelectAllInvoicesChange($event)" />
-    </th>
-    <th style="background-color:#2E5F73; color:#ffffff;">Invoice No</th>
-    <th style="background-color:#2E5F73; color:#ffffff;">Invoice Date</th>
-    <th style="background-color:#2E5F73; color:#ffffff;">Due Date</th>
-    <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Amount</th>
-    <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Paid</th>
-    <!-- Debit Note column removed -->
-    <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Outstanding</th>
-    <th style="background-color:#2E5F73; color:#ffffff;" class="text-center">Status</th>
-  </tr>
-</thead>
+                    <thead>
+                      <tr>
+                        <th style="background-color:#2E5F73; color:#ffffff;" class="text-center align-middle">
+                          <input
+                            type="checkbox"
+                            [(ngModel)]="payInvSelectAll"
+                            (ngModelChange)="onSelectAllInvoicesChange($event)" />
+                        </th>
+                        <th style="background-color:#2E5F73; color:#ffffff;">Invoice No</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;">Invoice Date</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;">Due Date</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Amount</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Paid</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Outstanding</th>
+                        <th style="background-color:#2E5F73; color:#ffffff;" class="text-center">Status</th>
+                      </tr>
+                    </thead>
 
                     <tbody>
-                     <ng-container *ngFor="let si of pagedSupplierInvoices">
-  <!-- Invoice row with checkbox -->
-  <tr>
-    <td class="text-center align-middle">
-      <input
-        type="checkbox"
-        [(ngModel)]="si.isSelected"
-        (ngModelChange)="onInvoiceCheckboxChange(si, $event)" />
-    </td>
-    <td>{{ si.invoiceNo }}</td>
-    <td>{{ si.invoiceDate | date:'dd-MMM-yyyy' }}</td>
-    <td>{{ si.dueDate | date:'dd-MMM-yyyy' }}</td>
-    <td class="text-right">{{ si.grandTotal | number:'1.2-2' }}</td>
-    <td class="text-right">{{ si.paidAmount | number:'1.2-2' }}</td>
-    <td class="text-right">{{ si.outstandingAmount | number:'1.2-2' }}</td>
-    <td class="text-center">
-      <span
-        class="badge status-pill"
-        [ngClass]="getInvoiceStatusClassByAmounts(si)">
-        {{ getInvoiceStatusTextByAmounts(si) }}
-      </span>
-    </td>
-  </tr>
+                      <ng-container *ngFor="let si of pagedSupplierInvoices">
+                        <!-- Invoice row with checkbox -->
+                        <tr>
+                          <td class="text-center align-middle">
+                            <input
+                              type="checkbox"
+                              [(ngModel)]="si.isSelected"
+                              (ngModelChange)="onInvoiceCheckboxChange(si, $event)" />
+                          </td>
+                          <td>{{ si.invoiceNo }}</td>
+                          <td>{{ si.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                          <td>{{ si.dueDate | date:'dd-MMM-yyyy' }}</td>
+                          <td class="text-right">{{ si.grandTotal | number:'1.2-2' }}</td>
+                          <td class="text-right">{{ si.paidAmount | number:'1.2-2' }}</td>
+                          <td class="text-right">{{ si.outstandingAmount | number:'1.2-2' }}</td>
+                          <td class="text-center">
+                            <span
+                              class="badge status-pill"
+                              [ngClass]="getInvoiceStatusClassByAmounts(si)">
+                              {{ getInvoiceStatusTextByAmounts(si) }}
+                            </span>
+                          </td>
+                        </tr>
 
-  <!-- Separate Debit Note row under amount -->
-  <tr *ngIf="si.debitNoteAmount > 0" class="ap-dn-row">
-    <td></td>
-    <td>
-      <span *ngIf="si.debitNoteNo">
-        {{ si.debitNoteNo }}
-      </span>
-    </td>
-    <td>{{ si.debitNoteDate | date:'dd-MMM-yyyy' }}</td>
-    <td></td>
-    <td class="text-right text-danger">
-      -{{ si.debitNoteAmount | number:'1.2-2' }}
-    </td>
-    <td class="text-right text-success">{{ si.debitNoteAmount | number:'1.2-2' }}</td>
-    <td class="text-right">0.00</td>
-    <td class="text-center">
-      <span class="badge status-pill badge-secondary">
-        Debit Note
-      </span>
-    </td>
-  </tr>
-</ng-container>
-
+                        <!-- Separate Debit Note row under amount -->
+                        <tr *ngIf="si.debitNoteAmount > 0" class="ap-dn-row">
+                          <td></td>
+                          <td>
+                            <span *ngIf="si.debitNoteNo">
+                              {{ si.debitNoteNo }}
+                            </span>
+                          </td>
+                          <td>{{ si.debitNoteDate | date:'dd-MMM-yyyy' }}</td>
+                          <td></td>
+                          <td class="text-right text-danger">
+                            -{{ si.debitNoteAmount | number:'1.2-2' }}
+                          </td>
+                          <td class="text-right text-success">
+                            {{ si.debitNoteAmount | number:'1.2-2' }}
+                          </td>
+                          <td class="text-right">0.00</td>
+                          <td class="text-center">
+                            <span class="badge status-pill badge-secondary">
+                              Debit Note
+                            </span>
+                          </td>
+                        </tr>
+                      </ng-container>
 
                       <tr *ngIf="!supplierInvoicesAll.length">
                         <td colspan="8" class="text-center text-muted py-2">
