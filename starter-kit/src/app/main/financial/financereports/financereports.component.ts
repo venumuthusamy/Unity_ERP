@@ -7,32 +7,36 @@ import { Router } from '@angular/router';
   styleUrls: ['./financereports.component.scss']
 })
 export class FinancereportsComponent implements OnInit {
+  selectedReport: string | null = null;
 
   constructor(private router: Router) {}
 
   ngOnInit(): void {}
 
-  goToProfitLoss(): void {
-    this.router.navigate(['/financial/profitloss']);
-  }
+  setAndGo(code: string): void {
+    // 1) set color
+    this.selectedReport = code;
 
-  goToBalanceSheet(): void {
-    this.router.navigate(['/financial/balance-sheet']);
-  }
-
-  goToGstReport(): void {
-    this.router.navigate(['/financial/Gst-report']);
-  }
-
-  goToAging(): void {
-    this.router.navigate(['/financial/aging']);
-  }
-
-  goToDayBook(): void {
-    this.router.navigate(['/financial/daybook']);
-  }
-
-  goToCollectionReport(): void {
-    this.router.navigate(['/financial/forecast']);
+    // 2) navigate
+    switch (code) {
+      case 'pl':
+        this.router.navigate(['/financial/profitloss']);
+        break;
+      case 'bs':
+        this.router.navigate(['/financial/balance-sheet']);
+        break;
+      case 'aging':
+        this.router.navigate(['/financial/aging']);
+        break;
+      case 'gst':
+        this.router.navigate(['/financial/Gst-report']);
+        break;
+      case 'cf':
+        this.router.navigate(['/financial/forecast']);
+        break;
+      case 'daybook':
+        this.router.navigate(['/financial/daybook']);
+        break;
+    }
   }
 }

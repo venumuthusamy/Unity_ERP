@@ -539,5 +539,17 @@ $brand: #2E5F73;
 .sup-total-pill.text-brand {
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
 }
+.pagination .page-item .page-link {
+  border-radius: 20px;
+  margin: 0 3px;
+  color: #2E5F73;
+  font-weight: 500;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #2E5F73;
+  border-color: #2E5F73;
+  color: white !important;
+}
 
 
