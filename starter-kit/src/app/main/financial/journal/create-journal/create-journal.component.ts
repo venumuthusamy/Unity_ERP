@@ -142,61 +142,77 @@ export class CreateJournalComponent implements OnInit {
 
   // ---------------- SUBMIT / CANCEL ----------------
 
-  onSubmit() {
-    if (!this.selectedAccountId || !this.journalDate) {
-      Swal.fire('Required', 'Account and Journal Date are required.', 'warning');
-      return;
-    }
+onSubmit() {
+  if (!this.selectedAccountId || !this.journalDate) {
+    Swal.fire('Required', 'Account and Journal Date are required.', 'warning');
+    return;
+  }
 
-    if (this.debitAmount <= 0 && this.creditAmount <= 0) {
-      Swal.fire('Invalid Amount', 'Enter debit or credit amount.', 'warning');
-      return;
-    }
+  if (this.debitAmount <= 0 && this.creditAmount <= 0) {
+    Swal.fire('Invalid Amount', 'Enter debit or credit amount.', 'warning');
+    return;
+  }
 
-    const startDate = this.isRecurring
-      ? (this.recurringStartDate || this.journalDate)
-      : null;
+  const startDate = this.isRecurring
+    ? (this.recurringStartDate || this.journalDate)
+    : null;
 
-    const payload = {
-      accountId: this.selectedAccountId,
-      journalDate: this.journalDate,
-      type: this.selectedType,
-      customerId: this.selectedType === 'Customer' ? this.selectedCustomerId : null,
-      supplierId: this.selectedType === 'Supplier' ? this.selectedSupplierId : null,
-      description: this.description,
-      debit: this.debitAmount,
-      credit: this.creditAmount,
+  // 🔹 Plain DTO – this MUST match ManualJournalCreateDto in C#
+  const dto = {
+    accountId: this.selectedAccountId,
+    journalDate: this.journalDate,
+    type: this.selectedType,
+    customerId: this.selectedType === 'Customer' ? this.selectedCustomerId : null,
+    supplierId: this.selectedType === 'Supplier' ? this.selectedSupplierId : null,
+    description: this.description,
+    debit: this.debitAmount,
+    credit: this.creditAmount,
 
-      // Recurring
-      isRecurring: this.isRecurring,
-      recurringFrequency: this.recurringFrequency,
-      recurringInterval: this.recurringInterval,
-      recurringStartDate: startDate,
-      recurringEndType: this.isRecurring ? this.recurringEndType : null,
-      recurringEndDate: this.recurringEndType === 'EndByDate' ? this.recurringEndDate : null,
-      recurringCount: this.recurringEndType === 'EndByCount' ? this.recurringCount : null,
+    // Recurring
+    isRecurring: this.isRecurring,
+    recurringFrequency: this.recurringFrequency,
+    recurringInterval: this.recurringInterval,
+    recurringStartDate: startDate,
+    recurringEndType: this.isRecurring ? this.recurringEndType : null,
+    recurringEndDate: this.recurringEndType === 'EndByDate' ? this.recurringEndDate : null,
+    recurringCount: this.recurringEndType === 'EndByCount' ? this.recurringCount : null,
 
-      timezone: this.timezone,
-      createdBy: 1,
+    // Timezone – match backend default
+    timezone: 'Asia/Kolkata',
 
-      // store item id if needed
-      itemId: this.selectedItem ? this.selectedItem.id : null
-    };
+    // createdBy – backend also sets 1, but no problem if send
+    createdBy: 1,
 
-    this.isSaving = true;
+    // optional
+    itemId: this.selectedItem ? this.selectedItem.id : null
+  };
 
-    this._journal.create(payload).subscribe({
-      next: () => {
-        this.isSaving = false;
-        Swal.fire('Success', 'Journal saved successfully', 'success')
-          .then(() => this.router.navigate(['financial/journal']));
-      },
-      error: () => {
-        this.isSaving = false;
+  // 🔴 IMPORTANT: send plain dto, NOT { dto: dto }
+  const payload = dto;
+
+  this.isSaving = true;
+  console.log('Journal payload =', payload);
+
+  this._journal.create(payload).subscribe({
+    next: () => {
+      this.isSaving = false;
+      Swal.fire('Success', 'Journal saved successfully', 'success')
+        .then(() => this.router.navigate(['financial/journal']));
+    },
+    error: (err) => {
+      this.isSaving = false;
+      console.error('Journal create error', err);
+
+      // If server sends { success: false, message: "..." }
+      if (err.error && err.error.message) {
+        Swal.fire('Error', err.error.message, 'error');
+      } else {
         Swal.fire('Error', 'Error saving journal', 'error');
       }
-    });
-  }
+    }
+  });
+}
+
 
   onCancel() {
     this.router.navigate(['financial/journal']);

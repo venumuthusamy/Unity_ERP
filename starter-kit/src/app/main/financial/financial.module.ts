@@ -35,6 +35,7 @@ import { APAgingComponent } from './reports/ap-aging/ap-aging.component';
 import { ArApAgingComponent } from './reports/ar/ap-aging/ap-aging.component';
 import { DaybookReportComponent } from './daybook/daybook-report/daybook-report.component';
 import { CollectionForecastComponent } from './reports/collection-forecast/collection-forecast.component';
+import { OpeningBalanceComponent } from './opening-balance/opening-balance/opening-balance.component';
 
 const routes: Routes = [
   { path: 'ChartOfAccount', component: ChartofaccountComponent },
@@ -59,6 +60,7 @@ const routes: Routes = [
 { path: 'aging', component: ArApAgingComponent },
 { path: 'daybook', component: DaybookReportComponent },
 { path: 'forecast', component: CollectionForecastComponent },
+{ path: 'opening-balance', component: OpeningBalanceComponent },
 ];
 
 @NgModule({
@@ -88,7 +90,8 @@ const routes: Routes = [
     APAgingComponent,
     ArApAgingComponent,
     DaybookReportComponent,
-    CollectionForecastComponent
+    CollectionForecastComponent,
+    OpeningBalanceComponent
   ],
   imports: [
     CommonModule,
