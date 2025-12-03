@@ -101,72 +101,96 @@
 
       <!-- Lines table -->
       <div class="rounded-xl border border-gray-200 mt-2">
-        <!-- Header row -->
-        <div
-          class="grid grid-cols-[1.3fr_1fr_0.7fr_1fr_0.8fr_1fr]
-                 text-[12px] font-medium
-                 bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
-          <div class="px-2.5 py-2">Item</div>
-          <div class="px-2.5 py-2">Location</div>
-          <div class="px-2.5 py-2">Qty</div>
-          <div class="px-2.5 py-2">Unit Price</div>
-          <div class="px-2.5 py-2">Discount %</div>
-          <div class="px-2.5 py-2 text-right">Total</div>
-        </div>
+      <!-- Header row -->
+<div
+  class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
+         text-[12px] font-medium
+         bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
+  <div class="px-2.5 py-2">Item</div>
+  <div class="px-2.5 py-2">Budget</div>
+  <div class="px-2.5 py-2">Location</div>
+  <div class="px-2.5 py-2">Qty</div>
+  <div class="px-2.5 py-2">Unit Price</div>
+  <div class="px-2.5 py-2">Discount %</div>
+  <div class="px-2.5 py-2 text-right">Total</div>
+</div>
 
-        <!-- Body -->
-        <div formArrayName="lines">
-          <div *ngIf="lines.length === 0"
-               class="text-center text-[12.5px] text-gray-400 py-3">
-            No lines yet.
-          </div>
+<!-- Body -->
+<div formArrayName="lines">
+  <div *ngIf="lines.length === 0"
+       class="text-center text-[12.5px] text-gray-400 py-3">
+    No lines yet.
+  </div>
 
-          <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
-               [formGroupName]="i"
-               class="grid grid-cols-[1.3fr_1fr_0.7fr_1fr_0.8fr_1fr] items-center border-t">
+  <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
+       [formGroupName]="i"
+       class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
 
-            <!-- Item -->
-            <div class="px-2.5 py-1.5">
-              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="item" />
-            </div>
+    <!-- Item -->
+    <div class="px-2.5 py-1.5">
+      <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+             formControlName="item" />
+    </div>
 
-            <!-- Location -->
-            <div class="px-2.5 py-1.5">
-              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="location" />
-            </div>
+    <!-- Budget -->
+ <div class="px-2.5 py-1.5">
+  <ng-select
+    class="pin-budget-select w-full"
+    [items]="parentHeadList"
+    bindLabel="label"
+    bindValue="value"
+    [searchable]="true"
+    [clearable]="false"
+    placeholder="Search / choose Budget Line..."
+    formControlName="budgetLineId"
+    appendTo="body"
+    dropdownPosition="bottom">
 
-            <!-- Qty -->
-            <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="qty"
-                     (input)="onCellChange(i)" />
-            </div>
+    <ng-template ng-option-tmp let-item="item">
+      <div class="pin-budget-option" [title]="item.label">
+        {{ item.label }}
+      </div>
+    </ng-template>
+  </ng-select>
+</div>
 
-            <!-- Unit Price -->
-            <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="unitPrice"
-                     (input)="onCellChange(i)" />
-            </div>
+    <!-- Location -->
+    <div class="px-2.5 py-1.5">
+      <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+             formControlName="location" />
+    </div>
 
-            <!-- Discount % -->
-            <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="discountPct"
-                     (input)="onCellChange(i)" />
-            </div>
+    <!-- Qty -->
+    <div class="px-2.5 py-1.5">
+      <input type="number"
+             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+             formControlName="qty"
+             (input)="onCellChange(i)" />
+    </div>
 
-            <!-- Line total (read-only display) -->
-            <div class="px-2.5 py-1.5 text-right text-[13px]">
-              {{ row.get('lineTotal')?.value || 0 | number:'1.2-2' }}
-            </div>
-          </div>
-        </div>
+    <!-- Unit Price -->
+    <div class="px-2.5 py-1.5">
+      <input type="number"
+             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+             formControlName="unitPrice"
+             (input)="onCellChange(i)" />
+    </div>
+
+    <!-- Discount % -->
+    <div class="px-2.5 py-1.5">
+      <input type="number"
+             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+             formControlName="discountPct"
+             (input)="onCellChange(i)" />
+    </div>
+
+    <!-- Line total -->
+    <div class="px-2.5 py-1.5 text-right text-[13px]">
+      {{ row.get('lineTotal')?.value || 0 | number:'1.2-2' }}
+    </div>
+  </div>
+</div>
+
 
         <!-- Footer totals -->
         <div class="border-t px-3 py-2 bg-slate-50 text-[13px]">

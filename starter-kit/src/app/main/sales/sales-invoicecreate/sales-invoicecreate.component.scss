@@ -235,3 +235,36 @@
   padding-top: 0.45rem;
   padding-bottom: 0.45rem;
 }
+/* Put in styles.scss OR in sales-invoice component with :host ::ng-deep */
+
+:host ::ng-deep .coa-parent-select.ng-select.ng-select-single .ng-select-container {
+  min-height: 40px;
+  border-radius: 0.428rem;
+  border: 1px solid #d8d6de;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+:host ::ng-deep .coa-parent-select .ng-value-container {
+  padding: 0 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .coa-parent-select .ng-arrow-wrapper {
+  width: 32px;
+}
+
+:host ::ng-deep .coa-parent-select .ng-dropdown-panel {
+  max-height: 350px;
+  /* optional: same wide dropdown panel as ChartOfAccount */
+}
+
+:host ::ng-deep .coa-option {
+  max-width: 420px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -17,6 +17,7 @@ import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
 import { SalesOrderService } from '../sales-order/sales-order.service';
 import { DeliveryOrderService } from '../deliveryorder/deliveryorder.service';
 import { ItemsService } from 'app/main/master/items/items.service';
+import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 
 /* ========== Local UI types ========== */
 interface SimpleItem {
@@ -98,6 +99,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
   // For compatibility with backend total field
   total = 0;
+  parentHeadList: any;
 
   constructor(
     private api: SalesInvoiceService,
@@ -106,13 +108,15 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     private doSrv: DeliveryOrderService,
     private itemsService: ItemsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private coaService: ChartofaccountService,
   ) {}
 
   // ============================================================
   // Lifecycle
   // ============================================================
   ngOnInit(): void {
+    this.loadAccountHeads()
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
       .subscribe(pm => {
@@ -357,7 +361,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             tax: r.tax,
             taxCodeId: r.taxCodeId ?? null,
             lineAmount: r.lineAmount,
-            description: r.description ?? r.itemName ?? ''
+            description: r.description ?? r.itemName ?? '',
+            budgetLineId: r.budgetLineId
           };
 
           this.applyTaxCode(line);
@@ -471,7 +476,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       tax: 'EXCLUSIVE',
       taxCodeId: null,
       description: '',
-      lineAmount: 0
+      lineAmount: 0,
+      budgetLineId: 0,
     };
     if (this.isEdit) row.__new = true;
     this.applyTaxCode(row);
@@ -530,6 +536,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               tax: r.tax,
               taxCodeId: r.taxCodeId ?? null,
               description: r.itemName,
+              budgetLineId: r.budgetLineId,
               lineAmount: 0
             };
             this.applyTaxCode(line);
@@ -610,7 +617,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       description:
         (line.description && line.description.trim().length > 0)
           ? line.description
-          : (line.itemName ?? null)
+          : (line.itemName ?? null),
+      budgetLineId: line.budgetLineId
     }).subscribe({
       next: (r) => {
         if (!this.isOk(r)) {
@@ -685,7 +693,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         description:
           (l.description && l.description.trim().length > 0)
             ? l.description
-            : (l.itemName ?? null)
+            : (l.itemName ?? null),
+        budgetLineId: l.budgetLineId
       }).subscribe({
         next: (r) => {
           if (this.isOk(r)) {
@@ -786,7 +795,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             description:
               (l.description && l.description.trim().length > 0)
                 ? l.description
-                : (l.itemName ?? null)
+                : (l.itemName ?? null),
+            budgetLineId: l.budgetLineId    
           } as SiCreateLine;
         })
       };
@@ -862,6 +872,26 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   textarea.style.height = 'auto';                // reset
   textarea.style.height = textarea.scrollHeight + 'px'; // grow to fit content
 }
+  loadAccountHeads(): void {
+    this.coaService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullPath(head, data)
+      }));
+    });
+  }
+
+  /** Build breadcrumb like: Parent >> Child >> This */
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    let current = all.find((x: any) => x.headCode === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.headCode === current.parentHead);
+    }
+    return path;
+  }
 
 }
 
