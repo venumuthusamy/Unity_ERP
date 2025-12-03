@@ -132,6 +132,7 @@
           <tr>
             <th style="min-width:220px">Item</th>
             <th style="min-width:220px">Description</th>
+            <th style="min-width:220px">BudgetLine</th>
             <th style="min-width:120px">UOM</th>
             <th class="text-center" style="min-width:80px">Qty</th>
             <th class="text-center" style="min-width:120px">Unit Price</th>
@@ -187,6 +188,30 @@
                      [ngModelOptions]="{standalone:true}"
                      placeholder="Description">
             </td>
+               <!-- Budget -->
+   <td class="px-2.5 py-1.5">
+  <ng-select
+    class="pin-budget-select w-full"
+    [items]="parentHeadList"
+    bindLabel="label"
+    bindValue="value"
+    [searchable]="true"
+    [clearable]="false"
+    placeholder="Search / choose Budget Line..."
+    formControlName="budgetLineId"
+    appendTo="body"
+    dropdownPosition="bottom">
+
+    <ng-template ng-option-tmp let-item="item">
+      <div class="pin-budget-option" [title]="item.label">
+        {{ item.label }}
+      </div>
+    </ng-template>
+  </ng-select>
+</td>
+
+
+            
 
             <!-- UOM -->
             <td>

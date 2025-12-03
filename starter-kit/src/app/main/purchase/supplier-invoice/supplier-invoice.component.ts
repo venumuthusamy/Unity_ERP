@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 
 import { SupplierInvoiceService } from './supplier-invoice.service';
 import { PurchaseGoodreceiptService } from '../purchase-goodreceipt/purchase-goodreceipt.service';
+import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 
 interface GRNHeader {
   id: number;
@@ -43,6 +44,7 @@ interface GRNItem {
 
   location?: string;
   discountPct?: number | string;
+  budgetLineId: number
 
   isPostInventory?: boolean | string | number;
   IsPostInventory?: boolean | string | number;
@@ -81,13 +83,15 @@ export class SupplierInvoiceComponent implements OnInit {
 
   // store PO lines (only location + discount needed)
   private poLinesList: any[] = [];
+  parentHeadList: any;
 
   constructor(
     private fb: FormBuilder,
     private api: SupplierInvoiceService,
     private grnService: PurchaseGoodreceiptService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private coaService: ChartofaccountService,
   ) {
 
     this.userId = localStorage.getItem('id') ?? 'System';
@@ -109,6 +113,8 @@ export class SupplierInvoiceComponent implements OnInit {
   }
 
   ngOnInit(): void {
+     document.body.classList.add('pin-supplier-invoice-page');
+    this.loadAccountHeads()
     this.setMinDate();
     this.loadGrns();
 
@@ -116,6 +122,9 @@ export class SupplierInvoiceComponent implements OnInit {
       const id = Number(pm.get('id') || 0);
       if (id > 0) this.loadInvoice(id);
     });
+  }
+    ngOnDestroy(): void {
+    document.body.classList.remove('pin-supplier-invoice-page');
   }
 
   // ------------------------------- Utilities -------------------------------
@@ -207,6 +216,7 @@ export class SupplierInvoiceComponent implements OnInit {
 
           this.lines.push(this.fb.group({
             item: [r.item || ''],
+            budgetLineId: r.budgetLineId,
             location: [r.location || ''],
             qty: [qty],
             unitPrice: [unitPrice],
@@ -277,6 +287,7 @@ export class SupplierInvoiceComponent implements OnInit {
     this.lines.push(this.fb.group({
       item: [it.item ?? it.itemName ?? it.itemCode ?? ''],
       location: [location],
+      budgetLineId: it.budgetLineId,
       qty: [qty],
       unitPrice: [unitPrice],
       discountPct: [discountPct],
@@ -365,6 +376,7 @@ private recalcHeaderFromLines(): void {
     const arr = this.lines.value.map((l: any) => ({
       item: l.item,
       location: l.location,
+      budgetLineId: l.budgetLineId,
       qty: Number(l.qty),
       unitPrice: Number(l.unitPrice),
       discountPct: Number(l.discountPct),
@@ -504,5 +516,25 @@ private recalcHeaderFromLines(): void {
 
   goToSupplierInvoice(): void {
     this.router.navigate(['/purchase/list-SupplierInvoice']);
+  }
+    loadAccountHeads(): void {
+    this.coaService.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullPath(head, data)
+      }));
+    });
+  }
+
+  /** Build breadcrumb like: Parent >> Child >> This */
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    let current = all.find((x: any) => x.headCode === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.headCode === current.parentHead);
+    }
+    return path;
   }
 }

@@ -65,7 +65,7 @@
               <ng-select
                 class="w-100 bank-select"
                 [items]="banks"
-                bindLabel="name"
+                bindLabel="bankName"
                 bindValue="id"
                 [(ngModel)]="selectedBankId"
                 name="bankId"
@@ -91,9 +91,10 @@
               <input *ngIf="paymentMode === 'BANK'"
                      type="number"
                      class="form-control text-end"
-                     [ngModel]="amountReceived"
+                    [(ngModel)]="amountReceived"
                      name="amountReceivedBank"
-                     readonly />
+                     (input)="onAmountReceivedChange()"
+                      />
             </div>
           </div>
 

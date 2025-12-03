@@ -221,38 +221,38 @@
     <!-- Row 3 : Budget Line + Contact + Email + Phone -->
     <div [ngClass]="gridColsClass(4)">
       <!-- Budget Line / Account -->
-      <div class="relative">
-        <label class="text-xs font-medium text-gray-600">Budget Line / Account</label>
-        <div class="relative">
-          <input
-            type="text"
-            [(ngModel)]="BudgetSearch"
-            (input)="filterBudget()"
-            (focus)="budgetDropdownOpen = true"
-            placeholder="Search account..."
-            class="w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring"
-            style="border-color:#0e3a4c"
-          />
-          <button
-            type="button"
-            (click)="budgetDropdownOpen = !budgetDropdownOpen"
-            class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-1 text-xs"
-          >▼</button>
-        </div>
+   <div class="relative">
+    <label class="text-xs font-medium text-gray-600">Budget Line / Account</label>
+    <div class="relative">
+      <input
+        type="text"
+        [(ngModel)]="BudgetSearch"
+        (input)="filterBudget()"
+        (focus)="budgetDropdownOpen = true"
+        placeholder="Search account..."
+        class="w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring"
+        style="border-color:#0e3a4c"
+      />
+      <button
+        type="button"
+        (click)="budgetDropdownOpen = !budgetDropdownOpen"
+        class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-1 text-xs"
+      >▼</button>
+    </div>
 
-        <ul
-          *ngIf="budgetDropdownOpen && BudgetFiltered.length"
-          class="absolute top-full left-0 right-0 bg-white border rounded-md mt-1 shadow z-10 max-h-40 overflow-y-auto"
-        >
-          <li
-            *ngFor="let b of BudgetFiltered"
-            (click)="selectBudget(b)"
-            class="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-          >
-            {{ b.headCode }} - {{ b.headName }}
-          </li>
-        </ul>
-      </div>
+    <ul
+      *ngIf="budgetDropdownOpen && BudgetFiltered.length"
+      class="absolute top-full left-0 right-0 bg-white border rounded-md mt-1 shadow z-10 max-h-40 overflow-y-auto"
+    >
+      <li
+        *ngFor="let b of BudgetFiltered"
+        (click)="selectBudget(b)"
+        class="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+      >
+        {{ b.headCodeName || (b.headCode + ' - ' + b.headName) }}
+      </li>
+    </ul>
+  </div>
 
       <!-- Contact Name -->
       <div>

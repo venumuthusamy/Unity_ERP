@@ -637,10 +637,10 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   buildFullPath(item: any): string {
     if (!item) return '';
     let path = item.headName;
-    let current = this.accountHeads.find((x: any) => x.id === item.parentHead);
+    let current = this.accountHeads.find((x: any) => x.headCode === item.parentHead);
     while (current) {
       path = `${current.headName} >> ${path}`;
-      current = this.accountHeads.find((x: any) => x.id === current.parentHead);
+      current = this.accountHeads.find((x: any) => x.headCode === current.parentHead);
     }
     return path;
   }
