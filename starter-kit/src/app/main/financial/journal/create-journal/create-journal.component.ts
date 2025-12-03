@@ -15,6 +15,7 @@ import { ItemsService } from 'app/main/master/items/items.service';
 export class CreateJournalComponent implements OnInit {
 
   // Top fields
+  showAccount = false; 
   selectedType: string | null = null;
   journalDate: string | null = null;
   description: string = '';

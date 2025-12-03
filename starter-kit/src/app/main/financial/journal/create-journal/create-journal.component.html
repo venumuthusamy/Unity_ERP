@@ -38,25 +38,25 @@
               </div>
 
               <!-- Account -->
-              <div class="col-md-4 col-sm-6">
-                <label class="form-label mb-25">Account</label>
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="AccountList"
-                  bindValue="id"
-                  [(ngModel)]="selectedAccountId"
-                  name="selectedAccountId"
-                  [clearable]="true"
-                  placeholder="Select account"
-                  (change)="onAccountChange($event)">
-                  <ng-template ng-option-tmp let-item="item">
-                    {{ item.headCode }} - {{ item.headName }}
-                  </ng-template>
-                  <ng-template ng-label-tmp let-item="item">
-                    {{ item.headCode }} - {{ item.headName }}
-                  </ng-template>
-                </ng-select>
-              </div>
+<div class="col-md-4 col-sm-6" *ngIf="showAccount">
+  <label class="form-label mb-25">Account</label>
+  <ng-select
+    class="w-100 journal-select"
+    [items]="AccountList"
+    bindValue="id"
+    [(ngModel)]="selectedAccountId"
+    name="selectedAccountId"
+    [clearable]="true"
+    placeholder="Select account"
+    (change)="onAccountChange($event)">
+    <ng-template ng-option-tmp let-item="item">
+      {{ item.headCode }} - {{ item.headName }}
+    </ng-template>
+    <ng-template ng-label-tmp let-item="item">
+      {{ item.headCode }} - {{ item.headName }}
+    </ng-template>
+  </ng-select>
+</div>
 
               <!-- Journal Date -->
               <div class="col-md-4 col-sm-6">
