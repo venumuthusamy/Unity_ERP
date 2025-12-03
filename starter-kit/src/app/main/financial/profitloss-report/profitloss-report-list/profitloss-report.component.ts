@@ -11,9 +11,24 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
 
   headerTitle = 'Profit & Loss';
 
-  purchaseAccounts: any[] = [];
-  salesAccounts: any[] = [];
   ProfitlossList: any[] = [];
+
+  // Base rows (without Net Profit / Net Loss)
+  private purchaseBase: any[] = [];
+  private salesBase: any[] = [];
+
+  // Rows actually displayed in UI (include Net Profit / Net Loss line)
+  purchaseRows: any[] = [];
+  salesRows: any[] = [];
+
+  // Summary numbers
+  totalExpense = 0;   // = base purchase total (no net row)
+  totalSales   = 0;   // = base sales total (no net row)
+  netProfit    = 0;   // sales - purchase
+
+  // Column grand totals (bottom “Total” rows)
+  leftGrandTotal  = 0;   // Purchase column final total
+  rightGrandTotal = 0;   // Sales column final total
 
   constructor(private _profitlossService: ProfitlossService) {}
 
@@ -25,46 +40,116 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
     setTimeout(() => feather.replace());
   }
 
-  // ===== API CALL & MAPPING =====
+  // =====================================================
+  // API CALL & MAPPING
+  // =====================================================
   loadProfitlossDetails() {
     this._profitlossService.GetProfitLossDetails().subscribe((res: any) => {
       this.ProfitlossList = res?.data || [];
 
-      // 🔹 LEFT – Purchase Accounts (HIDE 0.00)
-      this.purchaseAccounts = this.ProfitlossList
+      // ----- LEFT: Purchase Accounts (hide 0.00) -----
+      this.purchaseBase = this.ProfitlossList
         .filter((x: any) =>
           x.purchase !== null &&
           x.purchase !== undefined &&
-          Number(x.purchase) !== 0               // <- remove all 0.00
+          Number(x.purchase) !== 0
         )
         .map((x: any) => ({
           name: x.headName,
           amount: Number(x.purchase),
           code: x.headCode,
           avatarText: this.getInitials(x.headName),
-          avatarColor: this.getAvatarColor(x.headName)
+          avatarColor: this.getAvatarColor(x.headName),
+          isPnLLine: false
         }));
 
-      // 🔹 RIGHT – Sales Accounts (HIDE 0.00)
-      this.salesAccounts = this.ProfitlossList
+      // ----- RIGHT: Sales Accounts (hide 0.00) -----
+      this.salesBase = this.ProfitlossList
         .filter((x: any) =>
           x.sales !== null &&
           x.sales !== undefined &&
-          Number(x.sales) !== 0                  // <- remove all 0.00
+          Number(x.sales) !== 0
         )
         .map((x: any) => ({
           name: x.headName,
           amount: Number(x.sales),
           code: x.headCode,
           avatarText: this.getInitials(x.headName),
-          avatarColor: this.getAvatarColor(x.headName)
+          avatarColor: this.getAvatarColor(x.headName),
+          isPnLLine: false
         }));
+
+      // Build totals + net row
+      this.buildProfitLossView();
 
       setTimeout(() => feather.replace());
     });
   }
 
-  // ===== Helpers =====
+  // =====================================================
+  // BUILD VIEW (ADD NET PROFIT / NET LOSS LINE)
+  // =====================================================
+  private buildProfitLossView(): void {
+    // Base totals (without net row)
+    this.totalExpense = this.purchaseBase.reduce(
+      (sum, r) => sum + (Number(r.amount) || 0), 0
+    );
+
+    this.totalSales = this.salesBase.reduce(
+      (sum, r) => sum + (Number(r.amount) || 0), 0
+    );
+
+    // Net profit (can be negative)
+    this.netProfit = this.totalSales - this.totalExpense;
+
+    // Start from base arrays
+    this.purchaseRows = [...this.purchaseBase];
+    this.salesRows = [...this.salesBase];
+
+    if (this.netProfit > 0) {
+      // ---------- PROFIT ----------
+      // Add Net Profit to Purchase side so:
+      //   Purchase + NetProfit = Sales
+      this.purchaseRows.push({
+        name: 'Net Profit',
+        amount: this.netProfit,
+        code: '',
+        avatarText: '',
+        avatarColor: '',
+        isPnLLine: true
+      });
+
+      this.leftGrandTotal  = this.totalExpense + this.netProfit; // = totalSales
+      this.rightGrandTotal = this.totalSales;
+
+    } else if (this.netProfit < 0) {
+      // ---------- LOSS ----------
+      const netLoss = Math.abs(this.netProfit);
+
+      // Add Net Loss to Sales side so:
+      //   Sales + NetLoss = Purchase
+      this.salesRows.push({
+        name: 'Net Loss',
+        amount: netLoss,
+        code: '',
+        avatarText: '',
+        avatarColor: '',
+        isPnLLine: true
+      });
+
+      this.leftGrandTotal  = this.totalExpense;
+      this.rightGrandTotal = this.totalSales + netLoss; // = totalExpense
+
+    } else {
+      // Break-even – both sides already equal
+      this.leftGrandTotal  = this.totalExpense;
+      this.rightGrandTotal = this.totalSales;
+    }
+  }
+
+  // =====================================================
+  // Helpers
+  // =====================================================
   private getInitials(name: string): string {
     if (!name) { return ''; }
     const parts = name.trim().split(' ');
@@ -84,33 +169,7 @@ export class ProfitlossReportComponent implements OnInit, AfterViewInit {
     return colors[index];
   }
 
-  // ===== Totals & summary cards (only non-zero rows counted) =====
-  get purchaseTotal(): number {
-    return this.purchaseAccounts.reduce(
-      (sum: number, x: any) => sum + (x.amount || 0),
-      0
-    );
-  }
-
-  get salesTotal(): number {
-    return this.salesAccounts.reduce(
-      (sum: number, x: any) => sum + (x.amount || 0),
-      0
-    );
-  }
-
-  get totalExpense(): number {
-    return this.purchaseTotal;
-  }
-
-  get totalSales(): number {
-    return this.salesTotal;
-  }
-
-  get netProfit(): number {
-    return this.salesTotal - this.purchaseTotal;
-  }
-
+  // For top Net Profit card (green if profit, red if loss)
   get netProfitClass(): string {
     return this.netProfit >= 0 ? 'text-success' : 'text-danger';
   }
