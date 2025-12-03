@@ -75,7 +75,10 @@
                 </div>
 
                 <ul class="pl-list">
-                  <li class="pl-item" *ngFor="let acc of purchaseAccounts">
+                  <!-- Purchase rows (including Net Profit when profit > 0) -->
+                  <li class="pl-item"
+                      *ngFor="let acc of purchaseRows"
+                      [ngClass]="{ 'pl-net-row': acc.isPnLLine }">
                     <div class="pl-item-left">
                       <span class="drag-icon">
                         <i data-feather="menu"></i>
@@ -89,18 +92,18 @@
                     </div>
 
                     <div class="pl-item-right">
-                      <!-- ALWAYS show, even when 0 -->
                       <span class="pl-amount">
                         {{ acc.amount | number:'1.2-2' }}
                       </span>
                       <div class="avatar-circle"
+                           *ngIf="!acc.isPnLLine"
                            [style.background-color]="acc.avatarColor">
                         <span>{{ acc.avatarText }}</span>
                       </div>
                     </div>
                   </li>
 
-                  <!-- Total row -->
+                  <!-- Purchase Total row (grand total incl. Net Profit if any) -->
                   <li class="pl-item pl-total-row pl-total-purchase">
                     <div class="pl-item-left">
                       <div class="pl-text">
@@ -109,7 +112,7 @@
                     </div>
                     <div class="pl-item-right">
                       <span class="pl-amount">
-                        {{ purchaseTotal | number:'1.2-2' }}
+                        {{ leftGrandTotal | number:'1.2-2' }}
                       </span>
                     </div>
                   </li>
@@ -125,7 +128,10 @@
                 </div>
 
                 <ul class="pl-list">
-                  <li class="pl-item" *ngFor="let acc of salesAccounts">
+                  <!-- Sales rows (including Net Loss when profit < 0) -->
+                  <li class="pl-item"
+                      *ngFor="let acc of salesRows"
+                      [ngClass]="{ 'pl-net-row': acc.isPnLLine }">
                     <div class="pl-item-left">
                       <span class="drag-icon">
                         <i data-feather="menu"></i>
@@ -139,18 +145,18 @@
                     </div>
 
                     <div class="pl-item-right">
-                      <!-- ALWAYS show, even when 0 -->
                       <span class="pl-amount">
                         {{ acc.amount | number:'1.2-2' }}
                       </span>
                       <div class="avatar-circle"
+                           *ngIf="!acc.isPnLLine"
                            [style.background-color]="acc.avatarColor">
                         <span>{{ acc.avatarText }}</span>
                       </div>
                     </div>
                   </li>
 
-                  <!-- Total row -->
+                  <!-- Sales Total row (grand total incl. Net Loss if any) -->
                   <li class="pl-item pl-total-row pl-total-sales">
                     <div class="pl-item-left">
                       <div class="pl-text">
@@ -159,7 +165,7 @@
                     </div>
                     <div class="pl-item-right">
                       <span class="pl-amount">
-                        {{ salesTotal | number:'1.2-2' }}
+                        {{ rightGrandTotal | number:'1.2-2' }}
                       </span>
                     </div>
                   </li>

@@ -43,6 +43,7 @@ export class BankComponent implements OnInit {
   isSaving = false;
   isEdit = false;
   bankId: number | null = null;
+  userId: string;
  parentHeadList: Array<{ value: number; label: string }> = [];
   budgetLine: number | null = null;
   constructor(
@@ -52,7 +53,7 @@ export class BankComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
      private coaService: ChartofaccountService,
-  ) {}
+  ) {this.userId = localStorage.getItem('id')}
 
   // ------------------------------------
   // INIT
@@ -179,8 +180,10 @@ onSave(): void {
     email: this.bank.contactEmail,
     contactNo: this.bank.contactPhone,
     address: this.bank.address,
-    budgetLine: this.bank.budgetLineId,
-    isActive: true
+    budgetLineId: this.bank.budgetLineId,
+    isActive: true,
+    CreatedBy:this.userId,
+    UpdatedBy:this.userId
   };
 
   this.isSaving = true;

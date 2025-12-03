@@ -21,7 +21,7 @@
                 <div>
                   <div class="summary-label">Total Liabilities</div>
                   <div class="summary-value">
-                    {{ liabilitiesTotal | number:'1.2-2' }}
+                    {{ displayLiabilitiesTotal | number:'1.2-2' }}
                   </div>
                 </div>
               </div>
@@ -36,7 +36,7 @@
                 <div>
                   <div class="summary-label">Total Assets</div>
                   <div class="summary-value">
-                    {{ assetsTotal | number:'1.2-2' }}
+                    {{ displayAssetsTotal | number:'1.2-2' }}
                   </div>
                 </div>
               </div>
@@ -59,17 +59,20 @@
                 <ul class="pl-list">
                   <li class="pl-item"
                       *ngFor="let acc of liabilityAccounts"
+                      [ngClass]="{ 'bs-balance-row': acc.isSynthetic }"
                       (click)="acc.hasChildren && toggleLiability(acc, $event)">
 
                     <div class="pl-item-left"
                          [ngStyle]="{'padding-left.px': 12 + (acc.level || 0) * 16}">
 
-                      <span class="toggle-icon me-25" *ngIf="acc.hasChildren">
+                      <span class="toggle-icon me-25"
+                            *ngIf="acc.hasChildren && !acc.isSynthetic">
                         <i data-feather="chevron-down" *ngIf="acc.expanded"></i>
                         <i data-feather="chevron-right" *ngIf="!acc.expanded"></i>
                       </span>
 
-                      <span class="drag-icon" *ngIf="!acc.hasChildren">
+                      <span class="drag-icon"
+                            *ngIf="!acc.hasChildren && !acc.isSynthetic">
                         <i data-feather="minus"></i>
                       </span>
 
@@ -84,7 +87,10 @@
                           {{ amt | number:'1.2-2' }}
                         </ng-container>
                       </span>
+
+                      <!-- no avatar for balancing row -->
                       <div class="avatar-circle"
+                           *ngIf="!acc.isSynthetic"
                            [style.background-color]="'#ff9f43'">
                         <span>{{ (acc.headName || '?').substring(0,2).toUpperCase() }}</span>
                       </div>
@@ -96,7 +102,7 @@
                 <div class="pl-total-row pl-total-purchase">
                   <div class="pl-total-label">Total Liabilities</div>
                   <div class="pl-total-amount">
-                    {{ liabilitiesTotal | number:'1.2-2' }}
+                    {{ displayLiabilitiesTotal | number:'1.2-2' }}
                   </div>
                 </div>
               </div>
@@ -113,17 +119,20 @@
                 <ul class="pl-list">
                   <li class="pl-item"
                       *ngFor="let acc of assetAccounts"
+                      [ngClass]="{ 'bs-balance-row': acc.isSynthetic }"
                       (click)="acc.hasChildren && toggleAsset(acc, $event)">
 
                     <div class="pl-item-left"
                          [ngStyle]="{'padding-left.px': 12 + (acc.level || 0) * 16}">
 
-                      <span class="toggle-icon me-25" *ngIf="acc.hasChildren">
+                      <span class="toggle-icon me-25"
+                            *ngIf="acc.hasChildren && !acc.isSynthetic">
                         <i data-feather="chevron-down" *ngIf="acc.expanded"></i>
                         <i data-feather="chevron-right" *ngIf="!acc.expanded"></i>
                       </span>
 
-                      <span class="drag-icon" *ngIf="!acc.hasChildren">
+                      <span class="drag-icon"
+                            *ngIf="!acc.hasChildren && !acc.isSynthetic">
                         <i data-feather="minus"></i>
                       </span>
 
@@ -138,7 +147,9 @@
                           {{ amt | number:'1.2-2' }}
                         </ng-container>
                       </span>
+
                       <div class="avatar-circle"
+                           *ngIf="!acc.isSynthetic"
                            [style.background-color]="'#28c76f'">
                         <span>{{ (acc.headName || '?').substring(0,2).toUpperCase() }}</span>
                       </div>
@@ -150,7 +161,7 @@
                 <div class="pl-total-row pl-total-sales">
                   <div class="pl-total-label">Total Assets</div>
                   <div class="pl-total-amount">
-                    {{ assetsTotal | number:'1.2-2' }}
+                    {{ displayAssetsTotal | number:'1.2-2' }}
                   </div>
                 </div>
               </div>
