@@ -2,6 +2,20 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { BalanceSheetService } from '../balance-sheet-service/balance-sheet.service';
 import feather from 'feather-icons';
 
+interface BsRow {
+  headId: number;
+  headCode?: string;
+  headName: string;
+  parentHead: number | null;
+  rootHeadType?: string | null;   // 'A' / 'L' / etc.
+  headType?: string | null;
+  balance: number;
+  balanceNum: number;
+  groupHeadName?: string | null;
+  side?: string | null;
+  [key: string]: any;
+}
+
 @Component({
   selector: 'app-balance-sheet',
   templateUrl: './balance-sheet.component.html',
@@ -24,12 +38,12 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
   displayAssetsTotal = 0;
 
   // Raw API rows
-  allRows: any[] = [];
+  allRows: BsRow[] = [];
 
   // Maps
-  private headMap = new Map<number, any>();                 // headId -> row
-  private liabilityChildrenMap = new Map<number, any[]>();  // parentHead -> children[]
-  private assetChildrenMap = new Map<number, any[]>();      // parentHead -> children[]
+  private headMap = new Map<number, BsRow>();               // headId -> row
+  private liabilityChildrenMap = new Map<number, BsRow[]>(); // parentHead -> children[]
+  private assetChildrenMap = new Map<number, BsRow[]>();     // parentHead -> children[]
 
   // Subtree totals
   private liabilitySubtreeTotals = new Map<number, number>(); // headId -> total
@@ -62,30 +76,33 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     return 0;
   }
 
-  // climb parent chain to find Asset / Liability info
-  private getSideForRow(row: any): 'A' | 'L' | null {
-    let current = row;
-    let safety = 0;
+  private getSideForRow(row: BsRow): 'A' | 'L' | null {
+    // First priority: RootHeadType from backend
+    const rootType = (row.rootHeadType ||
+                      row.headType ||
+                      row['HeadType'] ||
+                      '')
+                      .toString()
+                      .toUpperCase();
 
-    while (current && safety < 100) {
-      const sideText   = (current.side || '').toString().toLowerCase();
-      const groupName  = (current.groupHeadName || '').toString().toLowerCase();
-      const headName   = (current.headName || '').toString().toLowerCase();
+    if (rootType === 'A') return 'A';
+    if (rootType === 'L') return 'L';
 
-      if (sideText.startsWith('asset') ||
-          groupName.startsWith('asset') ||
-          headName === 'assets') {
-        return 'A';
-      }
-      if (sideText.startsWith('liabilit') ||
-          groupName.startsWith('liabilit') ||
-          headName === 'liabilities') {
-        return 'L';
-      }
+    // Fallback (if ever needed): text-based detection
+    const sideText  = (row.side || '').toString().toLowerCase();
+    const groupName = (row.groupHeadName || '').toString().toLowerCase();
+    const headName  = (row.headName || '').toString().toLowerCase();
 
-      if (!current.parentHead || current.parentHead === 0) break;
-      current = this.headMap.get(current.parentHead);
-      safety++;
+    if (sideText.startsWith('asset') ||
+        groupName.startsWith('asset') ||
+        headName === 'assets') {
+      return 'A';
+    }
+
+    if (sideText.startsWith('liabilit') ||
+        groupName.startsWith('liabilit') ||
+        headName === 'liabilities') {
+      return 'L';
     }
 
     return null;
@@ -98,19 +115,36 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
       next: (res: any) => {
         const raw = res?.data || [];
 
-        // normalise keys & add numeric balance
-        this.allRows = raw.map((r: any) => ({
-          ...r,
-          headId:        r.headId        ?? r.HeadId,
-          parentHead:    r.parentHead    ?? r.ParentHead,
-          headName:      r.headName      ?? r.HeadName,
-          groupHeadName: r.groupHeadName ?? r.GroupHeadName,
-          side:          r.side          ?? r.Side,
-          balance:       r.balance       ?? r.Balance ?? 0,
-          balanceNum:    this.parseAmount(r.balance ?? r.Balance ?? 0)
-        }));
+        // Normalise keys & make sure balance ibuildChildrenMapss numeric
+        this.allRows = raw.map((r: any) => {
+          const headId      = r.headId      ?? r.HeadId;
+          const parentHead  = r.parentHead  ?? r.ParentHead ?? null;
+          const headName    = r.headName    ?? r.HeadName ?? '';
+          const groupHead   = r.groupHeadName ?? r.GroupHeadName ?? null;
+          const side        = r.side        ?? r.Side ?? null;
+          const rootType    = (r.rootHeadType ?? r.RootHeadType ?? null) as string | null;
+          const headType    = (r.headType ?? r.HeadType ?? null) as string | null;
 
-        // build head map
+          const balRaw      = r.balance ?? r.Balance ?? 0;
+          const balNum      = this.parseAmount(balRaw);
+
+          const row: BsRow = {
+            ...r,
+            headId,
+            parentHead,
+            headName,
+            groupHeadName: groupHead,
+            side,
+            rootHeadType: rootType,
+            headType,
+            balance: balNum,
+            balanceNum: balNum
+          };
+
+          return row;
+        });
+
+        // build head map FIRST
         this.headMap.clear();
         this.allRows.forEach(r => {
           if (r && r.headId != null) {
@@ -147,61 +181,86 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // ---------- build children maps ----------
+  // ---------- build children maps (Assets / Liabilities) ----------
 
-  private buildChildrenMaps(): void {
-    this.liabilityChildrenMap.clear();
-    this.assetChildrenMap.clear();
+ private buildChildrenMaps(): void {
+  this.liabilityChildrenMap.clear();
+  this.assetChildrenMap.clear();
 
-    const addToMap = (map: Map<number, any[]>, row: any) => {
-      const pid = row.parentHead || 0;
-      const arr = map.get(pid) || [];
-      arr.push(row);
-      map.set(pid, arr);
-    };
+  const addToMap = (map: Map<number, BsRow[]>, row: BsRow) => {
+    let pid = (row.parentHead ?? 0) || 0;
 
-    this.allRows.forEach(row => {
-      if (!row) return;
+    // If parent is itself OR parent does not exist in headMap, treat as root
+    if (pid === row.headId || !this.headMap.has(pid)) {
+      pid = 0;
+    }
 
-      const side = this.getSideForRow(row);   // 'A', 'L', or null
+    const arr = map.get(pid) || [];
+    arr.push(row);
+    map.set(pid, arr);
+  };
 
-      if (side === 'L') {
-        addToMap(this.liabilityChildrenMap, row);
-      } else if (side === 'A') {
-        addToMap(this.assetChildrenMap, row);
-      }
-      // others (equity, income, expense) ignored for this screen
-    });
-  }
+  this.allRows.forEach(row => {
+    if (!row) return;
+
+    const side = this.getSideForRow(row);  // uses rootHeadType 'A' / 'L'
+
+    if (side === 'A') {
+      addToMap(this.assetChildrenMap, row);
+    } else if (side === 'L') {
+      addToMap(this.liabilityChildrenMap, row);
+    }
+  });
+}
+
 
   // ---------- subtree totals ----------
 
-  private computeSubtreeTotals(childrenMap: Map<number, any[]>): Map<number, number> {
-    const memo = new Map<number, number>();
+private computeSubtreeTotals(childrenMap: Map<number, BsRow[]>): Map<number, number> {
+  const memo = new Map<number, number>();
+  const visiting = new Set<number>();   // to detect cycles
 
-    const dfs = (row: any): number => {
-      if (!row) return 0;
-      const id = row.headId;
-      if (id == null) return 0;
+  const dfs = (row: BsRow): number => {
+    if (!row) return 0;
+    const id = row.headId;
+    if (id == null) return 0;
 
-      if (memo.has(id)) return memo.get(id)!;
+    // already computed
+    if (memo.has(id)) return memo.get(id)!;
 
-      const children = childrenMap.get(id) || [];
-      if (!children.length) {
-        const val = row.balanceNum ?? 0;
-        memo.set(id, val);
-        return val;
+    // cycle detected – stop here and just use own balance
+    if (visiting.has(id)) {
+      console.warn('Cycle detected in Balance Sheet tree at headId', id, row);
+      const valCycle = row.balanceNum ?? 0;
+      memo.set(id, valCycle);
+      return valCycle;
+    }
+
+    visiting.add(id);
+
+    const children = childrenMap.get(id) || [];
+    let sum: number;
+
+    if (!children.length) {
+      sum = row.balanceNum ?? 0;
+    } else {
+      sum = 0;
+      for (const ch of children) {
+        sum += dfs(ch);
       }
+    }
 
-      let sum = 0;
-      children.forEach(ch => sum += dfs(ch));
-      memo.set(id, sum);
-      return sum;
-    };
+    visiting.delete(id);
+    memo.set(id, sum);
+    return sum;
+  };
 
-    (childrenMap.get(0) || []).forEach(root => dfs(root));
-    return memo;
-  }
+  const roots = childrenMap.get(0) || [];
+  roots.forEach(root => dfs(root));
+
+  return memo;
+}
+
 
   // ---------- build visible liabilities ----------
 
@@ -210,12 +269,12 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
 
     const totalsMap = this.liabilitySubtreeTotals;
 
-    const visit = (row: any, level: number) => {
-      const id        = row.headId;
-      const children  = this.liabilityChildrenMap.get(id) || [];
+    const visit = (row: BsRow, level: number) => {
+      const id          = row.headId;
+      const children    = this.liabilityChildrenMap.get(id) || [];
       const hasChildren = children.length > 0;
 
-      const baseAmount   = Number(row.balance) || 0;
+      const baseAmount   = row.balance ?? 0;
       const subtreeTotal = (totalsMap.get(id) ?? baseAmount);
 
       // hide this head + its subtree if everything is 0
@@ -226,9 +285,9 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
       let displayAmount = baseAmount;
       if (hasChildren) {
         if (this.liabilityExpanded.has(id)) {
-          displayAmount = 0;           // expanded → parent 0
+          displayAmount = 0;
         } else {
-          displayAmount = subtreeTotal; // collapsed → sum of children
+          displayAmount = subtreeTotal;
         }
       }
 
@@ -250,7 +309,7 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     let total = 0;
 
     roots.forEach(r => {
-      const st = (totalsMap.get(r.headId) || Number(r.balance) || 0);
+      const st = (totalsMap.get(r.headId) || (r.balance ?? 0));
       if (st !== 0) {
         total += st;
         visit(r, 0);
@@ -267,12 +326,12 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
 
     const totalsMap = this.assetSubtreeTotals;
 
-    const visit = (row: any, level: number) => {
-      const id        = row.headId;
-      const children  = this.assetChildrenMap.get(id) || [];
+    const visit = (row: BsRow, level: number) => {
+      const id          = row.headId;
+      const children    = this.assetChildrenMap.get(id) || [];
       const hasChildren = children.length > 0;
 
-      const baseAmount   = Number(row.balance) || 0;
+      const baseAmount   = row.balance ?? 0;
       const subtreeTotal = (totalsMap.get(id) ?? baseAmount);
 
       // hide this head + its subtree if everything is 0
@@ -307,7 +366,7 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     let total = 0;
 
     roots.forEach(r => {
-      const st = (totalsMap.get(r.headId) || Number(r.balance) || 0);
+      const st = (totalsMap.get(r.headId) || (r.balance ?? 0));
       if (st !== 0) {
         total += st;
         visit(r, 0);
@@ -317,10 +376,9 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     this.assetsTotal = total;
   }
 
-  // ---------- balancing figure (make totals equal) ----------
+  // ---------- balancing figure ----------
 
   private applyBalancingFigure(): void {
-    // remove any old synthetic rows
     this.liabilityAccounts = this.liabilityAccounts.filter(x => !x.isSynthetic);
     this.assetAccounts     = this.assetAccounts.filter(x => !x.isSynthetic);
 
@@ -330,15 +388,13 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
     this.displayLiabilitiesTotal = liab;
     this.displayAssetsTotal      = asset;
 
-    const diff = asset - liab;   // >0 → assets bigger
+    const diff = asset - liab;
 
-    // already equal (or tiny rounding difference)
     if (Math.abs(diff) < 0.005) {
       return;
     }
 
     if (diff > 0) {
-      // need extra Liability row so Liabilities + diff = Assets
       this.liabilityAccounts.push({
         headId: null,
         headName: 'Balancing Figure',
@@ -350,7 +406,6 @@ export class BalanceSheetComponent implements OnInit, AfterViewInit {
       });
       this.displayLiabilitiesTotal = liab + diff;
     } else {
-      // need extra Asset row so Assets + (-diff) = Liabilities
       const add = -diff;
       this.assetAccounts.push({
         headId: null,

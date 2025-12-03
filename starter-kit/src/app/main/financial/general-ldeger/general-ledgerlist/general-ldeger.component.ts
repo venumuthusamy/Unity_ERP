@@ -189,133 +189,102 @@ export class GeneralLdegerComponent implements OnInit {
     });
   }
 
-  // ===== aggregate CHILDREN (only children, not parent) =====
- // ===== aggregate CHILDREN (all descendants) =====
-private computeChildrenAggregate(node: CoaNode): {
-  opening: number; debit: number; credit: number;
-} {
-  if (!node.children || node.children.length === 0) {
-    return { opening: 0, debit: 0, credit: 0 };
-  }
+  // ===== aggregate CHILDREN (all descendants, not parent) =====
+  private computeChildrenAggregate(node: CoaNode): {
+    opening: number; debit: number; credit: number;
+  } {
+    let opening = 0;
+    let debit   = 0;
+    let credit  = 0;
 
-  let opening = 0;
-  let debit   = 0;
-  let credit  = 0;
-
-  node.children.forEach(ch => {
-    const childOwnOpening = ch.ownOpening ?? 0;
-    const childOwnDebit   = ch.ownDebit   ?? 0;
-    const childOwnCredit  = ch.ownCredit  ?? 0;
-
-    // child own values
-    opening += childOwnOpening;
-    debit   += childOwnDebit;
-    credit  += childOwnCredit;
-
-    // 🔹 ALWAYS include all descendants (control / non-control)
-    const subAgg = this.computeChildrenAggregate(ch);
-    opening += subAgg.opening;
-    debit   += subAgg.debit;
-    credit  += subAgg.credit;
-  });
-
-  return { opening, debit, credit };
-}
-
-
-  // ================= FLATTEN TREE =================
-private rebuildDisplayRows(): void {
-  const out: CoaNode[] = [];
-
-  const visit = (node: CoaNode) => {
-    const hasChildren = node.hasChildren && node.children.length > 0;
-
-    let agg = { opening: 0, debit: 0, credit: 0 };
-    let hasChildValues = false;
-
-    if (hasChildren) {
-      agg = this.computeChildrenAggregate(node);
-      hasChildValues = (agg.opening !== 0 || agg.debit !== 0 || agg.credit !== 0);
+    if (!node.children || node.children.length === 0) {
+      return { opening, debit, credit };
     }
 
-    if (hasChildren) {
-      if (node.$$expanded) {
-        if (hasChildValues) {
-          // 🔹 Normal case: children have values → parent 0 when expanded
+    node.children.forEach(ch => {
+      const childOwnOpening = ch.ownOpening ?? 0;
+      const childOwnDebit   = ch.ownDebit   ?? 0;
+      const childOwnCredit  = ch.ownCredit  ?? 0;
+
+      // child own values
+      opening += childOwnOpening;
+      debit   += childOwnDebit;
+      credit  += childOwnCredit;
+
+      // all descendants under this child
+      const subAgg = this.computeChildrenAggregate(ch);
+      opening += subAgg.opening;
+      debit   += subAgg.debit;
+      credit  += subAgg.credit;
+    });
+
+    return { opening, debit, credit };
+  }
+
+  // ================= FLATTEN TREE =================
+  private rebuildDisplayRows(): void {
+    const out: CoaNode[] = [];
+
+    const visit = (node: CoaNode) => {
+      const hasChildren = node.hasChildren && node.children.length > 0;
+
+      if (hasChildren) {
+        const agg = this.computeChildrenAggregate(node);
+
+        if (node.$$expanded) {
+          // 🔹 EXPANDED:
+          // values “move” into children → parent 0
           node.openingBalance = 0;
           node.debit          = 0;
           node.credit         = 0;
           node.balance        = 0;
         } else {
-          // 🔹 Special case: children all 0 → show parent's own value
-          const o = node.ownOpening ?? 0;
-          const d = node.ownDebit   ?? 0;
-          const c = node.ownCredit  ?? 0;
-          const rawBal = this.calcBalance(o, d, c);
+          // 🔹 COLLAPSED:
+          // parent = own + all descendants
+          const ownO = node.ownOpening ?? 0;
+          const ownD = node.ownDebit   ?? 0;
+          const ownC = node.ownCredit  ?? 0;
 
-          node.openingBalance = 0;       // opening column always 0
-          node.debit   = d;
-          node.credit  = c;
-          node.balance = Math.abs(rawBal);
+          const openingTotal = ownO + agg.opening;
+          const debitTotal   = ownD + agg.debit;
+          const creditTotal  = ownC + agg.credit;
+
+          node.openingBalance = openingTotal;
+          node.debit          = debitTotal;
+          node.credit         = creditTotal;
+          node.balance        = this.calcBalance(openingTotal, debitTotal, creditTotal);
         }
       } else {
-        // 🔹 COLLAPSED
-        let openingForCalc: number;
-        let debitForCalc: number;
-        let creditForCalc: number;
+        // 🔹 LEAF (child): show own values from API
+        const o = node.ownOpening ?? 0;
+        const d = node.ownDebit   ?? 0;
+        const c = node.ownCredit  ?? 0;
 
-        if (hasChildValues) {
-          // parent + total children
-          openingForCalc = (node.ownOpening ?? 0) + agg.opening;
-          debitForCalc   = agg.debit;
-          creditForCalc  = agg.credit;
-        } else {
-          // only parent has value
-          openingForCalc = node.ownOpening ?? 0;
-          debitForCalc   = node.ownDebit   ?? 0;
-          creditForCalc  = node.ownCredit  ?? 0;
-        }
-
-        const rawBal = this.calcBalance(openingForCalc, debitForCalc, creditForCalc);
-
-        node.openingBalance = 0;
-        node.debit   = debitForCalc;
-        node.credit  = creditForCalc;
-        node.balance = Math.abs(rawBal);
+        node.openingBalance = o;
+        node.debit          = d;
+        node.credit         = c;
+        node.balance        = this.calcBalance(o, d, c);
       }
+
+      out.push(node);
+
+      if (hasChildren && node.$$expanded) {
+        node.children.forEach(ch => visit(ch));
+      }
+    };
+
+    this.roots.forEach(r => visit(r));
+
+    const term = (this.searchValue || '').toLowerCase().trim();
+    if (!term) {
+      this.displayRows = out;
     } else {
-      // 🔹 LEAF (child) → opening + credit - debit
-      const o = node.ownOpening ?? 0;
-      const d = node.ownDebit   ?? 0;
-      const c = node.ownCredit  ?? 0;
-      const rawBal = this.calcBalance(o, d, c);
-
-      node.openingBalance = 0;
-      node.debit   = d;
-      node.credit  = c;
-      node.balance = Math.abs(rawBal);
+      this.displayRows = out.filter(n =>
+        (n.headName || '').toLowerCase().includes(term) ||
+        String(n.headCode).includes(term)
+      );
     }
-
-    out.push(node);
-
-    if (hasChildren && node.$$expanded) {
-      node.children.forEach(ch => visit(ch));
-    }
-  };
-
-  this.roots.forEach(r => visit(r));
-
-  const term = (this.searchValue || '').toLowerCase().trim();
-  if (!term) {
-    this.displayRows = out;
-  } else {
-    this.displayRows = out.filter(n =>
-      (n.headName || '').toLowerCase().includes(term) ||
-      String(n.headCode).includes(term)
-    );
   }
-}
-
 
   // ================= EVENTS =================
   toggleRow(row: CoaNode): void {
