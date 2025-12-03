@@ -103,7 +103,7 @@
       <div class="rounded-xl border border-gray-200 mt-2">
       <!-- Header row -->
 <div
-  class="grid grid-cols-[1.4fr_1fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
+  class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
          text-[12px] font-medium
          bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
   <div class="px-2.5 py-2">Item</div>
@@ -124,7 +124,7 @@
 
   <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
        [formGroupName]="i"
-       class="grid grid-cols-[1.4fr_1fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
+       class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
 
     <!-- Item -->
     <div class="px-2.5 py-1.5">
@@ -133,17 +133,26 @@
     </div>
 
     <!-- Budget -->
-    <div class="px-2.5 py-1.5">
-      <select
-        id="budget-line"
-        class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-        formControlName="budgetLineId">
-        <option value="">Select Budget Line</option>
-        <option *ngFor="let line of parentHeadList" [value]="line.value">
-          {{ line.label }}
-        </option>
-      </select>
-    </div>
+ <div class="px-2.5 py-1.5">
+  <ng-select
+    class="pin-budget-select w-full"
+    [items]="parentHeadList"
+    bindLabel="label"
+    bindValue="value"
+    [searchable]="true"
+    [clearable]="false"
+    placeholder="Search / choose Budget Line..."
+    formControlName="budgetLineId"
+    appendTo="body"
+    dropdownPosition="bottom">
+
+    <ng-template ng-option-tmp let-item="item">
+      <div class="pin-budget-option" [title]="item.label">
+        {{ item.label }}
+      </div>
+    </ng-template>
+  </ng-select>
+</div>
 
     <!-- Location -->
     <div class="px-2.5 py-1.5">

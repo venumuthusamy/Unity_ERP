@@ -113,6 +113,7 @@ export class SupplierInvoiceComponent implements OnInit {
   }
 
   ngOnInit(): void {
+     document.body.classList.add('pin-supplier-invoice-page');
     this.loadAccountHeads()
     this.setMinDate();
     this.loadGrns();
@@ -121,6 +122,9 @@ export class SupplierInvoiceComponent implements OnInit {
       const id = Number(pm.get('id') || 0);
       if (id > 0) this.loadInvoice(id);
     });
+  }
+    ngOnDestroy(): void {
+    document.body.classList.remove('pin-supplier-invoice-page');
   }
 
   // ------------------------------- Utilities -------------------------------

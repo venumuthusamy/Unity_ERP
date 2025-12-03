@@ -307,3 +307,42 @@
 :host ::ng-deep .swal2-popup.prlines-modal .swal2-close {
   color: #6b7280; /* gray-500 */
 }
+/* ===== Input look for PIN Budget dropdown (optional) ===== */
+:host ::ng-deep .pin-budget-select.ng-select.ng-select-single .ng-select-container {
+  height: 32px;
+  min-height: 32px;
+  border-radius: 0.428rem;
+  border: 1px solid #d8d6de;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+:host ::ng-deep .pin-budget-select .ng-value-container {
+  padding: 0 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .pin-budget-select .ng-arrow-wrapper {
+  width: 28px;
+}
+
+/* ===== Wide dropdown panel, but ONLY on Supplier Invoice page ===== */
+body.pin-supplier-invoice-page .ng-dropdown-panel {
+  min-width: 520px !important;
+  max-height: 380px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
+body.pin-supplier-invoice-page .ng-dropdown-panel .ng-dropdown-panel-items {
+  max-height: 340px;
+}
+
+body.pin-supplier-invoice-page .ng-dropdown-panel .pin-budget-option {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
