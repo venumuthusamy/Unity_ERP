@@ -189,17 +189,29 @@
                      placeholder="Description">
             </td>
                <!-- Budget -->
-            <td>
-            <select
-              id="budget-line"
-              class="form-control"
-              [(ngModel)]="r.budgetLineId"
-              required
-            >
-              <option value="" disabled selected>Select Budget Line</option>
-              <option *ngFor="let line of parentHeadList" [value]="line.value">{{ line.label }}</option>
-            </select>
-            </td>
+   <td class="px-2.5 py-1.5">
+  <ng-select
+    class="pin-budget-select w-full"
+    [items]="parentHeadList"
+    bindLabel="label"
+    bindValue="value"
+    [searchable]="true"
+    [clearable]="false"
+    placeholder="Search / choose Budget Line..."
+    formControlName="budgetLineId"
+    appendTo="body"
+    dropdownPosition="bottom">
+
+    <ng-template ng-option-tmp let-item="item">
+      <div class="pin-budget-option" [title]="item.label">
+        {{ item.label }}
+      </div>
+    </ng-template>
+  </ng-select>
+</td>
+
+
+            
 
             <!-- UOM -->
             <td>

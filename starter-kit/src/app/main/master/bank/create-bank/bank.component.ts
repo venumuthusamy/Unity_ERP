@@ -179,7 +179,7 @@ onSave(): void {
     email: this.bank.contactEmail,
     contactNo: this.bank.contactPhone,
     address: this.bank.address,
-    budgetLine: this.bank.budgetLineId,
+    budgetLineId: this.bank.budgetLineId,
     isActive: true
   };
 
