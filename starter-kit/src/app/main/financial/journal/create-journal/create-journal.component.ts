@@ -51,6 +51,9 @@ export class CreateJournalComponent implements OnInit {
 
   timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone;
   isSaving = false;
+  parentHeadList: any;
+  budgetLineId: number | null = null;
+  submitted = false;
 
   constructor(
     private router: Router,
@@ -58,7 +61,7 @@ export class CreateJournalComponent implements OnInit {
     private _customer: CustomerMasterService,
     private _supplier: SupplierService,
     private _journal: JournalService,
-    private _item: ItemsService
+    private _item: ItemsService,
   ) {}
 
   ngOnInit(): void {
@@ -66,6 +69,7 @@ export class CreateJournalComponent implements OnInit {
     this.loadCustomer();
     this.loadSuppliers();
     this.loadItem();
+    this.loadAccountHeads()
   }
 
   // ---------------- LOADERS ----------------
@@ -168,6 +172,7 @@ onSubmit() {
     description: this.description,
     debit: this.debitAmount,
     credit: this.creditAmount,
+    budgetLineId: this.budgetLineId,
 
     // Recurring
     isRecurring: this.isRecurring,
@@ -217,5 +222,25 @@ onSubmit() {
 
   onCancel() {
     this.router.navigate(['financial/journal']);
+  }
+  loadAccountHeads(): void {
+    this._chart.getAllChartOfAccount().subscribe((res: any) => {
+      const data = (res?.data || []).filter((x: any) => x.isActive === true);
+      this.parentHeadList = data.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullPath(head, data)
+      }));
+    });
+  }
+
+  /** Build breadcrumb like: Parent >> Child >> This */
+  private buildFullPath(item: any, all: any[]): string {
+    let path = item.headName;
+    let current = all.find((x: any) => x.headCode === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.headCode === current.parentHead);
+    }
+    return path;
   }
 }
