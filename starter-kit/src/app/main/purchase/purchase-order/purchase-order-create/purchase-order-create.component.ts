@@ -53,16 +53,16 @@ export class PurchaseOrderCreateComponent implements OnInit {
   paymentTerms: any;
   currencies: any;
   incoterms: any;
-  allPrNos: any;
-  allItems: any;
-  accounthead: any
-  allBudgets: any
-  allRecurring: any
-  allTaxCodes: any
-  deliveries: any;
+  allPrNos: any[] = [];
+  allItems: any[] = [];
+  accounthead: any[] = [];
+  allBudgets: any[] = [];
+  allRecurring: any[] = [];
+  allTaxCodes: any[] = [];
+  deliveries: any[] = [];
+  countries: any[] = [];
   submitted: boolean;
   iserrorDelivery: boolean;
-  countries: any
   minDate = '';
   private draftId: number | null = null;
   userId: string;
@@ -567,22 +567,22 @@ export class PurchaseOrderCreateComponent implements OnInit {
     this.poLines[index].dropdownOpen = field;
     // show all initially
     if (field === 'prNo') {
-      this.poLines[index].filteredOptions = [...this.allPrNos];
+      this.poLines[index].filteredOptions = [...(this.allPrNos || [])];
     }
     if (field === 'item') {
-      this.poLines[index].filteredOptions = [...this.allItems];
+      this.poLines[index].filteredOptions = [...(this.allItems || [])];
     }
     if (field === 'budget') {
-      this.poLines[index].filteredOptions = [...this.allBudgets];
+      this.poLines[index].filteredOptions = [...(this.allBudgets || [])];
     }
     if (field === 'recurring') {
-      this.poLines[index].filteredOptions = [...this.allRecurring];
+      this.poLines[index].filteredOptions = [...(this.allRecurring || [])];
     }
     if (field === 'taxCode') {
-      this.poLines[index].filteredOptions = [...this.allTaxCodes];
+      this.poLines[index].filteredOptions = [...(this.allTaxCodes || [])];
     }
     if (field === 'location') {
-      this.poLines[index].filteredOptions = [...this.deliveries];
+      this.poLines[index].filteredOptions = [...(this.deliveries || [])];
     }
   }
 
