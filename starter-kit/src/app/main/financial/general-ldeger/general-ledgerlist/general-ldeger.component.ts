@@ -22,13 +22,11 @@ interface CoaFlat {
 }
 
 interface CoaNode extends CoaFlat {
-  // ORIGINAL backend values
   ownOpening: number;
   ownDebit: number;
   ownCredit: number;
   ownBalance: number;
 
-  // CURRENT display values
   openingBalance: number;
   debit: number;
   credit: number;
@@ -65,7 +63,6 @@ export class GeneralLdegerComponent implements OnInit {
     this.load();
   }
 
-  // ===== BALANCE FORMULA (same for parent/child) =====
   // balance = opening + credit - debit
   private calcBalance(opening: number, debit: number, credit: number): number {
     return opening + credit - debit;
@@ -79,18 +76,11 @@ export class GeneralLdegerComponent implements OnInit {
       next: (res: any) => {
         const flat: CoaFlat[] = (res.data || []).map((x: any) => {
           const headName = String(x.headName ?? '').trim();
-          const rootHeadType = String(x.rootHeadType ?? '');
 
           const isControl =
             !!x.isControl ||
             headName === 'Accounts Payable' ||
-            headName.startsWith('Account Receivable');
-
-          const opening = x.openingBalance == null ? 0 : Number(x.openingBalance);
-          const debit   = x.debit           == null ? 0 : Number(x.debit);
-          const credit  = x.credit          == null ? 0 : Number(x.credit);
-
-          const balance = this.calcBalance(opening, debit, credit);
+            headName.startsWith('Accounts Receivable');
 
           return {
             id: Number(x.headId ?? 0),
@@ -99,12 +89,12 @@ export class GeneralLdegerComponent implements OnInit {
             parentHead: x.parentHead == null ? 0 : Number(x.parentHead),
 
             headType: String(x.headType ?? ''),
-            rootHeadType,
+            rootHeadType: String(x.rootHeadType ?? ''),
 
-            openingBalance: opening,
-            debit,
-            credit,
-            balance,
+            openingBalance: Number(x.openingBalance ?? 0),
+            debit: Number(x.debit ?? 0),
+            credit: Number(x.credit ?? 0),
+            balance: Number(x.balance ?? 0),
 
             isControl,
             isActive: x.isActive ?? true
@@ -113,6 +103,7 @@ export class GeneralLdegerComponent implements OnInit {
 
         const flatActive = flat.filter(r => !!r.isActive);
 
+        // Map by ID and by HeadCode (because ParentHead = HeadCode)
         const nodesById = new Map<number, CoaNode>();
         const nodesByCode = new Map<number, CoaNode>();
 
@@ -140,12 +131,11 @@ export class GeneralLdegerComponent implements OnInit {
           nodesByCode.set(node.headCode, node);
         });
 
+        // ---------- build tree ----------
         const roots: CoaNode[] = [];
 
-        // ParentHead IS HEADCODE → link by headCode
         nodesById.forEach(node => {
           const p = node.parentHead ?? 0;
-
           if (!p) {
             roots.push(node);
           } else {
@@ -160,7 +150,7 @@ export class GeneralLdegerComponent implements OnInit {
           }
         });
 
-        // ---------- sort & set level ----------
+        // ---------- sort ----------
         const sortAndSetLevel = (list: CoaNode[], level: number) => {
           list.sort((a, b) => a.headCode - b.headCode);
           list.forEach(n => {
@@ -173,8 +163,9 @@ export class GeneralLdegerComponent implements OnInit {
         sortAndSetLevel(roots, 0);
 
         this.roots = roots;
-        this.roots.forEach(r => r.$$expanded = false); // collapsed initially
+        this.roots.forEach(r => r.$$expanded = false);
         this.rebuildDisplayRows();
+
         this.isLoading = false;
       },
       error: (err) => {
@@ -189,106 +180,127 @@ export class GeneralLdegerComponent implements OnInit {
     });
   }
 
-  // ===== aggregate CHILDREN (all descendants, not parent) =====
+  // ===== CHILDREN AGGREGATE (recursive) =====
   private computeChildrenAggregate(node: CoaNode): {
     opening: number; debit: number; credit: number;
   } {
+    if (!node.children || node.children.length === 0) {
+      return { opening: 0, debit: 0, credit: 0 };
+    }
+
     let opening = 0;
     let debit   = 0;
     let credit  = 0;
 
-    if (!node.children || node.children.length === 0) {
-      return { opening, debit, credit };
-    }
-
     node.children.forEach(ch => {
-      const childOwnOpening = ch.ownOpening ?? 0;
-      const childOwnDebit   = ch.ownDebit   ?? 0;
-      const childOwnCredit  = ch.ownCredit  ?? 0;
+      opening += (ch.ownOpening ?? 0);
+      debit   += (ch.ownDebit   ?? 0);
+      credit  += (ch.ownCredit  ?? 0);
 
-      // child own values
-      opening += childOwnOpening;
-      debit   += childOwnDebit;
-      credit  += childOwnCredit;
-
-      // all descendants under this child
-      const subAgg = this.computeChildrenAggregate(ch);
-      opening += subAgg.opening;
-      debit   += subAgg.debit;
-      credit  += subAgg.credit;
+      const sub = this.computeChildrenAggregate(ch);
+      opening += sub.opening;
+      debit   += sub.debit;
+      credit  += sub.credit;
     });
 
     return { opening, debit, credit };
   }
 
   // ================= FLATTEN TREE =================
-  private rebuildDisplayRows(): void {
-    const out: CoaNode[] = [];
+private rebuildDisplayRows(): void {
+  const output: CoaNode[] = [];
 
-    const visit = (node: CoaNode) => {
-      const hasChildren = node.hasChildren && node.children.length > 0;
+  // ---------------- FIRST PASS: normalize leaves ----------------
+  const normalizeLeaves = (node: CoaNode) => {
+    if (!node.hasChildren || node.children.length === 0) {
+      const o = node.ownOpening;
+      const d = node.ownDebit;
+      const c = node.ownCredit;
+      const bal = this.calcBalance(o, d, c);
 
-      if (hasChildren) {
-        const agg = this.computeChildrenAggregate(node);
+      // fully settled leaf
+      if (o === 0 && bal === 0) {
+        node.ownOpening = 0;
+        node.ownDebit = 0;
+        node.ownCredit = 0;
+        node.ownBalance = 0;
 
-        if (node.$$expanded) {
-          // 🔹 EXPANDED:
-          // values “move” into children → parent 0
-          node.openingBalance = 0;
-          node.debit          = 0;
-          node.credit         = 0;
-          node.balance        = 0;
-        } else {
-          // 🔹 COLLAPSED:
-          // parent = own + all descendants
-          const ownO = node.ownOpening ?? 0;
-          const ownD = node.ownDebit   ?? 0;
-          const ownC = node.ownCredit  ?? 0;
-
-          const openingTotal = ownO + agg.opening;
-          const debitTotal   = ownD + agg.debit;
-          const creditTotal  = ownC + agg.credit;
-
-          node.openingBalance = openingTotal;
-          node.debit          = debitTotal;
-          node.credit         = creditTotal;
-          node.balance        = this.calcBalance(openingTotal, debitTotal, creditTotal);
-        }
+        node.openingBalance = 0;
+        node.debit = 0;
+        node.credit = 0;
+        node.balance = 0;
       } else {
-        // 🔹 LEAF (child): show own values from API
-        const o = node.ownOpening ?? 0;
-        const d = node.ownDebit   ?? 0;
-        const c = node.ownCredit  ?? 0;
-
+        // ✅ KEEP opening balance
         node.openingBalance = o;
-        node.debit          = d;
-        node.credit         = c;
-        node.balance        = this.calcBalance(o, d, c);
+        node.debit = d;
+        node.credit = c;
+        node.balance = Math.abs(bal);
       }
-
-      out.push(node);
-
-      if (hasChildren && node.$$expanded) {
-        node.children.forEach(ch => visit(ch));
-      }
-    };
-
-    this.roots.forEach(r => visit(r));
-
-    const term = (this.searchValue || '').toLowerCase().trim();
-    if (!term) {
-      this.displayRows = out;
-    } else {
-      this.displayRows = out.filter(n =>
-        (n.headName || '').toLowerCase().includes(term) ||
-        String(n.headCode).includes(term)
-      );
+      return;
     }
-  }
 
-  // ================= EVENTS =================
+    // normalize children recursively
+    node.children.forEach(ch => normalizeLeaves(ch));
+  };
+
+  this.roots.forEach(r => normalizeLeaves(r));
+
+  // ---------------- SECOND PASS: parent aggregation ----------------
+  const visit = (node: CoaNode) => {
+    const hasChildren = node.hasChildren && node.children.length > 0;
+    const agg = hasChildren ? this.computeChildrenAggregate(node) : null;
+
+    if (hasChildren) {
+      if (node.$$expanded) {
+        // when expanded, parent shows 0 so children carry details
+        node.openingBalance = 0;
+        node.debit = 0;
+        node.credit = 0;
+        node.balance = 0;
+      } else {
+        const o = node.ownOpening + (agg?.opening ?? 0);
+        const d = node.ownDebit   + (agg?.debit   ?? 0);
+        const c = node.ownCredit  + (agg?.credit  ?? 0);
+        const bal = this.calcBalance(o, d, c);
+
+        if (o === 0 && bal === 0) {
+          node.openingBalance = 0;
+          node.debit = 0;
+          node.credit = 0;
+          node.balance = 0;
+        } else {
+          // ✅ show aggregated opening + movement on collapsed parent
+          node.openingBalance = o;
+          node.debit = d;
+          node.credit = c;
+          node.balance = Math.abs(bal);
+        }
+      }
+    }
+
+    output.push(node);
+
+    if (hasChildren && node.$$expanded) {
+      node.children.forEach(ch => visit(ch));
+    }
+  };
+
+  this.roots.forEach(r => visit(r));
+
+  // Search filter
+  const term = (this.searchValue || '').toLowerCase();
+  this.displayRows = term
+    ? output.filter(n =>
+        n.headName.toLowerCase().includes(term) ||
+        String(n.headCode).includes(term)
+      )
+    : output;
+}
+
+
+  // Toggle expand/collapse
   toggleRow(row: CoaNode): void {
-    if (!row.hasChildren) { return; }
+    if (!row.hasChildren) return;
     row.$$expanded = !row.$$expanded;
     this.rebuildDisplayRows();
   }
@@ -297,7 +309,6 @@ export class GeneralLdegerComponent implements OnInit {
     this.rebuildDisplayRows();
   }
 
-  // ================= HELPERS =================
   private errMsg(err: any): string {
     return err?.error?.message || err?.message || 'Try again';
   }
