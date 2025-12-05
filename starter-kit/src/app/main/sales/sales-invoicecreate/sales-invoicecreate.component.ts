@@ -75,6 +75,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   doList: any[] = [];
   taxCodes: any[] = [];
   itemsList: SimpleItem[] = [];
+  parentHeadList: any[] = [];
 
   // ----- Lines & totals -----
   lines: UiLine[] = [];
@@ -99,7 +100,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
   // For compatibility with backend total field
   total = 0;
-  parentHeadList: any;
 
   constructor(
     private api: SalesInvoiceService,
@@ -116,7 +116,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Lifecycle
   // ============================================================
   ngOnInit(): void {
-    this.loadAccountHeads()
+    this.loadAccountHeads();
+
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
       .subscribe(pm => {
@@ -189,7 +190,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   }
 
   private resetForCreate() {
-    // this.sourceType = 1;
     this.sourceId = null;
     this.invoiceDate = new Date().toISOString().slice(0, 10);
 
@@ -353,7 +353,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             sourceLineId: r.sourceLineId ?? null,
             itemId: r.itemId ?? null,
             itemName: r.itemName ?? '',
-            uom: r.uom ?? null,
+            uom: r.uom ?? r.uomName ?? null,
             qty: Number(r.qty || 0),
             unitPrice: Number(r.unitPrice || 0),
             discountPct: Number(r.discountPct || 0),
@@ -618,7 +618,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         (line.description && line.description.trim().length > 0)
           ? line.description
           : (line.itemName ?? null),
-      budgetLineId: line.budgetLineId
+      budgetLineId: line.budgetLineId != null ? Number(line.budgetLineId) : null
     }).subscribe({
       next: (r) => {
         if (!this.isOk(r)) {
@@ -694,7 +694,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           (l.description && l.description.trim().length > 0)
             ? l.description
             : (l.itemName ?? null),
-        budgetLineId: l.budgetLineId
+        budgetLineId: l.budgetLineId != null ? Number(l.budgetLineId) : null
       }).subscribe({
         next: (r) => {
           if (this.isOk(r)) {
@@ -750,7 +750,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Save
   // ============================================================
   save(): void {
-    debugger
     if (!this.invoiceDate) {
       Swal.fire({ icon: 'warning', title: 'Invoice Date is required' });
       return;
@@ -796,10 +795,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               (l.description && l.description.trim().length > 0)
                 ? l.description
                 : (l.itemName ?? null),
-            budgetLineId: l.budgetLineId    
+            budgetLineId: l.budgetLineId != null ? Number(l.budgetLineId) : null
           } as SiCreateLine;
         })
       };
+
+      console.log(req);
 
       this.api.create(req)
         .pipe(takeUntil(this.destroy$))
@@ -866,12 +867,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   }
 
   autoResize(event: Event) {
-  const textarea = event.target as HTMLTextAreaElement;
-  if (!textarea) return;
+    const textarea = event.target as HTMLTextAreaElement;
+    if (!textarea) return;
 
-  textarea.style.height = 'auto';                // reset
-  textarea.style.height = textarea.scrollHeight + 'px'; // grow to fit content
-}
+    textarea.style.height = 'auto';                // reset
+    textarea.style.height = textarea.scrollHeight + 'px'; // grow to fit content
+  }
+
   loadAccountHeads(): void {
     this.coaService.getAllChartOfAccount().subscribe((res: any) => {
       const data = (res?.data || []).filter((x: any) => x.isActive === true);
@@ -892,6 +894,4 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     }
     return path;
   }
-
 }
-
