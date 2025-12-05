@@ -1,6 +1,10 @@
 <section id="location-list">
-  <h4 class="card-title">Location List</h4>
-
+  <div class="card">
+  <h4
+              class="card-text"
+              style="margin-left:0.85rem;margin-top:0.75rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+              Location List
+            </h4>
   <div class="row">
     <!-- Page size -->
     <div class="col-md-6 col-12">
@@ -53,7 +57,7 @@
 
     <!-- Columns -->
     <ngx-datatable-column name="Name" prop="name" [width]="220"></ngx-datatable-column>
-    <ngx-datatable-column name="Address" prop="address" [width]="240"></ngx-datatable-column>
+    <!-- <ngx-datatable-column name="Address" prop="address" [width]="240"></ngx-datatable-column> -->
     <ngx-datatable-column name="City" prop="cityName" [width]="160"></ngx-datatable-column>
     <ngx-datatable-column name="State" prop="stateName" [width]="160"></ngx-datatable-column>
     <ngx-datatable-column name="Country" prop="countryName" [width]="160"></ngx-datatable-column>
@@ -78,4 +82,5 @@
   >
     <app-create-location [locationId]="selectedLocationId" (onLocationChange)="getAllLocations()"></app-create-location>
   </core-sidebar>
+  </div>
 </section>

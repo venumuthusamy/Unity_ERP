@@ -595,9 +595,11 @@ export class SalesOrderCreateComponent implements OnInit {
       subTotal:      this.round2(gross),
       gstAmount:     this.round2(tax),
       discountLines: this.round2(discLines),
-      netTotal:      this.round2(lineTotals + ship)
+      netTotal:      this.round2(lineTotals + ship),
+      grandTotal: this.round2(lineTotals+ship)
     };
   }
+  
 
   // summary-la % show panna use panra helper
   get discountPctSummary(): number {
