@@ -991,23 +991,39 @@ export class PurchaseOrderCreateComponent implements OnInit {
   deliveryChange() {
     this.iserrorDelivery = false
   }
-  validatePO(): boolean {
+validatePO(): boolean {
 
-    // Case 1: No lines
-    if (this.poLines.length === 0) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line item.' });
-      return false;
-    }
-
-    // Case 2: Missing or invalid price
-    const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
-    if (invalidLine) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
-      return false;
-    }
-
-    return true; // ✅ everything is okay
+  // Case 1: No lines
+  if (this.poLines.length === 0) {
+    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line item.' });
+    return false;
   }
+
+  // ⭐ NEW: Missing Tax Code
+  const missingTax = this.poLines.find(line =>
+    !line.taxCode || line.taxCode.toString().trim() === ''
+  );
+
+  if (missingTax) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Tax Code required',
+      text: 'Please select Tax Code for all line items before saving.',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return false;
+  }
+
+  // Case 2: Missing or invalid price
+  const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
+  if (invalidLine) {
+    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
+    return false;
+  }
+
+  return true; // ✅ everything is okay
+}
+
   saveRequest() {
 
     if (this.draftId) {

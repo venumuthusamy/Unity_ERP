@@ -197,7 +197,7 @@
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">PR Number</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Item Code</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Description</th>
-                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Budget</th>
+                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">LedgerName</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Location</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Contact Number</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Recurring</th>
@@ -257,7 +257,7 @@
 
                         <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].budget" (focus)="openDropdown(i, 'budget')"
-                                (input)="filterOptions(i, 'budget')" placeholder="Search Budget..."
+                                (input)="filterOptions(i, 'budget')" placeholder="Search Ledger..."
                                 class="w-[300px] rounded-xl border px-3 py-2 text-sm" disabled />
 
                             <div *ngIf="poLines[i].dropdownOpen === 'budget'"
@@ -325,7 +325,7 @@
 
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['qty']" (input)="calculateLineTotal(poLines[i])" disabled />
+                                [(ngModel)]="poLines[i]['qty']" (input)="calculateLineTotal(poLines[i])" />
                         </td>
 
                         <td class="px-3 py-2">

@@ -340,9 +340,11 @@ body.pin-supplier-invoice-page .ng-dropdown-panel .ng-dropdown-panel-items {
 }
 
 body.pin-supplier-invoice-page .ng-dropdown-panel .pin-budget-option {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 

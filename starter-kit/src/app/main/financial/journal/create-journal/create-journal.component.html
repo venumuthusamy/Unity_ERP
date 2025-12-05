@@ -175,28 +175,26 @@
             </div>
 
               <!-- ================= ROW 4: Budget Line ================= -->
-            <div class="row gx-3 gy-3 mt-1">
-              <div class="col-md-4 col-sm-12">
-                <label class="form-label mb-25">Budget Line</label>
+<div class="row gx-3 gy-3 mt-1">
+  <div class="col-md-4 col-sm-12">
+    <label class="form-label mb-25">Ledger Name</label>
 
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="parentHeadList"
-                  bindLabel="label"
-                  bindValue="value"
-                  [(ngModel)]="budgetLineId"
-                  name="budgetLineId"
-                  [clearable]="true"
-                  placeholder="Select Budget Line">
-                </ng-select>
+    <ng-select
+      class="w-100 journal-select"
+      [items]="parentHeadList"
+      bindLabel="label"
+      bindValue="value"
+      [(ngModel)]="budgetLineId"
+      name="budgetLineId"
+      [clearable]="true"
+      placeholder="Select Ledger Name">
+    </ng-select>
 
-                <div
-                  *ngIf="submitted && !budgetLineId"
-                  class="invalid-feedback d-block">
-                  This field is required!
-                </div>
-              </div>
-            </div>
+    <div *ngIf="submitted && !budgetLineId" class="invalid-feedback d-block">
+      This field is required!
+    </div>
+  </div>
+</div>
 
 
             <!-- ================= RECURRING SECTION ================= -->
