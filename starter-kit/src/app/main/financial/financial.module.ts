@@ -61,6 +61,7 @@ const routes: Routes = [
 { path: 'daybook', component: DaybookReportComponent },
 { path: 'forecast', component: CollectionForecastComponent },
 { path: 'opening-balance', component: OpeningBalanceComponent },
+{ path: 'ap-aging', component: APAgingComponent },
 ];
 
 @NgModule({

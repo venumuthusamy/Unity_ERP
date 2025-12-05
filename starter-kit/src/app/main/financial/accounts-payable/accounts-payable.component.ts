@@ -14,6 +14,7 @@ import * as feather from 'feather-icons';
 
 import { AccountsPayableService } from './accounts-payable.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
+import { Router } from '@angular/router';
 
 type ApTab = 'invoices' | 'payments' | 'match';
 
@@ -104,7 +105,8 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
 
   constructor(
     private apSvc: AccountsPayableService,
-    private supplierSvc: SupplierService
+    private supplierSvc: SupplierService,
+    private router: Router
   ) {
     const today = new Date();
     this.payDate = today.toISOString().substring(0, 10);
@@ -661,4 +663,10 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   this.payListPageSize = +size;   // ensure number
   this.payListPage = 1;           // reset to first page
 }
+ goToApAging(): void {
+    // adjust path to match your routing config
+    this.router.navigate(['/financial/ap-aging']);
+    // or if it is nested:
+    // this.router.navigate(['/financial/ap-aging']);
+  }
 }

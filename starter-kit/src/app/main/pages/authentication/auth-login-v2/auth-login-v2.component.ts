@@ -93,7 +93,7 @@ export class AuthLoginV2Component implements OnInit {
       localStorage.setItem("id",res.userId)
       localStorage.setItem("email",res.email)
       
-      this._router.navigate(['/']);
+      this._router.navigate(['/home']);
       
       },(err:any)=>{
 

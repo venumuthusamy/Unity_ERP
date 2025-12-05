@@ -12,32 +12,44 @@
         </div>
 
         <!-- ================= TABS ================= -->
-        <ul class="nav nav-tabs ap-tabs mt-1" role="tablist">
-          <li class="nav-item">
-            <a
-              class="nav-link"
-              [ngClass]="{ 'active': activeTab === 'invoices' }"
-              (click)="setTab('invoices')">
-              Supplier Invoices
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              class="nav-link"
-              [ngClass]="{ 'active': activeTab === 'payments' }"
-              (click)="setTab('payments')">
-              Payments
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              class="nav-link"
-              [ngClass]="{ 'active': activeTab === 'match' }"
-              (click)="setTab('match')">
-              3-Way Match
-            </a>
-          </li>
-        </ul>
+      <ul class="nav nav-tabs ap-tabs mt-1" role="tablist">
+  <li class="nav-item">
+    <a
+      class="nav-link"
+      [ngClass]="{ 'active': activeTab === 'invoices' }"
+      (click)="setTab('invoices')">
+      Supplier Invoices
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a
+      class="nav-link"
+      [ngClass]="{ 'active': activeTab === 'payments' }"
+      (click)="setTab('payments')">
+      Payments
+    </a>
+  </li>
+
+  <!-- Aging: go to AP Aging component via router -->
+  <li class="nav-item">
+    <a
+      class="nav-link"
+      (click)="goToApAging()">
+      Aging
+    </a>
+  </li>
+
+  <!-- 3-Way Match: stays as local tab -->
+  <li class="nav-item">
+    <a
+      class="nav-link"
+      [ngClass]="{ 'active': activeTab === 'match' }"
+      (click)="setTab('match')">
+      3-Way Match
+    </a>
+  </li>
+</ul>
 
         <!-- ================= TAB CONTENT ================= -->
         <div class="tab-content p-1">
