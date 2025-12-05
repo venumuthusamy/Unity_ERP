@@ -74,7 +74,7 @@
 <!-- opening-balance.component.html -->
 
 <div class="form-group ">
-  <label class="form-label" for="budget-line">Budget Line</label>
+  <label class="form-label" for="budget-line">Ledger Name</label>
   <select id="budget-line"
           class="form-control"
           name="budgetLine"
@@ -82,7 +82,7 @@
           #budgetLineRef="ngModel"
           required
           [class.is-invalid]="(budgetLineRef.touched || openingBalanceForm.submitted) && budgetLineRef.invalid">
-    <option [ngValue]="null">Select Budget Line</option>
+    <option [ngValue]="null">Select Ledger</option>
     <option *ngFor="let line of parentHeadList" [ngValue]="line.value">
       {{ line.label }}
     </option>

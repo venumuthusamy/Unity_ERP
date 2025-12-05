@@ -1,10 +1,12 @@
 import {
-  Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef,
-  AfterViewInit, AfterViewChecked, HostListener
+  Component,
+  OnInit,
+  ChangeDetectorRef,
+  AfterViewInit,
+  AfterViewChecked
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
-import SignaturePad from 'signature_pad';
 import { forkJoin, of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import feather from 'feather-icons';
@@ -54,7 +56,7 @@ export interface LineRow {
   defectLabels: string;
   damagedPackage: string;
   time: string;
-  initial: string;
+  initial: string;     // now stores username text
   remarks: string;
 
   createdAt: Date;
@@ -79,45 +81,23 @@ interface GeneratedGRN {
   styleUrls: ['./purchase-goodreceipt.component.scss']
 })
 export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, AfterViewChecked {
+
   hover = false;
   minDate = '';
   showSummary = false;
 
+  // 🔹 username of current logged-in user (from localStorage)
+  currentUsername: string = '';
+
   imageViewer = { open: false, src: null as string | null };
   openImage(src: string) { this.imageViewer = { open: true, src }; document.body.style.overflow = 'hidden'; }
   closeImage() { this.imageViewer = { open: false, src: null }; document.body.style.overflow = ''; }
-
-  showPreview = false;
-  previewSrc: string | null = null;
-  openPreview(src: string) {
-    this.previewSrc = src || null;
-    if (this.previewSrc) {
-      this.showPreview = true;
-      document.body.style.overflow = 'hidden';
-    }
-  }
-  closePreview() {
-    this.showPreview = false;
-    this.previewSrc = null;
-    document.body.style.overflow = '';
-  }
-  @HostListener('document:keydown.escape', ['$event'])
-  onEscForPreview(_: KeyboardEvent) { if (this.showPreview) this.closePreview(); }
-
-  showInitialModal = false;
-  activeTab: 'image' | 'signature' = 'image';
-  uploadedImage: string | ArrayBuffer | null = null;
-  selectedRowIndex: number | null = null;
 
   flagModal = { open: false };
   selectedFlagIssueId: number | null = null;
   selectedRowForFlagIndex: number | null = null;
 
   isPoDateDisabled = false;
-  isDragOver = false;
-
-  @ViewChild('signaturePad', { static: false }) signaturePadElement!: ElementRef<HTMLCanvasElement>;
-  private signaturePad?: SignaturePad;
 
   selectedPO: number | null = null;
   receiptDate = '';
@@ -144,7 +124,9 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       storageType: '', surfaceTemp: '', expiry: '',
       pestSign: '', drySpillage: '', odor: '',
       plateNumber: '', defectLabels: '', damagedPackage: '',
-      time: '', initial: '', remarks: '',
+      time: '',
+      initial: '',                 // will be overridden by currentUsername on save
+      remarks: '',
       createdAt: new Date(), photos: [],
       isFlagIssue: false, isPostInventory: false, flagIssueId: null
     }
@@ -186,6 +168,9 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
   ngAfterViewChecked() { feather.replace(); }
 
   ngOnInit() {
+    // 🔹 get current username from localStorage
+    this.currentUsername = localStorage.getItem('username') || '';
+
     this.setMinDate();
     this.loadPOs();
     this.loadWarehouses();
@@ -196,7 +181,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       const id = idParam ? Number(idParam) : NaN;
       if (!isNaN(id) && id > 0) {
         this.editingGrnId = id;
-        this.loadForEdit(id); // method defined below
+        this.loadForEdit(id);
       }
     });
   }
@@ -253,7 +238,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
       defectLabels: r.defectLabels,
       damagedPackage: r.damagedPackage,
       time: r.time,
-      initial: r.initial,
+      initial: this.currentUsername,             // 🔹 save username as initial
       remarks: r.remarks,
       isFlagIssue: !!r.isFlagIssue,
       isPostInventory: !!r.isPostInventory,
@@ -274,7 +259,6 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     this.purchaseGoodReceiptService.createGRN(payload).subscribe({
       next: (res: any) => {
         const grnId = res?.data || res?.id || res;
-        // ✅ Only save; DO NOT post inventory here
         Swal.fire({ icon: 'success', title: 'Created', text: res?.message || 'GRN created.', confirmButtonColor: '#0e3a4c' });
         if (grnId) { this.showSummary = true; this.loadSummaryForCreate(grnId); }
       },
@@ -327,106 +311,100 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
     } as UpdateWarehouseAndSupplierPriceDto));
   }
 
-private postOneRowToInventory(row: any, index: number) {
-  debugger;
+  private postOneRowToInventory(row: any, index: number) {
+    // 0) Validate minimal fields
+    if (!row?.itemCode) {
+      Swal.fire('Missing item', 'Item code not found.', 'warning');
+      return;
+    }
+    if (!row?.warehouseId) {
+      Swal.fire('Missing warehouse', 'Select a warehouse before posting.', 'warning');
+      return;
+    }
+    const qty = Number(row?.qtyReceived || 0);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      Swal.fire('Quantity required', 'Enter a received quantity > 0.', 'warning');
+      return;
+    }
 
-  // 0) Validate minimal fields
-  if (!row?.itemCode) {
-    Swal.fire('Missing item', 'Item code not found.', 'warning');
-    return;
-  }
-  if (!row?.warehouseId) {
-    Swal.fire('Missing warehouse', 'Select a warehouse before posting.', 'warning');
-    return;
-  }
-  const qty = Number(row?.qtyReceived || 0);
-  if (!Number.isFinite(qty) || qty <= 0) {
-    Swal.fire('Quantity required', 'Enter a received quantity > 0.', 'warning');
-    return;
-  }
+    // 1) Build single-line ApplyGrn request
+    const applyReq: ApplyGrnRequest = {
+      grnNo: this.generatedGRN?.grnNo || '',
+      receptionDate: this.receiptDate || new Date(),
+      updatedBy: (localStorage.getItem('id') || ''),
+      lines: [{
+        itemCode: String(row.itemCode || '').trim(),
+        supplierId: row.supplierId ?? this.currentSupplierId ?? null,
+        warehouseId: Number(row.warehouseId),
+        binId: row.binId ?? null,
+        strategyId: row.strategyId ?? null,
+        qtyDelta: row.qtyReceived,
+        batchFlag: !!row.batchSerial,
+        serialFlag: false,
+        barcode: row.batchSerial ?? row.barcode ?? null,
+        price: this.getNumberOrNull(row.unitPrice),
+        remarks: row.remarks ?? null
+      } as ApplyGrnLine]
+    };
 
-  // 1) Build single-line ApplyGrn request
-  const applyReq: ApplyGrnRequest = {
-    grnNo: this.generatedGRN?.grnNo || '',
-    receptionDate: this.receiptDate || new Date(),
-    updatedBy: (localStorage.getItem('id') || ''),
-    lines: [{
+    // 2) Build single upsert for stock + price
+    const upsert: UpdateWarehouseAndSupplierPriceDto = {
       itemCode: String(row.itemCode || '').trim(),
-      supplierId: row.supplierId ?? this.currentSupplierId ?? null,
       warehouseId: Number(row.warehouseId),
       binId: row.binId ?? null,
       strategyId: row.strategyId ?? null,
-      qtyDelta: row.qtyReceived,
+      qtyDelta: qty,
       batchFlag: !!row.batchSerial,
       serialFlag: false,
-      barcode: row.batchSerial ?? row.barcode ?? null,
+      supplierId: row.supplierId ?? this.currentSupplierId ?? null,
       price: this.getNumberOrNull(row.unitPrice),
-      remarks: row.remarks ?? null
-    } as ApplyGrnLine]
-  };
+      barcode: row.batchSerial ?? row.barcode ?? null,
+      remarks: row.remarks ?? null,
+      updatedBy: (localStorage.getItem('id') || undefined)
+    };
 
-  // 2) Build single upsert for stock + price
-  const upsert: UpdateWarehouseAndSupplierPriceDto = {
-    itemCode: String(row.itemCode || '').trim(),
-    warehouseId: Number(row.warehouseId),
-    binId: row.binId ?? null,
-    strategyId: row.strategyId ?? null,
-    qtyDelta: qty,
-    batchFlag: !!row.batchSerial,
-    serialFlag: false,
-    supplierId: row.supplierId ?? this.currentSupplierId ?? null,
-    price: this.getNumberOrNull(row.unitPrice),
-    barcode: row.batchSerial ?? row.barcode ?? null,
-    remarks: row.remarks ?? null,
-    updatedBy: (localStorage.getItem('id') || undefined)
-  };
+    // 3) Call backend in sequence
+    this.inventoryService.applyGrnToInventory(applyReq).subscribe({
+      next: () => {
+        this.inventoryService.batchUpdateWarehouseAndSupplierPrice([upsert]).subscribe({
+          next: () => {
+            const alertReq = {
+              ItemCode: String(row.itemCode || '').trim(),
+              warehouseId: row.warehouseId,
+              binId: row.binId,
+              supplierId: row.supplierId,
+              receivedQty: row.qtyReceived,
+              updatedBy: localStorage.getItem('id')
+            };
 
-  // 3) Call backend in sequence
-  this.inventoryService.applyGrnToInventory(applyReq).subscribe({
-    next: () => {
-      this.inventoryService.batchUpdateWarehouseAndSupplierPrice([upsert]).subscribe({
-        next: () => {
-          // ✅ 4) Update SalesOrderLines + PurchaseAlert
-          // NOTE: itemId க்கு பதிலா ItemCode அனுப்புறோம்
-          const alertReq = {
-            ItemCode: String(row.itemCode || '').trim(),  // <<--- மாற்றம்
-            warehouseId: row.warehouseId,
-            binId: row.binId,
-            supplierId: row.supplierId,
-            receivedQty: row.qtyReceived,
-            updatedBy: localStorage.getItem('id')
-          };
-
-          this.purchaseGoodReceiptService.applyGrnAndUpdateSalesOrder(alertReq).subscribe({
-            next: () => {
-              // ✅ 5) Mark as posted only after everything succeeds
-              this.updateRowAndPersist(
-                index,
-                { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
-                () => {
-                  Swal.fire('Posted', 'Row posted to inventory & PurchaseAlert updated.', 'success');
-                }
-              );
-            },
-            error: (err) => {
-              console.error('SalesOrder/PurchaseAlert update failed', err);
-              Swal.fire('Partial', 'Inventory updated but PurchaseAlert update failed.', 'warning');
-            }
-          });
-        },
-        error: (err) => {
-          console.error('Price/warehouse upsert failed', err);
-          Swal.fire('Partial', 'Stock updated but price/warehouse upsert failed. Retry from this screen.', 'warning');
-        }
-      });
-    },
-    error: (err) => {
-      console.error('Apply GRN to inventory failed', err);
-      Swal.fire('Failed', 'Could not post this row to inventory.', 'error');
-    }
-  });
-}
-
+            this.purchaseGoodReceiptService.applyGrnAndUpdateSalesOrder(alertReq).subscribe({
+              next: () => {
+                this.updateRowAndPersist(
+                  index,
+                  { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
+                  () => {
+                    Swal.fire('Posted', 'Row posted to inventory & PurchaseAlert updated.', 'success');
+                  }
+                );
+              },
+              error: (err) => {
+                console.error('SalesOrder/PurchaseAlert update failed', err);
+                Swal.fire('Partial', 'Inventory updated but PurchaseAlert update failed.', 'warning');
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Price/warehouse upsert failed', err);
+            Swal.fire('Partial', 'Stock updated but price/warehouse upsert failed. Retry from this screen.', 'warning');
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Apply GRN to inventory failed', err);
+        Swal.fire('Failed', 'Could not post this row to inventory.', 'error');
+      }
+    });
+  }
 
   /* ====== Flag Issues ====== */
   loadFlagIssues() {
@@ -449,80 +427,75 @@ private postOneRowToInventory(row: any, index: number) {
     document.body.style.overflow = '';
   }
 
-private updateRowAndPersist(
-  rowIndex: number,
-  changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
-  onSuccess?: () => void
-) {
-  if (!this.generatedGRN?.id) return;
+  private updateRowAndPersist(
+    rowIndex: number,
+    changes: { isFlagIssue?: boolean; isPostInventory?: boolean; flagIssueId?: number | null },
+    onSuccess?: () => void
+  ) {
+    if (!this.generatedGRN?.id) return;
 
-  const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
-  const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
-    i === rowIndex
-      ? {
-          ...r,
-          isFlagIssue: Object.prototype.hasOwnProperty.call(changes, 'isFlagIssue')
-            ? !!changes.isFlagIssue
-            : !!r.isFlagIssue,
-          isPostInventory: Object.prototype.hasOwnProperty.call(changes, 'isPostInventory')
-            ? !!changes.isPostInventory
-            : !!r.isPostInventory,
-          flagIssueId: Object.prototype.hasOwnProperty.call(changes, 'flagIssueId')
-            ? (changes.flagIssueId ?? null)
-            : (r.flagIssueId ?? null)
-        }
-      : r
-  );
+    const prevRows = JSON.parse(JSON.stringify(this.generatedGRN.grnJson || []));
+    const rows = (this.generatedGRN.grnJson || []).map((r: any, i: number) =>
+      i === rowIndex
+        ? {
+            ...r,
+            isFlagIssue: Object.prototype.hasOwnProperty.call(changes, 'isFlagIssue')
+              ? !!changes.isFlagIssue
+              : !!r.isFlagIssue,
+            isPostInventory: Object.prototype.hasOwnProperty.call(changes, 'isPostInventory')
+              ? !!changes.isPostInventory
+              : !!r.isPostInventory,
+            flagIssueId: Object.prototype.hasOwnProperty.call(changes, 'flagIssueId')
+              ? (changes.flagIssueId ?? null)
+              : (r.flagIssueId ?? null)
+          }
+        : r
+    );
 
-  this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
+    this.generatedGRN = { ...this.generatedGRN, grnJson: rows };
 
-  // 🔹 ReceptionDate also included in payload
-  const receptionDateValue =
-    this.receiptDate
-      ? new Date(this.receiptDate)   // form date -> Date object
-      : new Date();                  // fallback: today
+    const receptionDateValue =
+      this.receiptDate
+        ? new Date(this.receiptDate)
+        : new Date();
 
-  const body: any = {
-    id: this.generatedGRN.id,
-    GrnNo: this.generatedGRN.grnNo || '',
-    GRNJSON: JSON.stringify(rows),
-    ReceptionDate: receptionDateValue      // 🔴 <-- NEW
-  };
+    const body: any = {
+      id: this.generatedGRN.id,
+      GrnNo: this.generatedGRN.grnNo || '',
+      GRNJSON: JSON.stringify(rows),
+      ReceptionDate: receptionDateValue
+    };
 
-  const anySvc: any = this.purchaseGoodReceiptService as any;
+    const anySvc: any = this.purchaseGoodReceiptService as any;
 
-  const call$ =
-    typeof anySvc.UpdateFlagIssues === 'function'
-      ? anySvc.UpdateFlagIssues(body)      // expects GrnNo / GRNJSON / ReceptionDate
-      : typeof anySvc.updateGRN === 'function'
-        ? anySvc.updateGRN({
-            ...body,
-            // some APIs use camelCase – give both shapes
-            grnNo: body.GrnNo,
-            grnJson: body.GRNJSON,
-            receptionDate: body.ReceptionDate
-          })
-        : null;
+    const call$ =
+      typeof anySvc.UpdateFlagIssues === 'function'
+        ? anySvc.UpdateFlagIssues(body)
+        : typeof anySvc.updateGRN === 'function'
+          ? anySvc.updateGRN({
+              ...body,
+              grnNo: body.GrnNo,
+              grnJson: body.GRNJSON,
+              receptionDate: body.ReceptionDate
+            })
+          : null;
 
-  if (!call$) return;
+    if (!call$) return;
 
-  call$.subscribe({
-    next: () => {
-      if (onSuccess) onSuccess();
-    },
-    error: (err) => {
-      // revert rows if API fail
-      this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
-      console.error('Update failed', err);
-      alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
-    }
-  });
-}
-
+    call$.subscribe({
+      next: () => {
+        if (onSuccess) onSuccess();
+      },
+      error: (err) => {
+        this.generatedGRN = { ...this.generatedGRN!, grnJson: prevRows };
+        console.error('Update failed', err);
+        alert('Update failed: ' + (err?.error?.message || err?.message || 'Bad Request'));
+      }
+    });
+  }
 
   /* ====== Click handlers ====== */
   onPostInventoryRow(row: any, index: number) {
-    // ✅ Only post now, not during save
     this.postOneRowToInventory(row, index);
   }
 
@@ -676,7 +649,7 @@ private updateRowAndPersist(
         defectLabels: 'No',
         damagedPackage: 'No',
         time: '',
-        initial: '',
+        initial: this.currentUsername,       // 🔹 username on each new row
         remarks: '',
         createdAt: new Date(),
         photos: [],
@@ -690,81 +663,6 @@ private updateRowAndPersist(
   private extractItemCode(itemText: string): string {
     const m = String(itemText).match(/^\s*([A-Za-z0-9_-]+)/);
     return m ? m[1] : '';
-  }
-
-  /* ================= MODALS: Image/Signature ================= */
-  openInitialModal(row: LineRow, index: number) {
-    this.selectedRowIndex = index;
-    this.activeTab = 'image';
-    this.uploadedImage = row.initial || null;
-    this.showInitialModal = true;
-  }
-  closeInitialModal() {
-    this.showInitialModal = false;
-    this.selectedRowIndex = null;
-    this.signaturePad?.off();
-    this.signaturePad = undefined;
-    this.isDragOver = false;
-  }
-  switchTab(tab: 'image' | 'signature') {
-    this.activeTab = tab;
-    if (tab === 'signature') setTimeout(() => this.initSignaturePad(), 0);
-  }
-  onImageSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input?.files?.[0];
-    if (file) this.readFile(file);
-  }
-  onDragOver(event: DragEvent) { event.preventDefault(); event.stopPropagation(); this.isDragOver = true; }
-  onDragLeave(event: DragEvent) { event.preventDefault(); event.stopPropagation(); this.isDragOver = false; }
-  onDrop(event: DragEvent) {
-    event.preventDefault(); event.stopPropagation(); this.isDragOver = false;
-    const file = event.dataTransfer?.files?.[0];
-    if (file) this.readFile(file);
-  }
-  private readFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => (this.uploadedImage = e.target?.result ?? null);
-    reader.readAsDataURL(file);
-  }
-  clearImage() { this.uploadedImage = null; }
-  saveImage() {
-    if (this.selectedRowIndex == null) return;
-    if (typeof this.uploadedImage !== 'string') { alert('Please select an image first.'); return; }
-    if (this.isEditMode && this.generatedGRN) {
-      this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
-    } else if (this.showSummary && this.generatedGRN) {
-      this.generatedGRN.grnJson[this.selectedRowIndex].initial = this.uploadedImage;
-    } else {
-      this.grnRows[this.selectedRowIndex].initial = this.uploadedImage;
-    }
-    this.closeInitialModal();
-  }
-  private initSignaturePad() {
-    const canvas = this.signaturePadElement?.nativeElement;
-    if (!canvas) return;
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    const width = canvas.clientWidth || 700;
-    const height = 180;
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.scale(ratio, ratio);
-    this.signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,1)', penColor: '#0e3a4c' });
-  }
-  clearSignature() { this.signaturePad?.clear(); }
-  saveSignature() {
-    if (this.selectedRowIndex == null) return;
-    if (!this.signaturePad || this.signaturePad.isEmpty()) { alert('Please sign before saving.'); return; }
-    const dataURL = this.signaturePad.toDataURL('image/png');
-    if (this.isEditMode && this.generatedGRN) {
-      this.generatedGRN.grnJson[this.selectedRowIndex].initial = dataURL;
-    } else if (this.showSummary && this.generatedGRN) {
-      this.generatedGRN.grnJson[this.selectedRowIndex].initial = dataURL;
-    } else {
-      this.grnRows[this.selectedRowIndex].initial = dataURL;
-    }
-    this.closeInitialModal();
   }
 
   /* =================== Warehouse/Bin helpers =================== */
@@ -861,7 +759,9 @@ private updateRowAndPersist(
         storageType: '', surfaceTemp: '', expiry: '',
         pestSign: '', drySpillage: '', odor: '',
         plateNumber: '', defectLabels: '', damagedPackage: '',
-        time: '', initial: '', remarks: '',
+        time: '',
+        initial: this.currentUsername,      // keep username for new blank row
+        remarks: '',
         createdAt: new Date(), photos: [],
         isFlagIssue: false, isPostInventory: false, flagIssueId: null
       }
@@ -1010,18 +910,17 @@ private updateRowAndPersist(
             barcode: r?.barcode ?? null,
             isFlagIssue: !!r?.isFlagIssue,
             isPostInventory: !!r?.isPostInventory,
-            flagIssueId: r?.flagIssueId ?? null
+            flagIssueId: r?.flagIssueId ?? null,
+            initial: r?.initial || this.currentUsername        // 🔹 ensure text initial
           };
         });
 
         this.generatedGRN = { id: data?.id, grnNo: data?.grnNo, poid: data?.poid ?? data?.POId, poNo: '', grnJson: rowsCoerced };
 
-        // Preload bins for shown warehouses
         const whSet = new Set<number>();
         rowsCoerced.forEach(r => { if (r.warehouseId) whSet.add(r.warehouseId); });
         whSet.forEach(id => this.ensureBinsLoaded(id));
 
-        // Get PO No
         const poId = Number(this.generatedGRN.poid);
         if (poId) {
           this.purchaseorderService.getPOById(poId).subscribe({
@@ -1036,7 +935,6 @@ private updateRowAndPersist(
           });
         }
 
-        // Supplier name lookups
         const ids = new Set<number>();
         rowsCoerced.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
         if (this.currentSupplierId) ids.add(this.currentSupplierId);
@@ -1088,7 +986,6 @@ private updateRowAndPersist(
         } catch { rows = []; }
         if (!rows.length) rows = [{}];
 
-        // supplier IDs to resolve
         const ids = new Set<number>();
         rows.forEach(r => { const rid = this.toNum(r?.supplierId); if (rid) ids.add(rid); });
         if (this.currentSupplierId) ids.add(this.currentSupplierId);
@@ -1140,18 +1037,17 @@ private updateRowAndPersist(
               barcode: r?.barcode ?? null,
               isFlagIssue: !!r?.isFlagIssue,
               isPostInventory: !!r?.isPostInventory,
-              flagIssueId: r?.flagIssueId ?? null
+              flagIssueId: r?.flagIssueId ?? null,
+              initial: r?.initial || this.currentUsername        // 🔹 username as fallback
             };
           });
 
-          // Preload bins for shown warehouses
           const whSet = new Set<number>();
           rowsWithNames.forEach(r => { if (r.warehouseId) whSet.add(r.warehouseId); });
           whSet.forEach(wid => this.ensureBinsLoaded(wid));
 
           this.generatedGRN = { id: data?.id, grnNo: data?.grnNo, poid: data?.poid ?? data?.POId, poNo: '', grnJson: rowsWithNames };
 
-          // attach PO No
           const poId = Number(this.generatedGRN.poid);
           if (poId) {
             this.purchaseorderService.getPOById(poId).subscribe({
@@ -1171,5 +1067,10 @@ private updateRowAndPersist(
       },
       error: (err) => console.error('Edit load failed', err)
     });
+  }
+
+  // compare function used by ng-select in edit mode
+  byId(a: any, b: any) {
+    return a === b;
   }
 }

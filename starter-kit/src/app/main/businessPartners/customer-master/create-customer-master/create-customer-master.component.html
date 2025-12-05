@@ -121,11 +121,11 @@
             </div>
                 <!-- Budget Line -->
             <div class="form-group col-md-4">
-              <label class="form-label" for="budget-line">Budget Line</label>
+              <label class="form-label" for="budget-line">Ledger Name</label>
               <select id="budget-line" class="form-control" name="budgetLine" [(ngModel)]="budgetLine"
                 #budgetLineRef="ngModel" required
                 [class.is-invalid]="(budgetLineRef.touched || accountDetailsForm.submitted) && budgetLineRef.invalid">
-                <option value="">Select Budget Line</option>
+                <option value="">Select Ledger</option>
                 <option *ngFor="let line of parentHeadList" [value]="line.value">
                   {{ line.label }}
                 </option>
