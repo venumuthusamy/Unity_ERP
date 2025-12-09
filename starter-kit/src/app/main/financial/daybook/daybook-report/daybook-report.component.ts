@@ -7,6 +7,10 @@ import {
 } from '../daybook-service/daybook.service';
 import { Router } from '@angular/router';
 
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 // For display label
 type DaybookType =
   | 'Journal'
@@ -57,13 +61,17 @@ export class DaybookReportComponent implements OnInit, AfterViewInit {
 
   viewMode: 'detailed' | 'summary' = 'detailed';
 
-  // modal + loading
+  // modal + loading (date filter)
   isFilterModalOpen = true;   // open on route load
   loading = false;
   filter = {
     fromDate: '',
     toDate: ''
   };
+
+  // export modal
+  showExportModal = false;
+  exportFileName = '';
 
   constructor(
     private daybookService: DaybookService,
@@ -76,6 +84,58 @@ export class DaybookReportComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     setTimeout(() => feather.replace());
+  }
+
+  // =========================================================
+  //  EXPORT MODAL
+  // =========================================================
+  openExportModal(): void {
+    if (!this.vouchers.length) {
+      return;
+    }
+    this.exportFileName = this.generateDefaultFilename();
+    this.showExportModal = true;
+  }
+
+  closeExportModal(): void {
+    this.showExportModal = false;
+  }
+
+  private generateDefaultFilename(): string {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const stamp =
+      now.getFullYear().toString() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds());
+
+    return `daybook-${stamp}`;
+  }
+
+  confirmExport(format: 'excel' | 'pdf'): void {
+    if (!this.vouchers.length) {
+      return;
+    }
+
+    const baseName =
+      (this.exportFileName || this.generateDefaultFilename()).trim();
+
+    if (format === 'excel') {
+      this.exportToExcel(`${baseName}.xlsx`);
+    } else {
+      // PDF – choose layout based on current tab
+      if (this.viewMode === 'detailed') {
+        this.exportDetailedPdf(`${baseName}.pdf`);
+      } else {
+        this.exportSummaryPdf(`${baseName}.pdf`);
+      }
+    }
+
+    this.closeExportModal();
   }
 
   // =========================================================
@@ -222,7 +282,7 @@ export class DaybookReportComponent implements OnInit, AfterViewInit {
   }
 
   // =========================================================
-  //  MODAL EVENTS
+  //  MODAL EVENTS (DATE FILTER)
   // =========================================================
   onApplyFilter(): void {
     if (!this.filter.fromDate || !this.filter.toDate) {
@@ -238,5 +298,112 @@ export class DaybookReportComponent implements OnInit, AfterViewInit {
 
   openFilterAgain(): void {
     this.isFilterModalOpen = true;
+  }
+
+  // =========================================================
+  //  EXPORT FUNCTIONS
+  // =========================================================
+
+  // Excel (always detailed rows)
+  private exportToExcel(fileName: string): void {
+    if (!this.vouchers.length) {
+      return;
+    }
+
+    const exportData = this.vouchers.map(v => ({
+      Date: v.date.toISOString().substring(0, 10),
+      'Voucher No': v.voucherNo,
+      Type: v.type,
+      Account: v.account,
+      Debit: v.debit || 0,
+      Credit: v.credit || 0,
+      'Running Balance': v.runningBalance
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daybook');
+
+    XLSX.writeFile(wb, fileName);
+  }
+
+  // ========= PDF – DETAILED (TABLE VIEW) =========
+  private exportDetailedPdf(fileName: string): void {
+    if (!this.vouchers.length) {
+      return;
+    }
+
+    const doc = new jsPDF('l', 'pt', 'a4');
+
+    const body = this.vouchers.map(v => [
+      v.date.toISOString().substring(0, 10),
+      v.voucherNo,
+      v.type,
+      v.account,
+      (v.debit || 0).toFixed(2),
+      (v.credit || 0).toFixed(2),
+      v.runningBalance.toFixed(2)
+    ]);
+
+    autoTable(doc, {
+      head: [[
+        'Date',
+        'Voucher No',
+        'Type',
+        'Account',
+        'Debit',
+        'Credit',
+        'Running Balance'
+      ]],
+      body,
+      startY: 40,
+      styles: { fontSize: 8 }
+    });
+
+    doc.text('Daybook – Detailed View', 40, 25);
+    doc.save(fileName);
+  }
+
+  // ========= PDF – SUMMARY (CARD VIEW STYLE) =========
+  private exportSummaryPdf(fileName: string): void {
+    if (!this.vouchers.length) {
+      return;
+    }
+
+    // ensure summaryRows is ready
+    if (!this.summaryRows || !this.summaryRows.length) {
+      this.calculateTotals();
+    }
+
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    doc.setFontSize(14);
+    doc.text('Daybook Summary', 40, 40);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text('Showing totals by voucher type for the selected period.', 40, 58);
+    doc.setTextColor(0);
+    doc.setFontSize(8);
+
+    const body = this.summaryRows.map(row => [
+      row.label,
+      row.totalDebit.toFixed(2),
+      row.totalCredit.toFixed(2),
+      `${row.netAbs.toFixed(2)} ${row.netType}`
+    ]);
+
+    autoTable(doc, {
+      head: [[
+        'Voucher Type',
+        'Total Debit',
+        'Total Credit',
+        'Net (Dr/Cr)'
+      ]],
+      body,
+      startY: 75,
+      styles: { fontSize: 8 }
+    });
+
+    doc.save(fileName);
   }
 }

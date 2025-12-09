@@ -2,8 +2,8 @@
   <div class="content-body gst-page">
     <section class="users-list-wrapper">
       <app-financereports></app-financereports>
-      <div class="card shadow-sm gst-card">
 
+      <div class="card shadow-sm gst-card">
         <!-- ========= HEADER ========= -->
         <div class="card-header d-flex justify-content-between align-items-center gst-header">
           <div class="d-flex flex-column">
@@ -12,16 +12,12 @@
             </h4>
           </div>
 
+          <!-- Export button (opens modal) -->
           <div class="d-flex align-items-center gst-export">
-            <button class="btn btn-outline-secondary btn-sm me-50 mr-1"
-                    (click)="exportToPdf()"
-                    [disabled]="!rows?.length">
-              <i class="far fa-file-pdf me-25"></i> PDF
-            </button>
             <button class="btn btn-outline-secondary btn-sm"
-                    (click)="exportToExcel()"
+                    (click)="openExportModal()"
                     [disabled]="!rows?.length">
-              <i class="far fa-file-excel me-25"></i> Excel
+              <i class="fas fa-file-export me-25"></i> Export
             </button>
           </div>
         </div>
@@ -79,65 +75,63 @@
             </div>
           </div>
 
-          <!-- ========= FILTERS ========= -->
-<!-- ========= FILTERS ========= -->
-<div class="gst-filter-card mb-2">
+          <!-- ========= FILTER CARD ========= -->
+          <div class="gst-filter-card mb-2">
 
-  <!-- 1st row – filters -->
-  <div class="row align-items-end">
-    <!-- From Date -->
-    <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-      <label class="form-label gst-filter-label">From Date</label>
-      <input type="date"
-             class="form-control form-control-sm"
-             [(ngModel)]="startDate">
-    </div>
+            <!-- 1st row – filters -->
+            <div class="row align-items-end">
+              <!-- From Date -->
+              <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                <label class="form-label gst-filter-label">From Date</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       [(ngModel)]="startDate">
+              </div>
 
-    <!-- To Date -->
-    <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-      <label class="form-label gst-filter-label">To Date</label>
-      <input type="date"
-             class="form-control form-control-sm"
-             [(ngModel)]="endDate">
-    </div>
+              <!-- To Date -->
+              <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                <label class="form-label gst-filter-label">To Date</label>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       [(ngModel)]="endDate">
+              </div>
 
-    <!-- Type -->
-    <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-      <label class="form-label gst-filter-label">Type</label>
-      <select class="form-control form-control-sm" [(ngModel)]="docType">
-        <option value="ALL">All</option>
-        <option value="SI">Sales (Output)</option>
-        <option value="PIN">Supplier (Input)</option>
-      </select>
-    </div>
+              <!-- Type -->
+              <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                <label class="form-label gst-filter-label">Type</label>
+                <select class="form-control form-control-sm" [(ngModel)]="docType">
+                  <option value="ALL">All</option>
+                  <option value="SI">Sales (Output)</option>
+                  <option value="PIN">Supplier (Input)</option>
+                </select>
+              </div>
 
-    <!-- Search -->
-    <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-      <label class="form-label gst-filter-label">Search</label>
-      <input type="text"
-             class="form-control form-control-sm"
-             placeholder="Doc / Customer / Supplier"
-             [(ngModel)]="searchText"
-             (keyup.enter)="loadDetails()">
-    </div>
-  </div>
+              <!-- Search -->
+              <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                <label class="form-label gst-filter-label">Search</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Doc / Customer / Supplier"
+                       [(ngModel)]="searchText"
+                       (keyup.enter)="loadDetails()">
+              </div>
+            </div>
 
-  <!-- 2nd row – buttons -->
-  <div class="row mt-1">
-    <div class="col-12 d-flex justify-content-end gst-filter-actions">
-      <button class="btn btn-brand btn-sm me-50"
-              (click)="loadDetails()">
-        <i class="fas fa-search me-25"></i> Filter
-      </button>
-      <button class="btn btn-outline-secondary btn-sm"
-              (click)="resetFilters()">
-        Reset
-      </button>
-    </div>
-  </div>
+            <!-- 2nd row – buttons -->
+            <div class="row mt-1">
+              <div class="col-12 d-flex justify-content-end gst-filter-actions">
+                <button class="btn btn-brand btn-sm me-50"
+                        (click)="loadDetails()">
+                  <i class="fas fa-search me-25"></i> Filter
+                </button>
+                <button class="btn btn-outline-secondary btn-sm"
+                        (click)="resetFilters()">
+                  Reset
+                </button>
+              </div>
+            </div>
 
-</div>
-
+          </div>
 
           <!-- ========= TOP "SHOW ENTRIES" ========= -->
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-1 w-100 gst-pagination-bar">
@@ -249,3 +243,51 @@
     </section>
   </div>
 </div>
+
+<!-- ========= EXPORT MODAL ========= -->
+<div class="gst-export-backdrop" *ngIf="showExportModal">
+  <div class="gst-export-modal card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <div class="gst-export-icon me-50">
+          <i class="fas fa-file-export"></i>
+        </div>
+        <h5 class="mb-0">Export GST Details</h5>
+      </div>
+      <button type="button"
+              class="btn btn-sm btn-icon"
+              (click)="closeExportModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="card-body">
+      <p class="text-muted mb-2 small">
+        Choose a format to export.<br>
+        <span class="d-block">Tip: exports exactly what you see (current filters applied).</span>
+      </p>
+
+      <label class="form-label small mb-25">Filename</label>
+      <div class="input-group mb-2">
+        <input type="text"
+               class="form-control"
+               [(ngModel)]="exportFileName">
+        <span class="input-group-text small text-muted">.xlsx / .pdf</span>
+      </div>
+
+      <!-- NEW BUTTON ROW -->
+      <div class="gst-export-actions">
+        <button class="btn btn-export-excel"
+                (click)="confirmExport('excel')">
+          Excel (.xlsx)
+        </button>
+
+        <button class="btn btn-export-pdf"
+                (click)="confirmExport('pdf')">
+          PDF (.pdf)
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

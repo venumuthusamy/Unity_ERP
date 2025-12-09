@@ -123,21 +123,30 @@
                 {{ viewMode === 'detailed' ? 'Daybook Transactions' : 'Daybook Summary' }}
               </h4>
 
-              <div class="d-flex align-items-center db-view-toggle">
-                <span class="mr-50 text-muted small">View:</span>
+              <div class="d-flex align-items-center db-header-actions">
+                <div class="d-flex align-items-center db-view-toggle">
+                  <span class="mr-50 text-muted small">View:</span>
+
+                  <button type="button"
+                          class="btn btn-sm db-toggle-btn"
+                          [class.active]="viewMode === 'detailed'"
+                          (click)="setViewMode('detailed')">
+                    Detailed
+                  </button>
+
+                  <button type="button"
+                          class="btn btn-sm db-toggle-btn ml-50"
+                          [class.active]="viewMode === 'summary'"
+                          (click)="setViewMode('summary')">
+                    Summary
+                  </button>
+                </div>
 
                 <button type="button"
-                        class="btn btn-sm db-toggle-btn"
-                        [class.active]="viewMode === 'detailed'"
-                        (click)="setViewMode('detailed')">
-                  Detailed
-                </button>
-
-                <button type="button"
-                        class="btn btn-sm db-toggle-btn ml-50"
-                        [class.active]="viewMode === 'summary'"
-                        (click)="setViewMode('summary')">
-                  Summary
+                        class="btn btn-outline-secondary btn-sm db-export-btn ml-75"
+                        (click)="openExportModal()"
+                        [disabled]="!vouchers.length">
+                  <i class="fas fa-file-export mr-50"></i> Export
                 </button>
               </div>
             </div>
@@ -252,7 +261,8 @@
                 Debit and credit totals must match for the day.
               </div>
 
-              <!-- <button type="button"
+              <!-- (you can re-enable print if needed)
+              <button type="button"
                       class="btn btn-sm btn-primary db-print-btn"
                       (click)="onPrintDaybook()"
                       [disabled]="!vouchers.length">
@@ -264,5 +274,51 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- ===== EXPORT MODAL (LIKE GST) ===== -->
+<div class="db-export-backdrop" *ngIf="showExportModal">
+  <div class="db-export-modal card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <div class="db-export-icon me-50">
+          <i class="fas fa-file-export"></i>
+        </div>
+        <h5 class="mb-0">Export Daybook</h5>
+      </div>
+      <button type="button"
+              class="btn btn-sm btn-icon"
+              (click)="closeExportModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="card-body">
+      <p class="text-muted mb-2 small">
+        Choose a format to export.<br>
+        <span class="d-block">Tip: exports exactly what you see (current period & view).</span>
+      </p>
+
+      <label class="form-label small mb-25">Filename</label>
+      <div class="input-group mb-2">
+        <input type="text"
+               class="form-control"
+               [(ngModel)]="exportFileName">
+        <span class="input-group-text small text-muted">.xlsx / .pdf</span>
+      </div>
+
+      <div class="db-export-actions">
+        <button class="btn btn-db-export-excel"
+                (click)="confirmExport('excel')">
+          Excel (.xlsx)
+        </button>
+
+        <button class="btn btn-db-export-pdf"
+                (click)="confirmExport('pdf')">
+          PDF (.pdf)
+        </button>
+      </div>
+    </div>
   </div>
 </div>

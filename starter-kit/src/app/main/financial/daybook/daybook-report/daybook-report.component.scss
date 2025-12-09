@@ -87,6 +87,21 @@
   color: #111827;
 }
 
+/* header view toggle + export */
+.db-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.db-export-btn {
+  border-radius: 999px;
+}
+
+/* reuse from GST style: little gap */
+.ml-75 {
+  margin-left: 0.75rem;
+}
+
 .db-view-toggle .db-toggle-btn {
   border-radius: 999px;
   padding: 0.2rem 0.9rem;
@@ -126,11 +141,6 @@
 .db-table tbody tr:last-child td {
   border-bottom: none;
 }
-
-// .db-date-main {
-//   font-weight: 500;
-//   color: #111827;
-// }
 
 .db-voucher-no {
   font-weight: 500;
@@ -223,10 +233,10 @@
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 
-  /* 🔹 light outline all sides */
+  /* light outline all sides */
   border: 1px solid #e5e7eb;
 
-  /* 🔹 bottom alone 3px (colour from modifier class) */
+  /* bottom alone 3px (colour from modifier class) */
   border-bottom-width: 3px;
   border-bottom-color: transparent;
 }
@@ -424,4 +434,91 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #111827;
+}
+
+/* =========================================================
+   EXPORT MODAL (LIKE GST)
+   ========================================================= */
+
+.db-export-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1060;
+}
+
+.db-export-modal {
+  width: 420px;
+  max-width: 90%;
+  border-radius: 18px;
+  padding: 0;
+}
+
+.db-export-modal .card-header {
+  border-bottom: none;
+  padding: 0.75rem 1rem;
+}
+
+.db-export-modal .card-body {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.db-export-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e3f2fd;
+  color: #2e5f73;
+  font-size: 14px;
+}
+
+.db-export-modal .btn-icon {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+}
+
+.db-export-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.db-export-actions .btn {
+  flex: 1 1 0;
+  height: 46px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-db-export-excel {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.btn-db-export-pdf {
+  background-color: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.btn-db-export-excel:hover {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-db-export-pdf:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
 }
