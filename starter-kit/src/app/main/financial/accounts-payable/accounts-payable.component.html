@@ -1,3 +1,5 @@
+<!-- src/app/main/financial/accounts-payable/accounts-payable.component.html -->
+
 <div class="content-wrapper p-0">
   <div class="content-body">
     <section class="users-list-wrapper">
@@ -12,44 +14,43 @@
         </div>
 
         <!-- ================= TABS ================= -->
-      <ul class="nav nav-tabs ap-tabs mt-1" role="tablist">
-  <li class="nav-item">
-    <a
-      class="nav-link"
-      [ngClass]="{ 'active': activeTab === 'invoices' }"
-      (click)="setTab('invoices')">
-      Supplier Invoices
-    </a>
-  </li>
+        <ul class="nav nav-tabs ap-tabs mt-1" role="tablist">
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'invoices' }"
+              (click)="setTab('invoices')">
+              Supplier Invoices
+            </a>
+          </li>
 
-  <li class="nav-item">
-    <a
-      class="nav-link"
-      [ngClass]="{ 'active': activeTab === 'payments' }"
-      (click)="setTab('payments')">
-      Payments
-    </a>
-  </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'payments' }"
+              (click)="setTab('payments')">
+              Payments
+            </a>
+          </li>
 
-  <!-- Aging: go to AP Aging component via router -->
-  <li class="nav-item">
-    <a
-      class="nav-link"
-      (click)="goToApAging()">
-      Aging
-    </a>
-  </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'aging' }"
+              (click)="setTab('aging')">
+              Aging
+            </a>
+          </li>
 
-  <!-- 3-Way Match: stays as local tab -->
-  <li class="nav-item">
-    <a
-      class="nav-link"
-      [ngClass]="{ 'active': activeTab === 'match' }"
-      (click)="setTab('match')">
-      3-Way Match
-    </a>
-  </li>
-</ul>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [ngClass]="{ 'active': activeTab === 'match' }"
+              (click)="setTab('match')">
+              3-Way Match
+            </a>
+          </li>
+        </ul>
 
         <!-- ================= TAB CONTENT ================= -->
         <div class="tab-content p-1">
@@ -205,6 +206,7 @@
                                 <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Paid</th>
                                 <th style="background-color:#2E5F73; color:#ffffff;" class="text-right">Outstanding</th>
                                 <th style="background-color:#2E5F73; color:#ffffff;" class="text-center">Status</th>
+                                
                               </tr>
                             </thead>
                             <tbody>
@@ -230,6 +232,7 @@
                                       {{ getInvoiceStatusTextByAmounts(inv) }}
                                     </span>
                                   </td>
+                                  
                                 </tr>
 
                                 <!-- Debit note row -->
@@ -253,6 +256,7 @@
                                       Debit Note
                                     </span>
                                   </td>
+                                  <td></td>
                                 </tr>
                               </ng-container>
                             </tbody>
@@ -483,7 +487,7 @@
                     (change)="onBankChange()">
                     <option [ngValue]="null">-- Select Bank --</option>
                     <option *ngFor="let b of bankAccounts" [ngValue]="b.id">
-                      {{ b.headName }} 
+                      {{ b.headName }}
                     </option>
                   </select>
 
@@ -676,6 +680,16 @@
           </div>
 
           <!-- ===================================================== -->
+          <!--  AGING TAB                                            -->
+          <!-- ===================================================== -->
+          <div
+            class="tab-pane"
+            [ngClass]="{ 'active show': activeTab === 'aging' }"
+            *ngIf="activeTab === 'aging'">
+            <app-ap-aging></app-ap-aging>
+          </div>
+
+          <!-- ===================================================== -->
           <!--  3-WAY MATCH TAB                                      -->
           <!-- ===================================================== -->
           <div
@@ -768,3 +782,42 @@
     </section>
   </div>
 </div>
+
+<!-- ========================================================= -->
+<!--  EMAIL MODAL (app-invoice-email)                         -->
+<!-- ========================================================= -->
+<div
+  class="modal fade"
+  tabindex="-1"
+  role="dialog"
+  [ngClass]="{ 'show d-block': showEmailModal }"
+  *ngIf="showEmailModal"
+  (click)="onEmailModalBackdropClick($event)">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Email Supplier Invoice
+        </h5>
+        <button type="button" class="close" aria-label="Close" (click)="closeEmailModal()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <app-invoice-email [invoice]="selectedInvoiceForEmail"></app-invoice-email>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="closeEmailModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showEmailModal" class="modal-backdrop fade show"></div>

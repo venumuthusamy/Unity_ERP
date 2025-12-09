@@ -1,4 +1,4 @@
-// app/main/financial/ap-aging/ap-aging-model.ts
+// src/app/main/financial/reports/ap-aging/ap-aging-model.ts
 
 export interface ApAgingSummary {
   supplierId: number;
@@ -29,4 +29,7 @@ export interface ApAgingInvoice {
   paidAmount: number;
   creditAmount: number;
   balance: number;
+
+  // 🔹 for auto-email
+  supplierEmail?: string;
 }
