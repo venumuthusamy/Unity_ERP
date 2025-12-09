@@ -40,7 +40,7 @@
 }
 
 .gst-body {
- background: linear-gradient(to bottom, #f9fafb 0%, #ffffff 80%);
+  background: linear-gradient(to bottom, #f9fafb 0%, #ffffff 80%);
   border-radius: 0 0 1.5rem 1.5rem;
   padding: 1.2rem 1.5rem 1.25rem 1.5rem;
 }
@@ -61,15 +61,11 @@
   position: relative;
   overflow: hidden;
 
-  /* 🔹 darker border so full outline clearly visible */
-  border: 1px solid #d1d5db;   // you can try #cbd5e1 or #e5e7eb if you want softer
-
-  /* optional: very small shadow to lift card a bit */
-//   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  /* darker border so full outline clearly visible */
+  border: 1px solid #d1d5db;
 
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-
 
 .gst-summary-card::after {
   content: '';
@@ -84,7 +80,6 @@
 
 .gst-summary-card:hover {
   transform: translateY(-2px);
-//   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
 }
 
 .gst-summary-icon {
@@ -319,6 +314,58 @@
   font-size: 0.85rem;
 }
 
+/* ========= EXPORT MODAL ========= */
+
+.gst-export-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.gst-export-modal {
+  width: 420px;
+  max-width: 90%;
+  border-radius: 18px;
+  padding: 0;
+}
+
+.gst-export-modal .card-header {
+  border-bottom: none;
+  padding: 0.75rem 1rem;
+}
+
+.gst-export-modal .card-body {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.gst-export-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e3f2fd;
+  color: #2e5f73;
+  font-size: 14px;
+}
+
+.gst-export-modal .btn-icon {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+}
+
+.gst-export-modal .btn-success,
+.gst-export-modal .btn-danger {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
 /* ========= RESPONSIVE ========= */
 
 @media (max-width: 991.98px) {
@@ -343,7 +390,7 @@
 
 @media (max-width: 767.98px) {
   .gst-filter-actions {
-    justify-content: flex-start; // phone la left-align
+    justify-content: flex-start;
   }
 }
 
@@ -361,4 +408,48 @@
     align-items: flex-start !important;
     gap: 0.4rem;
   }
+}
+
+
+/* ========= EXPORT MODAL BUTTONS ========= */
+
+.gst-export-actions {
+  display: flex;
+  gap: 0.75rem;         // space between buttons
+  margin-top: 1rem;
+}
+
+.gst-export-actions .btn {
+  flex: 1 1 0;
+  height: 46px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Green Excel button */
+.btn-export-excel {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+/* Red PDF button */
+.btn-export-pdf {
+  background-color: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.btn-export-excel:hover {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-export-pdf:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
 }
