@@ -220,9 +220,11 @@
                     </tr>
                     <tr *ngFor="let r of poLines; let i = index; trackBy: trackByIndex" class="border-t">
                         <td class="px-3 py-2 relative dropdown-cell">
-                            <input type="text" [(ngModel)]="poLines[i].prNo" (focus)="openDropdown(i, 'prNo')"
+                            <input type="text" [(ngModel)]="poLines[i].prNo" (focus)="openDropdown(i, 'prNo')"  
+                                (click)="openDropdown(i, 'prNo')" 
                                 (input)="filterOptions(i, 'prNo')" placeholder="Search PR No..."
-                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
+                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" 
+                                 [disabled]="!mastersLoaded || allPrNos.length === 0"/>
 
                             <div *ngIf="poLines[i].dropdownOpen === 'prNo'"
                                 class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
@@ -366,7 +368,7 @@
             <div class="p-2 border-t bg-gray-50">
                 <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" type="button" (click)="poAddLine()"
                     (mouseenter)="hover = true" (mouseleave)="hover = false"
-                    [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'">
+                    [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" [disabled]="!mastersLoaded">
                     + Add line
                 </button>
             </div>

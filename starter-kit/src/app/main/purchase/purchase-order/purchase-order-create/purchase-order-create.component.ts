@@ -66,6 +66,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   minDate = '';
   private draftId: number | null = null;
   userId: string;
+  mastersLoaded = false;
 
   formatDate(date: Date | string): string {
     if (!date) return '';
@@ -229,6 +230,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
           this.poLines = JSON.parse(results.poHdr.data.poLines);
           this.calculateFxTotal()
+           this.mastersLoaded = true;
         });
       } else {
         debugger
@@ -320,6 +322,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
           else {
             this.allPrNos = list.filter(p => !isYes(p.isReorder));
           }
+           this.mastersLoaded = true;
         });
       }
     });
@@ -591,12 +594,14 @@ export class PurchaseOrderCreateComponent implements OnInit {
     const searchValue = (this.poLines[index][field] || '').toLowerCase();
 
     if (field === 'prNo') {
-      this.poLines[index].filteredOptions = this.allPrNos
+      const src = this.allPrNos || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) => (x?.purchaseRequestNo || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'item') {
-      this.poLines[index].filteredOptions = this.allItems
+      const src = this.allItems || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) =>
           (x?.itemCode || '').toLowerCase().includes(searchValue) ||
           (x?.itemName || '').toLowerCase().includes(searchValue)
@@ -604,21 +609,25 @@ export class PurchaseOrderCreateComponent implements OnInit {
     }
 
     if (field === 'budget') {
-      this.poLines[index].filteredOptions = this.allBudgets
+      const src = this.allBudgets || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) => (x?.label || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'recurring') {
-      this.poLines[index].filteredOptions = this.allRecurring
+      const src = this.allRecurring || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) => (x?.recurringName || '').toLowerCase().includes(searchValue));
     }
 
     if (field === 'taxCode') {
-      this.poLines[index].filteredOptions = this.allTaxCodes
+      const src = this.allTaxCodes || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) => (x?.name || '').toLowerCase().includes(searchValue));
     }
     if (field === 'location') {
-      this.poLines[index].filteredOptions = this.deliveries
+      const src = this.deliveries || [];
+      this.poLines[index].filteredOptions = src
         .filter((x: any) => (x?.name || '').toLowerCase().includes(searchValue));
     }
   }
