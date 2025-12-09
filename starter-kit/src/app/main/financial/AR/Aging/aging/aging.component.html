@@ -9,6 +9,27 @@
 
         <div class="card-body" *ngIf="!isLoading; else loadingTpl">
 
+            <!-- ===== Header + Export buttons ===== -->
+ <div class="d-flex justify-content-between align-items-center mb-1 aging-header">
+  <h4 class="mb-0 aging-title">AR Aging</h4>
+
+  <div class="d-flex align-items-center gst-export">
+    <button class="btn btn-outline-secondary btn-sm"
+            (click)="exportToPdf()"
+            [disabled]="!rows?.length">
+      <i class="far fa-file-pdf me-25"></i>
+      <span>PDF</span>
+    </button>
+
+    <button class="btn btn-outline-secondary btn-sm"
+            (click)="exportToExcel()"
+            [disabled]="!rows?.length">
+      <i class="far fa-file-excel me-25"></i>
+      <span>Excel</span>
+    </button>
+  </div>
+</div>
+
           <!-- ===== AR summary cards ===== -->
           <div class="row ar-summary-row mb-2">
             <!-- Total Outstanding -->

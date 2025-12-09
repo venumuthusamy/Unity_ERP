@@ -10,6 +10,10 @@ import { ApAgingInvoice, ApAgingSummary } from './ap-aging-model';
 import { ApAgingService } from './ap-aging-service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import * as feather from 'feather-icons';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 
 @Component({
   selector: 'app-ap-aging',
@@ -219,4 +223,98 @@ export class APAgingComponent implements OnInit, AfterViewInit {
   onEmailModalBackdropClick(event: MouseEvent): void {
     this.closeEmailModal();
   }
+    // -------- EXPORT HELPERS --------
+
+  private buildExportRows() {
+    return (this.filteredRows || []).map((r, index) => ({
+      'Sl. No': index + 1,
+      Supplier: r.supplierName,
+      '0-30': r.bucket0_30 || 0,
+      '31-60': r.bucket31_60 || 0,
+      '61-90': r.bucket61_90 || 0,
+      '90+': r.bucket90Plus || 0,
+      'Total Outstanding': r.totalOutstanding || 0
+    }));
+  }
+
+  exportToExcel(): void {
+    const data = this.buildExportRows();
+    if (!data.length) {
+      return;
+    }
+
+    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'AP Aging');
+
+    const fileName = `AP-Aging-${this.fromDate}-to-${this.toDate}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }
+
+  exportToPdf(): void {
+    const rows = this.filteredRows || [];
+    if (!rows.length) {
+      return;
+    }
+
+    const doc = new jsPDF('l', 'pt', 'a4'); // landscape
+
+    // Title centered
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const title = `AP Aging (${this.fromDate} to ${this.toDate})`;
+    doc.setFontSize(12);
+    doc.text(title, pageWidth / 2, 30, { align: 'center' });
+
+    // Header (same pattern as AR)
+    const head = [[
+      'Sl. No',
+      'Supplier',
+      '0-30',
+      '31-60',
+      '61-90',
+      '90+',
+      'Total Outstanding'
+    ]];
+
+    // Body
+    const body = rows.map((r, index) => [
+      (index + 1).toString(),                        // Sl. No
+      r.supplierName,                                // Supplier
+      (r.bucket0_30   || 0).toFixed(2),              // 0-30
+      (r.bucket31_60  || 0).toFixed(2),              // 31-60
+      (r.bucket61_90  || 0).toFixed(2),              // 61-90
+      (r.bucket90Plus || 0).toFixed(2),              // 90+
+      (r.totalOutstanding || 0).toFixed(2)           // Total
+    ]);
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 45,
+      margin: { left: 40, right: 40 },
+      styles: {
+        fontSize: 9,
+        halign: 'right',          // numbers right aligned
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { halign: 'center' },  // Sl. No center
+        1: { halign: 'left' },   // Supplier left
+        2: { halign: 'left' },
+        3: { halign: 'left' },
+        4: { halign: 'left' },
+        5: { halign: 'left' },
+        6: { halign: 'left' },
+        7: { halign: 'left' }  
+        // others keep default halign: 'right'
+      },
+      headStyles: {
+        halign: 'left'
+      }
+    });
+
+    const fileName = `AP-Aging-${this.fromDate}-to-${this.toDate}.pdf`;
+    doc.save(fileName);
+  }
+
 }
