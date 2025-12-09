@@ -192,3 +192,39 @@
   background: #eef2ff;
   color: #4f46e5;
 }
+/* Export buttons in header (same as GST / Aging) */
+.gst-export {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gst-export .btn {
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 1.1rem;
+  border-color: #e5e7eb;
+  background-color: #ffffff;
+  color: #6b7280;
+  box-shadow: none;
+  line-height: 1.2;
+}
+
+.gst-export .btn i {
+  font-size: 0.9rem;
+  margin-right: 0.25rem;
+}
+
+.gst-export .btn:hover:not(:disabled),
+.gst-export .btn:focus-visible:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.gst-export .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
