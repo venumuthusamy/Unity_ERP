@@ -378,47 +378,62 @@ private computeSubtreeTotals(childrenMap: Map<number, BsRow[]>): Map<number, num
 
   // ---------- balancing figure ----------
 
-  private applyBalancingFigure(): void {
-    this.liabilityAccounts = this.liabilityAccounts.filter(x => !x.isSynthetic);
-    this.assetAccounts     = this.assetAccounts.filter(x => !x.isSynthetic);
+// ---------- balancing figure ----------
+private applyBalancingFigure(): void {
+  // remove old synthetic rows
+  this.liabilityAccounts = this.liabilityAccounts.filter(x => !x.isSynthetic);
+  this.assetAccounts     = this.assetAccounts.filter(x => !x.isSynthetic);
 
-    const liab  = this.liabilitiesTotal || 0;
-    const asset = this.assetsTotal || 0;
+  // raw totals from trees (may be negative)
+  const liabRaw  = this.liabilitiesTotal || 0;
+  const assetRaw = this.assetsTotal || 0;
 
-    this.displayLiabilitiesTotal = liab;
-    this.displayAssetsTotal      = asset;
+  // for balance sheet we work with absolute values
+  const liabAbs  = Math.abs(liabRaw);
+  const assetAbs = Math.abs(assetRaw);
 
-    const diff = asset - liab;
+  // start cards with raw abs totals
+  this.displayLiabilitiesTotal = liabAbs;
+  this.displayAssetsTotal      = assetAbs;
 
-    if (Math.abs(diff) < 0.005) {
-      return;
-    }
+  const diff = assetAbs - liabAbs;   // +ve -> assets bigger, -ve -> liabs bigger
 
-    if (diff > 0) {
-      this.liabilityAccounts.push({
-        headId: null,
-        headName: 'Balancing Figure',
-        level: 0,
-        hasChildren: false,
-        expanded: false,
-        amount: diff,
-        isSynthetic: true
-      });
-      this.displayLiabilitiesTotal = liab + diff;
-    } else {
-      const add = -diff;
-      this.assetAccounts.push({
-        headId: null,
-        headName: 'Balancing Figure',
-        level: 0,
-        hasChildren: false,
-        expanded: false,
-        amount: add,
-        isSynthetic: true
-      });
-      this.displayAssetsTotal = asset + add;
-    }
+  if (Math.abs(diff) < 0.005) {
+    // already balanced, no synthetic row
+    return;
   }
+
+  if (diff > 0) {
+    // Assets > Liabilities  -> balancing figure on Liabilities side
+    this.liabilityAccounts.push({
+      headId: null,
+      headName: 'Balancing Figure',
+      level: 0,
+      hasChildren: false,
+      expanded: false,
+      amount: diff,             // always +ve
+      isSynthetic: true
+    });
+    // after balancing, both sides equal to assetAbs
+    this.displayLiabilitiesTotal = liabAbs + diff; // = assetAbs
+    this.displayAssetsTotal      = assetAbs;
+  } else {
+    // Liabilities > Assets -> balancing figure on Assets side
+    const add = -diff;
+    this.assetAccounts.push({
+      headId: null,
+      headName: 'Balancing Figure',
+      level: 0,
+      hasChildren: false,
+      expanded: false,
+      amount: add,
+      isSynthetic: true
+    });
+    // both sides equal to liabAbs
+    this.displayAssetsTotal      = assetAbs + add; // = liabAbs
+    this.displayLiabilitiesTotal = liabAbs;
+  }
+}
 
   // ---------- toggle ----------
 
