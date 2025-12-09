@@ -1,169 +1,118 @@
-/* ===== Card container ===== */
-.ap-card {
-  border-radius: 18px;
-  border: 0;
-  background: #f9fbfd;
+/* ===== Aging wrapper ===== */
+.ap-aging-wrapper {
+  padding: 0.75rem 0.75rem 1rem;
 }
 
-.ap-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #2e5f73;
+/* ===== SUMMARY CARDS (small version) ===== */
+
+/* ================== SMALL SUMMARY CARDS (same style as AP screen) ================== */
+
+.ap-aging-summary {
+  margin-top: 0.75rem;
 }
 
-/* ===== Filters ===== */
-.ap-filters {
-  gap: 0.75rem;
-}
-
-.ap-filter-item {
-  margin-right: 0.75rem;
-}
-
-.ap-filter-label {
-  font-size: 0.8rem;
-  margin-right: 0.35rem;
-  font-weight: 500;
-  color: #6b7a8a;
-}
-
-.ap-filter-control {
-  min-width: 150px;
-}
-
-/* ===== Summary cards (top) ===== */
-
-.ap-summary-row {
-  margin-top: 1rem;
-}
-
-.ap-summary-card {
+/* base card */
+.ap-aging-summary .ap-summary-card {
   display: flex;
   align-items: center;
-  padding: 0.9rem 1rem;
+  padding: 0.75rem 1rem;        // smaller height
   border-radius: 18px;
-  background: #ffffff; /* overridden per card below */
-  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.05);
-  border: 1px solid #d4dde8;   // 🔹 added border
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  background: #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ap-summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(20, 47, 66, 0.12);
-  border-color: #b8c4d8;       // 🔹 slightly stronger border on hover (optional)
+.ap-aging-summary .ap-summary-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
-/* --- round icon --- */
-.ap-summary-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;          /* circle */
+/* icon circle */
+.ap-aging-summary .ap-summary-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 0.75rem;
-  background: rgba(46, 95, 115, 0.06); /* default light circle */
+  background: rgba(46, 95, 115, 0.06);
 }
 
-.ap-summary-icon i {
-  width: 20px;
-  height: 20px;
-}
-
-.ap-summary-content {
-  flex: 1;
-}
-
-.ap-summary-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #7c8895;
-  margin-bottom: 0.15rem;
-}
-
-.ap-summary-value {
-  font-size: 1.05rem;
-  font-weight: 600;
+.ap-aging-summary .ap-summary-icon i {
+  font-size: 18px;
   color: #2e5f73;
 }
 
-
-
-/* ===== Card-specific colors (MATCH INVOICE / AR STYLE) ===== */
-
-/* 1) Total Payable  -> peach / orange */
-.ap-card-total {
-  background: #fff3e8;                 /* light peach card */
-  border-color: #ffd7b8;
-}
-.ap-card-total .ap-summary-icon {
-  background: #ffe0c2;                 /* peach circle */
-}
-.ap-card-total .ap-summary-value {
-  color: #f97316;                      /* orange text */
+/* text */
+.ap-aging-summary .ap-summary-text .label {
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 0.1rem;
 }
 
-/* 2) 0–30 days -> mint / green */
-.ap-card-030 {
-  background: #ecfdf3;                 /* mint card */
+.ap-aging-summary .ap-summary-text .value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ==== specific colors to match first row cards ==== */
+
+/* Total Outstanding -> light blue */
+.ap-aging-summary .ap-summary-outstanding {
+  background: #e9f1ff;
+  border-color: #d4e2ff;
+}
+.ap-aging-summary .ap-summary-outstanding .ap-summary-icon {
+  background: #d4e2ff;
+}
+.ap-aging-summary .ap-summary-outstanding .value {
+  color: #1d4ed8;
+}
+
+/* 0–30 days -> mint green */
+.ap-aging-summary .ap-summary-0-30 {
+  background: #ecfff7;
   border-color: #bbf7d0;
 }
-.ap-card-030 .ap-summary-icon {
-  background: #bbf7d0;                 /* mint circle */
+.ap-aging-summary .ap-summary-0-30 .ap-summary-icon {
+  background: #bbf7d0;
 }
-.ap-card-030 .ap-summary-value {
-  color: #16a34a;                      /* green text */
+.ap-aging-summary .ap-summary-0-30 .value {
+  color: #15803d;
 }
 
-/* 3) 31–60 days -> soft yellow */
-.ap-card-3160 {
-  background: #fef9c3;                 /* pale yellow card */
+/* 31–60 days -> pale yellow */
+.ap-aging-summary .ap-summary-31-60 {
+  background: #fff7d1;
   border-color: #fde68a;
 }
-.ap-card-3160 .ap-summary-icon {
-  background: #fde68a;                 /* yellow circle */
+.ap-aging-summary .ap-summary-31-60 .ap-summary-icon {
+  background: #fde68a;
 }
-.ap-card-3160 .ap-summary-value {
-  color: #ca8a04;                      /* amber text */
-}
-
-/* 4) 61–90 & 90+ -> lavender / indigo */
-.ap-card-90 {
-  background: #eef2ff;                 /* light lavender card */
-  border-color: #e0e7ff;
-}
-.ap-card-90 .ap-summary-icon {
-  background: #e0e7ff;                 /* lavender circle */
-}
-.ap-card-90 .ap-summary-value {
-  color: #4f46e5;                      /* indigo text */
+.ap-aging-summary .ap-summary-31-60 .value {
+  color: #b45309;
 }
 
-
-/* ===== Panels & tables ===== */
-
-.ap-panel {
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(20, 47, 66, 0.04);
-  overflow: hidden;
+/* 61+ days -> soft red/pink */
+.ap-aging-summary .ap-summary-61plus {
+  background: #ffe4e6;
+  border-color: #fecaca;
+}
+.ap-aging-summary .ap-summary-61plus .ap-summary-icon {
+  background: #fecaca;
+}
+.ap-aging-summary .ap-summary-61plus .value {
+  color: #b91c1c;
 }
 
-.ap-panel-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #eef1f6;
-  font-weight: 600;
-  color: #2e5f73;
-  font-size: 0.95rem;
-}
+/* keep your existing table / detail styles below this */
 
-.ap-panel-body {
-  padding: 0.75rem 1rem 0.75rem 1rem;
-  max-height: 360px;
-  overflow-y: auto;
-}
+
+/* ===== TABLE & DETAIL (keep as you had, shortened) ===== */
 
 .ap-table thead th {
   background-color: #2e5f73;
@@ -177,32 +126,17 @@
   vertical-align: middle;
 }
 
-.ap-row-click {
-  cursor: pointer;
+.ap-aging-detail .ap-table tbody td {
+  font-size: 0.8rem;
 }
 
-.ap-row-click:hover {
-  background-color: #f5f7fa;
+.ap-table-wrap {
+  margin-top: 0.5rem;
 }
 
-/* Detail section */
-.ap-detail .ap-panel-body {
-  max-height: 280px;
-}
-
-/* ===== Responsive ===== */
+/* responsive tweaks */
 @media (max-width: 767.98px) {
-  .ap-panel-body {
-    max-height: none;
-  }
-
-  .ap-summary-card {
-    padding: 0.75rem 0.8rem;
-  }
-
-  .ap-summary-icon {
-    width: 36px;
-    height: 36px;
-    margin-right: 0.6rem;
+  .ap-aging-summary .ap-summary-card {
+    margin-bottom: 0.4rem;
   }
 }

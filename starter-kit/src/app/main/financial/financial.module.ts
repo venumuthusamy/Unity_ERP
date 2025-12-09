@@ -92,7 +92,8 @@ const routes: Routes = [
     ArApAgingComponent,
     DaybookReportComponent,
     CollectionForecastComponent,
-    OpeningBalanceComponent
+    OpeningBalanceComponent,
+    AccountsPayableComponent
   ],
   imports: [
     CommonModule,

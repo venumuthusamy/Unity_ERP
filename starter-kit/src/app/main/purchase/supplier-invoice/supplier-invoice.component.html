@@ -90,12 +90,26 @@
         </div>
 
         <!-- Tax % -->
-        <div>
-          <label class="text-[11px] font-medium text-gray-600 block">Tax (%)</label>
-          <input type="number"
-                 class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                 formControlName="tax"
-                 (input)="onTaxChange()" />
+      <div>
+          <label class="text-[11px] font-medium text-gray-600 block">Tax</label>
+          <div class="flex gap-1">
+            <!-- mode -->
+            <select
+              class="rounded-lg border px-2.5 h-8 text-[13px] w-[55%]"
+              formControlName="taxMode"
+              (change)="onTaxModeChange()">
+              <option value="EXCLUSIVE">Exclusive</option>
+              <option value="INCLUSIVE">Inclusive</option>
+              <option value="ZERO">0% (No tax)</option>
+            </select>
+
+            <!-- % -->
+            <input type="number"
+                   class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                   formControlName="tax"
+                   [readonly]="taxMode === 'ZERO'"
+                   (input)="onTaxChange()" />
+          </div>
         </div>
       </div>
 
@@ -107,7 +121,7 @@
          text-[12px] font-medium
          bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
   <div class="px-2.5 py-2">Item</div>
-  <div class="px-2.5 py-2">LedgerName</div>
+  <div class="px-2.5 py-2">Budget</div>
   <div class="px-2.5 py-2">Location</div>
   <div class="px-2.5 py-2">Qty</div>
   <div class="px-2.5 py-2">Unit Price</div>
@@ -141,7 +155,7 @@
     bindValue="value"
     [searchable]="true"
     [clearable]="false"
-    placeholder="Search / choose Ledger..."
+    placeholder="Search / choose Budget Line..."
     formControlName="budgetLineId"
     appendTo="body"
     dropdownPosition="bottom">
@@ -205,7 +219,17 @@
                 <span>- {{ discountTotal | number:'1.2-2' }}</span>
               </div>
               <div class="flex justify-between">
-                <span>Tax ({{ form.get('tax')?.value || 0 }}%)</span>
+                 <span>
+                  Tax
+                  <ng-container *ngIf="taxMode !== 'ZERO'">
+                    ({{ form.get('tax')?.value || 0 }}%
+                    <span *ngIf="taxMode === 'EXCLUSIVE'"> - Exclusive</span>
+                    <span *ngIf="taxMode === 'INCLUSIVE'"> - Inclusive</span>)
+                  </ng-container>
+                  <ng-container *ngIf="taxMode === 'ZERO'">
+                    (0% - No tax)
+                  </ng-container>
+                </span>
                 <span>{{ taxAmount | number:'1.2-2' }}</span>
               </div>
               <div class="flex justify-between font-semibold border-t pt-1 mt-1">

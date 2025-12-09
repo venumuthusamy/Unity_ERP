@@ -1,6 +1,4 @@
-// ============================================================
-//  ACCOUNTS PAYABLE COMPONENT - FULL
-// ============================================================
+// src/app/main/financial/accounts-payable/accounts-payable.component.ts
 
 import {
   Component,
@@ -16,7 +14,7 @@ import { AccountsPayableService } from './accounts-payable.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { Router } from '@angular/router';
 
-type ApTab = 'invoices' | 'payments' | 'match';
+type ApTab = 'invoices' | 'payments' | 'aging' | 'match';
 
 type SupplierInvoiceGroup = {
   supplierId: number;
@@ -38,6 +36,10 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
 
   // ---------------- TAB CONTROL ----------------
   activeTab: ApTab = 'invoices';
+
+  // ---------------- EMAIL MODAL ----------------
+  showEmailModal = false;
+  selectedInvoiceForEmail: any = null;
 
   // ---------------- SUPPLIERS ----------------
   suppliers: Array<{ id: number; name: string }> = [];
@@ -130,6 +132,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   //  TABS
   // =====================================================
   setTab(tab: ApTab): void {
+    debugger
     this.activeTab = tab;
 
     if (tab === 'invoices') {
@@ -141,6 +144,25 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     } else if (tab === 'match') {
       this.loadMatch();
     }
+    // 'aging' → no extra TS logic here, <app-ap-aging> loads itself
+  }
+
+  // =====================================================
+  //  EMAIL MODAL (app-invoice-email)
+  // =====================================================
+  openEmailModal(inv: any): void {
+    this.selectedInvoiceForEmail = inv;
+    this.showEmailModal = true;
+  }
+
+  closeEmailModal(): void {
+    this.showEmailModal = false;
+    this.selectedInvoiceForEmail = null;
+  }
+
+  onEmailModalBackdropClick(event: MouseEvent): void {
+    // click on grey area closes modal
+    this.closeEmailModal();
   }
 
   // =====================================================
@@ -165,19 +187,18 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   loadBankAccounts(): void {
     this.apSvc.getBankAccounts().subscribe({
       next: (res: any) => {
-        // Expecting: { bankId, bankName, headCode, availableBalance }
+        // Expecting: { id, headName, availableBalance, ... }
         this.bankAccounts = res?.data || res || [];
       },
       error: () => Swal.fire('Error', 'Failed to load bank accounts', 'error')
     });
   }
 
- onBankChange(): void {
-  const bank = this.bankAccounts.find(x => x.id === this.selectedBankId);
-  this.bankAvailableBalance = bank?.availableBalance || 0;
-  this.recalcBankBalanceAfterPayment();
-}
-
+  onBankChange(): void {
+    const bank = this.bankAccounts.find(x => x.id === this.selectedBankId);
+    this.bankAvailableBalance = bank?.availableBalance || 0;
+    this.recalcBankBalanceAfterPayment();
+  }
 
   // Method change (Cash / Bank / Cheque / Other)
   onMethodChange(): void {
@@ -495,7 +516,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
         amount: this.payAmount,
         notes: this.payNotes,
         bankAccountId: this.selectedBankId,
-         bankId: this.selectedBankId,
+        bankId: this.selectedBankId,
         createdBy: 1
       };
       requests = [this.apSvc.createPayment(payload)];
@@ -510,7 +531,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
           amount: inv.outstandingAmount,
           notes: this.payNotes,
           bankAccountId: this.selectedBankId,
-           bankId: this.selectedBankId,
+          bankId: this.selectedBankId,
           createdBy: 1
         }))
         .map(payload => this.apSvc.createPayment(payload));
@@ -523,20 +544,19 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
         if (allOk) {
           Swal.fire('Success', 'Payment(s) posted', 'success');
 
-          // Optional: call backend to update bank balance if you keep it in a separate table
-         if (this.selectedBankId && this.bankBalanceAfterPayment != null) {
-  const payload = {
-    bankHeadId: this.selectedBankId,
-    newBalance: this.bankBalanceAfterPayment
-  };
-  this.apSvc.updateBankBalance(payload).subscribe({
-    error: () => {
-      // optional – ignore or show warning
-    }
-   
-  });
-   this.loadBankAccounts();
-}
+          // Optional: update bank balance
+          if (this.selectedBankId && this.bankBalanceAfterPayment != null) {
+            const payload = {
+              bankHeadId: this.selectedBankId,
+              newBalance: this.bankBalanceAfterPayment
+            };
+            this.apSvc.updateBankBalance(payload).subscribe({
+              error: () => {
+                // optional – ignore or show warning
+              }
+            });
+            this.loadBankAccounts();
+          }
 
         } else {
           const err = results.find(r => r?.isSuccess === false);
@@ -645,7 +665,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     if (!dateStr) return;
 
     this.apSvc.getPeriodStatus(dateStr).subscribe({
-      next: res => {
+      next: (res: any) => {
         this.isPeriodLocked = !!res.isLocked;
         this.currentPeriodName = res.periodName || '';
       },
@@ -659,14 +679,9 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   onPayDateChange(): void {
     this.checkPeriodLockForDate(this.payDate);
   }
+
   onPayListPageSizeChange(size: number): void {
-  this.payListPageSize = +size;   // ensure number
-  this.payListPage = 1;           // reset to first page
-}
- goToApAging(): void {
-    // adjust path to match your routing config
-    this.router.navigate(['/financial/ap-aging']);
-    // or if it is nested:
-    // this.router.navigate(['/financial/ap-aging']);
+    this.payListPageSize = +size;   // ensure number
+    this.payListPage = 1;           // reset to first page
   }
 }

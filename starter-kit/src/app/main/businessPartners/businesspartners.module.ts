@@ -31,7 +31,7 @@ const routes: Routes = [
     SupplierComponent,
     CreateCustomerMasterComponent,
     CustomerMasterListComponent,
-    AccountsPayableComponent
+    //AccountsPayableComponent
   ],
   imports: [
     CommonModule,

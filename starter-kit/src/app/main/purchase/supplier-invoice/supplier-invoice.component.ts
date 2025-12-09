@@ -1,6 +1,7 @@
 import {
   Component,
   HostListener,
+  OnDestroy,
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
@@ -28,7 +29,7 @@ interface GRNHeader {
   poLines?: string;
   poLinesJson?: string;
   currencyId?: number;
-  tax?: number;
+  tax?: number;          // tax %
 }
 
 interface GRNItem {
@@ -44,7 +45,7 @@ interface GRNItem {
 
   location?: string;
   discountPct?: number | string;
-  budgetLineId: number
+  budgetLineId: number;
 
   isPostInventory?: boolean | string | number;
   IsPostInventory?: boolean | string | number;
@@ -52,13 +53,15 @@ interface GRNItem {
   [k: string]: any;
 }
 
+type TaxMode = 'EXCLUSIVE' | 'INCLUSIVE' | 'ZERO';
+
 @Component({
   selector: 'app-supplier-invoice',
   templateUrl: './supplier-invoice.component.html',
   styleUrls: ['./supplier-invoice.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class SupplierInvoiceComponent implements OnInit {
+export class SupplierInvoiceComponent implements OnInit, OnDestroy {
 
   form: FormGroup;
 
@@ -91,9 +94,8 @@ export class SupplierInvoiceComponent implements OnInit {
     private grnService: PurchaseGoodreceiptService,
     private router: Router,
     private route: ActivatedRoute,
-    private coaService: ChartofaccountService,
+    private coaService: ChartofaccountService
   ) {
-
     this.userId = localStorage.getItem('id') ?? 'System';
 
     this.form = this.fb.group({
@@ -105,16 +107,30 @@ export class SupplierInvoiceComponent implements OnInit {
       supplierName: [''],
       invoiceDate: ['', Validators.required],
       amount: [0, [Validators.required, Validators.min(0)]],
-      tax: [0, [Validators.min(0)]],
+      taxMode: ['ZERO'],                       // EXCLUSIVE | INCLUSIVE | ZERO
+      tax: [0, [Validators.min(0)]],           // tax %
       currencyId: [null],
       status: [0],
-      lines: this.fb.array([]) // FormArray
+      lines: this.fb.array([])                 // FormArray
     });
   }
 
+  // convenience accessors
+  get lines(): FormArray {
+    return this.form.get('lines') as FormArray;
+  }
+
+  get taxMode(): TaxMode {
+    return (this.form.get('taxMode')?.value || 'ZERO') as TaxMode;
+  }
+
+  // ------------------------------------------------------------------
+  // LIFECYCLE
+  // ------------------------------------------------------------------
   ngOnInit(): void {
-     document.body.classList.add('pin-supplier-invoice-page');
-    this.loadAccountHeads()
+    document.body.classList.add('pin-supplier-invoice-page');
+
+    this.loadAccountHeads();
     this.setMinDate();
     this.loadGrns();
 
@@ -123,16 +139,14 @@ export class SupplierInvoiceComponent implements OnInit {
       if (id > 0) this.loadInvoice(id);
     });
   }
-    ngOnDestroy(): void {
+
+  ngOnDestroy(): void {
     document.body.classList.remove('pin-supplier-invoice-page');
   }
 
-  // ------------------------------- Utilities -------------------------------
-
-  get lines(): FormArray {
-    return this.form.get('lines') as FormArray;
-  }
-
+  // ------------------------------------------------------------------
+  // UTILITIES
+  // ------------------------------------------------------------------
   private setMinDate(): void {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -178,8 +192,9 @@ export class SupplierInvoiceComponent implements OnInit {
     return this.isTruthyTrue(flag);
   }
 
-  // ------------------------------- Load Existing Invoice -------------------------------
-
+  // ------------------------------------------------------------------
+  // LOAD EXISTING INVOICE
+  // ------------------------------------------------------------------
   private loadInvoice(id: number): void {
     this.api.GetSupplierInvoiceById(id).subscribe({
       next: (res: any) => {
@@ -194,14 +209,19 @@ export class SupplierInvoiceComponent implements OnInit {
           invoiceNo: d.invoiceNo ?? '',
           grnId: d.grnId ?? null,
           grnNo: d.grnNo ?? '',
-          supplierId: d.supplierId ?? null,      // ⬅️ NEW (if your DTO exposes it)
-          supplierName: d.supplierName ?? '', 
+          supplierId: d.supplierId ?? null,
+          supplierName: d.supplierName ?? '',
           invoiceDate: dateOnly,
           amount: Number(d.amount ?? 0),
-          tax: Number(d.tax ?? 0),
+          tax: Number(d.tax ?? 0),         // assume stored %; tax amount will be recomputed
           currencyId: d.currencyId,
           status: Number(d.status ?? 0)
         });
+
+        // default taxMode from value
+        const pct = Number(this.form.get('tax')?.value || 0);
+        const mode: TaxMode = pct > 0 ? 'EXCLUSIVE' : 'ZERO';
+        this.form.get('taxMode')?.setValue(mode, { emitEvent: false });
 
         this.grnSearch = d.grnNo;
         this.clearLines();
@@ -241,8 +261,9 @@ export class SupplierInvoiceComponent implements OnInit {
     });
   }
 
-  // ------------------------------- Matching PO Lines -------------------------------
-
+  // ------------------------------------------------------------------
+  // MATCHING PO LINES
+  // ------------------------------------------------------------------
   private findPoLineForGrnItem(it: GRNItem): any | undefined {
     if (!this.poLinesList.length) return undefined;
 
@@ -255,8 +276,9 @@ export class SupplierInvoiceComponent implements OnInit {
     });
   }
 
-  // ------------------------------- Add Lines -------------------------------
-
+  // ------------------------------------------------------------------
+  // LINES
+  // ------------------------------------------------------------------
   private calcLineTotal(qty: number, price: number, discount: number): number {
     const gross = qty * price;
     const discAmt = (discount > 0) ? (gross * discount / 100) : 0;
@@ -266,10 +288,8 @@ export class SupplierInvoiceComponent implements OnInit {
   addLineFromGrn(it: GRNItem): void {
     if (!this.shouldIncludeItem(it)) return;
 
-    // PO match only for location + discount
     const po = this.findPoLineForGrnItem(it);
 
-    // Values from GRN ONLY
     const qty = it.qtyReceived != null
       ? Number(it.qtyReceived)
       : Number(it.qty ?? 0);
@@ -278,7 +298,6 @@ export class SupplierInvoiceComponent implements OnInit {
       ? Number(it.unitPrice)
       : Number(it.price ?? 0);
 
-    // 🎯 ONLY these two values come from PO lines
     const location = po?.location ?? '';
     const discountPct = po?.discount != null ? Number(po.discount) : 0;
 
@@ -317,54 +336,77 @@ export class SupplierInvoiceComponent implements OnInit {
     this.recalcHeaderFromLines();
   }
 
-  // ------------------------------- Header Summary -------------------------------
+  // ------------------------------------------------------------------
+  // HEADER SUMMARY / TAX LOGIC
+  // ------------------------------------------------------------------
+  private recalcHeaderFromLines(): void {
+    let grossTotal = 0;  // Σ(qty * unitPrice)
+    let discount = 0;    // Σ discount amount
 
-private recalcHeaderFromLines(): void {
-  let grossTotal = 0;   // Σ(qty * unitPrice)  👉 this will be Sub-total
-  let discount = 0;     // Σ discount amount
+    this.lines.value.forEach((l: any) => {
+      const q = Number(l.qty) || 0;
+      const p = Number(l.unitPrice) || 0;
+      const d = Number(l.discountPct) || 0;
 
-  this.lines.value.forEach((l: any) => {
-    const q = Number(l.qty) || 0;
-    const p = Number(l.unitPrice) || 0;
-    const d = Number(l.discountPct) || 0;
+      const gross = q * p;
+      const discAmt = d > 0 ? (gross * d / 100) : 0;
 
-    const gross = q * p;                          // full line amount
-    const discAmt = d > 0 ? (gross * d / 100) : 0;
+      grossTotal += gross;
+      discount += discAmt;
+    });
 
-    grossTotal += gross;
-    discount += discAmt;
-  });
+    const subtotal = +grossTotal.toFixed(2);
+    discount = +discount.toFixed(2);
 
-  const subtotal = +grossTotal.toFixed(2);        // ❗ no discount removed here
-  discount = +discount.toFixed(2);
+    const taxPct = Number(this.form.get('tax')?.value || 0);
+    const rate = taxPct / 100;
+    const mode = this.taxMode;
 
-  const taxPct = Number(this.form.get('tax')?.value || 0);
+    const netBeforeTax = subtotal - discount;
 
-  // tax on (subtotal - discount)
-  const netForTax = subtotal - discount;
-  const taxAmt = +(netForTax * taxPct / 100).toFixed(2);
+    let taxAmt = 0;
+    let grand = 0;
 
-  const grand = +(netForTax + taxAmt).toFixed(2);
+    if (mode === 'ZERO' || rate === 0) {
+      taxAmt = 0;
+      grand = netBeforeTax;
+    } else if (mode === 'EXCLUSIVE') {
+      taxAmt = +(netBeforeTax * rate).toFixed(2);
+      grand = +(netBeforeTax + taxAmt).toFixed(2);
+    } else { // INCLUSIVE
+      const base = +(netBeforeTax / (1 + rate)).toFixed(2);
+      taxAmt = +(netBeforeTax - base).toFixed(2);
+      grand = netBeforeTax;
+    }
 
-  this.subTotal = subtotal;       // shows Qty * Price total
-  this.discountTotal = discount;  // total discount
-  this.taxAmount = taxAmt;        // tax amount
-  this.grandTotal = grand;        // final amount
+    this.subTotal = subtotal;
+    this.discountTotal = discount;
+    this.taxAmount = taxAmt;
+    this.grandTotal = grand;
 
-  // keep Amount = Grand total
-  this.form.patchValue(
-    { amount: grand },
-    { emitEvent: false }
-  );
-}
-
+    // Amount = Grand total
+    this.form.patchValue({ amount: grand }, { emitEvent: false });
+  }
 
   onTaxChange(): void {
+    const pct = Number(this.form.get('tax')?.value || 0);
+    if (pct > 0 && this.taxMode === 'ZERO') {
+      this.form.get('taxMode')?.setValue('EXCLUSIVE', { emitEvent: false });
+    }
     this.recalcHeaderFromLines();
   }
 
-  // ------------------------------- Build Payload -------------------------------
+  onTaxModeChange(): void {
+    const mode = this.taxMode;
+    if (mode === 'ZERO') {
+      this.form.get('tax')?.setValue(0, { emitEvent: false });
+    }
+    this.recalcHeaderFromLines();
+  }
 
+  // ------------------------------------------------------------------
+  // SAVE
+  // ------------------------------------------------------------------
   private toSqlDate(v: any): string | null {
     if (!v) return null;
     if (typeof v === 'string') return v;
@@ -389,8 +431,6 @@ private recalcHeaderFromLines(): void {
     return JSON.stringify(arr);
   }
 
-  // ------------------------------- Save -------------------------------
-
   save(action: 'POST' | 'HOLD' = 'POST'): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -401,10 +441,10 @@ private recalcHeaderFromLines(): void {
     const payload = {
       grnId: v.grnId,
       grnNo: v.grnNo,
-      supplierId: v.supplierId, 
+      supplierId: v.supplierId,
       invoiceDate: this.toSqlDate(v.invoiceDate),
       amount: Number(v.amount),
-      tax: Number(this.taxAmount),
+      tax: Number(this.taxAmount),         // storing tax amount; tax % is form.get('tax')
       currencyId: v.currencyId,
       status: action === 'HOLD' ? 1 : 2,
       linesJson: this.buildLinesJson(),
@@ -438,8 +478,9 @@ private recalcHeaderFromLines(): void {
     });
   }
 
-  // ------------------------------- GRN Dropdown -------------------------------
-
+  // ------------------------------------------------------------------
+  // GRN DROPDOWN
+  // ------------------------------------------------------------------
   loadGrns(): void {
     this.grnService.getAllGRN().subscribe({
       next: (res: any) => {
@@ -482,31 +523,33 @@ private recalcHeaderFromLines(): void {
     this.grnOpen = true;
   }
 
- selectGrn(g: GRNHeader): void {
-  this.form.patchValue({
-    grnId: g.id,
-    grnNo: g.grnNo,
-    supplierId: g.supplierId ?? null,
-    supplierName: g.supplierName ?? '',   // ⬅️ NEW
-    tax: g.tax ?? 0,
-    currencyId: g.currencyId
-  });
+  selectGrn(g: GRNHeader): void {
+    const pct = Number(g.tax ?? 0);
+    const mode: TaxMode = pct > 0 ? 'EXCLUSIVE' : 'ZERO';
 
-  this.grnSearch = g.grnNo;
-  this.grnOpen = false;
+    this.form.patchValue({
+      grnId: g.id,
+      grnNo: g.grnNo,
+      supplierId: g.supplierId ?? null,
+      supplierName: g.supplierName ?? '',
+      tax: pct,
+      taxMode: mode,
+      currencyId: g.currencyId
+    });
 
-  // existing logic...
-  this.poLinesList = this.safeParsePoLines(g.poLines ?? g.poLinesJson);
-  const items = this.safeParseGrnItems(g.grnJson);
-  this.selectedGrnItems = items.filter(it => this.shouldIncludeItem(it));
+    this.grnSearch = g.grnNo;
+    this.grnOpen = false;
 
-  this.clearLines();
-  this.selectedGrnItems.forEach(it => this.addLineFromGrn(it));
-  this.recalcHeaderFromLines();
-}
+    this.poLinesList = this.safeParsePoLines(g.poLines ?? g.poLinesJson);
+    const items = this.safeParseGrnItems(g.grnJson);
+    this.selectedGrnItems = items.filter(it => this.shouldIncludeItem(it));
 
+    this.clearLines();
+    this.selectedGrnItems.forEach(it => this.addLineFromGrn(it));
+    this.recalcHeaderFromLines();
+  }
 
-  // close dropdown
+  // close dropdown when clicking outside
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent): void {
     if (!(ev.target as HTMLElement).closest('.grn-combobox')) {
@@ -514,10 +557,14 @@ private recalcHeaderFromLines(): void {
     }
   }
 
+  // ------------------------------------------------------------------
+  // NAV / COA
+  // ------------------------------------------------------------------
   goToSupplierInvoice(): void {
     this.router.navigate(['/purchase/list-SupplierInvoice']);
   }
-    loadAccountHeads(): void {
+
+  loadAccountHeads(): void {
     this.coaService.getAllChartOfAccount().subscribe((res: any) => {
       const data = (res?.data || []).filter((x: any) => x.isActive === true);
       this.parentHeadList = data.map((head: any) => ({

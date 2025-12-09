@@ -16,18 +16,17 @@ export interface ArAgingInvoice {
   invoiceNo: string;
   invoiceDate: string;
   dueDate: string;
-
   ageDays: number;
   bucketName: string;
-
   customerId: number;
   customerName: string;
-
+  customerEmail?: string;
   originalAmount: number;
   paidAmount: number;
   creditAmount: number;
   balance: number;
 }
+
 
 export interface ResponseResult<T> {
   success: boolean;

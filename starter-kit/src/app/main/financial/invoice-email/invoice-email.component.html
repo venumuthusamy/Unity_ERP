@@ -12,48 +12,50 @@
       <div class="card shadow-sm p-2">
 
         <!-- Top row: DocType + Invoice + Template -->
-        <div class="row">
+        <!-- Top row: DocType + Invoice + Template -->
+<div class="row" *ngIf="!embeddedMode">
 
-          <!-- Document Type -->
-          <div class="col-md-3">
-            <label>Document Type</label>
-            <select class="form-control"
-                    [(ngModel)]="docType"
-                    (change)="onDocTypeChange()"
-                    [disabled]="isSending">
-              <option [ngValue]="'SI'">Sales Invoice</option>
-              <option [ngValue]="'PIN'">Supplier Invoice</option>
-            </select>
-          </div>
+  <!-- Document Type -->
+  <div class="col-md-3">
+    <label>Document Type</label>
+    <select class="form-control"
+            [(ngModel)]="docType"
+            (change)="onDocTypeChange()"
+            [disabled]="isSending">
+      <option [ngValue]="'SI'">Sales Invoice</option>
+      <option [ngValue]="'PIN'">Supplier Invoice</option>
+    </select>
+  </div>
 
-          <!-- Invoice dropdown (filtered by docType) -->
-          <div class="col-md-3">
-            <label>{{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }}</label>
-            <select class="form-control"
-                    [(ngModel)]="selectedInvoiceId"
-                    (change)="onInvoiceChange()"
-                    [disabled]="isSending">
-              <option [ngValue]="null">
-                -- Select {{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }} --
-              </option>
-              <option *ngFor="let inv of invoiceList" [ngValue]="inv.id">
-                {{ inv.invoiceNo }} - {{ inv.partyName }}
-              </option>
-            </select>
-          </div>
+  <!-- Invoice dropdown (filtered by docType) -->
+  <div class="col-md-3">
+    <label>{{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }}</label>
+    <select class="form-control"
+            [(ngModel)]="selectedInvoiceId"
+            (change)="onInvoiceChange()"
+            [disabled]="isSending">
+      <option [ngValue]="null">
+        -- Select {{ docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice' }} --
+      </option>
+      <option *ngFor="let inv of invoiceList" [ngValue]="inv.id">
+        {{ inv.invoiceNo }} - {{ inv.partyName }}
+      </option>
+    </select>
+  </div>
 
-          <!-- Template -->
-          <div class="col-md-3">
-            <label>Template</label>
-            <select class="form-control"
-                    [(ngModel)]="selectedTemplate"
-                    (change)="onTemplateChange()"
-                    [disabled]="isSending">
-              <option [ngValue]="1">Standard</option>
-            </select>
-          </div>
+  <!-- Template -->
+  <div class="col-md-3">
+    <label>Template</label>
+    <select class="form-control"
+            [(ngModel)]="selectedTemplate"
+            (change)="onTemplateChange()"
+            [disabled]="isSending">
+      <option [ngValue]="1">Standard</option>
+    </select>
+  </div>
 
-        </div>
+</div>
+
 
         <!-- To / Cc -->
         <div class="row mt-2">
