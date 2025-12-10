@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
+type ArTab = 'invoices' | 'receipts' | 'advance' | 'aging';
+
 @Component({
   selector: 'app-ar-combine',
   templateUrl: './ar-combine.component.html',
@@ -8,21 +10,20 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class ARCombineComponent implements OnInit {
 
-  // active tab: 'invoices' | 'receipts' | 'aging'
-  activeTab: 'invoices' | 'receipts' | 'aging' = 'invoices';
+  activeTab: ArTab = 'invoices';
 
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe(params => {
-      const tab = params.get('tab') as 'invoices' | 'receipts' | 'aging' | null;
+      const tab = params.get('tab') as ArTab | null;
       if (tab) {
         this.activeTab = tab;
       }
     });
   }
 
-  setTab(tab: 'invoices' | 'receipts' | 'aging') {
+  setTab(tab: ArTab): void {
     this.activeTab = tab;
   }
 }

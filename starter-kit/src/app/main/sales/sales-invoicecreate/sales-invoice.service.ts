@@ -59,6 +59,8 @@ export interface SiCreateRequest {
   total: number;               // net total
   remarks?: string | null;     // <<-- used in component.save()
   lines: SiCreateLine[];
+   advanceId?: number | null;
+  advanceApplyAmount?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

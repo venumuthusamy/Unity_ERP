@@ -14,7 +14,8 @@ import { AccountsPayableService } from './accounts-payable.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { Router } from '@angular/router';
 
-type ApTab = 'invoices' | 'payments' | 'aging' | 'match';
+// ==== Tabs (added 'advances') ====
+type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
 
 type SupplierInvoiceGroup = {
   supplierId: number;
@@ -25,6 +26,18 @@ type SupplierInvoiceGroup = {
   totalOutstanding: number;
   invoices: any[];
 };
+
+// OPTIONAL: strongly-typed advance row
+interface SupplierAdvanceRow {
+  id: number;
+  advanceNo: string;
+  supplierId: number;
+  supplierName: string;
+  advanceDate: string | Date;
+  originalAmount: number;
+  utilisedAmount: number;
+  balanceAmount: number;
+}
 
 @Component({
   selector: 'app-accounts-payable',
@@ -95,6 +108,16 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   supTotalDebitNote = 0;
   supTotalNetOutstanding = 0;
 
+  // ---------------- ADVANCES TAB ----------------
+  supplierAdvances: SupplierAdvanceRow[] = [];
+  pagedSupplierAdvances: SupplierAdvanceRow[] = [];
+  advPage = 1;
+  advPageSize = 10;
+
+  totalAdvanceAmount = 0;
+  totalAdvanceUtilised = 0;
+  totalAdvanceBalance = 0;
+
   // ---------------- MATCH TAB ----------------
   matchRows: any[] = [];
 
@@ -132,7 +155,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   //  TABS
   // =====================================================
   setTab(tab: ApTab): void {
-    debugger
     this.activeTab = tab;
 
     if (tab === 'invoices') {
@@ -143,6 +165,8 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
       this.cancelPayment();
     } else if (tab === 'match') {
       this.loadMatch();
+    } else if (tab === 'advances') {
+      this.loadAdvances();
     }
     // 'aging' → no extra TS logic here, <app-ap-aging> loads itself
   }
@@ -161,7 +185,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   }
 
   onEmailModalBackdropClick(event: MouseEvent): void {
-    // click on grey area closes modal
     this.closeEmailModal();
   }
 
@@ -195,25 +218,21 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   }
 
   onBankChange(): void {
-    const bank = this.bankAccounts.find(x => x.id === this.selectedBankId);
+    const bank = this.bankAccounts.find((x: any) => x.id === this.selectedBankId);
     this.bankAvailableBalance = bank?.availableBalance || 0;
     this.recalcBankBalanceAfterPayment();
   }
 
-  // Method change (Cash / Bank / Cheque / Other)
   onMethodChange(): void {
     if (this.payMethodId === 2 || this.payMethodId === 3) {
-      // bank transfer or cheque → bank dropdown is visible
       this.onBankChange();
     } else {
-      // Cash / Other → clear bank selection and balances
       this.selectedBankId = null;
       this.bankAvailableBalance = null;
       this.bankBalanceAfterPayment = null;
     }
   }
 
-  // Calculate "After Payment" balance
   recalcBankBalanceAfterPayment(): void {
     if (this.bankAvailableBalance == null) {
       this.bankBalanceAfterPayment = null;
@@ -223,13 +242,11 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     this.bankBalanceAfterPayment = this.bankAvailableBalance - amt;
   }
 
-  // When user types amount manually
   onAmountInputChange(): void {
     this.amountEditedManually = true;
     this.recalcBankBalanceAfterPayment();
   }
 
-  // When user selects invoices (auto calc amount)
   recalcSelectedAmount(): void {
     if (this.amountEditedManually) return;
 
@@ -342,7 +359,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     return this.expandedSupplierIds.has(id);
   }
 
-  // INVOICE STATUS PILL
   getInvoiceStatusTextByAmounts(row: any): string {
     const paid = Number(row.paidAmount || 0);
     const dn   = Number(row.debitNoteAmount || 0);
@@ -415,7 +431,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     this.payInvPage = 1;
   }
 
-  // Supplier change in Payment form
   onPaySupplierChange(): void {
     this.payAmount = 0;
     this.amountEditedManually = false;
@@ -446,7 +461,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
           this.supTotalNetOutstanding += Number(x.outstandingAmount || 0);
         });
 
-        // Reset amount and bank balance calc
         this.payAmount = 0;
         this.recalcBankBalanceAfterPayment();
       },
@@ -454,7 +468,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // Checkboxes
   onSelectAllInvoicesChange(checked: boolean): void {
     this.payInvSelectAll = checked;
     this.supplierInvoicesAll.forEach(x => x.isSelected = checked);
@@ -468,7 +481,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     this.recalcSelectedAmount();
   }
 
-  // Get Payment Method Name for list tab
   getPaymentMethodName(id?: number): string {
     switch (id) {
       case 1: return 'Cash';
@@ -479,7 +491,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     }
   }
 
-  // POST PAYMENT
   postPayment(): void {
     if (!this.paySupplierId) {
       Swal.fire('Warning', 'Select supplier', 'warning');
@@ -497,7 +508,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // If method is bank transfer/cheque → bank is mandatory
     if ((this.payMethodId === 2 || this.payMethodId === 3) && !this.selectedBankId) {
       Swal.fire('Warning', 'Select Bank Account', 'warning');
       return;
@@ -544,7 +554,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
         if (allOk) {
           Swal.fire('Success', 'Payment(s) posted', 'success');
 
-          // Optional: update bank balance
           if (this.selectedBankId && this.bankBalanceAfterPayment != null) {
             const payload = {
               bankHeadId: this.selectedBankId,
@@ -580,7 +589,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     });
   }
 
-  // RESET PAYMENT FORM
   resetPaymentForm(): void {
     const today = new Date().toISOString().substring(0, 10);
     this.payDate = today;
@@ -594,7 +602,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     this.bankBalanceAfterPayment = null;
   }
 
-  // Pagination: Payments list
   get payListTotalPages(): number {
     return Math.max(1, Math.ceil((this.payments.length || 0) / this.payListPageSize));
   }
@@ -609,7 +616,6 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
     this.payListPage = p;
   }
 
-  // Pagination: Supplier invoices in payment form
   get payInvTotalPages(): number {
     return Math.max(1, Math.ceil((this.supplierInvoicesAll.length || 0) / this.payInvPageSize));
   }
@@ -622,6 +628,56 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   payInvGoToPage(p: number): void {
     if (p < 1 || p > this.payInvTotalPages) return;
     this.payInvPage = p;
+  }
+
+  // =====================================================
+  //  ADVANCES TAB
+  // =====================================================
+  loadAdvances(): void {
+    // Expecting API something like: getSupplierAdvances()
+    this.apSvc.getSupplierAdvances().subscribe({
+      next: (res: any) => {
+        const rows = (res?.data || res || []) as SupplierAdvanceRow[];
+
+        this.supplierAdvances = rows;
+        this.advPage = 1;
+
+        // Totals
+        this.totalAdvanceAmount = 0;
+        this.totalAdvanceUtilised = 0;
+        this.totalAdvanceBalance = 0;
+
+        rows.forEach(a => {
+          this.totalAdvanceAmount  += Number(a.originalAmount || 0);
+          this.totalAdvanceUtilised += Number(a.utilisedAmount || 0);
+          this.totalAdvanceBalance += Number(a.balanceAmount || 0);
+        });
+
+        this.updatePagedAdvances();
+      },
+      error: () => Swal.fire('Error', 'Failed to load supplier advances', 'error')
+    });
+  }
+
+  updatePagedAdvances(): void {
+    const start = (this.advPage - 1) * this.advPageSize;
+    this.pagedSupplierAdvances = this.supplierAdvances.slice(start, start + this.advPageSize);
+  }
+
+  get advTotalPages(): number {
+    return Math.max(1, Math.ceil((this.supplierAdvances.length || 0) / this.advPageSize));
+  }
+
+  advGoToPage(p: number): void {
+    if (p < 1 || p > this.advTotalPages) return;
+    this.advPage = p;
+    this.updatePagedAdvances();
+  }
+
+  openNewAdvance(): void {
+    // You can change this to navigate to your Advance create screen
+    // this.router.navigate(['/ap/advance-create']);
+    Swal.fire('Info', 'Advance create screen not wired yet.', 'info');
   }
 
   // =====================================================
@@ -681,7 +737,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   }
 
   onPayListPageSizeChange(size: number): void {
-    this.payListPageSize = +size;   // ensure number
-    this.payListPage = 1;           // reset to first page
+    this.payListPageSize = +size;
+    this.payListPage = 1;
   }
 }

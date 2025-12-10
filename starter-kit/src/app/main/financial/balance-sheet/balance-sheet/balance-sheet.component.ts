@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewEncapsulation } from '@angular/core';
 import { BalanceSheetService } from '../balance-sheet-service/balance-sheet.service';
 import feather from 'feather-icons';
 
@@ -19,7 +19,8 @@ interface BsRow {
 @Component({
   selector: 'app-balance-sheet',
   templateUrl: './balance-sheet.component.html',
-  styleUrls: ['./balance-sheet.component.scss']
+  styleUrls: ['./balance-sheet.component.scss'],
+  encapsulation:ViewEncapsulation.None
 })
 export class BalanceSheetComponent implements OnInit, AfterViewInit {
 
@@ -473,4 +474,327 @@ private applyBalancingFigure(): void {
     if (num === 0) { return null; }
     return num.toString();
   }
+    // ================== COMMON DOWNLOAD HELPER ==================
+  private triggerDownload(
+    data: string | Blob,
+    fileName: string,
+    mimeType: string
+  ): void {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+  // ================== EXPORT EXCEL (CSV) ==================
+  exportExcelSimple(): void {
+    const rows: any[][] = [];
+
+    // Title + summary
+    rows.push(['Balance Sheet']);
+    rows.push([]);
+    rows.push(['Total Liabilities', this.displayLiabilitiesTotal]);
+    rows.push(['Total Assets', this.displayAssetsTotal]);
+    rows.push([]);
+    
+    // Liabilities section
+    rows.push(['Liabilities']);
+    rows.push(['Name', 'Level', 'Balancing?', 'Amount']);
+
+    this.liabilityAccounts.forEach(acc => {
+      const level = acc.level ?? 0;
+      const isSynthetic = acc.isSynthetic ? 'Yes' : 'No';
+      const amount = Number(acc.amount || 0).toFixed(2);
+      rows.push([
+        acc.headName,
+        level,
+        isSynthetic,
+        amount
+      ]);
+    });
+
+    rows.push([]);
+    // Assets section
+    rows.push(['Assets']);
+    rows.push(['Name', 'Level', 'Balancing?', 'Amount']);
+
+    this.assetAccounts.forEach(acc => {
+      const level = acc.level ?? 0;
+      const isSynthetic = acc.isSynthetic ? 'Yes' : 'No';
+      const amount = Number(acc.amount || 0).toFixed(2);
+      rows.push([
+        acc.headName,
+        level,
+        isSynthetic,
+        amount
+      ]);
+    });
+
+    // Convert to CSV text
+    const csv = rows
+      .map(row =>
+        row
+          .map(col => {
+            const v = col === null || col === undefined ? '' : col.toString();
+            return `"${v.replace(/"/g, '""')}"`;
+          })
+          .join(',')
+      )
+      .join('\r\n');
+
+    this.triggerDownload(
+      csv,
+      'BalanceSheet.csv',
+      'text/csv;charset=utf-8;'
+    );
+  }
+  // ================== EXPORT PDF (PRINT → SAVE AS PDF) ==================
+  exportPdfSimple(): void {
+    const html = this.buildPrintHtml();
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) { return; }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  private buildPrintHtml(): string {
+    const liabRowsHtml = this.liabilityAccounts.map(acc => {
+      const isBal = acc.isSynthetic;
+      return `
+        <tr class="${isBal ? 'row-balance' : ''}">
+          <td class="name-cell">
+            ${'&nbsp;'.repeat((acc.level || 0) * 2)}${acc.headName}
+          </td>
+          <td class="amount-cell">
+            ${Number(acc.amount || 0).toFixed(2)}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const assetRowsHtml = this.assetAccounts.map(acc => {
+      const isBal = acc.isSynthetic;
+      return `
+        <tr class="${isBal ? 'row-balance' : ''}">
+          <td class="name-cell">
+            ${'&nbsp;'.repeat((acc.level || 0) * 2)}${acc.headName}
+          </td>
+          <td class="amount-cell">
+            ${Number(acc.amount || 0).toFixed(2)}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Balance Sheet</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #111827;
+    }
+    .page {
+      padding: 16px;
+    }
+
+    .bs-card {
+      background: #ffffff;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      padding: 16px 20px 20px 20px;
+    }
+
+    .bs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .bs-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2e5f73;
+      margin: 0;
+    }
+
+    /* Summary cards */
+    .summary-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .summary-card {
+      flex: 1;
+      border-radius: 0.75rem;
+      padding: 8px 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .summary-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+    .summary-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    /* Two columns with center divider */
+    .bs-columns {
+      display: flex;
+      gap: 16px;
+      position: relative;
+      margin-top: 4px;
+    }
+    .bs-col {
+      width: 50%;
+    }
+
+    .bs-divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      border-left: 1px dashed #e5e7eb;
+    }
+
+    .bs-column-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    thead th {
+      background: #f3f4f6;
+      font-weight: 600;
+      text-align: left;
+      padding: 4px 6px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    tbody td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .name-cell {
+      width: 70%;
+    }
+    .amount-cell {
+      width: 30%;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* balancing figure row (isSynthetic) */
+    .row-balance td {
+      font-weight: 600;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .row-total th,
+    .row-total td {
+      font-weight: 700;
+      border-top: 1px solid #d1d5db;
+      background: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="bs-card">
+      <div class="bs-header">
+        <h1 class="bs-title">Balance Sheet</h1>
+      </div>
+
+      <!-- Top summary cards -->
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="summary-label">Total Liabilities</div>
+          <div class="summary-value">${this.displayLiabilitiesTotal.toFixed(2)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Assets</div>
+          <div class="summary-value">${this.displayAssetsTotal.toFixed(2)}</div>
+        </div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="bs-columns">
+        <div class="bs-divider"></div>
+
+        <!-- Left: Liabilities -->
+        <div class="bs-col">
+          <div class="bs-column-header">Liabilities</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Head</th>
+                <th style="text-align:right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${liabRowsHtml}
+              <tr class="row-total">
+                <td>Total Liabilities</td>
+                <td class="amount-cell">${this.displayLiabilitiesTotal.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Right: Assets -->
+        <div class="bs-col">
+          <div class="bs-column-header">Assets</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Head</th>
+                <th style="text-align:right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${assetRowsHtml}
+              <tr class="row-total">
+                <td>Total Assets</td>
+                <td class="amount-cell">${this.displayAssetsTotal.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
 }

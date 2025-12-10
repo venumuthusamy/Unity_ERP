@@ -1,7 +1,8 @@
 <button (click)="goSIList()" class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
-  style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
-  <i class="fas fa-arrow-left position-absolute" style="left:0.75rem; top:50%; transform:translateY(-50%);"
-    aria-hidden="true"></i>
+        style="background-color:#2E5F73; color:white; padding-left:2.25rem;">
+  <i class="fas fa-arrow-left position-absolute"
+     style="left:0.75rem; top:50%; transform:translateY(-50%);"
+     aria-hidden="true"></i>
   <span>Go to SI list</span>
 </button>
 
@@ -15,18 +16,21 @@
     </div>
 
     <div class="d-flex gap-2 prl-head-actions">
-      <button class="btn prl-btn-primary" (click)="save()"
-        [disabled]="!invoiceDate || ( !isEdit && (!sourceId || lines.length===0) )">
+      <button class="btn prl-btn-primary"
+              (click)="save()"
+              [disabled]="!invoiceDate || ( !isEdit && (!sourceId || lines.length===0) )">
         {{ isEdit ? 'Save Header' : 'Create Invoice' }}
       </button>
-      <button *ngIf="isEdit" class="btn btn-outline-primary prl-btn-outline" (click)="saveNewLines()">
+      <button *ngIf="isEdit"
+              class="btn btn-outline-primary prl-btn-outline"
+              (click)="saveNewLines()">
         Save New Lines
       </button>
     </div>
   </div>
 
   <div class="card-body">
-    <!-- HEADER ROW -->
+    <!-- ================= HEADER ================= -->
     <div class="row g-3">
       <!-- Source type -->
       <div class="col-lg-3 col-md-6">
@@ -120,12 +124,11 @@
       </div>
     </div>
 
-    <!-- ADD LINE BUTTON -->
+    <!-- ================= LINES TABLE ================= -->
     <div class="d-flex justify-content-end mt-2">
       <button class="btn btn-outline-primary prl-btn-outline" (click)="addLine()">+ Add Line</button>
     </div>
 
-    <!-- LINES TABLE -->
     <div class="table-responsive mt-2 prl-table-wrap si-compact">
       <table class="table table-sm align-middle prl-table">
         <thead class="prl-thead-brand">
@@ -267,7 +270,6 @@
 
             <!-- Tax info -->
             <td class="text-start">
-              <!-- EXEMPT (always 0 tax) -->
               <ng-container *ngIf="r.tax === 'EXEMPT' || !r.gstPct; else hasGst">
                 <div>Exempt (0%)</div>
                 <div class="small text-muted">
@@ -275,7 +277,6 @@
                 </div>
               </ng-container>
 
-              <!-- EXCLUSIVE / INCLUSIVE -->
               <ng-template #hasGst>
                 <div>
                   <span *ngIf="r.tax === 'EXCLUSIVE'">Exclusive (add GST)</span>
@@ -294,7 +295,8 @@
 
             <!-- Remove -->
             <td class="text-end">
-              <button class="btn btn-sm btn-outline-danger prl-btn-outline" (click)="removeLine(i)">
+              <button class="btn btn-sm btn-outline-danger prl-btn-outline"
+                      (click)="removeLine(i)">
                 <i class="fa fa-times"></i>
               </button>
             </td>
@@ -309,9 +311,9 @@
       </table>
     </div>
 
-    <!-- REMARKS + SUMMARY ROW -->
+    <!-- ================= NOTES + SUMMARY ================= -->
     <div class="row mt-3">
-      <!-- Remarks card (LEFT) -->
+      <!-- Notes -->
       <div class="col-lg-6 col-md-6">
         <div class="mb-2">
           <label class="form-label prl-label" style="font-weight: 600;">Notes</label>
@@ -326,53 +328,88 @@
         </div>
       </div>
 
-      <!-- SUMMARY CARD (RIGHT) -->
-      <div class="col-lg-4 offset-lg-2 col-md-6">
+      <!-- SUMMARY CARD -->
+      <div class="col-lg-6 col-md-6">
         <div class="prl-summary-card">
           <!-- Sub Total -->
           <div class="prl-summary-row">
             <span class="prl-summary-label">Sub Total</span>
-            <input
-              class="prl-summary-input"
-              type="text"
-              [value]="subtotal | number:'1.2-2'"
-              readonly
-            />
+            <input class="prl-summary-input"
+                   type="text"
+                   [value]="subtotal | number:'1.2-2'"
+                   readonly>
           </div>
 
-          <!-- Discount (value only, no %) -->
+          <!-- Discount -->
           <div class="prl-summary-row">
             <span class="prl-summary-label">Discount</span>
-            <input
-              class="prl-summary-input"
-              type="text"
-              [value]="totalDiscount | number:'1.2-2'"
-              readonly
-            />
+            <input class="prl-summary-input"
+                   type="text"
+                   [value]="totalDiscount | number:'1.2-2'"
+                   readonly>
           </div>
 
-          <!-- Tax (GST) -->
+          <!-- Tax -->
           <div class="prl-summary-row">
             <span class="prl-summary-label">Tax (GST)</span>
-            <input
-              class="prl-summary-input"
-              type="text"
-              [value]="totalTax | number:'1.2-2'"
-              readonly
-            />
+            <input class="prl-summary-input"
+                   type="text"
+                   [value]="totalTax | number:'1.2-2'"
+                   readonly>
           </div>
 
           <!-- Shipping -->
           <div class="prl-summary-row">
             <span class="prl-summary-label">Shipping</span>
-            <input
-              class="prl-summary-input"
-              type="number"
-              step="0.01"
-              [(ngModel)]="shipping"
-              (input)="updateNetTotal()"
-              [ngModelOptions]="{ standalone: true }"
-            />
+            <input class="prl-summary-input"
+                   type="number"
+                   step="0.01"
+                   [(ngModel)]="shipping"
+                   (input)="updateNetTotal()"
+                   [ngModelOptions]="{ standalone: true }">
+          </div>
+
+          <!-- Apply Advance -->
+          <div class="prl-summary-row" *ngIf="advanceList?.length">
+            <span class="prl-summary-label">Apply Advance</span>
+            <ng-select
+              class="prl-summary-select"
+              [items]="advanceList"
+              bindLabel="advanceNo"
+              bindValue="id"
+              [(ngModel)]="selectedAdvanceId"
+              (change)="onAdvanceSelected()"
+              [ngModelOptions]="{standalone:true}"
+              placeholder="Select Advance…">
+              <ng-template ng-option-tmp let-a="item">
+                <div class="d-flex flex-column">
+                  <span class="fw-600">{{ a.advanceNo }}</span>
+                  <small class="text-muted">
+                    Date: {{ a.advanceDate | date:'dd-MMM-yyyy' }}
+                    • Balance: {{ a.balanceAmount || a.BalanceAmount | number:'1.2-2' }}
+                  </small>
+                </div>
+              </ng-template>
+            </ng-select>
+          </div>
+
+          <!-- Amount to apply -->
+          <div class="prl-summary-row" *ngIf="advanceList?.length">
+            <span class="prl-summary-label small">Amount to apply</span>
+            <input class="prl-summary-input text-end"
+                   type="number"
+                   step="0.01"
+                   [(ngModel)]="advanceApplyAmount"
+                   (input)="onAdvanceAmountChanged()"
+                   [ngModelOptions]="{standalone:true}">
+          </div>
+
+          <!-- Advance Applied -->
+          <div class="prl-summary-row" *ngIf="advanceTotalApplied > 0">
+            <span class="prl-summary-label text-success">Advance Applied</span>
+            <span class="prl-summary-input text-success">
+              - {{ advanceTotalApplied | number:'1.2-2' }}
+            </span>
           </div>
 
           <!-- Net Total -->
@@ -384,7 +421,6 @@
           </div>
         </div>
       </div>
-
     </div>
 
   </div>

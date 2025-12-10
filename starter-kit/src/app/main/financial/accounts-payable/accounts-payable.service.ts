@@ -66,4 +66,10 @@ private baseUrl2 = environment.apiUrl + '/BankAccounts';
       map(res => res.data as BankAccountBalance[])
     );
   }
+  getSupplierAdvances() {
+  return this.http.get<any>(`${this.baseUrl}/supplier-advances`); // adjust URL
+}
+createSupplierAdvance(payload: any) {
+  return this.http.post<any>(`${this.baseUrl}/createsupplier-advance`, payload);
+}
 }

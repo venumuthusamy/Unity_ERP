@@ -1,4 +1,8 @@
 /* ===== Card wrapper & title ===== */
+:host {
+  display: block;
+}
+
 .pl-card {
   border-radius: 1rem;
   border: none;
@@ -24,11 +28,11 @@
   align-items: center;
   padding: 0.9rem 1.15rem;
   border-radius: 1.25rem;
-  background: #ffffff;                 /* full color remove – always white */
-  border: 1px solid #cbd5e1;           /* dark-ish outline */
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   position: relative;
-  overflow: hidden;                    /* bottom color bar inside card */
+  overflow: hidden;
 }
 
 .summary-icon {
@@ -51,8 +55,6 @@
   color: #6b7280;
 }
 
-
-
 .summary-value {
   font-size: 1.25rem;
   font-weight: 600;
@@ -61,7 +63,7 @@
 
 /* 🔴 Liabilities card – darker pink */
 .bs-liab-card {
-  border-bottom: 4px solid #f97373;     /* bottom la color */
+  border-bottom: 4px solid #f97373;
 
   .summary-icon {
     background: #fef2f2;
@@ -90,10 +92,10 @@
     color: #16a34a;
   }
 }
+
 /* ===== Two-column list style ===== */
 .pl-column {
   padding: 0.25rem 0.5rem;
-
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -246,7 +248,99 @@
   background-color: #e5e7eb;
 }
 
-/* Mobile tweaks */
+/* ===== Export buttons (same style as P&L) ===== */
+
+.report-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-btn-excel,
+.report-btn-pdf {
+  border: none;
+  border-radius: 999px;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0.25rem;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+
+  i {
+    font-size: 13px;
+  }
+
+  &:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.16);
+  }
+}
+
+:host {
+  display: block;
+}
+
+/* Wrapper: keeps gap same everywhere */
+.report-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Base button style – SAME for Excel & PDF */
+.report-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.28rem 0.9rem;          /* ← size controlled here */
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0.25rem;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+
+  i {
+    font-size: 13px;
+  }
+
+  &:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.16);
+  }
+}
+
+/* Excel color */
+.report-btn-excel {
+  background: linear-gradient(90deg, #2e5f73, #16a34a);
+}
+
+/* PDF color */
+.report-btn-pdf {
+  background: linear-gradient(90deg, #b91c1c, #f97316);
+}
+
+
+/* ===== Mobile tweaks ===== */
 @media (max-width: 767.98px) {
   .pl-item {
     padding: 0.55rem 0.7rem;
