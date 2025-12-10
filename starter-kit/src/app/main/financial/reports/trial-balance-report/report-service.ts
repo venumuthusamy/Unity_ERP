@@ -13,9 +13,12 @@ export class ReportsService {
     constructor(private http: HttpClient) { }
 
     getTrialBalance(filter: any): Observable<any> {
-        return this.http.post(`${this.url+this.baseUrl}/trial-balance`, filter);
+        return this.http.post(`${this.url + this.baseUrl}/trial-balance`, filter);
     }
     getTrialBalanceDetail(filter: any): Observable<any> {
-        return this.http.post(`${this.url+this.baseUrl}/trial-balance-detail`, filter);
+        return this.http.post(`${this.url + this.baseUrl}/trial-balance-detail`, filter);
+    }
+    saveOpeningBalance(body: any) {
+        return this.http.post<any>(`${this.url + this.baseUrl}/trial-balance/opening-balance`, body);
     }
 }

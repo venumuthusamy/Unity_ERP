@@ -111,6 +111,7 @@
                   <th class="text-end">Opening Credit</th>
                   <th class="text-end">Closing Debit</th>
                   <th class="text-end">Closing Credit</th>
+                  <th class="text-center" style="width:80px;">Action</th>
                 </tr>
               </thead>
 
@@ -134,10 +135,51 @@
                       </span>
                     </td>
 
-                    <td class="text-end">{{ getOpeningDebitDisplay(r) | number:'1.2-2' }}</td>
-                    <td class="text-end">{{ getOpeningCreditDisplay(r) | number:'1.2-2' }}</td>
+                    <td class="text-end">
+                      <ng-container *ngIf="r.isLeaf && r.isEditingOpening; else openingDebitRead">
+                        <input type="number" class="form-control form-control-sm text-end"
+                          [(ngModel)]="r.openingDebitEdit">
+                      </ng-container>
+                      <ng-template #openingDebitRead>
+                        {{ getOpeningDebitDisplay(r) | number:'1.2-2' }}
+                      </ng-template>
+                    </td>
+
+                    <td class="text-end">
+                      <ng-container *ngIf="r.isLeaf && r.isEditingOpening; else openingCreditRead">
+                        <input type="number" class="form-control form-control-sm text-end"
+                          [(ngModel)]="r.openingCreditEdit">
+                      </ng-container>
+                      <ng-template #openingCreditRead>
+                        {{ getOpeningCreditDisplay(r) | number:'1.2-2' }}
+                      </ng-template>
+                    </td>
+
                     <td class="text-end">{{ getClosingDebitDisplay(r) | number:'1.2-2' }}</td>
                     <td class="text-end">{{ getClosingCreditDisplay(r) | number:'1.2-2' }}</td>
+                    <td class="text-center">
+                      <ng-container *ngIf="r.isLeaf">
+                        <!-- Edit button -->
+                        <button *ngIf="!r.isEditingOpening" class="btn btn-sm btn-link p-0 tb-action-btn"
+                          (click)="startEditOpening(r, $event)" title="Edit opening">
+                          <i data-feather="edit-2" class="tb-action-icon"></i>
+                        </button>
+
+                        <!-- Save / Cancel buttons -->
+                        <ng-container *ngIf="r.isEditingOpening">
+                          <button class="btn btn-sm btn-link p-0 me-25 tb-action-btn" (click)="saveOpening(r, $event)"
+                            title="Save">
+                            <i data-feather="check" class="tb-action-icon"></i>
+                          </button>
+                          <button class="btn btn-sm btn-link p-0 tb-action-btn" (click)="cancelEditOpening(r, $event)"
+                            title="Cancel">
+                            <i data-feather="x" class="tb-action-icon"></i>
+                          </button>
+                        </ng-container>
+                      </ng-container>
+                    </td>
+
+
 
                   </tr>
 

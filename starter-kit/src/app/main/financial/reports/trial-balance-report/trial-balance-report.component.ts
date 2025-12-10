@@ -9,6 +9,11 @@ interface TbNode extends TrialBalance {
   expanded: boolean;
   isLeaf: boolean;
   children: TbNode[];
+
+  // opening edit support
+  isEditingOpening?: boolean;
+  openingDebitEdit?: number | null;
+  openingCreditEdit?: number | null;
 }
 
 @Component({
@@ -41,137 +46,160 @@ export class TrialBalanceReportComponent implements OnInit {
   selectedHead: TbNode | null = null;
   detailRows: any[] = [];
   detailLoading = false;
+  userName: string;
 
   constructor(private reportsService: ReportsService) { }
 
   ngOnInit(): void { }
-   ngAfterViewInit() {
-      feather.replace(); // ✅ Required to render the icons
-    }
+  ngAfterViewInit() {
+    feather.replace(); // ✅ Required to render the icons
+  }
 
   // ================== RUN TB ==================
- // ================== RUN TB ==================
-// ================== RUN TB ==================
-runTB(): void {
-  const body = {
-    fromDate: this.fromDate,
-    toDate: this.toDate,
-    companyId: this.companyId
-  };
+  // ================== RUN TB ==================
+  // ================== RUN TB ==================
+  runTB(): void {
+    const body = {
+      fromDate: this.fromDate,
+      toDate: this.toDate,
+      companyId: this.companyId
+    };
 
-  this.isLoading = true;
-  this.selectedHead = null;
-  this.detailRows = [];
+    this.isLoading = true;
+    this.selectedHead = null;
+    this.detailRows = [];
 
-  this.reportsService.getTrialBalance(body).subscribe({
-    next: (res: any) => {
-      this.rawRows = res.data || [];
+    this.reportsService.getTrialBalance(body).subscribe({
+      next: (res: any) => {
+        this.rawRows = res.data || [];
 
-      // 1. build nodes dictionary (keyed by HEAD CODE)
-      const mapByCode = new Map<string, TbNode>();  // <-- key = headCode
+        // 1. build nodes dictionary (keyed by HEAD CODE)
+        const mapByCode = new Map<string, TbNode>();  // <-- key = headCode
 
-      this.rawRows.forEach((r: any) => {
-        const node: TbNode = {
-          ...r,
-          parentHead: r.parentHead ?? null,   // parent HEAD CODE from API
-          level: 0,
-          expanded: false,
-          isLeaf: true,
-          children: []
-        };
+        this.rawRows.forEach((r: any) => {
+          const node: TbNode = {
+            ...r,
+            parentHead: r.parentHead ?? null,   // parent HEAD CODE from API
+            level: 0,
+            expanded: false,
+            isLeaf: true,
+            children: [],
+            isEditingOpening: false,
+            openingDebitEdit: r.openingDebit,
+            openingCreditEdit: r.openingCredit
+          };
 
-        mapByCode.set(String(node.headCode), node);
-      });
+          mapByCode.set(String(node.headCode), node);
+        });
 
-      // 2. build tree using headCode -> parentHead (also headCode)
-      const roots: TbNode[] = [];
+        // 2. build tree using headCode -> parentHead (also headCode)
+        const roots: TbNode[] = [];
 
-      mapByCode.forEach(node => {
-        const parentCode =
-          node.parentHead !== null && node.parentHead !== 0
-            ? String(node.parentHead)
-            : '';
+        mapByCode.forEach(node => {
+          const parentCode =
+            node.parentHead !== null && node.parentHead !== 0
+              ? String(node.parentHead)
+              : '';
 
-        if (parentCode && mapByCode.has(parentCode)) {
-          const parent = mapByCode.get(parentCode)!;
-          parent.children.push(node);
-          parent.isLeaf = false;
-          node.level = parent.level + 1;
-        } else {
-          // no parentCode or parent not in result => root node
-          roots.push(node);
-        }
-      });
+          if (parentCode && mapByCode.has(parentCode)) {
+            const parent = mapByCode.get(parentCode)!;
+            parent.children.push(node);
+            parent.isLeaf = false;
+            node.level = parent.level + 1;
+          } else {
+            // no parentCode or parent not in result => root node
+            roots.push(node);
+          }
+        });
 
-      // 3. sort children + roots by headCode
-      mapByCode.forEach(n => {
-        if (n.children?.length) {
-          n.children.sort((a, b) => a.headCode.localeCompare(b.headCode));
-        }
-      });
-      roots.sort((a, b) => a.headCode.localeCompare(b.headCode));
+        // 3. sort children + roots by headCode
+        mapByCode.forEach(n => {
+          if (n.children?.length) {
+            n.children.sort((a, b) => a.headCode.localeCompare(b.headCode));
+          }
+        });
+        roots.sort((a, b) => a.headCode.localeCompare(b.headCode));
 
-      this.roots = roots;
+        this.roots = roots;
 
-      // 4. recompute parent totals from children (no double counting)
-      this.roots.forEach(r => this.recalcTotalsRecursive(r));
+        // 4. recompute parent totals from children (no double counting)
+        this.roots.forEach(r => this.recalcTotalsRecursive(r));
 
-      // 5. build flat list (all parents collapsed by default)
-      this.roots.forEach(r => (r.expanded = false));
-      this.rebuildDisplayRows();
 
-      // 6. grand totals = only leaf accounts
-      const leafNodes: TbNode[] = [];
-      this.collectLeaves(this.roots, leafNodes);
+        // 5. build flat list (all parents collapsed by default)
+        this.roots.forEach(r => (r.expanded = false));
+        this.rebuildDisplayRows();
 
-      this.totalOpeningDebit = leafNodes.reduce(
-        (s, n) => s + (n.openingDebit || 0),
-        0
-      );
-      this.totalOpeningCredit = leafNodes.reduce(
-        (s, n) => s + (n.openingCredit || 0),
-        0
-      );
-      this.totalClosingDebit = leafNodes.reduce(
-        (s, n) => s + (n.closingDebit || 0),
-        0
-      );
-      this.totalClosingCredit = leafNodes.reduce(
-        (s, n) => s + (n.closingCredit || 0),
-        0
-      );
+        // 6. grand totals = only leaf accounts
+        const leafNodes: TbNode[] = [];
+        this.collectLeaves(this.roots, leafNodes);
 
-      this.isLoading = false;
-    },
-    error: () => {
-      this.roots = [];
-      this.displayRows = [];
-      this.totalOpeningDebit =
-        this.totalOpeningCredit =
-        this.totalClosingDebit =
-        this.totalClosingCredit =
+        this.totalOpeningDebit = leafNodes.reduce(
+          (s, n) => s + (n.openingDebit || 0),
+          0
+        );
+        this.totalOpeningCredit = leafNodes.reduce(
+          (s, n) => s + (n.openingCredit || 0),
+          0
+        );
+        this.totalClosingDebit = leafNodes.reduce(
+          (s, n) => s + (n.closingDebit || 0),
+          0
+        );
+        this.totalClosingCredit = leafNodes.reduce(
+          (s, n) => s + (n.closingCredit || 0),
+          0
+        );
+
+        this.isLoading = false;
+      },
+      error: () => {
+        this.roots = [];
+        this.displayRows = [];
+        this.totalOpeningDebit =
+          this.totalOpeningCredit =
+          this.totalClosingDebit =
+          this.totalClosingCredit =
           0;
-      this.isLoading = false;
-    }
-  });
-}
+        this.isLoading = false;
+      }
+    });
+  }
 
 
 
   // recursively sum children into parent
   private recalcTotalsRecursive(node: TbNode): void {
+    // keep own values safe first
+    const ownOD = node.openingDebit || 0;
+    const ownOC = node.openingCredit || 0;
+    const ownCD = node.closingDebit || 0;
+    const ownCC = node.closingCredit || 0;
+
     if (!node.children.length) {
-      // leaf, keep as is
+      // leaf: just keep its own values
+      node.openingDebit = ownOD;
+      node.openingCredit = ownOC;
+      node.closingDebit = ownCD;
+      node.closingCredit = ownCC;
       return;
     }
 
+    // recurse children first
     node.children.forEach(c => this.recalcTotalsRecursive(c));
 
-    node.openingDebit = node.children.reduce((s, n) => s + (n.openingDebit || 0), 0);
-    node.openingCredit = node.children.reduce((s, n) => s + (n.openingCredit || 0), 0);
-    node.closingDebit = node.children.reduce((s, n) => s + (n.closingDebit || 0), 0);
-    node.closingCredit = node.children.reduce((s, n) => s + (n.closingCredit || 0), 0);
+    const childrenOD = node.children.reduce((s, n) => s + (n.openingDebit || 0), 0);
+    const childrenOC = node.children.reduce((s, n) => s + (n.openingCredit || 0), 0);
+    const childrenCD = node.children.reduce((s, n) => s + (n.closingDebit || 0), 0);
+    const childrenCC = node.children.reduce((s, n) => s + (n.closingCredit || 0), 0);
+
+    // parent total = own + children
+    node.openingDebit = ownOD + childrenOD;
+    node.openingCredit = ownOC + childrenOC;
+    node.closingDebit = ownCD + childrenCD;
+    node.closingCredit = ownCC + childrenCC;
   }
+
 
   private collectLeaves(nodes: TbNode[], bucket: TbNode[]): void {
     nodes.forEach(n => {
@@ -183,6 +211,9 @@ runTB(): void {
     });
   }
 
+  private refreshFeatherIcons(): void {
+  setTimeout(() => feather.replace(), 0);
+  }
   // rebuild flat list based on expanded flags
   private rebuildDisplayRows(): void {
     this.displayRows = [];
@@ -195,8 +226,9 @@ runTB(): void {
     };
 
     this.roots.forEach(r => visit(r));
+    this.refreshFeatherIcons();
   }
-    // ============= DISPLAY HELPERS (parent expanded => 0) =============
+  // ============= DISPLAY HELPERS (parent expanded => 0) =============
 
   private isHeadingExpanded(node: TbNode): boolean {
     return !!(node.children && node.children.length && node.expanded);
@@ -269,4 +301,68 @@ runTB(): void {
       }
     });
   }
+  startEditOpening(node: TbNode, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!node.isLeaf) {
+      return;
+    }
+
+    node.isEditingOpening = true;
+    node.openingDebitEdit = node.openingDebit || 0;
+    node.openingCreditEdit = node.openingCredit || 0;
+
+    setTimeout(() => feather.replace(), 0);
+  }
+
+  cancelEditOpening(node: TbNode, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    node.isEditingOpening = false;
+    node.openingDebitEdit = node.openingDebit || 0;
+    node.openingCreditEdit = node.openingCredit || 0;
+
+    setTimeout(() => feather.replace(), 0);
+  }
+
+  saveOpening(node: TbNode, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.userName = localStorage.getItem('username');
+
+    const body = {
+      headId: node.headId,
+      companyId: this.companyId,
+      openingDebit: node.openingDebitEdit || 0,
+      openingCredit: node.openingCreditEdit || 0,
+      asOfDate: this.fromDate, // or specific date / period
+      username : this.userName 
+    };
+
+    // You may want a small loading flag on the node if needed.
+
+    this.reportsService.saveOpeningBalance(body).subscribe({
+      next: () => {
+        // update current node values
+        node.openingDebit = body.openingDebit;
+        node.openingCredit = body.openingCredit;
+        node.isEditingOpening = false;
+
+        // Re-run totals and refresh view
+        this.roots.forEach(r => this.recalcTotalsRecursive(r));
+        this.rebuildDisplayRows();
+
+        setTimeout(() => feather.replace(), 0);
+      },
+      error: () => {
+        // handle error (toast)
+      }
+    });
+  }
+
 }
