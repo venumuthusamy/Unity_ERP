@@ -148,3 +148,27 @@
   color: #4f46e5;                      /* indigo text */
 }
 
+/* Action column smaller & centered */
+.trial-table th:last-child,
+.trial-table td:last-child {
+  width: 70px;
+  text-align: center;
+}
+
+/* Small round-ish icon buttons */
+.tb-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;   /* overall button size */
+  height: 24px;
+  padding: 0;
+}
+
+/* Feather icon size inside the button */
+.tb-action-icon,
+.tb-action-btn svg {
+  width: 14px;   /* <- change to 12/16 if you want smaller/bigger */
+  height: 14px;
+  stroke-width: 2.2;   /* slightly bolder line, optional */
+}
