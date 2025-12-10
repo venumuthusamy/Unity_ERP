@@ -5,15 +5,17 @@ import Swal from 'sweetalert2';
 import { PeriodCloseService } from '../../period-close-fx/period-close-fx.service';
 
 type JournalRow = {
-  id: number;                 // 👈 NEW
-  headName: string;
-  headCode: number | string;
-  amount: number;             // credit
-  debitAmount: number;        // debit
+  id: number;
+  journalNo: string;
+  journalDate: string;
+  description: string;
+  debitAmount: number;      // total debit
+  creditAmount: number;     // total credit
   isRecurring: boolean;
   recurringFrequency?: string | null;
-  isPosted?: boolean;         // 👈 NEW (optional)
+  isPosted?: boolean;
 };
+
 export interface PeriodStatusDto {
   isLocked: boolean;
   periodName?: string;
@@ -29,31 +31,34 @@ export interface PeriodStatusDto {
 })
 export class JournalComponent implements OnInit {
 
-  // Filters / header
+  // Filters / header (you can wire to backend later if needed)
   journalDate: string | null = null;
   reference: string = '';
   selectedType: string | null = null;
 
   journalTypes = [
-    { text: 'Standard',  value: 'Standard'  },
-    { text: 'Accrual',   value: 'Accrual'   },
-    { text: 'Adjustment',value: 'Adjustment'}
+    { text: 'Standard',   value: 'Standard'  },
+    { text: 'Accrual',    value: 'Accrual'   },
+    { text: 'Adjustment', value: 'Adjustment'}
   ];
 
   // Data
   journalList: JournalRow[] = [];
 
-  // Header info
+  // Header info badges (top summary)
   entryTypeLabel: string = '-';          // Recurring / One-time payment
-  recurringFrequencyLabel: string = '-'; // Daily / Monthly / Every Minute (Test) / -
+  recurringFrequencyLabel: string = '-'; // Daily / Monthly / -
 
   // Totals
   totalDebit: number = 0;
   totalCredit: number = 0;
 
   isLoading = false;
-isPeriodLocked = false;
+
+  // Period lock
+  isPeriodLocked = false;
   currentPeriodName = '';
+
   constructor(
     private router: Router,
     private journalService: JournalService,
@@ -65,7 +70,8 @@ isPeriodLocked = false;
     this.checkPeriodLockForDate(today);
     this.loadJournals();
   }
-private checkPeriodLockForDate(dateStr: string): void {
+
+  private checkPeriodLockForDate(dateStr: string): void {
     if (!dateStr) { return; }
 
     this.periodService.getStatusForDateWithName(dateStr).subscribe({
@@ -90,6 +96,7 @@ private checkPeriodLockForDate(dateStr: string): void {
       'warning'
     );
   }
+
   reload(): void {
     this.loadJournals();
   }
@@ -101,8 +108,9 @@ private checkPeriodLockForDate(dateStr: string): void {
       next: (res: any) => {
         this.isLoading = false;
 
-        // response shape: { isSuccess, message, data: [...] }
         const rows = res?.data || [];
+        // API returns: id, journalNo, journalDate, debitAmount, creditAmount,
+        // isRecurring, recurringFrequency, isPosted, description
         this.journalList = rows as JournalRow[];
 
         this.updateHeaderRecurringInfo();
@@ -145,8 +153,8 @@ private checkPeriodLockForDate(dateStr: string): void {
       case 'Monthly':      return 'Monthly';
       case 'Quarterly':    return 'Quarterly';
       case 'Yearly':       return 'Yearly';
-      case 'EveryMinute':  return 'Every minute (Test)';      // 👈 your current response
-      case 'TenMin':       return 'Every 10 minutes (Test)';  // 👈 fallback if some old data
+      case 'EveryMinute':  return 'Every minute (Test)';
+      case 'TenMin':       return 'Every 10 minutes (Test)';
       default:             return '-';
     }
   }
@@ -156,47 +164,53 @@ private checkPeriodLockForDate(dateStr: string): void {
     let credit = 0;
 
     for (const r of this.journalList || []) {
-      debit  += Number(r.debitAmount) || 0;
-      credit += Number(r.amount) || 0;
+      debit  += Number(r.debitAmount)   || 0;
+      credit += Number(r.creditAmount)  || 0;
     }
 
     this.totalDebit = debit;
     this.totalCredit = credit;
   }
 
-newJournal(): void {
- this.router.navigate(['financial/create-journal']);
-}
+  newJournal(): void {
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('create a journal');
+      return;
+    }
+    this.router.navigate(['financial/create-journal']);
+  }
 
   submit(): void {
-    debugger
-  if (!this.journalList || this.journalList.length === 0) {
-    return;
-  }
-
-  // only valid ids
-  const ids = this.journalList
-    .map(r => r.id)
-    .filter(id => !!id);
-
-  if (!ids.length) {
-    return;
-  }
-
-  this.isLoading = true;
-
-  this.journalService.postBatch(ids).subscribe({
-    next: res => {
-      this.isLoading = false;
-      Swal.fire('hi','Journals Posted General Ledger Successfully','success')
-      // reload list so we see updated data
-      this.loadJournals();
-    },
-    error: err => {
-      this.isLoading = false;
-      console.error('Error posting journals', err);
+    // Post batch to GL
+    if (this.isPeriodLocked) {
+      this.showPeriodLockedSwal('post journals');
+      return;
     }
-  });
-}
 
+    if (!this.journalList || this.journalList.length === 0) {
+      return;
+    }
+
+    const ids = this.journalList
+      .map(r => r.id)
+      .filter(id => !!id);
+
+    if (!ids.length) {
+      return;
+    }
+
+    this.isLoading = true;
+
+    this.journalService.postBatch(ids).subscribe({
+      next: res => {
+        this.isLoading = false;
+        Swal.fire('Success', 'Journals posted to General Ledger successfully.', 'success');
+        this.loadJournals();
+      },
+      error: err => {
+        this.isLoading = false;
+        console.error('Error posting journals', err);
+      }
+    });
+  }
 }
