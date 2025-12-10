@@ -27,33 +27,23 @@
             <!-- Customer -->
             <div class="col-md-4">
               <label class="form-label">Customer <span class="text-danger">*</span></label>
-              <ng-select
-                [items]="customerList"
-                bindLabel="customerName"
-                bindValue="customerId"
-                [(ngModel)]="customerId"
-                name="customerId"
-                placeholder="Select customer"
-                (change)="onCustomerChange($event)">
+              <ng-select [items]="customerList" bindLabel="customerName" bindValue="customerId" [(ngModel)]="customerId"
+                name="customerId" placeholder="Select customer" (change)="onCustomerChange($event)">
               </ng-select>
             </div>
 
             <!-- Date -->
             <div class="col-md-2 col-6">
               <label class="form-label">Date <span class="text-danger">*</span></label>
-              <input type="date"
-                     class="form-control"
-                     [(ngModel)]="receiptDate"
-                     name="receiptDate" />
+              <input type="date" class="form-control" [(ngModel)]="receiptDate" name="receiptDate" />
             </div>
-
             <!-- Payment Mode -->
             <div class="col-md-2 col-6">
-              <label class="form-label d-block">Payment Mode <span class="text-danger">*</span></label>
-              <select class="bank-select w-100"
-                      [(ngModel)]="paymentMode"
-                      name="paymentMode"
-                      (change)="onPaymentModeChange()">
+              <label class="form-label d-block">
+                Payment Mode <span class="text-danger">*</span>
+              </label>
+              <select class="form-control" [(ngModel)]="paymentMode" name="paymentMode"
+                (change)="onPaymentModeChange()">
                 <option value="CASH">Cash</option>
                 <option value="BANK">Bank</option>
               </select>
@@ -61,40 +51,33 @@
 
             <!-- Bank -->
             <div class="col-md-2" *ngIf="paymentMode === 'BANK'">
-              <label class="form-label d-block">Bank <span class="text-danger">*</span></label>
-              <ng-select
-                class="w-100 bank-select"
-                [items]="banks"
-                bindLabel="bankName"
-                bindValue="id"
-                [(ngModel)]="selectedBankId"
-                name="bankId"
-                placeholder="-- Select Bank --"
-                (change)="onBankChange()">
+              <label class="form-label d-block">
+                Bank <span class="text-danger">*</span>
+              </label>
+              <ng-select class="w-100 bank-select" [items]="banks" bindLabel="bankName" bindValue="id"
+                [(ngModel)]="selectedBankId" name="bankId" placeholder="-- Select Bank --" (change)="onBankChange($event)">
               </ng-select>
+
+              <div class="text-muted small bank-balance-text" *ngIf="bankAvailableBalance !== null">
+                <div>
+                  Available:
+                  <strong>{{ bankAvailableBalance | number:'1.2-2' }}</strong>
+                </div>
+              </div>
             </div>
+
 
             <!-- Amount Received -->
             <div class="col-md-2">
               <label class="form-label">Amount Received <span class="text-danger">*</span></label>
 
               <!-- CASH -->
-              <input *ngIf="paymentMode === 'CASH'"
-                     type="number"
-                     class="form-control text-end"
-                     [(ngModel)]="amountReceived"
-                     name="amountReceived"
-                     min="0"
-                     (input)="onAmountReceivedChange()" />
+              <input *ngIf="paymentMode === 'CASH'" type="number" class="form-control text-end"
+                [(ngModel)]="amountReceived" name="amountReceived" min="0" (input)="onAmountReceivedChange()" />
 
               <!-- BANK -->
-              <input *ngIf="paymentMode === 'BANK'"
-                     type="number"
-                     class="form-control text-end"
-                    [(ngModel)]="amountReceived"
-                     name="amountReceivedBank"
-                     (input)="onAmountReceivedChange()"
-                      />
+              <input *ngIf="paymentMode === 'BANK'" type="number" class="form-control text-end"
+                [(ngModel)]="amountReceived" name="amountReceivedBank" (input)="onAmountReceivedChange()" />
             </div>
           </div>
 
@@ -133,9 +116,7 @@
                 <tr>
                   <!-- Select-all checkbox -->
                   <th class="text-center" style="width: 40px;">
-                    <input
-                      type="checkbox"
-                      [checked]="allSelected"
+                    <input type="checkbox" [checked]="allSelected"
                       (change)="onHeaderCheckboxChange($event.target.checked)" />
                   </th>
                   <th>Invoice</th>
@@ -150,9 +131,7 @@
                 <tr *ngFor="let inv of invoices; let i = index">
                   <!-- Row checkbox -->
                   <td class="text-center">
-                    <input
-                      type="checkbox"
-                      [checked]="allocations[i]?.selected"
+                    <input type="checkbox" [checked]="allocations[i]?.selected"
                       (change)="onRowCheckboxChange(i, $event.target.checked)" />
                   </td>
 
@@ -172,12 +151,8 @@
 
                   <!-- Allocate -->
                   <td class="text-end">
-                    <input type="number"
-                           min="0"
-                           class="form-control form-control-sm text-end"
-                           [(ngModel)]="allocations[i].allocatedAmount"
-                           name="alloc_{{ i }}"
-                           (input)="onAllocateChange(i)" />
+                    <input type="number" min="0" class="form-control form-control-sm text-end"
+                      [(ngModel)]="allocations[i].allocatedAmount" name="alloc_{{ i }}" (input)="onAllocateChange(i)" />
                   </td>
                 </tr>
 

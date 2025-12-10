@@ -5,6 +5,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { ReceiptService, ReceiptDetailDto } from '../receipt-service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { BankService } from 'app/main/master/bank/bank-service/bank.service';
+import Swal from 'sweetalert2';
+import { AccountsPayableService } from 'app/main/financial/accounts-payable/accounts-payable.service';
 
 interface AllocationRow {
   invoiceId: number;
@@ -42,6 +44,8 @@ export class ReceiptCreateComponent implements OnInit {
 
   isSaving = false;
   customerList: any[] = [];
+  bankAccounts: any;
+  bankAvailableBalance: any;
 
   constructor(
     private receiptService: ReceiptService,
@@ -50,6 +54,7 @@ export class ReceiptCreateComponent implements OnInit {
     private route: ActivatedRoute,
     private _customerMasterService: CustomerMasterService,
     private _bankService: BankService,
+    private apSvc: AccountsPayableService,
   ) {
     const today = new Date();
     this.receiptDate = today.toISOString().substring(0, 10);
@@ -59,6 +64,13 @@ export class ReceiptCreateComponent implements OnInit {
 
     this._bankService.getAllBank().subscribe((res: any) => {
       this.banks = res.data || [];
+    });
+    this.apSvc.getBankAccounts().subscribe({
+        next: (res: any) => {
+          // Expecting: { id, headName, availableBalance, ... }
+          this.bankAccounts = res?.data || res || [];
+        },
+        error: () => Swal.fire('Error', 'Failed to load bank accounts', 'error')
     });
 
     this._customerMasterService.GetAllCustomerDetails().subscribe((res: any) => {
@@ -187,10 +199,14 @@ export class ReceiptCreateComponent implements OnInit {
     }
   }
 
-  onBankChange(): void {
+  onBankChange(event): void {
+    debugger
+    const bank = this.bankAccounts.find(x => x.id === event.budgetLineId);
+    this.bankAvailableBalance = bank?.availableBalance || 0;
     if (!this.customerId || !this.selectedBankId) {
       return;
     }
+  
     // TODO: call API for bank amount
   }
 
