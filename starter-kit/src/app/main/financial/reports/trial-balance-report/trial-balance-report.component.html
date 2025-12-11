@@ -8,7 +8,22 @@
           <h4 class="mb-50" style="font-weight:600;color:#2E5F73;">
             Trial Balance
           </h4>
+
+          <div class="d-flex align-items-center gst-export">
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportToPdf()"
+              [disabled]="!displayRows?.length">
+              <i class="far fa-file-pdf me-25"></i>
+              <span>PDF</span>
+            </button>
+
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportToExcel()"
+              [disabled]="!displayRows?.length">
+              <i class="far fa-file-excel me-25"></i>
+              <span>Excel</span>
+            </button>
+          </div>
         </div>
+
 
         <div class="card-body pt-1">
 

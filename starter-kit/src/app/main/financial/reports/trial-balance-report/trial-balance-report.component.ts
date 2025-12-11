@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { ReportsService } from './report-service';
 import { TrialBalance } from '../trial-balance-model';
 import feather from 'feather-icons';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 
 interface TbNode extends TrialBalance {
   parentHead: number | null;
@@ -404,6 +408,124 @@ export class TrialBalanceReportComponent implements OnInit {
     if (this.totalRows === 0) return 0;
     const end = this.currentPage * this.pageSize;
     return end > this.totalRows ? this.totalRows : end;
+  }
+
+  private buildTbExportRows(): any[] {
+    // 1) take only leaf nodes
+    const leaves: TbNode[] = [];
+    this.collectLeaves(this.roots, leaves);
+
+    // 2) keep only rows where any value > 0
+    const valueRows = leaves.filter(n => {
+      const od = this.getOpeningDebitDisplay(n) || 0;
+      const oc = this.getOpeningCreditDisplay(n) || 0;
+      const cd = this.getClosingDebitDisplay(n) || 0;
+      const cc = this.getClosingCreditDisplay(n) || 0;
+      return od !== 0 || oc !== 0 || cd !== 0 || cc !== 0;
+    });
+
+    // 3) map to export format
+    const rows: any[] = valueRows.map((n, idx) => ({
+      'Sl. No': idx + 1,
+      'Head Code': n.headCode,
+      'Head Name': n.headName,
+      'Opening Debit': this.getOpeningDebitDisplay(n),
+      'Opening Credit': this.getOpeningCreditDisplay(n),
+      'Closing Debit': this.getClosingDebitDisplay(n),
+      'Closing Credit': this.getClosingCreditDisplay(n)
+    }));
+
+    // 4) add TOTAL row (always show)
+    rows.push({
+      'Sl. No': '',
+      'Head Code': '',
+      'Head Name': 'Total',
+      'Opening Debit': this.totalOpeningDebit,
+      'Opening Credit': this.totalOpeningCredit,
+      'Closing Debit': this.totalClosingDebit,
+      'Closing Credit': this.totalClosingCredit
+    });
+
+    return rows;
+  }
+
+
+
+  exportToExcel(): void {
+    const data = this.buildTbExportRows();
+    if (!data.length) { return; }
+
+    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Trial Balance');
+
+    const from = this.fromDate || 'all';
+    const to = this.toDate || 'all';
+    const fileName = `Trial-Balance-${from}-to-${to}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+  }
+
+  exportToPdf(): void {
+    const data = this.buildTbExportRows();   // already filtered > 0
+    if (!data.length) { return; }
+
+    const doc = new jsPDF('l', 'pt', 'a4'); // landscape
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    const from = this.fromDate || 'All';
+    const to = this.toDate || 'All';
+    const title = `Trial Balance (${from} to ${to})`;
+
+    doc.setFontSize(12);
+    doc.text(title, pageWidth / 2, 30, { align: 'center' });
+
+    const head = [[
+      'Sl. No',
+      'Head Code',
+      'Head Name',
+      'Opening Debit',
+      'Opening Credit',
+      'Closing Debit',
+      'Closing Credit'
+    ]];
+
+    const body = data.map(r => [
+      r['Sl. No'].toString(),
+      r['Head Code'].toString(),
+      r['Head Name'],
+      (r['Opening Debit'] || 0).toFixed(2),
+      (r['Opening Credit'] || 0).toFixed(2),
+      (r['Closing Debit'] || 0).toFixed(2),
+      (r['Closing Credit'] || 0).toFixed(2)
+    ]);
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 45,
+      margin: { left: 40, right: 40 },
+      styles: {
+        fontSize: 9,
+        halign: 'right',
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { halign: 'center' }, // Sl. No
+        1: { halign: 'left' },   // Head Code
+        2: { halign: 'left' },   // Head Name
+        3: { halign: 'center' },
+        4: { halign: 'center' },
+        5: { halign: 'center' },
+        6: { halign: 'center' }
+      },
+      headStyles: {
+        halign: 'left'
+      }
+    });
+
+    const fileName = `Trial-Balance-${from}-to-${to}.pdf`;
+    doc.save(fileName);
   }
 
 
