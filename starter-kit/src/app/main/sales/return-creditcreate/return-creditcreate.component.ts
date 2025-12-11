@@ -144,7 +144,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
           unitPrice: +l.unitPrice,
           discountPct: +l.discountPct,
           gstPct: +(l.gstPct ?? 0),
-          tax: l.tax ?? 'EXCLUSIVE',
+          tax: l.tax ?? 'STANDARD-RATED',
           taxCodeId: l.taxCodeId,
           lineNet: +l.lineNet,
           reasonId: l.reasonId,
@@ -210,7 +210,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
           unitPrice: +(r.UnitPrice ?? 0),
           discountPct: +(r.DiscountPct ?? 0),
           gstPct: +(r.GstPct ?? r.gstPct ?? 0),
-          tax: r.Tax ?? r.tax ?? 'EXCLUSIVE',
+          tax: r.Tax ?? r.tax ?? 'STANDARD-RATED',
           taxCodeId: r.TaxCodeId ?? null,
           warehouseId: r.WarehouseId ?? null,
           supplierId: r.SupplierId ?? null,
@@ -260,7 +260,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
       unitPrice: 0,
       discountPct: 0,
       gstPct: 0,
-      tax: 'EXCLUSIVE',
+      tax: 'STANDARD-RATED',
       taxCodeId: null,
       lineNet: 0,
       reasonId: null,
@@ -293,7 +293,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
     row.unitPrice = src.unitPrice;
     row.discountPct = src.discountPct ?? 0;
     row.gstPct = src.gstPct ?? 0;
-    row.tax = src.tax ?? 'EXCLUSIVE';
+    row.tax = src.tax ?? 'STANDARD-RATED';
     row.taxCodeId = src.taxCodeId ?? null;
 
     row.warehouseId = src.warehouseId ?? null;
@@ -332,7 +332,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
 
     if (!hasTax || taxFlag === 'EXEMPT') {
       lineNet = baseAmount;
-    } else if (taxFlag === 'EXCLUSIVE') {
+    } else if (taxFlag === 'STANDARD-RATED') {
       const gstAmount = +(baseAmount * (gstPct / 100)).toFixed(2);
       lineNet = baseAmount + gstAmount;
     } else {
@@ -389,7 +389,7 @@ export class ReturnCreditcreateComponent implements OnInit, OnDestroy {
         unitPrice: +l.unitPrice,
         discountPct: +l.discountPct,
         gstPct: l.gstPct ?? 0,
-        tax: l.tax ?? 'EXCLUSIVE',
+        tax: l.tax ?? 'STANDARD-RATED',
         taxCodeId: l.taxCodeId ?? null,
         lineNet: +l.lineNet,
         reasonId: l.reasonId ?? null,
