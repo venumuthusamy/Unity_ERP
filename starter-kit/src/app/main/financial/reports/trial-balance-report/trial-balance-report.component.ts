@@ -27,6 +27,10 @@ export class TrialBalanceReportComponent implements OnInit {
   toDate: string | null = null;
   companyId: number | null = 1;
 
+  // for Show entries + Search
+  selectedOption = 25;          // default page size
+  searchValue = '';
+
   // raw rows from API (for debugging)
   rawRows: any[] = [];
 
@@ -47,16 +51,18 @@ export class TrialBalanceReportComponent implements OnInit {
   detailRows: any[] = [];
   detailLoading = false;
   userName: string;
+  pageSize = 10;
+  currentPage = 1;
+  totalRows = 0;
 
   constructor(private reportsService: ReportsService) { }
 
   ngOnInit(): void { }
+
   ngAfterViewInit() {
-    feather.replace(); // ✅ Required to render the icons
+    feather.replace();
   }
 
-  // ================== RUN TB ==================
-  // ================== RUN TB ==================
   // ================== RUN TB ==================
   runTB(): void {
     const body = {
@@ -68,18 +74,18 @@ export class TrialBalanceReportComponent implements OnInit {
     this.isLoading = true;
     this.selectedHead = null;
     this.detailRows = [];
+    this.currentPage = 1;
 
     this.reportsService.getTrialBalance(body).subscribe({
       next: (res: any) => {
         this.rawRows = res.data || [];
 
-        // 1. build nodes dictionary (keyed by HEAD CODE)
-        const mapByCode = new Map<string, TbNode>();  // <-- key = headCode
+        const mapByCode = new Map<string, TbNode>();
 
         this.rawRows.forEach((r: any) => {
           const node: TbNode = {
             ...r,
-            parentHead: r.parentHead ?? null,   // parent HEAD CODE from API
+            parentHead: r.parentHead ?? null,
             level: 0,
             expanded: false,
             isLeaf: true,
@@ -88,11 +94,9 @@ export class TrialBalanceReportComponent implements OnInit {
             openingDebitEdit: r.openingDebit,
             openingCreditEdit: r.openingCredit
           };
-
           mapByCode.set(String(node.headCode), node);
         });
 
-        // 2. build tree using headCode -> parentHead (also headCode)
         const roots: TbNode[] = [];
 
         mapByCode.forEach(node => {
@@ -107,12 +111,10 @@ export class TrialBalanceReportComponent implements OnInit {
             parent.isLeaf = false;
             node.level = parent.level + 1;
           } else {
-            // no parentCode or parent not in result => root node
             roots.push(node);
           }
         });
 
-        // 3. sort children + roots by headCode
         mapByCode.forEach(n => {
           if (n.children?.length) {
             n.children.sort((a, b) => a.headCode.localeCompare(b.headCode));
@@ -122,15 +124,11 @@ export class TrialBalanceReportComponent implements OnInit {
 
         this.roots = roots;
 
-        // 4. recompute parent totals from children (no double counting)
         this.roots.forEach(r => this.recalcTotalsRecursive(r));
 
-
-        // 5. build flat list (all parents collapsed by default)
         this.roots.forEach(r => (r.expanded = false));
         this.rebuildDisplayRows();
 
-        // 6. grand totals = only leaf accounts
         const leafNodes: TbNode[] = [];
         this.collectLeaves(this.roots, leafNodes);
 
@@ -166,18 +164,14 @@ export class TrialBalanceReportComponent implements OnInit {
     });
   }
 
-
-
-  // recursively sum children into parent
+  // -------- recursion / totals (unchanged) --------
   private recalcTotalsRecursive(node: TbNode): void {
-    // keep own values safe first
     const ownOD = node.openingDebit || 0;
     const ownOC = node.openingCredit || 0;
     const ownCD = node.closingDebit || 0;
     const ownCC = node.closingCredit || 0;
 
     if (!node.children.length) {
-      // leaf: just keep its own values
       node.openingDebit = ownOD;
       node.openingCredit = ownOC;
       node.closingDebit = ownCD;
@@ -185,7 +179,6 @@ export class TrialBalanceReportComponent implements OnInit {
       return;
     }
 
-    // recurse children first
     node.children.forEach(c => this.recalcTotalsRecursive(c));
 
     const childrenOD = node.children.reduce((s, n) => s + (n.openingDebit || 0), 0);
@@ -193,13 +186,11 @@ export class TrialBalanceReportComponent implements OnInit {
     const childrenCD = node.children.reduce((s, n) => s + (n.closingDebit || 0), 0);
     const childrenCC = node.children.reduce((s, n) => s + (n.closingCredit || 0), 0);
 
-    // parent total = own + children
     node.openingDebit = ownOD + childrenOD;
     node.openingCredit = ownOC + childrenOC;
     node.closingDebit = ownCD + childrenCD;
     node.closingCredit = ownCC + childrenCC;
   }
-
 
   private collectLeaves(nodes: TbNode[], bucket: TbNode[]): void {
     nodes.forEach(n => {
@@ -212,24 +203,50 @@ export class TrialBalanceReportComponent implements OnInit {
   }
 
   private refreshFeatherIcons(): void {
-  setTimeout(() => feather.replace(), 0);
+    setTimeout(() => feather.replace(), 0);
   }
-  // rebuild flat list based on expanded flags
-  private rebuildDisplayRows(): void {
-    this.displayRows = [];
+
+  // ================= FLATTEN + FILTER + PAGINATE =================
+  rebuildDisplayRows(): void {
+    const flat: TbNode[] = [];
 
     const visit = (n: TbNode) => {
-      this.displayRows.push(n);
+      flat.push(n);
       if (n.expanded && n.children.length) {
         n.children.forEach(c => visit(c));
       }
     };
 
     this.roots.forEach(r => visit(r));
+
+    // ---------- SEARCH FILTER ----------
+    const term = (this.searchValue || '').toLowerCase();
+    let filtered = flat;
+
+    if (term) {
+      filtered = flat.filter(n =>
+        String(n.headCode).includes(term) ||
+        (n.headName || '').toLowerCase().includes(term)
+      );
+    }
+
+    // ---------- PAGINATION ----------
+    this.totalRows = filtered.length;
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+
+    this.displayRows = filtered.slice(start, end);
+
     this.refreshFeatherIcons();
   }
-  // ============= DISPLAY HELPERS (parent expanded => 0) =============
 
+
+  filterUpdate(): void {
+    this.currentPage = 1;
+    this.rebuildDisplayRows();
+  }
+
+  // ============= DISPLAY HELPERS (parent expanded => 0) =============
   private isHeadingExpanded(node: TbNode): boolean {
     return !!(node.children && node.children.length && node.expanded);
   }
@@ -250,13 +267,12 @@ export class TrialBalanceReportComponent implements OnInit {
     return this.isHeadingExpanded(node) ? 0 : (node.closingCredit || 0);
   }
 
-
   toggleNode(node: TbNode, event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();
     }
     if (!node.children.length) {
-      return; // leaf, nothing to expand
+      return;
     }
     node.expanded = !node.expanded;
     this.rebuildDisplayRows();
@@ -264,13 +280,11 @@ export class TrialBalanceReportComponent implements OnInit {
 
   // ================== DETAIL ==================
   onRowClick(row: TbNode): void {
-    // only drill-down for leaf accounts (Laptop, Mobile, Venugopal, Apple…)
     if (!row.isLeaf && row.children.length) {
       return;
     }
 
     if (this.selectedHead && this.selectedHead.headId === row.headId) {
-      // toggle off
       this.selectedHead = null;
       this.detailRows = [];
       return;
@@ -301,20 +315,19 @@ export class TrialBalanceReportComponent implements OnInit {
       }
     });
   }
+
+  // opening edit methods (unchanged)
   startEditOpening(node: TbNode, event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();
     }
-
-    if (!node.isLeaf) {
-      return;
-    }
+    if (!node.isLeaf) return;
 
     node.isEditingOpening = true;
     node.openingDebitEdit = node.openingDebit || 0;
     node.openingCreditEdit = node.openingCredit || 0;
 
-    setTimeout(() => feather.replace(), 0);
+    this.refreshFeatherIcons();
   }
 
   cancelEditOpening(node: TbNode, event?: MouseEvent): void {
@@ -326,43 +339,72 @@ export class TrialBalanceReportComponent implements OnInit {
     node.openingDebitEdit = node.openingDebit || 0;
     node.openingCreditEdit = node.openingCredit || 0;
 
-    setTimeout(() => feather.replace(), 0);
+    this.refreshFeatherIcons();
   }
 
   saveOpening(node: TbNode, event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();
     }
-    this.userName = localStorage.getItem('username');
+    this.userName = localStorage.getItem('username') || '';
 
     const body = {
       headId: node.headId,
       companyId: this.companyId,
       openingDebit: node.openingDebitEdit || 0,
       openingCredit: node.openingCreditEdit || 0,
-      asOfDate: this.fromDate, // or specific date / period
-      username : this.userName 
+      asOfDate: this.fromDate,
+      username: this.userName
     };
-
-    // You may want a small loading flag on the node if needed.
 
     this.reportsService.saveOpeningBalance(body).subscribe({
       next: () => {
-        // update current node values
         node.openingDebit = body.openingDebit;
         node.openingCredit = body.openingCredit;
         node.isEditingOpening = false;
 
-        // Re-run totals and refresh view
         this.roots.forEach(r => this.recalcTotalsRecursive(r));
         this.rebuildDisplayRows();
-
-        setTimeout(() => feather.replace(), 0);
       },
       error: () => {
-        // handle error (toast)
+        // handle error toast if needed
       }
     });
   }
+  changePage(page: number): void {
+    const maxPage = this.totalPages;
+    if (page < 1 || page > maxPage) {
+      return;
+    }
+    this.currentPage = page;
+    this.rebuildDisplayRows();
+  }
+
+  get totalPages(): number {
+    if (!this.pageSize) return 1;
+    const pages = Math.ceil(this.totalRows / this.pageSize);
+    return pages > 0 ? pages : 1;
+  }
+
+  // simple [1..N] list; you can later make it windowed if needed
+  get pages(): number[] {
+    const arr: number[] = [];
+    for (let i = 1; i <= this.totalPages; i++) {
+      arr.push(i);
+    }
+    return arr;
+  }
+
+  get startIndex(): number {
+    if (this.totalRows === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    if (this.totalRows === 0) return 0;
+    const end = this.currentPage * this.pageSize;
+    return end > this.totalRows ? this.totalRows : end;
+  }
+
 
 }
