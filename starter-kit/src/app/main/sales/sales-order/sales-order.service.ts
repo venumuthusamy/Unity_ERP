@@ -92,4 +92,10 @@ getDrafts() {
  getSOByStatus(id): Observable<ResponseResult<any>> {
     return this.http.get<ResponseResult<any>>(this.url + SalesOrderApiUrls.GetSOByStatus+id);
   }
+  getOpenByCustomer(customerId: number): Observable<ResponseResult<any[]>> {
+  return this.http.get<ResponseResult<any[]>>(
+    this.url + SalesOrderApiUrls.GetOpenSOByCustomer + customerId
+  );
+}
+
 }

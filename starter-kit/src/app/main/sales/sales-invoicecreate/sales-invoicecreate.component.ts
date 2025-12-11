@@ -1,4 +1,3 @@
-// src/app/main/sales/sales-invoicecreate/sales-invoicecreate.component.ts
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
@@ -8,7 +7,6 @@ import Swal from 'sweetalert2';
 import {
   SalesInvoiceService,
   SiCreateLine,
-  SiCreateRequest,
   SiSourceType,
   ApiResponse
 } from './sales-invoice.service';
@@ -18,6 +16,7 @@ import { SalesOrderService } from '../sales-order/sales-order.service';
 import { DeliveryOrderService } from '../deliveryorder/deliveryorder.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
+import { ArInvoiceService } from 'app/main/financial/AR/Invoice/invoice-service';
 
 /* ========== Local UI types ========== */
 interface SimpleItem {
@@ -64,10 +63,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   sourceId: number | null = null;
   invoiceDate = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
 
-  // Customer (read-only field)
+  // Customer
   customerName: string = '';
+  customerId: number | null = null;
 
-  // Remarks (header) – will be saved
+  // Remarks (header)
   remarks: string = '';
 
   // ----- Dropdown data -----
@@ -80,26 +80,21 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // ----- Lines & totals -----
   lines: UiLine[] = [];
 
-  // Subtotal: qty*unitPrice (before discount & tax)
   subtotal = 0;
-
-  // Total discount: sum of discount amount for all lines
   totalDiscount = 0;
 
   // Total GST (sum of line TaxAmount)
   totalTax = 0;
-
-  // Grand total: after discount & tax (sum of line gross)
   grandTotal = 0;
-
-  // Shipping cost: user-entered, default 0
   shipping = 0;
-
-  // Net total: grandTotal + shipping
   netTotal = 0;
-
-  // For compatibility with backend total field
   total = 0;
+
+  // ----- Customer advance -----
+  advanceList: any[] = [];
+  selectedAdvanceId: number | null = null;
+  advanceApplyAmount = 0;
+  advanceTotalApplied = 0;
 
   constructor(
     private api: SalesInvoiceService,
@@ -110,6 +105,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private coaService: ChartofaccountService,
+    private arService: ArInvoiceService
   ) {}
 
   // ============================================================
@@ -144,7 +140,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
                 doNumber: d.doNumber ?? d.DoNumber ?? ''
               }));
 
-              // Load items for labels/UOM
+              // Load items
               this.itemsService.getAllItem()
                 .pipe(takeUntil(this.destroy$))
                 .subscribe({
@@ -204,13 +200,20 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     this.total = 0;
 
     this.customerName = '';
+    this.customerId = null;
     this.remarks = '';
+
+    this.advanceList = [];
+    this.selectedAdvanceId = null;
+    this.advanceApplyAmount = 0;
+    this.advanceTotalApplied = 0;
   }
 
   private isOk(res: any) { return res?.isSuccess ?? res?.success; }
 
   // ============================================================
   // Tax helpers – Standard-Rated / Zero-Rated / Exempt
+  // Tax helpers
   // ============================================================
 
   /**
@@ -255,8 +258,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     const disc = Number(line.discountPct || 0);
     const gst = Number(line.gstPct || 0);
 
-    const raw = +(qty * price).toFixed(2);               // qty * price
-    const discAmount = +(raw * (disc / 100)).toFixed(2); // discount value
+    const raw = +(qty * price).toFixed(2);
+    const discAmount = +(raw * (disc / 100)).toFixed(2);
     const baseAfterDisc = +(raw - discAmount).toFixed(2);
 
     const mode = this.canonicalTaxMode(line.tax, gst);
@@ -272,12 +275,22 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       tax = +(net * rate).toFixed(2);
       gross = +(net + tax).toFixed(2);
     } else {
+    if (!gst || mode === 'EXEMPT') {
       tax = 0;
       gross = net;
     }
 
     // Persist for UI
     line.tax = mode;
+    } else if (mode === 'EXCLUSIVE') {
+      tax = +(net * gst / 100).toFixed(2);
+      gross = +(net + tax).toFixed(2);
+    } else if (mode === 'INCLUSIVE') {
+      gross = baseAfterDisc;
+      net = +(gross * 100 / (100 + gst)).toFixed(2);
+      tax = +(gross - net).toFixed(2);
+    }
+
     line.lineAmount = gross;
     (line as any).taxAmount = tax;
 
@@ -336,6 +349,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         so?.bpName ||
         so?.BpName ||
         '';
+
+      this.customerId =
+        so?.customerId ??
+        so?.CustomerId ??
+        null;
+
     } else if (this.sourceType === 2 && this.sourceId) {
       const d = this.doList.find((x: any) =>
         +x.id === +this.sourceId ||
@@ -351,8 +370,15 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         d?.bpName ||
         d?.BpName ||
         '';
+
+      this.customerId =
+        d?.customerId ??
+        d?.CustomerId ??
+        null;
+
     } else {
       this.customerName = '';
+      this.customerId = null;
     }
   }
 
@@ -372,7 +398,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         this.invoiceDate = this.toDateInput(hdr.invoiceDate);
         this.sourceType = (hdr.sourceType ?? 1) as 1 | 2;
 
-        // sourceId
         this.sourceId = this.sourceType === 1
           ? (hdr.soId ?? hdr.SoId ?? hdr.salesOrderId ?? null)
           : (hdr.doId ?? hdr.DoId ?? hdr.deliveryOrderId ?? null);
@@ -413,6 +438,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
         this.reconcileLinesWithItems();
         this.recalc();
+
+        // for edit, you could also load applied advances if needed
       },
       error: () =>
         Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load invoice.' })
@@ -424,8 +451,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // ============================================================
   onSourceTypeChanged(): void {
     if (this.isEdit) return;
-    this.sourceId = null;
-    this.lines = [];
     this.resetForCreate();
   }
 
@@ -437,12 +462,18 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
     if (!id) {
       this.customerName = '';
+      this.customerId = null;
       this.lines = [];
+      this.advanceList = [];
+      this.selectedAdvanceId = null;
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
       this.recalc();
       return;
     }
 
     const so = this.soList.find((s: any) => +s.id === +id);
+
     this.customerName =
       so?.customerName ||
       so?.CustomerName ||
@@ -450,6 +481,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       so?.customer_name ||
       '';
 
+    this.customerId =
+      so?.customerId ??
+      so?.CustomerId ??
+      null;
+
+    this.loadAvailableAdvances();
     this.loadSourceLines();
   }
 
@@ -461,12 +498,18 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
     if (!id) {
       this.customerName = '';
+      this.customerId = null;
       this.lines = [];
+      this.advanceList = [];
+      this.selectedAdvanceId = null;
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
       this.recalc();
       return;
     }
 
     const d = this.doList.find((x: any) => +x.id === +id);
+
     this.customerName =
       d?.customerName ||
       d?.CustomerName ||
@@ -474,7 +517,88 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       d?.customer_name ||
       '';
 
+    this.customerId =
+      d?.customerId ??
+      d?.CustomerId ??
+      null;
+
+    this.loadAvailableAdvances();
     this.loadSourceLines();
+  }
+
+  // ============================================================
+  // Customer Advances
+  // ============================================================
+  private loadAvailableAdvances(): void {
+    this.advanceList = [];
+    this.selectedAdvanceId = null;
+    this.advanceApplyAmount = 0;
+    this.advanceTotalApplied = 0;
+
+    if (!this.customerId) return;
+
+    this.arService.getOpenAdvances(
+      this.customerId,
+      this.sourceType === 1 ? this.sourceId : null
+    )
+    .subscribe({
+      next: (res: any) => {
+        this.advanceList = Array.isArray(res)
+          ? res
+          : (res?.data || []);
+      },
+      error: _ => {
+        this.advanceList = [];
+      }
+    });
+  }
+
+  onAdvanceSelected(): void {
+    const adv = this.advanceList.find(a => +a.id === +this.selectedAdvanceId);
+    if (!adv) {
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
+      this.updateNetTotal();
+      return;
+    }
+
+    const available = Number(adv.balanceAmount ?? adv.BalanceAmount ?? 0);
+    const gross = this.grandTotal + Number(this.shipping || 0);
+
+    const max = Math.max(0, Math.min(available, gross));
+    this.advanceApplyAmount = +max.toFixed(2);
+    this.advanceTotalApplied = this.advanceApplyAmount;
+    this.updateNetTotal();
+  }
+
+  onAdvanceAmountChanged(): void {
+    if (!this.selectedAdvanceId) {
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
+      this.updateNetTotal();
+      return;
+    }
+
+    const adv = this.advanceList.find(a => +a.id === +this.selectedAdvanceId);
+    if (!adv) {
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
+      this.updateNetTotal();
+      return;
+    }
+
+    let val = Number(this.advanceApplyAmount || 0);
+    if (val < 0) val = 0;
+
+    const available = Number(adv.balanceAmount ?? adv.BalanceAmount ?? 0);
+    const gross = this.grandTotal + Number(this.shipping || 0);
+
+    const max = Math.max(0, Math.min(available, gross));
+    if (val > max) val = max;
+
+    this.advanceApplyAmount = +val.toFixed(2);
+    this.advanceTotalApplied = this.advanceApplyAmount;
+    this.updateNetTotal();
   }
 
   // ============================================================
@@ -637,7 +761,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
   updateNetTotal(): void {
     const ship = Number(this.shipping || 0);
-    this.netTotal = +(this.grandTotal + ship).toFixed(2);
+    const adv = Number(this.advanceTotalApplied || 0);
+
+    const gross = this.grandTotal + ship;
+    let net = gross - adv;
+    if (net < 0) net = 0;
+
+    this.netTotal = +net.toFixed(2);
     this.total = this.netTotal;
   }
 
@@ -817,7 +947,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
 
       this.recalc();
 
-      const req: SiCreateRequest = {
+      const advanceAdjustments =
+        (this.selectedAdvanceId && this.advanceApplyAmount > 0)
+          ? [{ advanceId: this.selectedAdvanceId, amount: this.advanceApplyAmount }]
+          : [];
+
+      const req: any = {
         sourceType: this.sourceType,
         soId: this.sourceType === 1 ? this.sourceId : null,
         doId: this.sourceType === 2 ? this.sourceId : null,
@@ -827,6 +962,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         taxAmount: this.totalTax,              // 🔹 header total GST
         total: this.total,
         remarks: this.remarks || null,
+        advanceAdjustments,
         lines: this.lines.map(l => {
           const { gross, tax } = this.calcLineAmounts(l);
 
@@ -851,10 +987,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
                 : (l.itemName ?? null),
             budgetLineId: l.budgetLineId != null ? Number(l.budgetLineId) : null
           } as SiCreateLine;
-        })
+        }),
+        advanceId: this.selectedAdvanceId || null,
+  advanceApplyAmount:
+    this.advanceApplyAmount && this.advanceApplyAmount > 0
+      ? this.advanceApplyAmount
+      : null
       };
-
-      console.log(req);
 
       this.api.create(req)
         .pipe(takeUntil(this.destroy$))
@@ -905,7 +1044,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   }
 
   // ============================================================
-  // Navigation
+  // Navigation & misc
   // ============================================================
   goSIList() {
     this.router.navigate(['/Sales/Sales-Invoice-list']);
@@ -915,6 +1054,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     const textarea = event.target as HTMLTextAreaElement;
     if (!textarea) return;
 
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
   }
@@ -929,7 +1070,6 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Build breadcrumb like: Parent >> Child >> This */
   private buildFullPath(item: any, all: any[]): string {
     let path = item.headName;
     let current = all.find((x: any) => x.headCode === item.parentHead);

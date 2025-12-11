@@ -59,4 +59,14 @@ export class ArInvoiceService {
             .get<{ data: ArInvoiceListItem[] }>(`${this.url + this.baseUrl}/list`)
             .pipe(map(r => r.data || []));
     }
+    createAdvance(data: any) {
+  return this.http.post(`${this.url + this.baseUrl}/advance`, data);
+}
+ getOpenAdvances(customerId: number, salesOrderId?: number) {
+    const params: any = { customerId };
+    if (salesOrderId) {
+      params.salesOrderId = salesOrderId;
+    }
+    return this.http.get<any[]>(`${this.url + this.baseUrl}/advance/open`, { params });
+  }
 }

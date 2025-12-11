@@ -15,4 +15,5 @@ export class SalesOrderApiUrls {
   }
 
     public static readonly Drafts = "/SalesOrder/drafts";
+  public static readonly  GetOpenSOByCustomer = '/SalesOrder/customer-open/'
 }

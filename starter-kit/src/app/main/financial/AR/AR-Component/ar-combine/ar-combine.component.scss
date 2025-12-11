@@ -135,3 +135,45 @@ $brand: #2E5F73;
 .ar-tabs {
   border-bottom: none;
 }
+.ar-adv-header {
+  margin-bottom: 0.5rem;
+
+  .ar-adv-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2E5F73;
+  }
+}
+
+.ar-adv-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 13px;
+}
+
+/* Base pill */
+.ar-adv-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f4f6;           // light grey
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Balance pill – green tone */
+.ar-adv-pill-balance {
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+/* Utilised pill – red tone */
+.ar-adv-pill-utilised {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}

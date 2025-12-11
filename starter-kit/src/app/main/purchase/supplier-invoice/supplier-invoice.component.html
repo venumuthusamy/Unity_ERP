@@ -61,15 +61,16 @@
             </li>
           </ul>
         </div>
-<!-- Supplier Name (auto-filled from GRN) -->
-<div>
-  <label class="text-[11px] font-medium text-gray-600 block">Supplier</label>
-  <input
-    type="text"
-    class="w-full rounded-lg border px-2.5 h-8 text-[13px] bg-gray-50"
-    formControlName="supplierName"
-    readonly />
-</div>
+
+        <!-- Supplier Name (auto-filled from GRN) -->
+        <div>
+          <label class="text-[11px] font-medium text-gray-600 block">Supplier</label>
+          <input
+            type="text"
+            class="w-full rounded-lg border px-2.5 h-8 text-[13px] bg-gray-50"
+            formControlName="supplierName"
+            readonly />
+        </div>
 
         <!-- Invoice Date -->
         <div>
@@ -90,7 +91,7 @@
         </div>
 
         <!-- Tax % -->
-      <div>
+        <div>
           <label class="text-[11px] font-medium text-gray-600 block">Tax</label>
           <div class="flex gap-1">
             <!-- mode -->
@@ -115,111 +116,116 @@
 
       <!-- Lines table -->
       <div class="rounded-xl border border-gray-200 mt-2">
-      <!-- Header row -->
-<div
-  class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
-         text-[12px] font-medium
-         bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
-  <div class="px-2.5 py-2">Item</div>
-  <div class="px-2.5 py-2">Budget</div>
-  <div class="px-2.5 py-2">Location</div>
-  <div class="px-2.5 py-2">Qty</div>
-  <div class="px-2.5 py-2">Unit Price</div>
-  <div class="px-2.5 py-2">Discount %</div>
-  <div class="px-2.5 py-2 text-right">Total</div>
-</div>
+        <!-- Header row -->
+        <div
+          class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
+                 text-[12px] font-medium
+                 bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
+          <div class="px-2.5 py-2">Item</div>
+          <div class="px-2.5 py-2">Budget</div>
+          <div class="px-2.5 py-2">Location</div>
+          <div class="px-2.5 py-2">Qty</div>
+          <div class="px-2.5 py-2">Unit Price</div>
+          <div class="px-2.5 py-2">Discount %</div>
+          <div class="px-2.5 py-2 text-right">Total</div>
+        </div>
 
-<!-- Body -->
-<div formArrayName="lines">
-  <div *ngIf="lines.length === 0"
-       class="text-center text-[12.5px] text-gray-400 py-3">
-    No lines yet.
-  </div>
+        <!-- Body -->
+        <div formArrayName="lines">
+          <div *ngIf="lines.length === 0"
+               class="text-center text-[12.5px] text-gray-400 py-3">
+            No lines yet.
+          </div>
 
-  <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
-       [formGroupName]="i"
-       class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
+          <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
+               [formGroupName]="i"
+               class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
 
-    <!-- Item -->
-    <div class="px-2.5 py-1.5">
-      <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-             formControlName="item" />
-    </div>
+            <!-- Item -->
+            <div class="px-2.5 py-1.5">
+              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="item" />
+            </div>
 
-    <!-- Budget -->
- <div class="px-2.5 py-1.5">
-  <ng-select
-    class="pin-budget-select w-full"
-    [items]="parentHeadList"
-    bindLabel="label"
-    bindValue="value"
-    [searchable]="true"
-    [clearable]="false"
-    placeholder="Search / choose Budget Line..."
-    formControlName="budgetLineId"
-    appendTo="body"
-    dropdownPosition="bottom">
+            <!-- Budget -->
+            <div class="px-2.5 py-1.5">
+              <ng-select
+                class="pin-budget-select w-full"
+                [items]="parentHeadList"
+                bindLabel="label"
+                bindValue="value"
+                [searchable]="true"
+                [clearable]="false"
+                placeholder="Search / choose Budget Line..."
+                formControlName="budgetLineId"
+                appendTo="body"
+                dropdownPosition="bottom">
 
-    <ng-template ng-option-tmp let-item="item">
-      <div class="pin-budget-option" [title]="item.label">
-        {{ item.label }}
-      </div>
-    </ng-template>
-  </ng-select>
-</div>
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="pin-budget-option" [title]="item.label">
+                    {{ item.label }}
+                  </div>
+                </ng-template>
+              </ng-select>
+            </div>
 
-    <!-- Location -->
-    <div class="px-2.5 py-1.5">
-      <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-             formControlName="location" />
-    </div>
+            <!-- Location -->
+            <div class="px-2.5 py-1.5">
+              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="location" />
+            </div>
 
-    <!-- Qty -->
-    <div class="px-2.5 py-1.5">
-      <input type="number"
-             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-             formControlName="qty"
-             (input)="onCellChange(i)" />
-    </div>
+            <!-- Qty -->
+            <div class="px-2.5 py-1.5">
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="qty"
+                     (input)="onCellChange(i)" />
+            </div>
 
-    <!-- Unit Price -->
-    <div class="px-2.5 py-1.5">
-      <input type="number"
-             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-             formControlName="unitPrice"
-             (input)="onCellChange(i)" />
-    </div>
+            <!-- Unit Price -->
+            <div class="px-2.5 py-1.5">
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="unitPrice"
+                     (input)="onCellChange(i)" />
+            </div>
 
-    <!-- Discount % -->
-    <div class="px-2.5 py-1.5">
-      <input type="number"
-             class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-             formControlName="discountPct"
-             (input)="onCellChange(i)" />
-    </div>
+            <!-- Discount % -->
+            <div class="px-2.5 py-1.5">
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="discountPct"
+                     (input)="onCellChange(i)" />
+            </div>
 
-    <!-- Line total -->
-    <div class="px-2.5 py-1.5 text-right text-[13px]">
-      {{ row.get('lineTotal')?.value || 0 | number:'1.2-2' }}
-    </div>
-  </div>
-</div>
+            <!-- Line total -->
+            <div class="px-2.5 py-1.5 text-right text-[13px]">
+              {{ row.get('lineTotal')?.value || 0 | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
 
-
-        <!-- Footer totals -->
+        <!-- Footer totals (with Advance + Net Payable) -->
         <div class="border-t px-3 py-2 bg-slate-50 text-[13px]">
           <div class="flex justify-end">
             <div class="w-64 space-y-1">
+
+              <!-- Subtotal -->
               <div class="flex justify-between">
                 <span>Sub-total</span>
                 <span>{{ subTotal | number:'1.2-2' }}</span>
               </div>
+
+              <!-- Discount -->
               <div class="flex justify-between">
                 <span>Discount</span>
                 <span>- {{ discountTotal | number:'1.2-2' }}</span>
               </div>
+
+              <!-- Tax -->
               <div class="flex justify-between">
-                 <span>
+                <span>
                   Tax
                   <ng-container *ngIf="taxMode !== 'ZERO'">
                     ({{ form.get('tax')?.value || 0 }}%
@@ -232,10 +238,66 @@
                 </span>
                 <span>{{ taxAmount | number:'1.2-2' }}</span>
               </div>
+
+              <!-- Grand total (full invoice) -->
               <div class="flex justify-between font-semibold border-t pt-1 mt-1">
                 <span>Grand total</span>
                 <span>{{ grandTotal | number:'1.2-2' }}</span>
               </div>
+
+              <!-- APPLY ADVANCE: dropdown -->
+              <div
+                class="flex items-center justify-between mt-1"
+                *ngIf="supplierAdvances?.length">
+                <span>Apply Advance</span>
+                <ng-select
+                  class="w-[60%] pin-advance-select"
+                  [items]="supplierAdvances"
+                  bindLabel="label"
+                  bindValue="id"
+                  [(ngModel)]="selectedAdvanceId"
+                  [ngModelOptions]="{ standalone: true }"
+                  (change)="onAdvanceSelected()">
+                  <ng-template ng-option-tmp let-a="item">
+                    <div class="flex flex-col">
+                      <span class="font-medium text-[12px]">{{ a.advanceNo }}</span>
+                      <span class="text-[11px] text-gray-500">
+                        Date: {{ a.advanceDate | date:'dd-MMM-yyyy' }}
+                        • Bal: {{ a.balanceAmount | number:'1.2-2' }}
+                      </span>
+                    </div>
+                  </ng-template>
+                </ng-select>
+              </div>
+
+              <!-- Amount to apply -->
+              <div
+                class="flex items-center justify-between mt-1"
+                *ngIf="selectedAdvanceId">
+                <span class="text-xs text-gray-600">Amount to apply</span>
+                <input
+                  type="number"
+                  class="w-[60%] rounded-lg border px-2.5 h-8 text-[13px] text-right"
+                  [(ngModel)]="advanceApplyAmount"
+                  [ngModelOptions]="{ standalone: true }"
+                  (input)="onAdvanceAmountChanged()" />
+              </div>
+
+              <!-- Advance applied line -->
+              <div
+                class="flex justify-between text-green-700"
+                *ngIf="advanceTotalApplied > 0">
+                <span>Advance Applied</span>
+                <span>- {{ advanceTotalApplied | number:'1.2-2' }}</span>
+              </div>
+
+              <!-- Net Payable -->
+              <div
+                class="flex justify-between font-semibold border-t pt-1 mt-1 text-[#0e3a4c]">
+                <span>Net Payable</span>
+                <span>{{ netPayable | number:'1.2-2' }}</span>
+              </div>
+
             </div>
           </div>
         </div>
@@ -272,5 +334,23 @@
 
   .ui-compact .grn-combobox ul {
     overscroll-behavior: contain;
+  }
+
+  .pin-budget-select .ng-select-container {
+    min-height: 32px;
+    border-radius: 0.5rem;
+  }
+
+  .pin-advance-select .ng-select-container {
+    min-height: 30px;
+    border-radius: 0.5rem;
+    font-size: 12px;
+  }
+
+  .pin-budget-option {
+    max-width: 420px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 </style>
