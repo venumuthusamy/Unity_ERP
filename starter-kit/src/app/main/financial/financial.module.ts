@@ -65,6 +65,7 @@ const routes: Routes = [
 { path: 'opening-balance', component: OpeningBalanceComponent },
 { path: 'ap-aging', component: APAgingComponent },
 { path: 'ap-advance', component: ApAdvanceComponent },
+{ path: 'ar-advance', component: ArAdvanceComponent },
 ];
 
 @NgModule({

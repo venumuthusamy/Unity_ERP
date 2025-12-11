@@ -101,4 +101,10 @@ export class SupplierInvoiceService {
       {}
     );
   }
+  getSupplierAdvancesBySupplier(supplierId: number) {
+  return this.http.get<any>(
+    this.url +DebitNoteApiUrls.getSupplierAdvancesBySupplier + supplierId
+  );
+}
+
 }

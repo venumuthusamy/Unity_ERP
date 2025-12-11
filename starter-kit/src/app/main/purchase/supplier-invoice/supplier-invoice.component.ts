@@ -53,6 +53,16 @@ interface GRNItem {
   [k: string]: any;
 }
 
+interface SupplierAdvanceOption {
+  id: number;
+  advanceNo: string;
+  advanceDate: string;
+  originalAmount: number;
+  utilisedAmount: number;
+  balanceAmount: number;
+  label?: string;
+}
+
 type TaxMode = 'EXCLUSIVE' | 'INCLUSIVE' | 'ZERO';
 
 @Component({
@@ -83,6 +93,14 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
   discountTotal = 0;
   taxAmount = 0;
   grandTotal = 0;
+
+  // ====== ADVANCE (AP) ======
+  supplierAdvances: SupplierAdvanceOption[] = [];
+  selectedAdvanceId: number | null = null;
+  advanceApplyAmount = 0;
+  advanceTotalApplied = 0;
+  advanceBalanceForSelected = 0;
+  netPayable = 0;
 
   // store PO lines (only location + discount needed)
   private poLinesList: any[] = [];
@@ -193,6 +211,92 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
   }
 
   // ------------------------------------------------------------------
+  // ADVANCE UTIL
+  // ------------------------------------------------------------------
+  private resetAdvanceState(): void {
+    this.supplierAdvances = [];
+    this.selectedAdvanceId = null;
+    this.advanceApplyAmount = 0;
+    this.advanceTotalApplied = 0;
+    this.advanceBalanceForSelected = 0;
+    this.recalcNetPayable();
+  }
+
+  private loadSupplierAdvancesForSupplier(supplierId: number | null | undefined): void {
+  this.resetAdvanceState();
+  if (!supplierId) return;
+
+  this.api.getSupplierAdvancesBySupplier(supplierId).subscribe({
+    next: (res: any) => {
+      const rows = res?.data || res || [];
+
+      this.supplierAdvances = rows
+        .map((a: any): SupplierAdvanceOption => {
+          // NOTE: use the *actual* property names from API: AdvanceNo, Amount, BalanceAmount
+          const original = Number(
+            a.originalAmount ?? a.OriginalAmount ?? a.Amount ?? 0
+          );
+          const utilised = Number(
+            a.utilisedAmount ?? a.UtilisedAmount ?? 0
+          );
+          const balance = Number(
+            a.balanceAmount ?? a.BalanceAmount ?? (original - utilised)
+          );
+
+          return {
+            id: a.Id ?? a.id,
+            advanceNo: a.AdvanceNo ?? a.advanceNo,
+            advanceDate: a.AdvanceDate ?? a.advanceDate,
+            originalAmount: original,
+            utilisedAmount: utilised,
+            balanceAmount: balance,
+            label: `${a.AdvanceNo ?? a.advanceNo} – Bal: ${balance.toFixed(2)}`
+          };
+        })
+        // if you want to see it for testing, comment this line first
+        .filter(x => x.balanceAmount > 0);
+    },
+    error: () => {
+      console.error('Failed to load supplier advances');
+    }
+  });
+}
+
+
+  private recalcNetPayable(): void {
+    const cap = this.advanceBalanceForSelected || 0;
+    const raw = Number(this.advanceApplyAmount || 0);
+
+    const safe = Math.max(0, Math.min(raw, cap, this.grandTotal || 0));
+
+    this.advanceApplyAmount = safe;
+    this.advanceTotalApplied = safe;
+    this.netPayable = +(((this.grandTotal || 0) - safe).toFixed(2));
+  }
+
+  onAdvanceSelected(): void {
+    const adv = this.supplierAdvances.find(x => x.id === this.selectedAdvanceId) || null;
+
+    if (!adv) {
+      this.advanceBalanceForSelected = 0;
+      this.advanceApplyAmount = 0;
+      this.advanceTotalApplied = 0;
+      this.recalcNetPayable();
+      return;
+    }
+
+    this.advanceBalanceForSelected = adv.balanceAmount || 0;
+
+    const defaultApply = Math.min(this.advanceBalanceForSelected, this.grandTotal || 0);
+    this.advanceApplyAmount = defaultApply;
+    this.recalcNetPayable();
+  }
+
+  onAdvanceAmountChanged(): void {
+    this.recalcNetPayable();
+  }
+
+  // ------------------------------------------------------------------
   // LOAD EXISTING INVOICE
   // ------------------------------------------------------------------
   private loadInvoice(id: number): void {
@@ -218,7 +322,6 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
           status: Number(d.status ?? 0)
         });
 
-        // default taxMode from value
         const pct = Number(this.form.get('tax')?.value || 0);
         const mode: TaxMode = pct > 0 ? 'EXCLUSIVE' : 'ZERO';
         this.form.get('taxMode')?.setValue(mode, { emitEvent: false });
@@ -249,6 +352,11 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
         });
 
         this.recalcHeaderFromLines();
+
+        // Optionally: load advances for existing supplier
+        if (d.supplierId) {
+          this.loadSupplierAdvancesForSupplier(d.supplierId);
+        }
       },
       error: (err) => {
         Swal.fire({
@@ -384,8 +492,10 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
     this.taxAmount = taxAmt;
     this.grandTotal = grand;
 
-    // Amount = Grand total
     this.form.patchValue({ amount: grand }, { emitEvent: false });
+
+    // update Net Payable based on advance
+    this.recalcNetPayable();
   }
 
   onTaxChange(): void {
@@ -443,13 +553,19 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
       grnNo: v.grnNo,
       supplierId: v.supplierId,
       invoiceDate: this.toSqlDate(v.invoiceDate),
-      amount: Number(v.amount),
-      tax: Number(this.taxAmount),         // storing tax amount; tax % is form.get('tax')
+      amount: Number(v.amount),        // full invoice amount (grandTotal)
+      tax: Number(this.taxAmount),     // tax amount
       currencyId: v.currencyId,
       status: action === 'HOLD' ? 1 : 2,
       linesJson: this.buildLinesJson(),
       createdBy: this.userId,
-      updatedBy: this.userId
+      updatedBy: this.userId,
+
+      // advance info for backend
+      advanceId: this.selectedAdvanceId,
+      advanceApplyAmount: this.advanceTotalApplied,
+      netPayable: this.netPayable,
+      
     };
 
     const isUpdate = v.id > 0;
@@ -539,6 +655,9 @@ export class SupplierInvoiceComponent implements OnInit, OnDestroy {
 
     this.grnSearch = g.grnNo;
     this.grnOpen = false;
+
+    // load AP advances for that supplier
+    this.loadSupplierAdvancesForSupplier(g.supplierId);
 
     this.poLinesList = this.safeParsePoLines(g.poLines ?? g.poLinesJson);
     const items = this.safeParseGrnItems(g.grnJson);

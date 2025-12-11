@@ -9,4 +9,5 @@ export class DebitNoteApiUrls {
   // 🔹 NEW → matches [HttpGet("GetDebitNoteSource/{id}")]
   public static readonly GetDebitNoteSource = "/SupplierDebitNote/GetDebitNoteSource/"; // + id (PIN or source id)
     public static readonly MarkDebitNote    = '/SupplierDebitNote/MarkDebitNote/'; 
+    public static readonly getSupplierAdvancesBySupplier = '/finance/ap/supplier-advances/'
 }

@@ -5,6 +5,7 @@ import { ArInvoiceService } from '../Invoice/invoice-service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { SalesOrderService } from 'app/main/sales/sales-order/sales-order.service';
 import { AccountsPayableService } from '../../accounts-payable/accounts-payable.service';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-ar-advance',
   templateUrl: './ar-advance.component.html',
@@ -36,6 +37,7 @@ export class ArAdvanceComponent implements OnInit {
     private customerService: CustomerMasterService,
     private salesOrderService: SalesOrderService,
       private apSvc: AccountsPayableService,
+       private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -163,5 +165,8 @@ export class ArAdvanceComponent implements OnInit {
         Swal.fire('Error', 'Failed to save advance', 'error');
       }
     });
+  }
+    goBack(): void {
+    this.router.navigate(['/financial/AR']);
   }
 }

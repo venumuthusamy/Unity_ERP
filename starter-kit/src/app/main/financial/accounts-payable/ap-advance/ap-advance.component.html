@@ -1,4 +1,4 @@
-<!-- src/app/main/financial/accounts-payable/ap-advance-create/ap-advance-create.component.html -->
+<!-- src/app/main/financial/accounts-payable/ap-advance-create/ap-advance.component.html -->
 
 <div class="content-wrapper p-0">
   <div class="content-body">
@@ -14,7 +14,7 @@
           <div class="d-flex gap-50">
             <button
               type="button"
-              class="btn btn-outline-secondary btn-sm"
+              class="btn btn-outline-secondary btn-sm mr-1"
               (click)="goBack()">
               <i class="fas fa-arrow-left mr-25"></i>
               Back
@@ -37,7 +37,7 @@
 
           <div class="row">
 
-            <!-- Left column – basic info -->
+            <!-- ================= LEFT COLUMN – FORM ================= -->
             <div class="col-lg-7 col-md-7 col-12">
 
               <!-- Supplier -->
@@ -59,7 +59,7 @@
                 </ng-select>
               </div>
 
-              <!-- Date + Amount -->
+              <!-- Date + Amount + Reference -->
               <div class="form-row row mb-1">
                 <div class="col-md-4 col-12 mb-1 mb-md-0">
                   <label class="ap-label">Advance Date</label>
@@ -95,6 +95,50 @@
                     [(ngModel)]="referenceNo"
                     name="referenceNo"
                     placeholder="e.g. Advance Ref / Internal No" />
+                </div>
+              </div>
+
+              <!-- GRN combobox row -->
+              <div class="form-row row mb-1">
+                <div class="col-md-6 col-12">
+                  <div class="relative grn-combobox">
+                    <label class="ap-label d-block">GRN #</label>
+
+                    <div class="relative">
+                      <input type="text"
+                             [value]="grnSearch"
+                             (input)="onGrnSearch($event)"
+                             (focus)="onGrnFocus()"
+                             placeholder="Search GRN…"
+                             class="form-control"
+                             [attr.aria-autocomplete]="'list'"
+                             [attr.aria-expanded]="grnOpen" />
+
+                      <button type="button"
+                              class="grn-toggle-btn"
+                              (click)="toggleGrnDropdown($event)"
+                              aria-label="Toggle GRN list">
+                        ▼
+                      </button>
+                    </div>
+
+                    <!-- dropdown -->
+                    <ul *ngIf="grnOpen"
+                        class="grn-dropdown-list">
+                      <li *ngFor="let g of grnFiltered; trackBy: trackByGrn"
+                          (click)="selectGrn(g)"
+                          class="grn-dropdown-item">
+                        <span class="font-weight-semibold">{{ g.grnNo }}</span>
+                        <small class="text-muted ml-25" *ngIf="g.poNo">· PO: {{ g.poNo }}</small>
+                        <small class="text-muted ml-25" *ngIf="g.supplierName">· {{ g.supplierName }}</small>
+                      </li>
+
+                      <li *ngIf="!grnFiltered?.length"
+                          class="grn-dropdown-empty">
+                        No results
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -157,7 +201,7 @@
 
             </div>
 
-            <!-- Right column – summary -->
+            <!-- ================= RIGHT COLUMN – SUMMARY ================= -->
             <div class="col-lg-5 col-md-5 col-12 mt-2 mt-md-0">
               <div class="ap-advance-summary-card">
                 <div class="d-flex justify-content-between align-items-center mb-25">
@@ -195,6 +239,13 @@
                   </span>
                 </div>
 
+                <div class="ap-advance-summary-row">
+                  <span class="label">GRN No</span>
+                  <span class="value">
+                    {{ grnNo || '-' }}
+                  </span>
+                </div>
+
                 <div class="ap-advance-summary-divider"></div>
 
                 <div class="ap-advance-summary-row total">
@@ -204,17 +255,6 @@
                   </span>
                 </div>
 
-                <div class="mt-50 text-right">
-                  <button
-                    type="button"
-                    class="btn btn-sm"
-                    style="background-color:#2E5F73; color:white;"
-                    (click)="saveAdvance()"
-                    [disabled]="saving || !canSave()">
-                    <i class="fas fa-check-circle mr-25"></i>
-                    Save Advance
-                  </button>
-                </div>
               </div>
             </div>
 

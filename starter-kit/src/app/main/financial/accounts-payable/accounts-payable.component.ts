@@ -39,6 +39,7 @@ interface SupplierAdvanceRow {
   balanceAmount: number;
 }
 
+
 @Component({
   selector: 'app-accounts-payable',
   templateUrl: './accounts-payable.component.html',
@@ -218,6 +219,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   }
 
   onBankChange(): void {
+    debugger
     const bank = this.bankAccounts.find((x: any) => x.id === this.selectedBankId);
     this.bankAvailableBalance = bank?.availableBalance || 0;
     this.recalcBankBalanceAfterPayment();
@@ -492,6 +494,7 @@ export class AccountsPayableComponent implements OnInit, AfterViewInit {
   }
 
   postPayment(): void {
+    debugger
     if (!this.paySupplierId) {
       Swal.fire('Warning', 'Select supplier', 'warning');
       return;
