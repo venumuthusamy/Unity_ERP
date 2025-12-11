@@ -59,8 +59,7 @@ export interface SiCreateRequest {
   total: number;               // net total
   remarks?: string | null;     // <<-- used in component.save()
   lines: SiCreateLine[];
-   advanceId?: number | null;
-  advanceApplyAmount?: number | null;
+  taxAmount:number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -128,6 +127,7 @@ export class SalesInvoiceService {
       tax: string;
       taxCodeId?: number | null;
       lineAmount?: number;
+      taxAmount?:number;
       description?: string | null;
       budgetLineId: number
     }

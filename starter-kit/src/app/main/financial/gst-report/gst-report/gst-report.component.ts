@@ -1,11 +1,11 @@
-
 import { Component, OnInit } from '@angular/core';
-
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { GstDetailRow, GstReturnsService } from '../../tax-gst/finance-gstreturns/gst-returns.service';
-
+import {
+  GstDetailRow,
+  GstReturnsService
+} from '../../tax-gst/finance-gstreturns/gst-returns.service';
 
 @Component({
   selector: 'app-gst-report',
@@ -29,6 +29,10 @@ export class GstReportComponent implements OnInit {
   pageSize = 10;
   pageSizeOptions = [10, 25, 50];
 
+  // Export modal
+  showExportModal = false;
+  exportFileName = '';
+
   constructor(private gstService: GstReturnsService) {}
 
   ngOnInit(): void {
@@ -38,36 +42,86 @@ export class GstReportComponent implements OnInit {
     from.setMonth(from.getMonth() - 3);
 
     this.startDate = from.toISOString().substring(0, 10);
-    this.endDate   = today.toISOString().substring(0, 10);
+    this.endDate = today.toISOString().substring(0, 10);
 
     this.loadDetails();
+  }
+
+  /* ------------ EXPORT MODAL HANDLERS ----------- */
+
+  openExportModal(): void {
+    if (!this.rows?.length) {
+      return;
+    }
+    this.exportFileName = this.generateDefaultFilename();
+    this.showExportModal = true;
+  }
+
+  closeExportModal(): void {
+    this.showExportModal = false;
+  }
+
+  private generateDefaultFilename(): string {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const stamp =
+      now.getFullYear().toString() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds());
+
+    return `gst-details-${stamp}`;
+  }
+
+  confirmExport(format: 'excel' | 'pdf'): void {
+    if (!this.rows?.length) {
+      return;
+    }
+
+    const baseName =
+      (this.exportFileName || this.generateDefaultFilename()).trim();
+
+    if (format === 'excel') {
+      this.exportToExcel(`${baseName}.xlsx`);
+    } else {
+      this.exportToPdf(`${baseName}.pdf`);
+    }
+
+    this.closeExportModal();
   }
 
   /* ----------------- Load data ----------------- */
 
   loadDetails(): void {
-    if (!this.startDate || !this.endDate) { return; }
+    if (!this.startDate || !this.endDate) {
+      return;
+    }
 
     this.isLoading = true;
 
-    this.gstService.getGstDetails(
-      this.startDate,
-      this.endDate,
-      this.docType,
-      this.searchText?.trim() || ''
-    ).subscribe({
-      next: (data) => {
-        this.rows = data || [];
-        this.page = 1;     // reset to first page whenever we reload
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Error loading GST details', err);
-        this.rows = [];
-        this.page = 1;
-        this.isLoading = false;
-      }
-    });
+    this.gstService
+      .getGstDetails(
+        this.startDate,
+        this.endDate,
+        this.docType,
+        this.searchText?.trim() || ''
+      )
+      .subscribe({
+        next: (data) => {
+          this.rows = data || [];
+          this.page = 1; // reset to first page whenever we reload
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Error loading GST details', err);
+          this.rows = [];
+          this.page = 1;
+          this.isLoading = false;
+        }
+      });
   }
 
   resetFilters(): void {
@@ -76,8 +130,8 @@ export class GstReportComponent implements OnInit {
     from.setMonth(from.getMonth() - 3);
 
     this.startDate = from.toISOString().substring(0, 10);
-    this.endDate   = today.toISOString().substring(0, 10);
-    this.docType   = 'ALL';
+    this.endDate = today.toISOString().substring(0, 10);
+    this.docType = 'ALL';
     this.searchText = '';
 
     this.loadDetails();
@@ -90,7 +144,9 @@ export class GstReportComponent implements OnInit {
   }
 
   get totalPages(): number {
-    return this.totalRows === 0 ? 1 : Math.ceil(this.totalRows / this.pageSize);
+    return this.totalRows === 0
+      ? 1
+      : Math.ceil(this.totalRows / this.pageSize);
   }
 
   get pagedRows(): GstDetailRow[] {
@@ -99,12 +155,16 @@ export class GstReportComponent implements OnInit {
   }
 
   get displayFrom(): number {
-    if (this.totalRows === 0) { return 0; }
+    if (this.totalRows === 0) {
+      return 0;
+    }
     return (this.page - 1) * this.pageSize + 1;
   }
 
   get displayTo(): number {
-    if (this.totalRows === 0) { return 0; }
+    if (this.totalRows === 0) {
+      return 0;
+    }
     const end = this.page * this.pageSize;
     return end > this.totalRows ? this.totalRows : end;
   }
@@ -119,7 +179,9 @@ export class GstReportComponent implements OnInit {
   }
 
   goToPage(p: number): void {
-    if (p < 1 || p > this.totalPages) { return; }
+    if (p < 1 || p > this.totalPages) {
+      return;
+    }
     this.page = p;
   }
 
@@ -137,10 +199,12 @@ export class GstReportComponent implements OnInit {
 
   /* ----------------- Export: Excel ----------------- */
 
-  exportToExcel(): void {
-    if (!this.rows?.length) { return; }
+  exportToExcel(fileName?: string): void {
+    if (!this.rows?.length) {
+      return;
+    }
 
-    const exportData = this.rows.map(r => ({
+    const exportData = this.rows.map((r) => ({
       Type: r.docType === 'SI' ? 'Sales Invoice' : 'Supplier Invoice',
       Source: r.source,
       Date: r.docDate.substring(0, 10),
@@ -155,17 +219,20 @@ export class GstReportComponent implements OnInit {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'GST Details');
 
-    XLSX.writeFile(workbook, 'GstDetails.xlsx');
+    const name = fileName || 'GstDetails.xlsx';
+    XLSX.writeFile(workbook, name);
   }
 
   /* ----------------- Export: PDF ----------------- */
 
-  exportToPdf(): void {
-    if (!this.rows?.length) { return; }
+  exportToPdf(fileName?: string): void {
+    if (!this.rows?.length) {
+      return;
+    }
 
     const doc = new jsPDF('l', 'pt', 'a4');
 
-    const body = this.rows.map(r => [
+    const body = this.rows.map((r) => [
       r.docType === 'SI' ? 'Sales' : 'Supplier',
       r.source,
       r.docDate.substring(0, 10),
@@ -177,29 +244,36 @@ export class GstReportComponent implements OnInit {
     ]);
 
     autoTable(doc, {
-      head: [[
-        'Type',
-        'Source',
-        'Date',
-        'Doc No',
-        'Customer / Supplier',
-        'Taxable',
-        'Tax',
-        'Net'
-      ]],
+      head: [
+        [
+          'Type',
+          'Source',
+          'Date',
+          'Doc No',
+          'Customer / Supplier',
+          'Taxable',
+          'Tax',
+          'Net'
+        ]
+      ],
       body,
       startY: 40,
       styles: { fontSize: 8 }
     });
 
     doc.text('GST Detail Listing', 40, 25);
-    doc.save('GstDetails.pdf');
+
+    const name = fileName || 'GstDetails.pdf';
+    doc.save(name);
   }
 
   /* ----------------- Totals ----------------- */
 
   get totalTaxable(): number {
-    return this.rows.reduce((sum, r) => sum + (r.taxableAmount || 0), 0);
+    return this.rows.reduce(
+      (sum, r) => sum + (r.taxableAmount || 0),
+      0
+    );
   }
 
   get totalTax(): number {

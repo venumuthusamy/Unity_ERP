@@ -1,6 +1,27 @@
 <!-- src/app/main/financial/reports/ap-aging/ap-aging.component.html -->
 
 <div class="ap-aging-wrapper">
+   <div class="d-flex justify-content-between align-items-center mb-1 aging-header">
+    <h4 class="mb-0 aging-title">AP Aging</h4>
+
+    <div class="d-flex align-items-center gst-export">
+      <button class="btn btn-outline-secondary btn-sm"
+              type="button"
+              (click)="exportToPdf()"
+              [disabled]="!filteredRows?.length">
+        <i class="far fa-file-pdf me-25"></i>
+        <span>PDF</span>
+      </button>
+
+      <button class="btn btn-outline-secondary btn-sm"
+              type="button"
+              (click)="exportToExcel()"
+              [disabled]="!filteredRows?.length">
+        <i class="far fa-file-excel me-25"></i>
+        <span>Excel</span>
+      </button>
+    </div>
+  </div>
 
   <!-- ================== FILTER BAR ================== -->
   <div class="row mb-1 align-items-end">

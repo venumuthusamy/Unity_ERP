@@ -269,6 +269,23 @@
             </td>
 
             <!-- Tax info -->
+    <!-- Tax info -->
+<td class="text-start">
+  <div class="small text-muted mb-1">
+    {{
+      r.tax === 'Standard-Rated'
+        ? 'Standard-Rated (GST applies)'
+        : r.tax === 'Zero-Rated'
+          ? 'Zero-Rated (0%)'
+          : 'Exempt (No GST)'
+    }}
+  </div>
+  <div class="small text-muted">
+    Tax: {{ taxPortion(r) | number:'1.2-2' }}
+    <span *ngIf="r.gstPct"> ({{ r.gstPct }}%)</span>
+  </div>
+</td>
+
             <td class="text-start">
               <ng-container *ngIf="r.tax === 'EXEMPT' || !r.gstPct; else hasGst">
                 <div>Exempt (0%)</div>

@@ -1,299 +1,258 @@
-<!-- create-journal.component.html -->
 <div class="content-wrapper container-xxl p-0">
   <div class="content-body">
-    <div class="row g-3 metrics-row">
+    <div class="row g-3">
       <div class="col-md-12">
-        <div class="card h-100 journal-card">
+        <div class="card journal-card h-100">
           <div class="card-body">
 
-            <!-- Header -->
-            <div class="journal-header d-flex justify-content-between align-items-center mb-2">
-              <h2 class="journal-title mb-0" style="color:#2E5F73; font-size:20px; font-weight:600;">
-                Manual Journal Entry
-              </h2>
+            <!-- ===== HEADER TITLE ===== -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <h2 class="journal-title mb-0">Manual Journal Entry</h2>
+                <p class="journal-subtitle mb-0">
+                  Capture multiple debit &amp; credit lines in a single balanced journal.
+                </p>
+              </div>
             </div>
 
-            <!-- ================= ROW 1: Item, Account, Journal Date ================= -->
-            <div class="row gx-3 gy-3 journal-fields">
-
-              <!-- Item -->
-              <div class="col-md-4 col-sm-6">
-                <label class="form-label mb-25">Item</label>
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="ItemList"
-                  bindLabel="itemName"
-                  [(ngModel)]="selectedItem"
-                  name="selectedItem"
-                  [clearable]="true"
-                  placeholder="Select item"
-                  (change)="onItemChange($event)">
-                  <ng-template ng-option-tmp let-item="item">
-                    {{ item.itemCode }} - {{ item.itemName }}
-                  </ng-template>
-                  <ng-template ng-label-tmp let-item="item">
-                    {{ item.itemCode }} - {{ item.itemName }}
-                  </ng-template>
-                </ng-select>
-              </div>
-
-              <!-- Account -->
-<div class="col-md-4 col-sm-6" *ngIf="showAccount">
-  <label class="form-label mb-25">Account</label>
-  <ng-select
-    class="w-100 journal-select"
-    [items]="AccountList"
-    bindValue="id"
-    [(ngModel)]="selectedAccountId"
-    name="selectedAccountId"
-    [clearable]="true"
-    placeholder="Select account"
-    (change)="onAccountChange($event)">
-    <ng-template ng-option-tmp let-item="item">
-      {{ item.headCode }} - {{ item.headName }}
-    </ng-template>
-    <ng-template ng-label-tmp let-item="item">
-      {{ item.headCode }} - {{ item.headName }}
-    </ng-template>
-  </ng-select>
-</div>
-
+            <!-- ===== TOP ROW : DATE + NARRATION ===== -->
+            <div class="row gx-3 gy-3 mb-2">
               <!-- Journal Date -->
               <div class="col-md-4 col-sm-6">
                 <label class="form-label mb-25">Journal Date</label>
-                <div class="journal-date-group">
-                  <input
-                    type="date"
-                    class="form-control journal-input"
-                    [(ngModel)]="journalDate"
-                    name="journalDate"
-                    placeholder="dd/mm/yyyy" />
-                </div>
-              </div>
-            </div>
-
-            <!-- ================= ROW 2: Type, Debit, Credit ================= -->
-            <div class="row gx-3 gy-3 mt-1">
-
-              <!-- Type -->
-              <div class="col-md-4 col-sm-6">
-                <label class="form-label mb-25">Type</label>
-                <ng-select
-                  class="w-100 journal-select"
-                  [items]="journalTypes"
-                  bindLabel="value"
-                  bindValue="value"
-                  [(ngModel)]="selectedType"
-                  name="selectedType"
-                  [clearable]="true"
-                  placeholder="Select type">
-                </ng-select>
-              </div>
-
-              <!-- Debit -->
-              <div class="col-md-4 col-sm-6">
-                <label class="form-label mb-25">Debit</label>
                 <input
-                  type="number"
-                  class="form-control journal-input text-right"
-                  [(ngModel)]="debitAmount"
-                  name="debitAmount"
-                  placeholder="0.00" />
+                  type="date"
+                  class="form-control journal-input"
+                  [(ngModel)]="journalDate"
+                  name="journalDate" />
               </div>
 
-              <!-- Credit -->
-              <div class="col-md-4 col-sm-6">
-                <label class="form-label mb-25">Credit</label>
-                <input
-                  type="number"
-                  class="form-control journal-input text-right"
-                  [(ngModel)]="creditAmount"
-                  name="creditAmount"
-                  placeholder="0.00" />
-              </div>
-            </div>
-
-            <!-- ================= ROW 3: Customer/Supplier + Description (ONLY 2 FIELDS) ================= -->
-            <div class="row gx-3 gy-3 mt-1">
-
-              <!-- Customer / Supplier (same column) -->
-              <div class="col-md-4 col-sm-12">
-                <label class="form-label mb-25">
-                  <!-- label changes based on type -->
-                  <ng-container [ngSwitch]="selectedType">
-                    <span *ngSwitchCase="'Supplier'">Supplier</span>
-                    <span *ngSwitchDefault>Customer</span>
-                  </ng-container>
-                </label>
-
-                <ng-container [ngSwitch]="selectedType">
-                  <!-- Customer -->
-                  <ng-select
-                    *ngSwitchCase="'Customer'"
-                    class="w-100 journal-select"
-                    [items]="CustomerList"
-                    bindLabel="customerName"
-                    bindValue="id"
-                    [(ngModel)]="selectedCustomerId"
-                    name="selectedCustomerId"
-                    [clearable]="true"
-                    placeholder="Select customer">
-                  </ng-select>
-
-                  <!-- Supplier -->
-                  <ng-select
-                    *ngSwitchCase="'Supplier'"
-                    class="w-100 journal-select"
-                    [items]="SupplierList"
-                    bindLabel="name"
-                    bindValue="id"
-                    [(ngModel)]="selectedSupplierId"
-                    name="selectedSupplierId"
-                    [clearable]="true"
-                    placeholder="Select supplier">
-                  </ng-select>
-
-                  <!-- If no type selected, just an empty disabled box -->
-                  <input
-                    *ngSwitchDefault
-                    class="form-control journal-input"
-                    placeholder="Select type first"
-                    disabled />
-                </ng-container>
-              </div>
-
-              <!-- Description -->
-              <div class="col-md-8 col-sm-12">
+              <!-- Header Description -->
+              <div class="col-md-8 col-sm-6">
                 <label class="form-label mb-25">Description</label>
-                <textarea
+                <input
+                  type="text"
                   class="form-control journal-input"
                   [(ngModel)]="description"
+                  (ngModelChange)="onHeaderDescriptionChange($event)"
                   name="description"
-                  rows="3">
-                </textarea>
+                  placeholder="Narration" />
               </div>
             </div>
 
-              <!-- ================= ROW 4: Budget Line ================= -->
-<div class="row gx-3 gy-3 mt-1">
-  <div class="col-md-4 col-sm-12">
-    <label class="form-label mb-25">Ledger Name</label>
+            <!-- ========================================= -->
+            <!-- GRID + TOTALS + RECURRING + BUTTONS BLOCK -->
+            <!-- ========================================= -->
+            <div class="journal-grid-block">
 
-    <ng-select
-      class="w-100 journal-select"
-      [items]="parentHeadList"
-      bindLabel="label"
-      bindValue="value"
-      [(ngModel)]="budgetLineId"
-      name="budgetLineId"
-      [clearable]="true"
-      placeholder="Select Ledger Name">
-    </ng-select>
+              <!-- ===== LINES GRID ===== -->
+              <div class="journal-table-wrapper">
+                <table class="table journal-table mb-0">
+                  <thead>
+                    <tr>
+                      <th class="col-desc">Description</th>
+                      <th class="col-ledger">Ledger Name</th>
+                      <th class="col-amount text-right">Debit</th>
+                      <th class="col-amount text-right">Credit</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
 
-    <div *ngIf="submitted && !budgetLineId" class="invalid-feedback d-block">
-      This field is required!
-    </div>
-  </div>
-</div>
+                  <tbody>
+                    <!-- Empty state -->
+                    <tr *ngIf="!lines || lines.length === 0">
+                      <td colspan="5" class="jl-no-lines text-center">
+                        No lines yet.
+                      </td>
+                    </tr>
 
+                    <!-- Actual lines -->
+                    <tr *ngFor="let line of lines; let i = index">
+                      <!-- Line Description -->
+                      <td>
+                        <input
+                          type="text"
+                          class="form-control journal-input"
+                          [(ngModel)]="line.lineDescription"
+                          placeholder="Line description" />
+                      </td>
 
-            <!-- ================= RECURRING SECTION ================= -->
-            <div class="row mt-3">
-              <div class="col-12">
-                <div class="recurring-card">
+                      <!-- Ledger Name -->
+                      <td>
+                        <ng-select
+                          class="journal-select w-100"
+                          [items]="parentHeadList"
+                          bindLabel="label"
+                          bindValue="value"
+                          [(ngModel)]="line.ledgerId"
+                          [clearable]="true"
+                          placeholder="Select Ledger Name">
+                        </ng-select>
+                      </td>
 
-                  <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="form-check mb-0">
-                      <input class="form-check-input" type="checkbox" id="isRecurring" [(ngModel)]="isRecurring">
-                      <label class="form-check-label ms-2" for="isRecurring">Make this a recurring journal</label>
-                    </div>
-                    <small class="recurring-help d-none d-md-inline">
-                      Automatically create this journal on a schedule.
-                    </small>
-                  </div>
+                      <!-- Debit -->
+                      <td class="text-right amount-cell">
+                        <input
+                          type="number"
+                          class="form-control journal-input text-right"
+                          [(ngModel)]="line.debit"
+                          (input)="onDebitChanged(line)"
+                          placeholder="0.00" />
+                      </td>
 
-                  <div class="row gx-3 gy-2 mt-1" *ngIf="isRecurring">
+                      <!-- Credit -->
+                      <td class="text-right amount-cell">
+                        <input
+                          type="number"
+                          class="form-control journal-input text-right"
+                          [(ngModel)]="line.credit"
+                          (input)="onCreditChanged(line)"
+                          placeholder="0.00" />
+                      </td>
 
-                    <!-- Frequency -->
-                    <div class="col-md-3 col-sm-6">
-                      <label class="recurring-label">Frequency</label>
-                      <select
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringFrequency">
-                        <option [ngValue]="null" disabled>Select frequency</option>
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                        <option value="Quarterly">Quarterly</option>
-                        <option value="Yearly">Yearly</option>
-                      </select>
-                    </div>
+                      <!-- Remove -->
+                      <td class="text-center">
+                        <button
+                          type="button"
+                          class="btn btn-sm journal-remove-btn"
+                          [disabled]="lines.length === 1"
+                          (click)="removeLine(i)">
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
-                    <!-- Interval -->
-                    <div class="col-md-2 col-sm-6">
-                      <label class="recurring-label">Every</label>
-                      <input
-                        type="number"
-                        min="1"
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringInterval">
-                    </div>
-
-                    <!-- Start -->
-                    <div class="col-md-3 col-sm-6">
-                      <label class="recurring-label">Start Date</label>
-                      <input
-                        type="date"
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringStartDate" />
-                    </div>
-
-                    <!-- Ends -->
-                    <div class="col-md-2 col-sm-6">
-                      <label class="recurring-label">Ends</label>
-                      <select
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringEndType">
-                        <option value="NoEnd">Never</option>
-                        <option value="EndByDate">On date</option>
-                        <option value="EndByCount">After N times</option>
-                      </select>
-                    </div>
-
-                    <!-- End Date -->
-                    <div class="col-md-2" *ngIf="recurringEndType === 'EndByDate'">
-                      <label class="recurring-label">End Date</label>
-                      <input
-                        type="date"
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringEndDate" />
-                    </div>
-
-                    <!-- Count -->
-                    <div class="col-md-2" *ngIf="recurringEndType === 'EndByCount'">
-                      <label class="recurring-label">Occurrences</label>
-                      <input
-                        type="number"
-                        min="1"
-                        class="form-control journal-input"
-                        [(ngModel)]="recurringCount" />
-                    </div>
-
-                  </div>
-
+                <!-- Add line footer -->
+                <div class="journal-add-footer">
+                  <button
+                    type="button"
+                    class="journal-add-btn"
+                    (click)="addLine()"
+                    (mouseenter)="addHover = true"
+                    (mouseleave)="addHover = false"
+                    [style.backgroundColor]="addHover ? '#092f3f' : '#2E5F73'">
+                    + Add line
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <!-- ================= BUTTONS ================= -->
-            <div class="row mt-3">
-              <div class="col-12 d-flex justify-content-end">
-                <button class="btn btn-outline-secondary mr-1" (click)="onCancel()">Cancel</button>
-                <button class="btn" [disabled]="isSaving" style="background:#2E5F73;color:white" (click)="onSubmit()">
-                  {{ isSaving ? 'Saving...' : 'Submit' }}
+              <!-- ===== TOTALS STRIP ===== -->
+              <div class="journal-totals-strip">
+                <div>
+                  <span class="totals-label">Total Debit</span>
+                  <span class="totals-value">{{ totalDebit | number:'1.2-2' }}</span>
+                </div>
+                <div>
+                  <span class="totals-label">Total Credit</span>
+                  <span class="totals-value">{{ totalCredit | number:'1.2-2' }}</span>
+                </div>
+                <div class="ms-auto">
+                  <span
+                    class="badge"
+                    [ngClass]="isBalanced ? 'badge-balanced' : 'badge-unbalanced'">
+                    {{ isBalanced ? 'Balanced' : 'Not Balanced' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- ===== RECURRING SECTION ===== -->
+              <div class="recurring-card">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="isRecurring"
+                          [(ngModel)]="isRecurring">
+                    <label class="form-check-label ms-2" for="isRecurring">
+                      Make this a recurring journal
+                    </label>
+                  </div>
+                  <small class="recurring-help d-none d-md-inline">
+                    Automatically create this journal on a schedule.
+                  </small>
+                </div>
+
+                <div class="row gx-3 gy-2 mt-1" *ngIf="isRecurring">
+                  <!-- Frequency -->
+                  <div class="col-md-3 col-sm-6">
+                    <label class="recurring-label">Frequency</label>
+                    <select
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringFrequency">
+                      <option [ngValue]="null" disabled>Select frequency</option>
+                      <option value="Daily">Daily</option>
+                      <option value="Weekly">Weekly</option>
+                      <option value="Monthly">Monthly</option>
+                      <option value="Quarterly">Quarterly</option>
+                      <option value="Yearly">Yearly</option>
+                    </select>
+                  </div>
+
+                  <!-- Every -->
+                  <div class="col-md-2 col-sm-6">
+                    <label class="recurring-label">Every</label>
+                    <input
+                      type="number"
+                      min="1"
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringInterval">
+                  </div>
+
+                  <!-- Start date -->
+                  <div class="col-md-3 col-sm-6">
+                    <label class="recurring-label">Start Date</label>
+                    <input
+                      type="date"
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringStartDate" />
+                  </div>
+
+                  <!-- Ends -->
+                  <div class="col-md-2 col-sm-6">
+                    <label class="recurring-label">Ends</label>
+                    <select
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringEndType">
+                      <option value="NoEnd">Never</option>
+                      <option value="EndByDate">On date</option>
+                      <option value="EndByCount">After N times</option>
+                    </select>
+                  </div>
+
+                  <!-- End Date -->
+                  <div class="col-md-2 col-sm-6" *ngIf="recurringEndType === 'EndByDate'">
+                    <label class="recurring-label">End Date</label>
+                    <input
+                      type="date"
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringEndDate" />
+                  </div>
+
+                  <!-- Count -->
+                  <div class="col-md-2 col-sm-6" *ngIf="recurringEndType === 'EndByCount'">
+                    <label class="recurring-label">Occurrences</label>
+                    <input
+                      type="number"
+                      min="1"
+                      class="form-control journal-input"
+                      [(ngModel)]="recurringCount" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- ===== BUTTONS ===== -->
+              <div class="journal-action-row">
+                <button class="btn btn-outline-secondary" (click)="onCancel()">Cancel</button>
+
+                <button class="btn journal-submit-btn"
+                        [disabled]="isSaving || !isBalanced || !hasValidLines"
+                        (click)="onSubmit()">
+                  {{ isSaving ? 'Saving...' : 'Submit Journal' }}
                 </button>
               </div>
+
             </div>
+            <!-- /journal-grid-block -->
 
           </div>
         </div>

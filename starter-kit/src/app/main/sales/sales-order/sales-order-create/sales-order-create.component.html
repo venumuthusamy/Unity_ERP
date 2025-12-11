@@ -160,13 +160,19 @@
             </td>
 
             <!-- Tax -->
-            <td>
-              <div class="dim xs mb-1">
-                {{ soLines[i].tax === 'EXCLUSIVE' ? 'Exclusive (add GST)' :
-                   soLines[i].tax === 'INCLUSIVE' ? 'Inclusive (includes GST)' : 'Exempt (0%)' }}
-              </div>
-              <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
-            </td>
+         <!-- Tax -->
+<td>
+  <div class="dim xs mb-1">
+    {{
+      soLines[i].tax === 'Standard-Rated'
+        ? 'Standard-Rated (GST applies)'
+        : soLines[i].tax === 'Zero-Rated'
+          ? 'Zero-Rated (0%)'
+          : 'Exempt (No GST)'
+    }}
+  </div>
+  <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
+</td>
 
             <!-- Total -->
             <td class="num">{{ (soLines[i].total || 0) | number:'1.2-2' }}</td>

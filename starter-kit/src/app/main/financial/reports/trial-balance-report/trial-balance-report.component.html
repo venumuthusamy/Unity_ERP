@@ -1,18 +1,32 @@
-<!-- trial-balance-report.component.html -->
 <div class="content-wrapper p-0">
   <div class="content-body">
     <section class="users-list-wrapper">
       <div class="card shadow-sm">
 
-        <!-- Header -->
+        <!-- ===== Header ===== -->
         <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
           <h4 class="mb-50" style="font-weight:600;color:#2E5F73;">
             Trial Balance
           </h4>
+
+          <div class="d-flex align-items-center gst-export">
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportToPdf()"
+              [disabled]="!displayRows?.length">
+              <i class="far fa-file-pdf me-25"></i>
+              <span>PDF</span>
+            </button>
+
+            <button class="btn btn-outline-secondary btn-sm" type="button" (click)="exportToExcel()"
+              [disabled]="!displayRows?.length">
+              <i class="far fa-file-excel me-25"></i>
+              <span>Excel</span>
+            </button>
+          </div>
         </div>
 
+
         <div class="card-body pt-1">
-          <!-- ===== TB SUMMARY CARDS (NEW) ===== -->
+
           <!-- ===== TB SUMMARY CARDS (NEW AP/AR STYLE) ===== -->
           <div class="row tb-summary-row mb-2">
             <!-- Opening Debit -->
@@ -76,9 +90,7 @@
             </div>
           </div>
 
-
-
-          <!-- Filters -->
+          <!-- ===== Filters (From / To / Company / Run) ===== -->
           <div class="row mb-2">
             <div class="col-md-3">
               <label class="form-label">From</label>
@@ -101,7 +113,36 @@
             </div>
           </div>
 
-          <!-- Trial Balance (hierarchical) -->
+          <!-- ===== Show entries + Search (like General Ledger) ===== -->
+          <div class="row align-items-center mb-1">
+            <div class="col-md-6 col-12">
+              <div class="d-flex align-items-center m-1">
+                <label class="d-flex align-items-center mb-0">
+                  Show
+                  <select class="form-control mx-25" [(ngModel)]="pageSize"
+                    (ngModelChange)="currentPage = 1;rebuildDisplayRows()">
+                    <option [ngValue]="10">10</option>
+                    <option [ngValue]="25">25</option>
+                    <option [ngValue]="50">50</option>
+                    <option [ngValue]="100">100</option>
+                  </select>
+                  entries
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+              <div class="d-flex align-items-center justify-content-end pr-2 pb-1 pb-md-0">
+                <label class="d-flex align-items-center ml-1 ml-md-0 mb-0">
+                  Search:
+                  <input [(ngModel)]="searchValue" name="searchValue" type="search" class="form-control ml-25"
+                    (keyup)="filterUpdate()" (search)="filterUpdate()" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Trial Balance (hierarchical) ===== -->
           <div class="table-responsive mb-3">
             <table class="table table-hover trial-table">
               <thead class="thead-light">
@@ -111,6 +152,7 @@
                   <th class="text-end">Opening Credit</th>
                   <th class="text-end">Closing Debit</th>
                   <th class="text-end">Closing Credit</th>
+                  <th class="text-center" style="width:80px;">Action</th>
                 </tr>
               </thead>
 
@@ -120,28 +162,63 @@
                   <!-- MAIN ROW (group or leaf) -->
                   <tr (click)="onRowClick(r)" style="cursor:pointer;">
                     <td class="tb-account-col">
-                      <!-- indent by level -->
                       <span [style.padding-left.px]="r.level * 20"></span>
 
-                      <!-- expand / collapse icon for groups -->
                       <span *ngIf="r.children && r.children.length" class="me-50" (click)="toggleNode(r, $event)">
                         <i class="fas" [ngClass]="r.expanded ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
                       </span>
 
-                      <!-- account text -->
                       <span [ngStyle]="{'font-weight': r.children.length ? '600' : '400'}">
                         {{ r.headCode }} - {{ r.headName }}
                       </span>
                     </td>
 
-                    <td class="text-end">{{ getOpeningDebitDisplay(r) | number:'1.2-2' }}</td>
-                    <td class="text-end">{{ getOpeningCreditDisplay(r) | number:'1.2-2' }}</td>
+                    <td class="text-end">
+                      <ng-container *ngIf="r.isLeaf && r.isEditingOpening; else openingDebitRead">
+                        <input type="number" class="form-control form-control-sm text-end"
+                          [(ngModel)]="r.openingDebitEdit">
+                      </ng-container>
+                      <ng-template #openingDebitRead>
+                        {{ getOpeningDebitDisplay(r) | number:'1.2-2' }}
+                      </ng-template>
+                    </td>
+
+                    <td class="text-end">
+                      <ng-container *ngIf="r.isLeaf && r.isEditingOpening; else openingCreditRead">
+                        <input type="number" class="form-control form-control-sm text-end"
+                          [(ngModel)]="r.openingCreditEdit">
+                      </ng-container>
+                      <ng-template #openingCreditRead>
+                        {{ getOpeningCreditDisplay(r) | number:'1.2-2' }}
+                      </ng-template>
+                    </td>
+
                     <td class="text-end">{{ getClosingDebitDisplay(r) | number:'1.2-2' }}</td>
                     <td class="text-end">{{ getClosingCreditDisplay(r) | number:'1.2-2' }}</td>
+                    <td class="text-center">
+                      <ng-container *ngIf="r.isLeaf">
+                        <!-- Edit button -->
+                        <button *ngIf="!r.isEditingOpening" class="btn btn-sm btn-link p-0 tb-action-btn"
+                          (click)="startEditOpening(r, $event)" title="Edit opening">
+                          <i data-feather="edit-2" class="tb-action-icon"></i>
+                        </button>
 
+                        <!-- Save / Cancel buttons -->
+                        <ng-container *ngIf="r.isEditingOpening">
+                          <button class="btn btn-sm btn-link p-0 me-25 tb-action-btn" (click)="saveOpening(r, $event)"
+                            title="Save">
+                            <i data-feather="check" class="tb-action-icon"></i>
+                          </button>
+                          <button class="btn btn-sm btn-link p-0 tb-action-btn" (click)="cancelEditOpening(r, $event)"
+                            title="Cancel">
+                            <i data-feather="x" class="tb-action-icon"></i>
+                          </button>
+                        </ng-container>
+                      </ng-container>
+                    </td>
                   </tr>
 
-                  <!-- DETAIL ROW: only when a LEAF is selected -->
+                  <!-- DETAIL ROW -->
                   <tr *ngIf="selectedHead && selectedHead.headId === r.headId">
                     <td colspan="5" style="background:#fafafa;">
                       <h6 class="mb-1">
@@ -193,6 +270,53 @@
 
             </table>
           </div>
+          <div class="d-flex justify-content-between align-items-center mt-1">
+
+            <!-- left side text, like "15 total" -->
+            <div class="text-muted">
+              {{ totalRows }} total
+            </div>
+
+            <!-- right side: numbered pagination like General Ledger -->
+            <ul class="pagination mb-0">
+
+              <!-- First -->
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <a class="page-link" (click)="changePage(1)">
+                  «
+                </a>
+              </li>
+
+              <!-- Previous -->
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <a class="page-link" (click)="changePage(currentPage - 1)">
+                  ‹
+                </a>
+              </li>
+
+              <!-- Page numbers -->
+              <li *ngFor="let p of pages" class="page-item" [class.active]="currentPage === p">
+                <a class="page-link" (click)="changePage(p)">{{ p }}</a>
+              </li>
+
+              <!-- Next -->
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <a class="page-link" (click)="changePage(currentPage + 1)">
+                  ›
+                </a>
+              </li>
+
+              <!-- Last -->
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <a class="page-link" (click)="changePage(totalPages)">
+                  »
+                </a>
+              </li>
+            </ul>
+          </div>
+
+
+
         </div>
       </div>
     </section>
