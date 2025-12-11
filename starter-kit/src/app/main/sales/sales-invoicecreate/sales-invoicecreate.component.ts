@@ -252,48 +252,38 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
    * - Standard-Rated → GST applies
    * - Zero-Rated / Exempt → GST = 0
    */
-  private calcLineAmounts(line: UiLine) {
+ private calcLineAmounts(line: UiLine) {
     const qty = Number(line.qty || 0);
     const price = Number(line.unitPrice || 0);
     const disc = Number(line.discountPct || 0);
     const gst = Number(line.gstPct || 0);
-
-    const raw = +(qty * price).toFixed(2);
-    const discAmount = +(raw * (disc / 100)).toFixed(2);
+ 
+    const raw = +(qty * price).toFixed(2);               // qty * price
+    const discAmount = +(raw * (disc / 100)).toFixed(2); // discount value
     const baseAfterDisc = +(raw - discAmount).toFixed(2);
-
+ 
     const mode = this.canonicalTaxMode(line.tax, gst);
-
+ 
     // GST applies only for Standard-Rated & gst > 0
     const rate = mode === 'Standard-Rated' && gst > 0 ? (gst / 100) : 0;
-
+ 
     let net = baseAfterDisc;
     let tax = 0;
     let gross = baseAfterDisc;
-
+ 
     if (rate > 0) {
       tax = +(net * rate).toFixed(2);
       gross = +(net + tax).toFixed(2);
     } else {
-    if (!gst || mode === 'EXEMPT') {
       tax = 0;
       gross = net;
     }
-
+ 
     // Persist for UI
     line.tax = mode;
-    } else if (mode === 'EXCLUSIVE') {
-      tax = +(net * gst / 100).toFixed(2);
-      gross = +(net + tax).toFixed(2);
-    } else if (mode === 'INCLUSIVE') {
-      gross = baseAfterDisc;
-      net = +(gross * 100 / (100 + gst)).toFixed(2);
-      tax = +(gross - net).toFixed(2);
-    }
-
     line.lineAmount = gross;
     (line as any).taxAmount = tax;
-
+ 
     return { net, tax, gross, raw, discAmount };
   }
 
