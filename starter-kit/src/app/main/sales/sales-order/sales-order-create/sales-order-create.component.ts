@@ -19,7 +19,8 @@ type WarehouseInfo = {
 
 type WarehouseMaster = { id: number; warehouseName: string };
 
-type LineTaxMode = 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT';
+// 🔹 New tax mode values – same as Quotation
+type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
 
 type SoLine = {
   __id?: number;
@@ -33,16 +34,15 @@ type SoLine = {
 
   // discount input (ALWAYS percent in UI)
   discount?: number | string;
-  // not used in UI, but kept for future
   discountType?: 'PCT' | 'VAL';
 
   tax?: LineTaxMode;
 
   // amounts
   lineGross?: number;     // qty * price (before discount & tax)
-  lineNet?: number;       // after discount, before tax (exclusive) or net-of-tax (inclusive)
-  lineTax?: number;
-  total?: number;         // line total including tax
+  lineNet?: number;       // after discount, before tax
+  lineTax?: number;       // GST amount
+  total?: number;         // line total including tax (net + tax)
   lineDiscount?: number;  // discount amount in money
 
   // original snapshot
@@ -97,6 +97,9 @@ export class SalesOrderCreateComponent implements OnInit {
     shipping: 0,
     discount: 0,   // total discount AMOUNT (sum of line discounts)
     gstPct: 0,
+    taxAmount: 0,  // 🔹 header tax
+    subTotal: 0,   // 🔹 header subtotal (net + shipping)
+    grandTotal: 0, // 🔹 subtotal + tax
     status: 1,
     statusText: 'Pending'
   };
@@ -205,6 +208,25 @@ export class SalesOrderCreateComponent implements OnInit {
   /* ======== helpers for amounts ======== */
   private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
+  // 🔹 Convert any old/DB values → canonical LineTaxMode
+  private canonicalTaxMode(rawMode: any, gstPct: number): LineTaxMode {
+    const s = (rawMode ?? '').toString().toUpperCase().trim();
+
+    if (s === 'STANDARD-RATED' || s === 'STANDARD_RATED' || s === 'EXCLUSIVE') {
+      return 'Standard-Rated';
+    }
+    if (s === 'ZERO-RATED' || s === 'ZERO_RATED' || s === 'INCLUSIVE') {
+      // your older code may have used INCLUSIVE for 0-tax in some cases
+      return 'Zero-Rated';
+    }
+    if (s === 'EXEMPT' || s === 'NO GST' || s === 'NO_GST') {
+      return 'Exempt';
+    }
+
+    // Default based on GST rule: 9 => Standard, otherwise Zero
+    return gstPct === 9 ? 'Standard-Rated' : 'Zero-Rated';
+  }
+
   private calcAmounts(
     qty: number,
     unitPrice: number,
@@ -215,10 +237,8 @@ export class SalesOrderCreateComponent implements OnInit {
 
     const sub = qty * unitPrice;          // GROSS before discount & tax
     const discPct = discountPct || 0;
-    const mode = (taxMode ?? 'EXCLUSIVE').toUpperCase();
-    const rate = (gstPct || 0) / 100;
 
-    // discount amount in money from % (always)
+    // Discount amount
     let discountAmt = sub * discPct / 100;
     if (discountAmt < 0) discountAmt = 0;
     if (discountAmt > sub) discountAmt = sub;
@@ -226,17 +246,19 @@ export class SalesOrderCreateComponent implements OnInit {
     let afterDisc = sub - discountAmt;
     if (afterDisc < 0) afterDisc = 0;
 
+    // 🔹 Canonical tax mode (Standard/Zero/Exempt)
+    const mode = this.canonicalTaxMode(taxMode, gstPct);
+    const rate = (mode === 'Standard-Rated' ? gstPct : 0) / 100;
+
     let net = afterDisc, tax = 0, tot = afterDisc;
 
-    if (mode === 'EXCLUSIVE') {
+    if (mode === 'Standard-Rated' && rate > 0) {
+      // Standard: normal exclusive calculation
       net = afterDisc;
       tax = net * rate;
       tot = net + tax;
-    } else if (mode === 'INCLUSIVE') {
-      tot = afterDisc;
-      net = rate > 0 ? (tot / (1 + rate)) : tot;
-      tax = tot - net;
-    } else { // EXEMPT
+    } else {
+      // Zero-Rated / Exempt – no GST
       net = afterDisc;
       tax = 0;
       tot = afterDisc;
@@ -249,6 +271,16 @@ export class SalesOrderCreateComponent implements OnInit {
       total: this.round2(tot),
       discountAmt: this.round2(discountAmt)
     };
+  }
+
+  // GST rule: if GST ≠ 9 → force all lines to Zero-Rated
+  private enforceTaxModesByGst() {
+    const gst = Number(this.soHdr.gstPct || 0);
+    if (gst !== 9) {
+      this.soLines.forEach(l => {
+        l.tax = 'Zero-Rated';
+      });
+    }
   }
 
   /* ============ Load SO (Edit) ============ */
@@ -269,28 +301,30 @@ export class SalesOrderCreateComponent implements OnInit {
         this.soHdr.shipping = Number(head.shipping ?? 0);
         this.soHdr.discount = Number(head.discount ?? 0); // total discount amount
         this.soHdr.gstPct   = Number(head.gstPct ?? 0);
+        this.soHdr.taxAmount = Number(head.taxAmount ?? head.TaxAmount ?? 0); // header tax
+        this.soHdr.subTotal  = Number(head.subtotal ?? head.Subtotal ?? 0);
+        this.soHdr.grandTotal = Number(head.grandTotal ?? head.GrandTotal ?? 0);
+
         this.soHdr.status   = head.status ?? 1;
         this.soHdr.statusText = this.mapStatusText(this.soHdr.status);
 
         const gst = Number(this.soHdr.gstPct || 0);
-        const rate = gst / 100;
-
         const lines = (head.lineItems ?? []) as any[];
 
-        // Derive line % from total
         this.soLines = lines.map((l: any) => {
           const qty   = Number(l.quantity ?? 0);
           const price = Number(l.unitPrice ?? 0);
-          const mode  = (l.tax || 'EXCLUSIVE') as LineTaxMode;
+          const mode  = this.canonicalTaxMode(l.tax, gst);
           const totalDb = Number(l.total ?? 0);
           const sub  = qty * price;
 
           let discAmt = 0;
           if (sub > 0) {
-            if (mode === 'EXCLUSIVE') {
+            if (mode === 'Standard-Rated') {
+              const rate = gst / 100;
               const netFromTotal = rate > 0 ? totalDb / (1 + rate) : totalDb;
               discAmt = sub - netFromTotal;
-            } else { // INCLUSIVE / EXEMPT
+            } else {
               discAmt = sub - totalDb;
             }
             if (discAmt < 0) discAmt = 0;
@@ -298,14 +332,7 @@ export class SalesOrderCreateComponent implements OnInit {
           }
 
           const discPct = sub > 0 ? (discAmt * 100) / sub : 0;
-
-          const amt = this.calcAmounts(
-            qty,
-            price,
-            discPct,
-            mode,
-            gst
-          );
+          const amt = this.calcAmounts(qty, price, discPct, mode, gst);
 
           return {
             __id: Number(l.id || l.Id || 0) || undefined,
@@ -341,6 +368,8 @@ export class SalesOrderCreateComponent implements OnInit {
           } as SoLine;
         });
 
+        // GST rule apply
+        this.enforceTaxModesByGst();
         this.filteredLists.warehouse = [...this.warehousesMaster];
         this.recalcTotals();
       },
@@ -411,6 +440,7 @@ export class SalesOrderCreateComponent implements OnInit {
         const head = res?.data || res || {};
         const lines = (head?.lines ?? []) as any[];
 
+        // 🔹 GST & tax modes from Quotation
         this.soHdr.gstPct = Number(head?.gstPct ?? head?.gst ?? 0);
         const gst = Number(this.soHdr.gstPct || 0);
 
@@ -422,9 +452,10 @@ export class SalesOrderCreateComponent implements OnInit {
           const qty      = Number(l.qty ?? l.quantity ?? 0);
           const price    = Number(l.unitPrice ?? 0);
           const discPct  = Number(l.discountPct ?? l.discount ?? 0);
-          const taxMode  = (l.taxMode || l.tax || 'EXCLUSIVE') as LineTaxMode;
+          // taxMode from Quotation: Standard-Rated / Zero-Rated / Exempt OR old codes
+          const mode     = this.canonicalTaxMode(l.taxMode ?? l.tax, gst);
 
-          const amt = this.calcAmounts(qty, price, discPct, taxMode, gst);
+          const amt = this.calcAmounts(qty, price, discPct, mode, gst);
 
           return {
             __id: undefined,
@@ -435,7 +466,7 @@ export class SalesOrderCreateComponent implements OnInit {
             unitPrice: price,
             discount: discPct,
             discountType: 'PCT',
-            tax: taxMode,
+            tax: mode,
 
             lineGross: amt.gross,
             lineNet:   amt.net,
@@ -461,6 +492,8 @@ export class SalesOrderCreateComponent implements OnInit {
         this.warehousesMaster = Array.from(seen.entries()).map(([id, warehouseName]) => ({ id, warehouseName }));
         this.filteredLists.warehouse = [...this.warehousesMaster];
 
+        // 🔹 GST rule
+        this.enforceTaxModesByGst();
         this.recalcTotals();
       });
 
@@ -535,7 +568,8 @@ export class SalesOrderCreateComponent implements OnInit {
       this.soLines[i].uom = opt.defaultUom || this.soLines[i].uom || '';
       if (!this.soLines[i].unitPrice) this.soLines[i].unitPrice = Number(opt.price || 0);
     } else {
-      this.soLines[i].tax = opt.code;
+      // Tax select – if you later use taxCodes, map to Standard/Zero/Exempt here.
+      this.soLines[i].tax = this.canonicalTaxMode(opt.code, Number(this.soHdr.gstPct || 0));
     }
     this.soLines[i].dropdownOpen = '';
     this.soLines[i].filteredOptions = [];
@@ -568,11 +602,12 @@ export class SalesOrderCreateComponent implements OnInit {
     const qty      = Number(L.quantity) || 0;
     const price    = Number(L.unitPrice) || 0;
     const discPct  = Number(L.discount) || 0;
-    const taxMode  = L.tax ?? 'EXCLUSIVE';
     const gst      = Number(this.soHdr.gstPct || 0);
+    const mode     = this.canonicalTaxMode(L.tax, gst);
 
-    const amt = this.calcAmounts(qty, price, discPct, taxMode, gst);
+    const amt = this.calcAmounts(qty, price, discPct, mode, gst);
 
+    L.tax          = mode;
     L.lineGross    = amt.gross;
     L.lineNet      = amt.net;
     L.lineTax      = amt.tax;
@@ -584,22 +619,24 @@ export class SalesOrderCreateComponent implements OnInit {
 
   /* ============ Totals ============ */
   get totals() {
-    const gross      = this.soLines.reduce((s, x) => s + (x.lineGross    || 0), 0);
-    const tax        = this.soLines.reduce((s, x) => s + (x.lineTax      || 0), 0);
-    const discLines  = this.soLines.reduce((s, x) => s + (x.lineDiscount || 0), 0);
-    const lineTotals = this.soLines.reduce((s, x) => s + (x.total        || 0), 0);
+    const net       = this.soLines.reduce((s, x) => s + (x.lineNet      || 0), 0);
+    const tax       = this.soLines.reduce((s, x) => s + (x.lineTax      || 0), 0);
+    const discLines = this.soLines.reduce((s, x) => s + (x.lineDiscount || 0), 0);
+    const shipping  = Number(this.soHdr.shipping || 0);
 
-    const ship  = Number(this.soHdr.shipping || 0);
+    const netAfterDisc = net; // lineNet already after discount
+    const subTotal     = this.round2(netAfterDisc + shipping);
+    const gstAmount    = this.round2(tax);
+    const grandTotal   = this.round2(subTotal + gstAmount);
 
     return {
-      subTotal:      this.round2(gross),
-      gstAmount:     this.round2(tax),
+      subTotal,
+      gstAmount,
       discountLines: this.round2(discLines),
-      netTotal:      this.round2(lineTotals + ship),
-      grandTotal: this.round2(lineTotals+ship)
+      netTotal: grandTotal,
+      grandTotal
     };
   }
-  
 
   // summary-la % show panna use panra helper
   get discountPctSummary(): number {
@@ -608,9 +645,14 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 
   recalcTotals() {
-    // header discount amount = sum of line discounts
     const t = this.totals;
-    this.soHdr = { ...this.soHdr, discount: t.discountLines };
+    this.soHdr = {
+      ...this.soHdr,
+      discount: t.discountLines,
+      taxAmount: t.gstAmount,
+      subTotal: t.subTotal,
+      grandTotal: t.grandTotal
+    };
   }
 
   /* ============ Save ============ */
@@ -634,6 +676,8 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 
   private buildPayload() {
+    const t = this.totals;
+
     return {
       id: this.soHdr.id,
       quotationNo: this.soHdr.quotationNo,
@@ -643,9 +687,15 @@ export class SalesOrderCreateComponent implements OnInit {
       shipping: Number(this.soHdr.shipping || 0),
 
       // header discount amount (sum of lines)
-      discount: this.totals.discountLines,
+      discount: t.discountLines,
 
       gstPct: Number(this.soHdr.gstPct || 0),
+
+      // 🔹 header totals
+      subTotal: t.subTotal,
+      taxAmount: t.gstAmount,
+      grandTotal: t.grandTotal,
+
       status: this.soHdr.status,
       customerName: this.searchTexts.customer,
       createdBy: this.userId,
@@ -662,13 +712,19 @@ export class SalesOrderCreateComponent implements OnInit {
         // line discount as PERCENT
         discount: Number(l.discount) || 0,
 
+        // Tax mode stored as Standard-Rated / Zero-Rated / Exempt
         tax: l.tax || null,
+
+        // 🔹 store tax amount separately
+        taxAmount: Number(l.lineTax || 0),
+
+        // line total (net + tax)
         total: Number(l.total) || 0,
         createdBy: this.userId,
         updatedBy: this.userId
       })),
 
-      totals: this.totals
+      totals: t
     };
   }
 
