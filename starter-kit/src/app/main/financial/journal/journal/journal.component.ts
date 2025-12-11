@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { JournalService } from '../journalservice/journal.service';
 import Swal from 'sweetalert2';
 import { PeriodCloseService } from '../../period-close-fx/period-close-fx.service';
+import * as feather from 'feather-icons';
 
 type JournalRow = {
   id: number;
@@ -29,7 +30,7 @@ export interface PeriodStatusDto {
   templateUrl: './journal.component.html',
   styleUrls: ['./journal.component.scss']
 })
-export class JournalComponent implements OnInit {
+export class JournalComponent implements OnInit,AfterViewInit {
 
   // Filters / header (you can wire to backend later if needed)
   journalDate: string | null = null;
@@ -101,6 +102,9 @@ export class JournalComponent implements OnInit {
     this.loadJournals();
   }
 
+    ngAfterViewInit(): void {
+    feather.replace();
+  }
   loadJournals(): void {
     this.isLoading = true;
 
@@ -115,6 +119,7 @@ export class JournalComponent implements OnInit {
 
         this.updateHeaderRecurringInfo();
         this.recalcTotals();
+         setTimeout(() => feather.replace(), 0);
       },
       error: err => {
         console.error(err);

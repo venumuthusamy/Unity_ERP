@@ -86,7 +86,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Total discount: sum of discount amount for all lines
   totalDiscount = 0;
 
-  // Total GST
+  // Total GST (sum of line TaxAmount)
   totalTax = 0;
 
   // Grand total: after discount & tax (sum of line gross)
@@ -210,54 +210,91 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   private isOk(res: any) { return res?.isSuccess ?? res?.success; }
 
   // ============================================================
-  // Tax helper – EXCLUSIVE / INCLUSIVE / EXEMPT
+  // Tax helpers – Standard-Rated / Zero-Rated / Exempt
   // ============================================================
+
+  /**
+   * Normalise any old Tax string (EXCLUSIVE, INCLUSIVE, NO GST, etc.)
+   * We only keep:
+   *  - 'Standard-Rated'
+   *  - 'Zero-Rated'
+   *  - 'Exempt'
+   */
+  private canonicalTaxMode(
+    rawMode: any,
+    gstPct: number
+  ): 'Standard-Rated' | 'Zero-Rated' | 'Exempt' {
+    const s = (rawMode ?? '').toString().toUpperCase().trim();
+
+    // New labels
+    if (s === 'STANDARD-RATED' || s === 'STANDARD_RATED') return 'Standard-Rated';
+    if (s === 'ZERO-RATED' || s === 'ZERO_RATED') return 'Zero-Rated';
+    if (s === 'EXEMPT' || s === 'NO GST' || s === 'NO_GST') return 'Exempt';
+
+    // Legacy labels → map (no Inclusive concept now)
+    if (s === 'EXCLUSIVE' || s === 'INCLUSIVE') {
+      // If GST% > 0, treat as standard-rated, else zero-rated
+      return gstPct > 0 ? 'Standard-Rated' : 'Zero-Rated';
+    }
+
+    // Fallback based on rate
+    if (!gstPct || gstPct === 0) return 'Zero-Rated';
+    return 'Standard-Rated';
+  }
+
+  /**
+   * Core calculation for a line:
+   * - raw = qty * price
+   * - discountPct is percent
+   * - Standard-Rated → GST applies
+   * - Zero-Rated / Exempt → GST = 0
+   */
   private calcLineAmounts(line: UiLine) {
     const qty = Number(line.qty || 0);
     const price = Number(line.unitPrice || 0);
     const disc = Number(line.discountPct || 0);
     const gst = Number(line.gstPct || 0);
 
-    const mode = (line.tax || 'EXCLUSIVE').toString().toUpperCase();
-
     const raw = +(qty * price).toFixed(2);               // qty * price
     const discAmount = +(raw * (disc / 100)).toFixed(2); // discount value
     const baseAfterDisc = +(raw - discAmount).toFixed(2);
+
+    const mode = this.canonicalTaxMode(line.tax, gst);
+
+    // GST applies only for Standard-Rated & gst > 0
+    const rate = mode === 'Standard-Rated' && gst > 0 ? (gst / 100) : 0;
 
     let net = baseAfterDisc;
     let tax = 0;
     let gross = baseAfterDisc;
 
-    // EXEMPT or 0% GST
-    if (!gst || mode === 'EXEMPT') {
+    if (rate > 0) {
+      tax = +(net * rate).toFixed(2);
+      gross = +(net + tax).toFixed(2);
+    } else {
       tax = 0;
       gross = net;
     }
-    // EXCLUSIVE: price without GST
-    else if (mode === 'EXCLUSIVE') {
-      tax = +(net * gst / 100).toFixed(2);
-      gross = +(net + tax).toFixed(2);
-    }
-    // INCLUSIVE: price already includes GST
-    else if (mode === 'INCLUSIVE') {
-      gross = baseAfterDisc;
-      net = +(gross * 100 / (100 + gst)).toFixed(2);
-      tax = +(gross - net).toFixed(2);
-    }
 
-    // store on line
+    // Persist for UI
+    line.tax = mode;
     line.lineAmount = gross;
     (line as any).taxAmount = tax;
 
     return { net, tax, gross, raw, discAmount };
   }
 
-  // ---------- FRONTEND TAX → TAXCODEID MAPPING ----------
+  // FRONTEND TAX → TAXCODEID MAPPING (no Inclusive)
   private mapTaxToCode(tax: string | null | undefined): number | null {
     const key = (tax || '').toString().toUpperCase();
-    if (key === 'EXCLUSIVE') return 1;
-    if (key === 'INCLUSIVE') return 2;
-    if (key === 'EXEMPT') return 3;
+
+    if (key === 'STANDARD-RATED' || key === 'STANDARD_RATED') return 1;
+    if (key === 'ZERO-RATED' || key === 'ZERO_RATED') return 2;
+    if (key === 'EXEMPT' || key === 'NO GST' || key === 'NO_GST') return 3;
+
+    // Legacy fallbacks
+    if (key === 'EXCLUSIVE' || key === 'INCLUSIVE') return 1;
+
     return null;
   }
 
@@ -343,11 +380,15 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         this.subtotal = Number(hdr.subtotal ?? hdr.Subtotal ?? 0);
         this.shipping = Number(hdr.shippingCost ?? hdr.ShippingCost ?? 0);
         this.total = Number(hdr.total ?? hdr.Total ?? 0);
+        // header total tax if needed: hdr.taxAmount
+        this.totalTax = Number(hdr.taxAmount ?? hdr.TaxAmount ?? 0);
         this.remarks = hdr.remarks ?? hdr.Remarks ?? '';
 
         this.refreshCustomerFromSource(hdr);
 
         this.lines = (rows as any[]).map(r => {
+          const gstPct = Number(r.gstPct ?? 0);
+          const mode = this.canonicalTaxMode(r.tax, gstPct);
           const line: UiLine = {
             id: Number(r.id ?? 0),
             sourceLineId: r.sourceLineId ?? null,
@@ -357,10 +398,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             qty: Number(r.qty || 0),
             unitPrice: Number(r.unitPrice || 0),
             discountPct: Number(r.discountPct || 0),
-            gstPct: r.gstPct,
-            tax: r.tax,
+            gstPct: gstPct,
+            tax: mode,
             taxCodeId: r.taxCodeId ?? null,
             lineAmount: r.lineAmount,
+            taxAmount: r.taxAmount ?? 0,   // from backend
             description: r.description ?? r.itemName ?? '',
             budgetLineId: r.budgetLineId
           };
@@ -449,13 +491,18 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         !l.description ||
         l.description.trim().toLowerCase() === prevName.trim().toLowerCase();
 
+      const gstPct = Number(l.gstPct || 0);
+      const mode = this.canonicalTaxMode(l.tax, gstPct);
+
       const line: UiLine = {
         ...l,
         itemName: newItemName ?? l.itemName,
         uom: it?.uomName ?? l.uom ?? null,
         description: shouldOverwriteDesc
           ? (newItemName ?? l.itemName ?? '')
-          : l.description
+          : l.description,
+        tax: mode,
+        gstPct
       };
 
       this.applyTaxCode(line);
@@ -473,10 +520,11 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       unitPrice: 0,
       discountPct: 0,
       gstPct: 0,
-      tax: 'EXCLUSIVE',
+      tax: 'Zero-Rated',      // default 0% GST
       taxCodeId: null,
       description: '',
       lineAmount: 0,
+      taxAmount: 0,
       budgetLineId: 0,
     };
     if (this.isEdit) row.__new = true;
@@ -524,6 +572,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
           }
           const rows = Array.isArray(res.data) ? res.data : [];
           this.lines = rows.map((r: any) => {
+            const gstPct = Number(r.gstPct ?? 0);
+            const mode = this.canonicalTaxMode(r.tax, gstPct);
             const line: UiLine = {
               sourceLineId: r.sourceLineId,
               itemId: r.itemId,
@@ -532,12 +582,13 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               qty: r.qtyOpen,
               unitPrice: r.unitPrice,
               discountPct: r.discountPct ?? 0,
-              gstPct: r.gstPct,
-              tax: r.tax,
+              gstPct: gstPct,
+              tax: mode,
               taxCodeId: r.taxCodeId ?? null,
               description: r.itemName,
               budgetLineId: r.budgetLineId,
-              lineAmount: 0
+              lineAmount: 0,
+              taxAmount: 0
             };
             this.applyTaxCode(line);
             return line;
@@ -594,7 +645,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   // Edit: persist lines in place
   // ============================================================
   onCellChanged(line: UiLine) {
-    const { gross } = this.calcLineAmounts(line);
+    const { gross, tax } = this.calcLineAmounts(line);
     const qty = Number(line.qty || 0);
     const price = Number(line.unitPrice || 0);
     const disc = Number(line.discountPct || 0);
@@ -614,6 +665,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       tax: line.tax,
       taxCodeId: line.taxCodeId ?? null,
       lineAmount: gross,
+      taxAmount: tax,                        // 🔹 send line tax to backend
       description:
         (line.description && line.description.trim().length > 0)
           ? line.description
@@ -670,7 +722,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       }
 
       const l = pending[i++];
-      const { gross } = this.calcLineAmounts(l);
+      const { gross, tax } = this.calcLineAmounts(l);
 
       const qty = Number(l.qty || 0);
       const price = Number(l.unitPrice || 0);
@@ -688,6 +740,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         discountPct: disc,
         gstPct: l.gstPct,
         tax: l.tax,
+        taxAmount: tax,                 // 🔹 new
         taxCodeId: l.taxCodeId ?? null,
         lineAmount: gross,
         description:
@@ -771,6 +824,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
         invoiceDate: this.invoiceDate,
         subtotal: this.subtotal,
         shippingCost: Number(this.shipping || 0),
+        taxAmount: this.totalTax,              // 🔹 header total GST
         total: this.total,
         remarks: this.remarks || null,
         lines: this.lines.map(l => {
@@ -788,7 +842,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
             discountPct: Number(l.discountPct || 0),
             gstPct: l.gstPct,
             tax: l.tax,
-            taxAmount: tax,
+            taxAmount: tax,                  // 🔹 per line
             taxCodeId: l.taxCodeId ?? null,
             lineAmount: gross,
             description:
@@ -823,7 +877,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // EDIT: header update (date only for now)
+    // EDIT: header update (for now only date)
     if (!this.siId) return;
 
     this.api.updateHeader(this.siId, { invoiceDate: this.invoiceDate })
@@ -841,21 +895,12 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
   }
 
   netPortion(line: UiLine): number {
-    const total = this.lineAmount(line);
-    const gst = Number(line.gstPct || 0);
-
-    if (!gst || line.tax === 'EXEMPT') {
-      return total;
-    }
-
-    const base = total / (1 + gst / 100);
-    return +base.toFixed(2);
+    const { net } = this.calcLineAmounts(line);
+    return +net.toFixed(2);
   }
 
   taxPortion(line: UiLine): number {
-    const total = this.lineAmount(line);
-    const base = this.netPortion(line);
-    const tax = total - base;
+    const { tax } = this.calcLineAmounts(line);
     return +tax.toFixed(2);
   }
 
@@ -870,8 +915,8 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     const textarea = event.target as HTMLTextAreaElement;
     if (!textarea) return;
 
-    textarea.style.height = 'auto';                // reset
-    textarea.style.height = textarea.scrollHeight + 'px'; // grow to fit content
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
   }
 
   loadAccountHeads(): void {

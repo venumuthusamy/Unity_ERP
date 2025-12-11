@@ -266,26 +266,23 @@
             </td>
 
             <!-- Tax info -->
-            <td class="text-start">
-              <!-- EXEMPT (always 0 tax) -->
-              <ng-container *ngIf="r.tax === 'EXEMPT' || !r.gstPct; else hasGst">
-                <div>Exempt (0%)</div>
-                <div class="small text-muted">
-                  Tax: {{ 0 | number:'1.2-2' }} (0%)
-                </div>
-              </ng-container>
+    <!-- Tax info -->
+<td class="text-start">
+  <div class="small text-muted mb-1">
+    {{
+      r.tax === 'Standard-Rated'
+        ? 'Standard-Rated (GST applies)'
+        : r.tax === 'Zero-Rated'
+          ? 'Zero-Rated (0%)'
+          : 'Exempt (No GST)'
+    }}
+  </div>
+  <div class="small text-muted">
+    Tax: {{ taxPortion(r) | number:'1.2-2' }}
+    <span *ngIf="r.gstPct"> ({{ r.gstPct }}%)</span>
+  </div>
+</td>
 
-              <!-- EXCLUSIVE / INCLUSIVE -->
-              <ng-template #hasGst>
-                <div>
-                  <span *ngIf="r.tax === 'EXCLUSIVE'">Exclusive (add GST)</span>
-                  <span *ngIf="r.tax === 'INCLUSIVE'">Inclusive (includes GST)</span>
-                </div>
-                <div class="small text-muted">
-                  Tax: {{ taxPortion(r) | number:'1.2-2' }} ({{ r.gstPct }}%)
-                </div>
-              </ng-template>
-            </td>
 
             <!-- Amount -->
             <td class="text-end">
