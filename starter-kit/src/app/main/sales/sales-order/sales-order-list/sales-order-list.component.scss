@@ -97,3 +97,13 @@ $green: #0F766E;
   .search-wrap{ justify-content:stretch; }
   .so-search{ width:100%; max-width:none; }
 }
+::ng-deep .ngx-datatable .datatable-body-cell .datatable-body-cell-label{
+  white-space: normal !important;
+  line-height: 1.2;
+}
+
+.po-wrap-cell{
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

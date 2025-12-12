@@ -56,7 +56,14 @@
                         </ng-template>
                     </ngx-datatable-column>
                     <ngx-datatable-column name="SO Number" prop="salesOrderNo" [width]="120"></ngx-datatable-column>
-                    <ngx-datatable-column name="Customer Name" prop="customerName" [width]="140"></ngx-datatable-column>
+                   <ngx-datatable-column name="Customer Name" prop="customerName" [width]="140">
+                    <ng-template let-row="row" ngx-datatable-cell-template>
+                        <div class="po-wrap-cell" [title]="row.customerName">
+                        {{ row.customerName || '-' }}
+                        </div>
+                    </ng-template>
+                    </ngx-datatable-column>
+
  
                     <ngx-datatable-column name="Requested Date" prop="soDate" [width]="140">
                         <ng-template let-row="row" ngx-datatable-cell-template>

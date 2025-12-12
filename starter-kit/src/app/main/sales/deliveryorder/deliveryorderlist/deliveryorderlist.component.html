@@ -93,7 +93,7 @@
 
           <ngx-datatable-column name="DO No" prop="doNumber" [width]="160"></ngx-datatable-column>
 
-          <ngx-datatable-column name="SO #" [width]="110">
+          <ngx-datatable-column name="SO #" [width]="160">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.salesOrderNo || '-' }}
             </ng-template>
@@ -107,7 +107,10 @@
 
           <ngx-datatable-column name="Vehicle" [width]="160">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              {{ getVehicleNo(row.vehicleId) || '-' }}
+              
+              <div class="po-wrap-cell" [title]="row.vehicleId">
+            {{ getVehicleNo(row.vehicleId) || '-' }}
+            </div>
             </ng-template>
           </ngx-datatable-column>
 
@@ -117,13 +120,13 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="160">
+          <ngx-datatable-column name="Delivery Date" prop="deliveryDate" [width]="170">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.deliveryDate | date:'dd-MM-yyyy' }}
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Posted" [width]="110">
+          <ngx-datatable-column name="Posted" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <span class="badge badge-pill" [ngClass]="row.isPosted ? 'badge-success' : 'badge-secondary'">
                 {{ row.isPosted ? 'Yes' : 'No' }}
