@@ -92,8 +92,26 @@
 
           <ngx-datatable-column name="GRN No" prop="grnNo" [width]="140"></ngx-datatable-column>
           <ngx-datatable-column name="PO No"  prop="pono"  [width]="160"></ngx-datatable-column>
-          <ngx-datatable-column name="Items"  prop="itemName" [width]="180"></ngx-datatable-column>
-          <ngx-datatable-column name="Supplier Name" prop="name" [width]="180"></ngx-datatable-column>
+         
+
+ <ngx-datatable-column name="Items" prop="itemName" [width]="200">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <span class="truncate-20"
+          [title]="row.itemName">
+      {{ row.itemName?.slice(0, 20) }}{{ row.itemName?.length > 20 ? '...' : '' }}
+    </span>
+  </ng-template>
+</ngx-datatable-column>
+
+            <ngx-datatable-column name="Supplier Name" prop="name" [width]="200">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <span class="truncate-20"
+          [title]="row.name">
+      {{ row.name?.slice(0, 20) }}{{ row.name?.length > 20 ? '...' : '' }}
+    </span>
+  </ng-template>
+</ngx-datatable-column>
+
 
           <!-- Status -->
           <ngx-datatable-column name="Status" [width]="140" [sortable]="false">
