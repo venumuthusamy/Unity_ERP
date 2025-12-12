@@ -382,7 +382,7 @@
                 <div class="flex items-center justify-between gap-2">
                     <span>Sub Total</span>
                     <span class="inline-block w-28 text-right px-1">
-                        {{ poTotals.subTotal.toFixed(2) }}
+                        {{ poTotals.subTotal | number:'1.2-2' }}
                     </span>
                 </div>
 
@@ -435,7 +435,7 @@
                 <!-- Net Total -->
                 <div class="border-t pt-2 flex justify-between font-semibold">
                     <span>Net Total</span>
-                    <span> {{ poTotals.netTotal.toFixed(2) }} {{ poHdr.currencyName }}</span>
+                    <span> {{ poTotals.netTotal | number:'1.2-2' }} {{ poHdr.currencyName }}</span>
                 </div>
 
                 <div *ngIf="poHdr.currencyName !== 'SGD'" class="border-t pt-2 flex justify-between font-semibold">
