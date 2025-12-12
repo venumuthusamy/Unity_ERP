@@ -30,20 +30,20 @@ export const menu: CoreMenu[] = [
       { id: 'service', title: 'Services', type: 'item', icon: 'circle', url: '/master/service' },
       { id: 'suppliergroups', title: 'Supplier Groups', type: 'item', icon: 'circle', url: '/master/suppliergroups' },
       { id: 'customergroups', title: 'Customer Groups', type: 'item', icon: 'circle', url: '/master/customergroups' },
-      { id: 'regions', title: 'Regions', type: 'item', icon: 'circle', url: '/master/regions' },
-      { id: 'deductions', title: 'Deductions', type: 'item', icon: 'circle', url: '/master/deductions' },
-      { id: 'income', title: 'Income', type: 'item', icon: 'circle', url: '/master/income' },
+    //  { id: 'regions', title: 'Regions', type: 'item', icon: 'circle', url: '/master/regions' },
+     // { id: 'deductions', title: 'Deductions', type: 'item', icon: 'circle', url: '/master/deductions' },
+     // { id: 'income', title: 'Income', type: 'item', icon: 'circle', url: '/master/income' },
       { id: 'department', title: 'Department', type: 'item', icon: 'circle', url: '/master/department' },
       { id: 'items', title: 'Item', type: 'item', icon: 'circle', url: '/master/items' },
       { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse' },
       { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring' },
       { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode' },
       { id: 'catagory', title: 'Catagory', type: 'item', icon: 'circle', url: '/master/catagory' },
-      { id: 'coastingmethod', title: 'Coasting Method ', type: 'item', icon: 'circle', url: '/master/coastingmethod' },
+      { id: 'costingmethod', title: 'Costing Method ', type: 'item', icon: 'circle', url: '/master/coastingmethod' },
       { id: 'strategy', title: 'Strategy', type: 'item', icon: 'circle', url: '/master/strategy' },
       { id: 'stockissue', title: 'StockIssue', type: 'item', icon: 'circle', url: '/master/stockIssue' },
-      { id: 'bin', title: 'BIN', type: 'item', icon: 'circle', url: '/master/bin' },
-      { id: 'driver', title: 'DRIVER', type: 'item', icon: 'circle', url: '/master/driver' },
+      { id: 'bin', title: 'Bin', type: 'item', icon: 'circle', url: '/master/bin' },
+      { id: 'driver', title: 'Driver', type: 'item', icon: 'circle', url: '/master/driver' },
        { id: 'Vehicle', title: 'Vechicle', type: 'item', icon: 'circle', url: '/master/vehicle' },
        { id: 'bank', title: 'Bank', type: 'item', icon: 'circle', url: '/master/bank-list' },
        
@@ -135,7 +135,10 @@ export const menu: CoreMenu[] = [
     icon: 'user',
     children: [
       { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' },
-       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster' }
+       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster' },
+       { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users' },
+
+
     ]
   },
 

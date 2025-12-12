@@ -37,22 +37,26 @@ const appRoutes: Routes = [
     path: 'purchase',
     loadChildren: () => import('./main/purchase/purchase.module').then(m => m.PurchaseModule)
   },
-   
-     {
+
+  {
     path: 'Inventory',
     loadChildren: () => import('./main/inventory/inventory.module').then(m => m.InventoryModule)
   },
-   {
+  {
     path: 'financial',
     loadChildren: () => import('./main/financial/financial.module').then(m => m.FinancialModule)
   },
-     {
+  {
     path: 'Businesspartners',
     loadChildren: () => import('./main/businessPartners/businesspartners.module').then(m => m.BusinesspartnersModule)
   },
-    {
+  {
     path: 'Sales',
     loadChildren: () => import('./main/sales/sales.module').then(m => m.SalesModule)
+  },
+  {
+    path: 'admin/users',
+    loadChildren: () => import('./main/user/user.module').then(m => m.UserModule)
   },
   {
     path: '',
@@ -89,4 +93,4 @@ const appRoutes: Routes = [
   ],
   bootstrap: [AppComponent]
 })
-export class AppModule {}
+export class AppModule { }
