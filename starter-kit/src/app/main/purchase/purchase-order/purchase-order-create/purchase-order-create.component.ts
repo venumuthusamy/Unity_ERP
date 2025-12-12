@@ -765,6 +765,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
 
   poAddLine() {
+    debugger
     this.poLines.push({
       prNo: '',
       item: '',
