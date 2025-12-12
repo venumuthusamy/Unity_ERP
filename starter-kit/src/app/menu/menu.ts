@@ -18,18 +18,18 @@ export const menu: CoreMenu[] = [
     icon: 'settings',
     children: [
       { id: 'approval-level', title: 'Approval Level', type: 'item', icon: 'circle', url: '/master/approval-level' },
-      { id: 'cities', title: 'Cities', type: 'item', icon: 'circle', url: '/master/cities' },
       { id: 'countries', title: 'Countries', type: 'item', icon: 'circle', url: '/master/countries' },
+      { id: 'states', title: 'States', type: 'item', icon: 'circle', url: '/master/states' },
+      { id: 'cities', title: 'Cities', type: 'item', icon: 'circle', url: '/master/cities' },
+      { id: 'location', title: 'Location', type: 'item', icon: 'circle', url: '/master/location' },
+      { id: 'currency', title: 'Currency', type: 'item', icon: 'circle', url: '/master/currency' },
       { id: 'uom', title: 'UOM', type: 'item', icon: 'circle', url: '/master/uom' },
       { id: 'incoterms', title: 'Incoterms', type: 'item', icon: 'circle', url: '/master/incoterms' },
       { id: 'flagissue', title: 'FlagIssue', type: 'item', icon: 'circle', url: '/master/flagIssue' },
       { id: 'paymentTerms', title: 'PaymentTerms', type: 'item', icon: 'circle', url: '/master/paymentTerms' },
-      { id: 'currency', title: 'Currency', type: 'item', icon: 'circle', url: '/master/currency' },
-      { id: 'location', title: 'Location', type: 'item', icon: 'circle', url: '/master/location' },
-      { id: 'states', title: 'States', type: 'item', icon: 'circle', url: '/master/states' },
       { id: 'service', title: 'Services', type: 'item', icon: 'circle', url: '/master/service' },
-      { id: 'suppliergroups', title: 'Supplier Groups', type: 'item', icon: 'circle', url: '/master/suppliergroups' },
       { id: 'customergroups', title: 'Customer Groups', type: 'item', icon: 'circle', url: '/master/customergroups' },
+      { id: 'suppliergroups', title: 'Supplier Groups', type: 'item', icon: 'circle', url: '/master/suppliergroups' },
     //  { id: 'regions', title: 'Regions', type: 'item', icon: 'circle', url: '/master/regions' },
      // { id: 'deductions', title: 'Deductions', type: 'item', icon: 'circle', url: '/master/deductions' },
      // { id: 'income', title: 'Income', type: 'item', icon: 'circle', url: '/master/income' },
@@ -100,9 +100,9 @@ export const menu: CoreMenu[] = [
       { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list' },
       { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-list' },
       { id: 'ReturnCredit', title: 'Credit Note', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-list' },
-      { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
+      // { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
       { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create' },
-      { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create' }
+      // { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create' }
     ]
   },
   {
@@ -134,8 +134,8 @@ export const menu: CoreMenu[] = [
     type: 'collapsible',
     icon: 'user',
     children: [
-      { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' },
        { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster' },
+      { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' },
        { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users' },
 
 
