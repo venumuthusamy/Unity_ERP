@@ -119,7 +119,7 @@ export const menu: CoreMenu[] = [
       { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable' },
       { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst' },
       { id: 'Period-close', title: 'Period-close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close' },
-      { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email' },
+      // { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email' },
       { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report' },
       { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report' },
             // { id: 'opening-balance', title: 'Opening-Balance', translate: 'MENU.FINANCIAL.OpeningBalance', type: 'item', icon: 'circle', url: '/financial/opening-balance' },
