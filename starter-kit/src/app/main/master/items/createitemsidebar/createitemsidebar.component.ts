@@ -5,7 +5,8 @@ import {
   OnChanges,
   OnInit,
   Output,
-  SimpleChanges
+  SimpleChanges,
+  ViewEncapsulation
 } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
@@ -20,7 +21,8 @@ import { numericIndexGetter } from '@swimlane/ngx-datatable';
 @Component({
   selector: 'app-createitemsidebar',
   templateUrl: './createitemsidebar.component.html',
-  styleUrls: ['./createitemsidebar.component.scss']
+  styleUrls: ['./createitemsidebar.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
 export class CreateitemsidebarComponent implements OnInit, OnChanges {
   @Input() editId: number | null = null;       // pass id when editing
