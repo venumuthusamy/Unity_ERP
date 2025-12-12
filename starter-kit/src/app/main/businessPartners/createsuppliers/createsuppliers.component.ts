@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import Swal from 'sweetalert2';
@@ -177,7 +177,8 @@ export class CreatesuppliersComponent implements OnInit {
     private CurrencyService: CurrencyService,
     private incotermsService: IncotermsService,
     private itemsService: ItemsService,
-    private _chartOfAccountService: ChartofaccountService
+    private _chartOfAccountService: ChartofaccountService,
+    private router: Router
   ) {}
 
   /* =========================
@@ -712,6 +713,7 @@ export class CreatesuppliersComponent implements OnInit {
             allowOutsideClick: false
           });
           if (payload.id === 0) this.new();
+          this.router.navigate(['/Businesspartners/supplier']);
         } else {
           Swal.fire('Info', res?.message ?? 'Could not save supplier', 'info');
         }
@@ -761,5 +763,8 @@ export class CreatesuppliersComponent implements OnInit {
 
     this.preferredItems = []; this.preferredText = ''; this.filteredItems = [];
     this.docs = [{ name: '', number: '', expiry: null, files: [] }];
+  }
+  cancel(){
+     this.router.navigate(['/Businesspartners/supplier']);
   }
 }
