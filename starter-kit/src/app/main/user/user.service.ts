@@ -14,6 +14,7 @@ export interface UserView {
   email: string;
   isActive: boolean;
   approvalLevelIds: number[];
+  departmentId : number;
   approvalLevelNames: string[];
 }
 
@@ -51,4 +52,8 @@ private url = environment.apiUrl;
     return this.http.get<ApprovalLevel[]>(`${this.url}/ApprovalLevel/GetApprovalLevels`);
     // change url if your approval controller route differs
   }
+  getDepartments() {
+  return this.http.get<any>(`${this.url}/user/departments`);
+}
+
 }

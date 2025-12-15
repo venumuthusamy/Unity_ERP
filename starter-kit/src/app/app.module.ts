@@ -21,42 +21,55 @@ import { SampleModule } from 'app/main/sample/sample.module';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { ChartofaccountComponent } from './main/financial/chartofaccount/chartofaccount-list/chartofaccount.component';
 import { SupplierComponent } from './main/businessPartners/supplier/supplier.component';
+import { AuthGuard } from './auth/helpers';
 
 const appRoutes: Routes = [
   {
     path: 'pages',
     loadChildren: () =>
-      import('./main/pages/pages.module').then(m => m.PagesModule)
+      import('./main/pages/pages.module').then(m => m.PagesModule),
+    
   },
   {
     path: 'master',
     loadChildren: () =>
-      import('./main/master/master.module').then(m => m.MasterModule)  // ✅ lazy loading only
+      import('./main/master/master.module').then(m => m.MasterModule),
+    
   },
   {
     path: 'purchase',
-    loadChildren: () => import('./main/purchase/purchase.module').then(m => m.PurchaseModule)
+    loadChildren: () => import('./main/purchase/purchase.module').then(m => m.PurchaseModule),
+   
+    data: { roles: ['Purchase Team', 'Admin', 'Super Admin'] }
   },
 
   {
     path: 'Inventory',
-    loadChildren: () => import('./main/inventory/inventory.module').then(m => m.InventoryModule)
+    loadChildren: () => import('./main/inventory/inventory.module').then(m => m.InventoryModule),
+    
+    data: { roles: ['Purchase Team', 'Admin', 'Super Admin'] }
   },
   {
     path: 'financial',
-    loadChildren: () => import('./main/financial/financial.module').then(m => m.FinancialModule)
+    loadChildren: () => import('./main/financial/financial.module').then(m => m.FinancialModule),
+    
+    data: { roles: ['Finance Team',  'Super Admin'] }
   },
   {
     path: 'Businesspartners',
-    loadChildren: () => import('./main/businessPartners/businesspartners.module').then(m => m.BusinesspartnersModule)
+    loadChildren: () => import('./main/businessPartners/businesspartners.module').then(m => m.BusinesspartnersModule),
+    
   },
   {
     path: 'Sales',
-    loadChildren: () => import('./main/sales/sales.module').then(m => m.SalesModule)
+    loadChildren: () => import('./main/sales/sales.module').then(m => m.SalesModule),
+    
+     data: { roles: ['Sales Team', 'Admin', 'Super Admin'] }
   },
   {
     path: 'admin/users',
-    loadChildren: () => import('./main/user/user.module').then(m => m.UserModule)
+    loadChildren: () => import('./main/user/user.module').then(m => m.UserModule),
+   
   },
   {
     path: '',

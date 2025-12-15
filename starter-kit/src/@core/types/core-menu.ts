@@ -4,7 +4,7 @@ export interface CoreMenuItem {
     title        : string;
     url?         : string;
     type         : 'section' | 'collapsible' | 'item';
-    role?        : Array<string>;
+    roles?        : Array<string>;
     translate?   : string;
     icon?        : string;
     disabled?    : boolean;

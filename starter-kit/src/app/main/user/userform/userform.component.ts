@@ -35,7 +35,7 @@ export class UserformComponent implements OnInit {
   roles: any[] = [];
 
   isSaving = false;
-
+departments: any[] = [];
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
@@ -48,6 +48,7 @@ export class UserformComponent implements OnInit {
       username: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: [''],
+      departmentId: [null, Validators.required], 
       approvalLevelIds: [[]]
     });
 
@@ -60,12 +61,14 @@ export class UserformComponent implements OnInit {
       this.isEdit = !!this.id;
       this.canEditPassword = !this.isEdit;
 
-      this.form.reset({
-        username: '',
-        email: '',
-        password: '',
-        approvalLevelIds: []
-      });
+     this.form.reset({
+  username: '',
+  email: '',
+  password: '',
+  departmentId: null,
+  approvalLevelIds: []
+});
+
 
       const pwd = this.form.get('password');
 
@@ -83,11 +86,13 @@ export class UserformComponent implements OnInit {
           this.form.patchValue({
             username: u.username,
             email: u.email,
-            approvalLevelIds: u.approvalLevelIds || []
+           departmentId: u.departmentId ?? null,
+           approvalLevelIds: u.approvalLevelIds || []
           });
         });
       }
     });
+    this.getDepartment();
   }
 
   togglePasswordEdit() {
@@ -144,6 +149,7 @@ export class UserformComponent implements OnInit {
   const payload: any = {
     username: this.form.value.username,
     email: this.form.value.email,
+     departmentId: this.form.value.departmentId,
     approvalLevelIds: this.form.value.approvalLevelIds || []
   };
 
@@ -207,5 +213,10 @@ export class UserformComponent implements OnInit {
     }
 
     this.router.navigate(['/admin/users']);
+  }
+  getDepartment(){
+    this.svc.getDepartments().subscribe((res: any) => {
+  this.departments = res?.data || [];
+});
   }
 }
