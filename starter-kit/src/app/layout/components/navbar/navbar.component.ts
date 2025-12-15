@@ -168,7 +168,7 @@ public approvalRoleText: string = '';
    */
   logout() {
     this._authenticationService.logout();
-    localStorage.clear();
+    // localStorage.clear();
     this._router.navigate(['/pages/authentication/login-v2']);
   }
 
