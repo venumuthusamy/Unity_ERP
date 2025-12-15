@@ -225,12 +225,8 @@ export const menu: any[] = [
     children: [
       { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster', approvalRoles: ['Admin', 'Super Admin'] },
-       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster' },
-      { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' },
-       { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users' },
 
-
-      // ONLY SUPER ADMIN
+ // ONLY SUPER ADMIN
       { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users', approvalRoles: ['Super Admin'] }
     ]
   }
