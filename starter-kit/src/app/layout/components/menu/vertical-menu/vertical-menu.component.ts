@@ -63,15 +63,16 @@ export class VerticalMenuComponent implements OnInit, OnDestroy {
       .subscribe(() => setTimeout(() => this.directiveRef?.scrollToElement('.navigation .active', -180, 500)));
   }
 
-  private filterMenu(items: any[]): any[] {
-    return (items || [])
-      .filter(i => this._auth.canShowMenu(i.teams || [], i.approvalRoles || []))
-      .map(i => ({
-        ...i,
-        children: i.children ? this.filterMenu(i.children) : undefined
-      }))
-      .filter(i => i.type !== 'collapsible' || (i.children && i.children.length));
-  }
+ private filterMenu(items: any[]): any[] {
+  return (items || [])
+    .filter(i => this._auth.canShowMenu(i.teams || [], i.approvalRoles || []))
+    .map(i => ({
+      ...i,
+      children: i.children ? this.filterMenu(i.children) : undefined
+    }))
+    .filter(i => i.type !== 'collapsible' || (i.children && i.children.length));
+}
+
 
   onSidebarScroll(): void {
     const y = Number(this.directiveRef?.position(true)?.y ?? 0);
