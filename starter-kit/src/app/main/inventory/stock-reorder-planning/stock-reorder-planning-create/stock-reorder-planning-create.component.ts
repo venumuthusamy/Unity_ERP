@@ -549,6 +549,9 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     });
   }
 
+  goToStockReorderPlanningList(){
+  this.router.navigate(['/Inventory/list-stockreorderplanning']); 
+}
   // Save draft (also store location and deliveryDate per line)
   // returns Promise<number> with the id (new or existing)
   saveDraft(status: number): Promise<number> {
@@ -632,3 +635,5 @@ function n(v: any, d = 0) {
   const num = Number(v);
   return Number.isFinite(num) ? num : d;
 }
+
+
