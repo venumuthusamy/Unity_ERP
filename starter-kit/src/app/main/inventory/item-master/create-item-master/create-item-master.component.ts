@@ -692,7 +692,7 @@ export class CreateItemMasterComponent implements OnInit {
     if (open) {
       const q = (this.modalLine.itemSearch || '').trim();
       if (q) this.filterModalItems();
-      else this.modalLine.filteredItems = this.itemsList.slice(0, 50);
+      else this.modalLine.filteredItems = [...this.itemsList];
       setTimeout(() => this.itemSearchInput?.nativeElement?.focus(), 0);
     }
   }

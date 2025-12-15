@@ -150,7 +150,7 @@ export const menu: any[] = [
       icon: 'circle',
       url: '/Businesspartners/supplier',
       teams: ['Purchase Team'],
-      approvalRoles: ['Super Admin', 'Admin']
+      approvalRoles: ['Super Admin']
     },
 
     // ✅ Customer => Sales Team (and Super Admin can see)
@@ -161,7 +161,7 @@ export const menu: any[] = [
       icon: 'circle',
       url: '/Businesspartners/customermaster',
       teams: ['Sales Team'],
-      approvalRoles: ['Super Admin', 'Admin']
+      approvalRoles: ['Super Admin']
     },
 
     // ✅ Users => only Super Admin (change if you want Admin also)
