@@ -39,14 +39,17 @@ export class AuthService {
     return !!localStorage.getItem('token');
   }
 
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('approvalRoles');
-    localStorage.removeItem('teams');
-    localStorage.removeItem('id');
-    localStorage.removeItem('username');
-    localStorage.removeItem('email');
-  }
+logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('approvalRoles');
+  localStorage.removeItem('teams');
+  localStorage.removeItem('id');
+  localStorage.removeItem('username');
+  localStorage.removeItem('email');
+
+  // ✅ keep remember_username always
+  // localStorage.removeItem('remember_username'); ❌ never
+}
 
   // =========================
   // ✅ MENU ACCESS CHECK

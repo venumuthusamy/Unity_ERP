@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
@@ -13,16 +13,14 @@ import Swal from 'sweetalert2';
   styleUrls: ['./auth-login-v2.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class AuthLoginV2Component implements OnInit, OnDestroy {
+export class AuthLoginV2Component implements OnInit, AfterViewInit, OnDestroy {
 
-  // REQUIRED BY TEMPLATE
   loginForm!: UntypedFormGroup;
   submitted = false;
   loading = false;
   error = '';
   passwordTextType = false;
 
-  // Background image support
   images: string[] = [
     'assets/images/pages/image1.JPG',
     'assets/images/pages/image2.JPG',
@@ -37,6 +35,9 @@ export class AuthLoginV2Component implements OnInit, OnDestroy {
 
   private _unsubscribeAll = new Subject<any>();
 
+  // ✅ NEW STORAGE KEY (single object)
+  private readonly REMEMBER_KEY = 'remember_login';
+
   constructor(
     private _coreConfigService: CoreConfigService,
     private _formBuilder: UntypedFormBuilder,
@@ -44,7 +45,6 @@ export class AuthLoginV2Component implements OnInit, OnDestroy {
     private _router: Router,
     private authService: AuthService
   ) {
-    // hide layout on login
     this._coreConfigService.config = {
       layout: {
         navbar: { hidden: true },
@@ -56,15 +56,17 @@ export class AuthLoginV2Component implements OnInit, OnDestroy {
     };
   }
 
-  // TEMPLATE GETTER
   get f() {
     return this.loginForm.controls;
   }
 
   ngOnInit(): void {
+
+    // ✅ default empty form
     this.loginForm = this._formBuilder.group({
       username: ['', Validators.required],
-      password: ['', Validators.required]
+      password: ['', Validators.required],
+      rememberMe: [false]
     });
 
     this.returnUrl = this._route.snapshot.queryParams['returnUrl'] || '/home';
@@ -73,11 +75,31 @@ export class AuthLoginV2Component implements OnInit, OnDestroy {
       .pipe(takeUntil(this._unsubscribeAll))
       .subscribe(config => (this.coreConfig = config));
 
-    // rotate background image (store timer to clear later)
+    // ✅ background image slider
     this.imageTimer = setInterval(() => {
       this.imgIndex = (this.imgIndex + 1) % this.images.length;
       this.currentImage = this.images[this.imgIndex];
     }, 4000);
+  }
+
+  // ✅ load remembered username + password AFTER view (autofill override)
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      const raw = localStorage.getItem(this.REMEMBER_KEY);
+
+      if (!raw) return;
+
+      try {
+        const saved = JSON.parse(raw);
+        this.loginForm.patchValue({
+          username: saved?.username || '',
+          password: saved?.password || '',
+          rememberMe: !!saved?.rememberMe
+        });
+      } catch {
+        localStorage.removeItem(this.REMEMBER_KEY);
+      }
+    }, 0);
   }
 
   togglePasswordTextType() {
@@ -92,15 +114,35 @@ export class AuthLoginV2Component implements OnInit, OnDestroy {
 
     this.loading = true;
 
-    this.authService.userLogin(this.loginForm.value).subscribe({
+    const remember = !!this.loginForm.value.rememberMe;
+
+    // ✅ login payload only username/password
+    const payload = {
+      username: this.loginForm.value.username,
+      password: this.loginForm.value.password
+    };
+
+    this.authService.userLogin(payload).subscribe({
       next: (res: any) => {
-        // ✅ store user basics
-        localStorage.setItem('username', res.username ?? this.loginForm.value.username);
+        const username = res.username ?? payload.username;
+        const password = payload.password;
+
+        // ✅ Remember Me: store username + password
+        if (remember) {
+          localStorage.setItem(
+            this.REMEMBER_KEY,
+            JSON.stringify({ username, password, rememberMe: true })
+          );
+        } else {
+          localStorage.removeItem(this.REMEMBER_KEY);
+        }
+
+        // ✅ existing stores
+        localStorage.setItem('username', username);
         localStorage.setItem('token', res.token ?? '');
         localStorage.setItem('id', String(res.userId ?? ''));
         localStorage.setItem('email', res.email ?? '');
 
-        // ✅ IMPORTANT: store BOTH (Approval roles + Teams)
         localStorage.setItem('approvalRoles', JSON.stringify(res.approvalLevelNames || []));
         localStorage.setItem('teams', JSON.stringify(res.teams || []));
 
