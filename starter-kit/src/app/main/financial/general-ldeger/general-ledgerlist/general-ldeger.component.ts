@@ -28,6 +28,7 @@ interface CoaNode extends CoaFlat {
   ownCredit: number;
   ownBalance: number;
 
+
   // TOTALS (own + all descendants)
   totalOpening: number;
   totalDebit: number;
@@ -56,7 +57,7 @@ interface CoaNode extends CoaFlat {
 export class GeneralLdegerComponent implements OnInit {
 
   @ViewChild('table') table: DatatableComponent | undefined;
-
+isExpanded: boolean = false;
   headervalue = 'General Ledger';
   selectedOption = 10;
   searchValue = '';
@@ -288,14 +289,19 @@ export class GeneralLdegerComponent implements OnInit {
   }
 
   // ===== EXPAND / COLLAPSE =====
-  toggleRow(row: CoaNode): void {
-    const hasChildren = !!(row.children && row.children.length);
-    if (!hasChildren) return;
+toggleRow(row: CoaNode): void {
+  const hasChildren = !!(row.children && row.children.length);
+  if (!hasChildren) return;
 
-    row.$$expanded = !row.$$expanded;
-    this.rebuildDisplayRows();
-  }
+  // expand/collapse
+  row.$$expanded = !row.$$expanded;
 
+  // rebuild rows (your existing logic)
+  this.rebuildDisplayRows();
+
+  // ✅ scrollbar ON only if any parent expanded
+  this.isExpanded = this.displayRows?.some((r: any) => r.$$expanded) || false;
+}
   filterUpdate(): void {
     this.rebuildDisplayRows();
   }
