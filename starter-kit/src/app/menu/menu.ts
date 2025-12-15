@@ -131,16 +131,49 @@ export const menu: any[] = [
 
   // Business Partners (Admin / Super Admin)
   {
-    id: 'businesspartners',
-    title: 'Business Partners',
-    translate: 'MENU.BUSINESSPARTNERS.TITLE',
-    type: 'collapsible',
-    icon: 'user',
-    approvalRoles: ['Admin', 'Super Admin'],
-    children: [
-      { id: 'supplier', title: 'Supplier', type: 'item', icon: 'circle', url: '/Businesspartners/supplier', approvalRoles: ['Admin', 'Super Admin'] },
-      { id: 'customermaster', title: 'Customer', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster', approvalRoles: ['Admin', 'Super Admin'] },
-      { id: 'users', title: 'Users', type: 'item', icon: 'circle', url: '/admin/users', approvalRoles: ['Super Admin'] }
-    ]
-  }
+  id: 'businesspartners',
+  title: 'Business Partners',
+  translate: 'MENU.BUSINESSPARTNERS.TITLE',
+  type: 'collapsible',
+  icon: 'user',
+
+  // show parent if any child is allowed (your filter will remove empty collapsible anyway)
+  teams: ['Purchase Team', 'Sales Team'],
+  approvalRoles: ['Admin', 'Super Admin'],
+
+  children: [
+    // ✅ Supplier => Purchase Team (and Super Admin can see)
+    {
+      id: 'supplier',
+      title: 'Supplier',
+      type: 'item',
+      icon: 'circle',
+      url: '/Businesspartners/supplier',
+      teams: ['Purchase Team'],
+      approvalRoles: ['Super Admin', 'Admin']
+    },
+
+    // ✅ Customer => Sales Team (and Super Admin can see)
+    {
+      id: 'customermaster',
+      title: 'Customer',
+      type: 'item',
+      icon: 'circle',
+      url: '/Businesspartners/customermaster',
+      teams: ['Sales Team'],
+      approvalRoles: ['Super Admin', 'Admin']
+    },
+
+    // ✅ Users => only Super Admin (change if you want Admin also)
+    {
+      id: 'users',
+      title: 'Users',
+      type: 'item',
+      icon: 'circle',
+      url: '/admin/users',
+      approvalRoles: ['Super Admin']
+    }
+  ]
+}
+
 ];
