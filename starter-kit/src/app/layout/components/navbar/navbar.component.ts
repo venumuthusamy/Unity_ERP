@@ -43,7 +43,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   @HostBinding('class.navbar-static-style-on-scroll')
   public windowScrolled = false;
   userName: any;
-
+public approvalRoleText: string = '';
   // Add .navbar-static-style-on-scroll on scroll using HostListener & HostBinding
   @HostListener('window:scroll', [])
   onWindowScroll() {
@@ -182,7 +182,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // get the currentUser details from localStorage
     // this.currentUser = JSON.parse(localStorage.getItem('currentUser'));
     this.userName = localStorage.getItem('username');
+    let approvalRoles: string[] = [];
+  try {
+    approvalRoles = JSON.parse(localStorage.getItem('approvalRoles') || '[]');
+  } catch {
+    approvalRoles = [];
+  }
 
+  // ✅ show first role (or join multiple)
+  this.approvalRoleText = approvalRoles.length ? approvalRoles.join(', ') : '—';
     // Subscribe to the config changes
     this._coreConfigService.config.pipe(takeUntil(this._unsubscribeAll)).subscribe(config => {
       this.coreConfig = config;

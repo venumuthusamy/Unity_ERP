@@ -48,13 +48,13 @@
     <div class="col-md-4">
       <label class="form-label small d-flex justify-content-between align-items-center">
         <span>Password</span>
-        <button
+        <!-- <button
           *ngIf="isEdit"
           type="button"
           class="btn btn-sm btn-outline-primary"
           (click)="togglePasswordEdit()">
           {{ canEditPassword ? 'Cancel' : 'Change Password' }}
-        </button>
+        </button> -->
       </label>
 
       <!-- dummy hidden fields (prevents chrome autofill strongly) -->
@@ -72,7 +72,7 @@
       />
 
       <small *ngIf="isEdit && !canEditPassword" class="text-muted">
-        Password hidden. Click <b>Change Password</b> to update.
+        Password hidden. Click <b>Edit Password</b> to update.
       </small>
 
       <div class="invalid-feedback">

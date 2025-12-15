@@ -89,13 +89,13 @@ export const menu: any[] = [
     icon: 'file',
     teams: ['Purchase Team'],
     children: [
-      { id: 'PR', title: 'Purchase Request', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest', teams: ['Purchase Team'] },
+      { id: 'PR', title: 'Purchase Request', translate: 'MENU.PURCHASE.PR', type: 'item', icon: 'circle', url: '/purchase/list-PurchaseRequest', teams: ['Purchase Team','Super Admin'] },
       { id: 'rfq', title: 'RFQ', translate: 'MENU.PURCHASE.RFQ', type: 'item', icon: 'circle', url: '/purchase/rfq', teams: ['Purchase Team'] },
-      { id: 'PO', title: 'Purchase Order', translate: 'MENU.PURCHASE.PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder', teams: ['Purchase Team'] },
-      { id: 'mobilereceiving', title: 'Mobile Receiving', translate: 'MENU.PURCHASE.MobileReceiving', type: 'item', icon: 'circle', url: '/purchase/mobilereceiving', teams: ['Purchase Team'] },
-      { id: 'GRN', title: 'Goods Receipt Note', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt', teams: ['Purchase Team'] },
-      { id: 'SupplierInvoice', title: 'Supplier Invoice', translate: 'MENU.PURCHASE.SupplierInvoice', type: 'item', icon: 'circle', url: '/purchase/list-SupplierInvoice', teams: ['Purchase Team'] },
-      { id: 'DebitNote', title: 'Debit Note', translate: 'MENU.PURCHASE.DebitNote', type: 'item', icon: 'circle', url: '/purchase/list-debitnote', teams: ['Purchase Team'] }
+      { id: 'PO', title: 'Purchase Order', translate: 'MENU.PURCHASE.PO', type: 'item', icon: 'circle', url: '/purchase/list-purchaseorder', teams: ['Purchase Team','Super Admin'] },
+      { id: 'mobilereceiving', title: 'Mobile Receiving', translate: 'MENU.PURCHASE.MobileReceiving', type: 'item', icon: 'circle', url: '/purchase/mobilereceiving', teams: ['Purchase Team','Super Admin'] },
+      { id: 'GRN', title: 'Goods Receipt Note', translate: 'MENU.PURCHASE.GRN', type: 'item', icon: 'circle', url: '/purchase/list-Purchasegoodreceipt', teams: ['Purchase Team','Super Admin'] },
+      { id: 'SupplierInvoice', title: 'Supplier Invoice', translate: 'MENU.PURCHASE.SupplierInvoice', type: 'item', icon: 'circle', url: '/purchase/list-SupplierInvoice', teams: ['Purchase Team','Super Admin'] },
+      { id: 'DebitNote', title: 'Debit Note', translate: 'MENU.PURCHASE.DebitNote', type: 'item', icon: 'circle', url: '/purchase/list-debitnote', teams: ['Purchase Team','Super Admin'] }
     ]
   },
 
@@ -110,11 +110,11 @@ export const menu: any[] = [
     icon: 'file',
     teams: ['Purchase Team'],
     children: [
-      { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/List-itemmaster', teams: ['Purchase Team'] },
-      { id: 'StackOverview', title: 'Stock-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview', teams: ['Purchase Team'] },
-      { id: 'StackTransfer', title: 'Stock-Transfer', translate: 'MENU.INVENTORY.STACKTRANSFER', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer', teams: ['Purchase Team'] },
-      { id: 'StockTake', title: 'Stock-Take', translate: 'MENU.INVENTORY.STOCKTAKE', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake', teams: ['Purchase Team'] },
-      { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/list-stockreorderplanning', teams: ['Purchase Team'] }
+      { id: 'ItemMaster', title: 'Item Master', translate: 'MENU.INVENTORY.ITEMMASTER', type: 'item', icon: 'circle', url: '/Inventory/List-itemmaster', teams: ['Purchase Team','Super Admin'] },
+      { id: 'StackOverview', title: 'Stock-Overview', translate: 'MENU.INVENTORY.STACKOVERVIEW', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview', teams: ['Purchase Team','Super Admin'] },
+      { id: 'StackTransfer', title: 'Stock-Transfer', translate: 'MENU.INVENTORY.STACKTRANSFER', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer', teams: ['Purchase Team','Super Admin'] },
+      { id: 'StockTake', title: 'Stock-Take', translate: 'MENU.INVENTORY.STOCKTAKE', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake', teams: ['Purchase Team','Super Admin'] },
+      { id: 'StockReorderPlanning', title: 'Stock-Reorder-Planning', translate: 'MENU.INVENTORY.STOCKREORDERPLANNING', type: 'item', icon: 'circle', url: '/Inventory/list-stockreorderplanning', teams: ['Purchase Team','Super Admin'] }
     ]
   },
 
@@ -129,25 +129,16 @@ export const menu: any[] = [
     icon: 'shopping-cart',
     teams: ['Sales Team'],
     children: [
-      { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list', teams: ['Sales Team'] },
-      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-list', teams: ['Sales Team'] },
-      { id: 'Picking', title: 'Picking & Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-list', teams: ['Sales Team'] },
-      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list', teams: ['Sales Team'] },
-      { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-list', teams: ['Sales Team'] },
-      { id: 'ReturnCredit', title: 'Credit Note', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-list', teams: ['Sales Team'] },
-      { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections', teams: ['Sales Team'] },
-      { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create', teams: ['Sales Team'] },
-      { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create', teams: ['Sales Team'] },
-      // { id: 'CustomerMaster', title: 'Customer Master', translate: 'MENU.SALES.CUSTOMERMASTER', type: 'item', icon: 'circle', url: '/Sales/Create-customer-master' },
-      { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list' },
-      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-list' },
-      { id: 'Picking', title: 'Picking & Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-list' },
-      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list' },
-      { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-list' },
-      { id: 'ReturnCredit', title: 'Credit Note', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-list' },
-      // { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
-      { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create' },
-      // { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create' }
+      { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list', teams: ['Sales Team','Super Admin'] },
+      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-list', teams: ['Sales Team','Super Admin'] },
+      { id: 'Picking', title: 'Picking & Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-list', teams: ['Sales Team','Super Admin'] },
+      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list', teams: ['Sales Team','Super Admin'] },
+      { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-list', teams: ['Sales Team','Super Admin'] },
+      { id: 'ReturnCredit', title: 'Credit Note', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-list', teams: ['Sales Team','Super Admin'] },
+    //  { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections', teams: ['Sales Team'] },
+      { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create', teams: ['Sales Team','Super Admin'] },
+     // { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create', teams: ['Sales Team'] },
+      
     ]
   },
 
@@ -162,27 +153,17 @@ export const menu: any[] = [
     icon: 'dollar-sign',
     teams: ['Finance Team'],
     children: [
-      { id: 'ledger', title: 'General Ledger', translate: 'MENU.FINANCIAL.LEDGER', type: 'item', icon: 'circle', url: '/financial/ledger', teams: ['Finance Team'] },
-      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount', teams: ['Finance Team'] },
-      { id: 'journal', title: 'Journal', translate: 'MENU.FINANCIAL.JOURNAL', type: 'item', icon: 'circle', url: '/financial/journal', teams: ['Finance Team'] },
-      { id: 'AR', title: 'Accounts Receivable', translate: 'MENU.FINANCIAL.ACCCOUNTSRECEIVABLE', type: 'item', icon: 'circle', url: '/financial/AR', teams: ['Finance Team'] },
-      { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable', teams: ['Finance Team'] },
-      { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst', teams: ['Finance Team'] },
-      { id: 'Period-close', title: 'Period-close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close', teams: ['Finance Team'] },
-      { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email', teams: ['Finance Team'] },
-      { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report', teams: ['Finance Team'] },
-      { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report', teams: ['Finance Team'] },
-      { id: 'ledger', title: 'General Ledger', translate: 'MENU.FINANCIAL.LEDGER', type: 'item', icon: 'circle', url: '/financial/ledger' },
-      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount' },
-      { id: 'journal', title: 'Journal', translate: 'MENU.FINANCIAL.JOURNAL', type: 'item', icon: 'circle', url: '/financial/journal' },
-       { id: 'AR', title: 'Accounts Receivable', translate: 'MENU.FINANCIAL.ACCCOUNTSRECEIVABLE', type: 'item', icon: 'circle', url: '/financial/AR' },
-      { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable' },
-      { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst' },
-      { id: 'Period-close', title: 'Period-close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close' },
-      // { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email' },
-      { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report' },
-      { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report' },
-            // { id: 'opening-balance', title: 'Opening-Balance', translate: 'MENU.FINANCIAL.OpeningBalance', type: 'item', icon: 'circle', url: '/financial/opening-balance' },
+      { id: 'ledger', title: 'General Ledger', translate: 'MENU.FINANCIAL.LEDGER', type: 'item', icon: 'circle', url: '/financial/ledger', teams: ['Finance Team','Super Admin'] },
+      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount', teams: ['Finance Team','Super Admin'] },
+      { id: 'journal', title: 'Journal', translate: 'MENU.FINANCIAL.JOURNAL', type: 'item', icon: 'circle', url: '/financial/journal', teams: ['Finance Team','Super Admin'] },
+      { id: 'AR', title: 'Accounts Receivable', translate: 'MENU.FINANCIAL.ACCCOUNTSRECEIVABLE', type: 'item', icon: 'circle', url: '/financial/AR', teams: ['Finance Team','Super Admin'] },
+      { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable', teams: ['Finance Team','Super Admin'] },
+      { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst', teams: ['Finance Team','Super Admin'] },
+      { id: 'Period-close', title: 'Period-close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close', teams: ['Finance Team','Super Admin'] },
+      { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email', teams: ['Finance Team','Super Admin'] },
+      { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report', teams: ['Finance Team','Super Admin'] },
+      { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report', teams: ['Finance Team','Super Admin'] },
+     
 
     ]
   },

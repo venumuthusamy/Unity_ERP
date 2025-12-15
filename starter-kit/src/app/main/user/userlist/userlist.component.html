@@ -90,13 +90,25 @@
               </ng-template>
             </ng-template>
           </ngx-datatable-column>
+<ngx-datatable-column name="TEAMS" [minWidth]="50" [maxWidth]="150" [sortable]="false">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <ng-container *ngIf="row.teams?.length; else noTeam">
+      <span *ngFor="let t of row.teams" class="badge badge-light-info mr-25">
+        {{ t }}
+      </span>
+    </ng-container>
+    <ng-template #noTeam>
+      <span class="text-muted">No</span>
+    </ng-template>
+  </ng-template>
+</ngx-datatable-column>
 
           <!-- Action -->
           <ngx-datatable-column name="ACTION" [width]="120" [sortable]="false">
             <ng-template ngx-datatable-cell-template let-row="row">
               <div class="d-flex justify-content-center align-items-center gap-1">
                 <i
-                  class="fas fa-pen text-primary"
+                  class="fas fa-pen text-primary mr-1"
                   style="cursor:pointer;"
                   (click)="edit(row.id)"
                   title="Edit">
