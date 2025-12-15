@@ -34,17 +34,7 @@ export const menu: any[] = [
     icon: 'settings',
     approvalRoles: ['Admin', 'Super Admin'],
     children: [
-      // ONLY SUPER ADMIN
-      {
-        id: 'approval-level',
-        title: 'Approval Level',
-        type: 'item',
-        icon: 'circle',
-        url: '/master/approval-level',
-        approvalRoles: ['Super Admin']
-      },
-
-      
+     
       { id: 'approval-level', title: 'Approval Level', type: 'item', icon: 'circle', url: '/master/approval-level',approvalRoles: ['Admin', 'Super Admin']  },
       { id: 'countries', title: 'Countries', type: 'item', icon: 'circle', url: '/master/countries',approvalRoles: ['Admin', 'Super Admin']  },
       { id: 'states', title: 'States', type: 'item', icon: 'circle', url: '/master/states',approvalRoles: ['Admin', 'Super Admin']  },
