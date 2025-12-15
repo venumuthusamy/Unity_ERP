@@ -131,7 +131,15 @@
           </ngx-datatable-column>
 
           <ngx-datatable-column name="PO Number" prop="purchaseOrderNo" [width]="120"></ngx-datatable-column>
-          <ngx-datatable-column name="Supplier Name" prop="supplierName" [width]="140"></ngx-datatable-column>
+      <ngx-datatable-column name="Supplier Name" prop="supplierName" [width]="200">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <span class="truncate-20"
+          [title]="row.supplierName">
+      {{ row.supplierName?.slice(0, 20) }}{{ row.supplierName?.length > 20 ? '...' : '' }}
+    </span>
+  </ng-template>
+</ngx-datatable-column>
+
           <ngx-datatable-column name="Currency/FX" prop="currencyName" [width]="120"></ngx-datatable-column>
 
           <ngx-datatable-column name="PO Date" prop="poDate" [width]="120">

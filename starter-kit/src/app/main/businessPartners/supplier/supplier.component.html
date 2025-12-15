@@ -67,7 +67,13 @@
   >
     <!-- Name -->
     <ngx-datatable-column name="NAME" prop="name" [width]="220">
-    </ngx-datatable-column>
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    <div class="po-wrap-cell" [title]="row.name">
+      {{ row.name || '-' }}
+    </div>
+  </ng-template>
+</ngx-datatable-column>
+
 
     <!-- Code -->
     <ngx-datatable-column name="CODE" prop="code" [width]="140">

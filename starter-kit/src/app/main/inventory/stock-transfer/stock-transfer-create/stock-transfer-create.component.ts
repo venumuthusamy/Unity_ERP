@@ -558,4 +558,8 @@ export class StockTransferCreateComponent implements OnInit {
     this.fromWarehouseName = '';
     this.groupMeta = this.computeGroupMeta();
   }
+
+  goToStockTransferList(){
+     this.router.navigate(['/Inventory/list-stocktransfer']); 
+  }
 }

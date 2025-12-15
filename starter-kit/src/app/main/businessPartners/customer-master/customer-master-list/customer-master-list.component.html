@@ -53,11 +53,14 @@ Customer Master List
                [reorderable]="true">
 
   <!-- Customer Name -->
-  <ngx-datatable-column name="Customer" prop="customerName" [width]="220">
-    <ng-template ngx-datatable-cell-template let-row="row">
+ <ngx-datatable-column name="Customer" prop="customerName" [width]="220">
+  <ng-template ngx-datatable-cell-template let-row="row">
+    <div class="po-wrap-cell" [title]="row?.customerName">
       {{ row?.customerName || '—' }}
-    </ng-template>
-  </ngx-datatable-column>
+    </div>
+  </ng-template>
+</ngx-datatable-column>
+
 
   <!-- Contact Number -->
   <ngx-datatable-column name="Contact" [width]="150">

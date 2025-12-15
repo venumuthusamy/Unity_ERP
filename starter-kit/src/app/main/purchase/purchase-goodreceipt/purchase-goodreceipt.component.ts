@@ -384,6 +384,7 @@ export class PurchaseGoodreceiptComponent implements OnInit, AfterViewInit, Afte
                   { isPostInventory: true, isFlagIssue: false, flagIssueId: 0 },
                   () => {
                     Swal.fire('Posted', 'Row posted to inventory & PurchaseAlert updated.', 'success');
+                    this.router.navigate(['/purchase/list-Purchasegoodreceipt']);
                   }
                 );
               },

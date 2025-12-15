@@ -762,4 +762,9 @@ submitAdjust(modalRef: any) {
   private safeFile(s: string): string {
     return this.sanitizeBaseName(s).toLowerCase();
   }
+
+
+  goToStockOverviewList(){
+    this.router.navigate(['/Inventory/list-stackoverview']); 
+  }
 }

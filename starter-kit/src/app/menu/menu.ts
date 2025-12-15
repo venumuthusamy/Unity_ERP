@@ -70,6 +70,36 @@ export const menu: any[] = [
       { id: 'driver', title: 'Driver', type: 'item', icon: 'circle', url: '/master/driver', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'vehicle', title: 'Vechicle', type: 'item', icon: 'circle', url: '/master/vehicle', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'bank', title: 'Bank', type: 'item', icon: 'circle', url: '/master/bank-list', approvalRoles: ['Admin', 'Super Admin'] }
+      { id: 'approval-level', title: 'Approval Level', type: 'item', icon: 'circle', url: '/master/approval-level' },
+      { id: 'countries', title: 'Countries', type: 'item', icon: 'circle', url: '/master/countries' },
+      { id: 'states', title: 'States', type: 'item', icon: 'circle', url: '/master/states' },
+      { id: 'cities', title: 'Cities', type: 'item', icon: 'circle', url: '/master/cities' },
+      { id: 'location', title: 'Location', type: 'item', icon: 'circle', url: '/master/location' },
+      { id: 'currency', title: 'Currency', type: 'item', icon: 'circle', url: '/master/currency' },
+      { id: 'uom', title: 'UOM', type: 'item', icon: 'circle', url: '/master/uom' },
+      { id: 'incoterms', title: 'Incoterms', type: 'item', icon: 'circle', url: '/master/incoterms' },
+      { id: 'flagissue', title: 'FlagIssue', type: 'item', icon: 'circle', url: '/master/flagIssue' },
+      { id: 'paymentTerms', title: 'PaymentTerms', type: 'item', icon: 'circle', url: '/master/paymentTerms' },
+      { id: 'service', title: 'Services', type: 'item', icon: 'circle', url: '/master/service' },
+      { id: 'customergroups', title: 'Customer Groups', type: 'item', icon: 'circle', url: '/master/customergroups' },
+      { id: 'suppliergroups', title: 'Supplier Groups', type: 'item', icon: 'circle', url: '/master/suppliergroups' },
+    //  { id: 'regions', title: 'Regions', type: 'item', icon: 'circle', url: '/master/regions' },
+     // { id: 'deductions', title: 'Deductions', type: 'item', icon: 'circle', url: '/master/deductions' },
+     // { id: 'income', title: 'Income', type: 'item', icon: 'circle', url: '/master/income' },
+      { id: 'department', title: 'Department', type: 'item', icon: 'circle', url: '/master/department' },
+      { id: 'items', title: 'Item', type: 'item', icon: 'circle', url: '/master/items' },
+      { id: 'warehouse', title: 'Warehouse', type: 'item', icon: 'circle', url: '/master/warehouse' },
+      { id: 'recurring', title: 'Recurring', type: 'item', icon: 'circle', url: '/master/recurring' },
+      { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode' },
+      { id: 'catagory', title: 'Catagory', type: 'item', icon: 'circle', url: '/master/catagory' },
+      { id: 'costingmethod', title: 'Costing Method ', type: 'item', icon: 'circle', url: '/master/coastingmethod' },
+      { id: 'strategy', title: 'Strategy', type: 'item', icon: 'circle', url: '/master/strategy' },
+      { id: 'stockissue', title: 'StockIssue', type: 'item', icon: 'circle', url: '/master/stockIssue' },
+      { id: 'bin', title: 'Bin', type: 'item', icon: 'circle', url: '/master/bin' },
+      { id: 'driver', title: 'Driver', type: 'item', icon: 'circle', url: '/master/driver' },
+       { id: 'Vehicle', title: 'Vechicle', type: 'item', icon: 'circle', url: '/master/vehicle' },
+       { id: 'bank', title: 'Bank', type: 'item', icon: 'circle', url: '/master/bank-list' },
+       
     ]
   },
 
@@ -133,6 +163,16 @@ export const menu: any[] = [
       { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections', teams: ['Sales Team'] },
       { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create', teams: ['Sales Team'] },
       { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create', teams: ['Sales Team'] }
+      // { id: 'CustomerMaster', title: 'Customer Master', translate: 'MENU.SALES.CUSTOMERMASTER', type: 'item', icon: 'circle', url: '/Sales/Create-customer-master' },
+      { id: 'Quotation', title: 'Quotation', translate: 'MENU.SALES.QUOTATION', type: 'item', icon: 'circle', url: '/Sales/Quotation-list' },
+      { id: 'SalesOrder', title: 'Sales Order', translate: 'MENU.SALES.SALESORDER', type: 'item', icon: 'circle', url: '/Sales/Sales-Order-list' },
+      { id: 'Picking', title: 'Picking & Packing', translate: 'MENU.SALES.PICKING', type: 'item', icon: 'circle', url: '/Sales/Picking-packing-list' },
+      { id: 'DeliveryOrder', title: 'Delivery Order', translate: 'MENU.SALES.DELIVERYORDER', type: 'item', icon: 'circle', url: '/Sales/Delivery-order-list' },
+      { id: 'SalesInvoice', title: 'Sales Invoice', translate: 'MENU.SALES.SALESINVOICE', type: 'item', icon: 'circle', url: '/Sales/Sales-Invoice-list' },
+      { id: 'ReturnCredit', title: 'Credit Note', translate: 'MENU.SALES.RETURNCREDIT', type: 'item', icon: 'circle', url: '/Sales/Return-credit-list' },
+      // { id: 'Collections', title: 'Collections', translate: 'MENU.SALES.COLLECTIONS', type: 'item', icon: 'circle', url: '/Sales/Create-collections' },
+      { id: 'Report', title: 'Report', translate: 'MENU.SALES.REPORTS', type: 'item', icon: 'circle', url: '/Sales/Reports-create' },
+      // { id: 'Shared', title: 'Shared', translate: 'MENU.SALES.SHARED', type: 'item', icon: 'circle', url: '/Sales/Shared-create' }
     ]
   },
 
@@ -157,6 +197,18 @@ export const menu: any[] = [
       { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email', teams: ['Finance Team'] },
       { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report', teams: ['Finance Team'] },
       { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report', teams: ['Finance Team'] }
+      { id: 'ledger', title: 'General Ledger', translate: 'MENU.FINANCIAL.LEDGER', type: 'item', icon: 'circle', url: '/financial/ledger' },
+      { id: 'ChartofAccount', title: 'Chart of Account', translate: 'MENU.FINANCIAL.CHARTOFACCOUNT', type: 'item', icon: 'circle', url: '/financial/ChartOfAccount' },
+      { id: 'journal', title: 'Journal', translate: 'MENU.FINANCIAL.JOURNAL', type: 'item', icon: 'circle', url: '/financial/journal' },
+       { id: 'AR', title: 'Accounts Receivable', translate: 'MENU.FINANCIAL.ACCCOUNTSRECEIVABLE', type: 'item', icon: 'circle', url: '/financial/AR' },
+      { id: 'AccountPayable', title: 'Accounts Payable', translate: 'MENU.FINANCIAL.ACCOUNTPAYABLE', type: 'item', icon: 'circle', url: '/financial/AccountPayable' },
+      { id: 'tax-gst', title: 'Tax & Gst', translate: 'MENU.FINANCIAL.TAX', type: 'item', icon: 'circle', url: '/financial/tax-gst' },
+      { id: 'Period-close', title: 'Period-close', translate: 'MENU.FINANCIAL.PERIODCLOSE', type: 'item', icon: 'circle', url: '/financial/Period-close' },
+      // { id: 'invoice-email', title: 'Invoice Email', translate: 'MENU.FINANCIAL.INVOICEEMAIL', type: 'item', icon: 'circle', url: '/financial/Invoice-email' },
+      { id: 'report', title: 'Trail Balance', translate: 'MENU.FINANCIAL.Report', type: 'item', icon: 'circle', url: '/financial/report' },
+      { id: 'finance-report', title: 'Reports', translate: 'MENU.FINANCIAL.FinanceReport', type: 'item', icon: 'circle', url: '/financial/finance-report' },
+            // { id: 'opening-balance', title: 'Opening-Balance', translate: 'MENU.FINANCIAL.OpeningBalance', type: 'item', icon: 'circle', url: '/financial/opening-balance' },
+
     ]
   },
 
@@ -173,6 +225,10 @@ export const menu: any[] = [
     children: [
       { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster', approvalRoles: ['Admin', 'Super Admin'] },
+       { id: 'customermaster', title: 'Customer', translate: 'MENU.BUSINESSPARTNERS.CUSTOMER', type: 'item', icon: 'circle', url: '/Businesspartners/customermaster' },
+      { id: 'supplier', title: 'Supplier', translate: 'MENU.BUSINESSPARTNERS.SUPPLIER', type: 'item', icon: 'circle', url: '/Businesspartners/supplier' },
+       { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users' },
+
 
       // ONLY SUPER ADMIN
       { id: 'users', title: 'Users', translate: 'MENU.BUSINESSPARTNERS.USER', type: 'item', icon: 'circle', url: '/admin/users', approvalRoles: ['Super Admin'] }

@@ -46,6 +46,7 @@ export class ReceiptCreateComponent implements OnInit {
   customerList: any[] = [];
   bankAccounts: any;
   bankAvailableBalance: any;
+  isAmountManual = false;
 
   constructor(
     private receiptService: ReceiptService,
@@ -145,6 +146,8 @@ export class ReceiptCreateComponent implements OnInit {
     this.customerId = event.customerId;
     const selected = this.customerList.find(c => c.id === this.customerId);
     this.customerName = selected ? selected.customerName : '';
+    this.amountReceived = 0;
+    this.isAmountManual = false;
     this.loadInvoicesForCustomer();
   }
 
@@ -211,6 +214,7 @@ export class ReceiptCreateComponent implements OnInit {
   }
 
   onAmountReceivedChange(): void {
+    this.isAmountManual = true;
     this.recalculateTotals();
   }
 
@@ -303,6 +307,9 @@ export class ReceiptCreateComponent implements OnInit {
 
   recalculateTotals(): void {
     // getters do the work – kept for future logic if needed
+      if (!this.isAmountManual) {
+    this.amountReceived = this.totalAllocated;
+  }
   }
 
   // ==========================
