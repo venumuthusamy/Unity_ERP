@@ -16,8 +16,7 @@
         <h4 class="card-text pin-title">Supplier Invoice (PIN)</h4>
 
         <div class="flex items-center gap-2">
-          <span
-            class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+          <span class="px-2 py-0.5 text-[11px] rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
             3-way match: PO · GRN · PIN
           </span>
 
@@ -63,10 +62,7 @@
               <small class="text-gray-500 ml-1" *ngIf="g.poNo">· PO: {{ g.poNo }}</small>
               <small class="text-gray-400 ml-1" *ngIf="g.supplierName">· {{ g.supplierName }}</small>
             </li>
-            <li *ngIf="!grnFiltered?.length"
-                class="px-3 py-2 text-gray-400 text-[13px]">
-              No results
-            </li>
+            <li *ngIf="!grnFiltered?.length" class="px-3 py-2 text-gray-400 text-[13px]">No results</li>
           </ul>
         </div>
 
@@ -132,8 +128,7 @@
         </div>
 
         <div formArrayName="lines">
-          <div *ngIf="lines.length === 0"
-               class="text-center text-[12.5px] text-gray-400 py-3">
+          <div *ngIf="lines.length === 0" class="text-center text-[12.5px] text-gray-400 py-3">
             No lines yet.
           </div>
 
@@ -142,8 +137,7 @@
                class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
 
             <div class="px-2.5 py-1.5">
-              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="item" />
+              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="item" />
             </div>
 
             <div class="px-2.5 py-1.5">
@@ -158,37 +152,28 @@
                          appendTo="body"
                          dropdownPosition="bottom">
                 <ng-template ng-option-tmp let-item="item">
-                  <div class="pin-budget-option" [title]="item.label">
-                    {{ item.label }}
-                  </div>
+                  <div class="pin-budget-option" [title]="item.label">{{ item.label }}</div>
                 </ng-template>
               </ng-select>
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="location" />
+              <input class="w-full rounded-lg border px-2.5 h-8 text-[13px]" formControlName="location" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="qty"
-                     (input)="onCellChange(i)" />
+              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="qty" (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="unitPrice"
-                     (input)="onCellChange(i)" />
+              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="unitPrice" (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number"
-                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="discountPct"
-                     (input)="onCellChange(i)" />
+              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="discountPct" (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5 text-right text-[13px]">
@@ -197,44 +182,44 @@
           </div>
         </div>
 
-        <!-- Footer totals -->
-        <div class="border-t px-3 py-2 bg-slate-50 text-[13px]">
+        <!-- ✅ Footer totals as INPUT FIELDS -->
+        <div class="border-t px-3 py-3 bg-slate-50 text-[13px]">
           <div class="flex justify-end">
-            <div class="w-64 space-y-1">
+            <div class="w-72 space-y-2">
 
-              <div class="flex justify-between">
-                <span>Sub-total</span>
-                <span>{{ subTotal | number:'1.2-2' }}</span>
+              <div class="grid grid-cols-2 items-center gap-2">
+                <div class="text-right text-gray-600">Sub-total</div>
+                <input class="w-full rounded-lg border px-2.5 h-8 text-[13px] text-right bg-white"
+                       [value]="subTotal | number:'1.2-2'" readonly />
               </div>
 
-              <div class="flex justify-between">
-                <span>Discount</span>
-                <span>- {{ discountTotal | number:'1.2-2' }}</span>
+              <div class="grid grid-cols-2 items-center gap-2">
+                <div class="text-right text-gray-600">Discount</div>
+                <input class="w-full rounded-lg border px-2.5 h-8 text-[13px] text-right bg-white"
+                       [value]="discountTotal | number:'1.2-2'" readonly />
               </div>
 
-              <div class="flex justify-between">
-                <span>
+              <div class="grid grid-cols-2 items-center gap-2">
+                <div class="text-right text-gray-600">
                   Tax
-                  <ng-container *ngIf="taxMode !== 'ZERO'">
-                    ({{ form.get('tax')?.value || 0 }}%
-                    <span *ngIf="taxMode === 'EXCLUSIVE'"> - Exclusive</span>
-                    <span *ngIf="taxMode === 'INCLUSIVE'"> - Inclusive</span>)
-                  </ng-container>
-                  <ng-container *ngIf="taxMode === 'ZERO'">
-                    (0% - No tax)
-                  </ng-container>
-                </span>
-                <span>{{ taxAmount | number:'1.2-2' }}</span>
+                  <span class="text-gray-400">
+                    ({{ form.get('tax')?.value || 0 }}% - {{ taxMode }})
+                  </span>
+                </div>
+                <input class="w-full rounded-lg border px-2.5 h-8 text-[13px] text-right bg-white"
+                       [value]="taxAmount | number:'1.2-2'" readonly />
               </div>
 
-              <div class="flex justify-between font-semibold border-t pt-1 mt-1">
-                <span>Grand total</span>
-                <span>{{ grandTotal | number:'1.2-2' }}</span>
+              <div class="grid grid-cols-2 items-center gap-2 pt-2 border-t">
+                <div class="text-right font-semibold">Grand total</div>
+                <input class="w-full rounded-lg border px-2.5 h-9 text-[13px] text-right bg-white font-semibold"
+                       [value]="grandTotal | number:'1.2-2'" readonly />
               </div>
 
-              <div class="flex justify-between font-semibold border-t pt-1 mt-1 text-[#0e3a4c]">
-                <span>Net Payable</span>
-                <span>{{ netPayable | number:'1.2-2' }}</span>
+              <div class="grid grid-cols-2 items-center gap-2 pt-2 border-t">
+                <div class="text-right font-semibold text-[#0e3a4c]">Net Payable</div>
+                <input class="w-full rounded-lg border px-2.5 h-9 text-[13px] text-right bg-white font-semibold text-[#0e3a4c]"
+                       [value]="netPayable | number:'1.2-2'" readonly />
               </div>
 
             </div>

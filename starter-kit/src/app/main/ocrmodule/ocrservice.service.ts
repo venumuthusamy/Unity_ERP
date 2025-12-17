@@ -10,6 +10,8 @@ export interface OcrParsed {
   taxPercent?: number;
   taxAmount?: number;
   supplierName?: string;
+  subTotal?: number;
+  discount?: number;
 }
 
 export interface OcrResponse {
@@ -22,17 +24,17 @@ export interface OcrResponse {
 
 @Injectable({ providedIn: 'root' })
 export class OcrService {
-  private base = environment.apiUrl + '/ocr';
+  private base = environment.apiUrl + '/ocr'; // ✅ IMPORTANT
 
   constructor(private http: HttpClient) {}
 
-  extract(file: File, opts: { lang?: string; module?: string; refNo?: string; createdBy?: string }): Observable<OcrResponse> {
+  extractAny(file: File, opts: { lang?: string; module?: string; refNo?: string; createdBy?: string }): Observable<OcrResponse> {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('lang', opts.lang || 'eng');
     if (opts.module) fd.append('module', opts.module);
     if (opts.refNo) fd.append('refNo', opts.refNo);
     if (opts.createdBy) fd.append('createdBy', opts.createdBy);
-    return this.http.post<OcrResponse>(`${this.base}/extract`, fd);
+    return this.http.post<OcrResponse>(`${this.base}/extract`, fd); // ✅ POST
   }
 }
