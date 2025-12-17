@@ -9,16 +9,15 @@ import { OcrResponse, OcrService } from '../ocrservice.service';
 })
 export class OcruploadmodalComponent {
   @Input() open = false;
-
   @Input() createdBy?: string;
-  @Input() refNo?: string;
-
+@Input() currencyId: number = 1;
   @Output() closed = new EventEmitter<void>();
   @Output() applied = new EventEmitter<OcrResponse>();
 
   lang = 'eng';
   file?: File;
   previewUrl?: string;
+  isImage = true;
 
   loading = false;
   error?: string;
@@ -35,17 +34,22 @@ export class OcruploadmodalComponent {
     this.error = undefined;
     this.result = undefined;
 
-    const f = e?.target?.files?.[0] as File | undefined;
+    const f = e?.target?.files?.[0] as File;
     this.file = f;
+    this.previewUrl = undefined;
 
-    if (!f) {
-      this.previewUrl = undefined;
-      return;
+    if (!f) return;
+
+    this.isImage = f.type?.startsWith('image/');
+
+    if (this.isImage) {
+      const reader = new FileReader();
+      reader.onload = () => (this.previewUrl = String(reader.result || ''));
+      reader.readAsDataURL(f);
+    } else {
+      // PDF selected
+      this.previewUrl = 'pdf';
     }
-
-    const reader = new FileReader();
-    reader.onload = () => (this.previewUrl = String(reader.result || ''));
-    reader.readAsDataURL(f);
   }
 
   run() {
@@ -55,10 +59,9 @@ export class OcruploadmodalComponent {
     this.error = undefined;
     this.result = undefined;
 
-    this.ocr.extract(this.file, {
+    this.ocr.extractAny(this.file, {
       lang: this.lang,
-      module: 'PIN-DRAFT',
-      refNo: this.refNo,
+      module: 'PIN',
       createdBy: this.createdBy
     }).subscribe({
       next: (res) => {
@@ -72,7 +75,7 @@ export class OcruploadmodalComponent {
     });
   }
 
-  applyToFormOnly() {
+  apply() {
     if (!this.result) return;
     this.applied.emit(this.result);
     this.close();
