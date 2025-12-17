@@ -20,6 +20,7 @@ import { RfqComponent } from './rfq/rfq.component';
 import { DebitNoteListComponent } from './debit-note/debit-note-list/debit-note-list.component';
 import { DebitNoteCreateComponent } from './debit-note/debit-note-create/debit-note-create.component';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { OcruploadmodalComponent } from '../ocrmodule/ocruploadmodal/ocruploadmodal.component';
 
 
 const routes = [
@@ -114,7 +115,7 @@ const routes = [
 ];
 
 @NgModule({
-  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent,PurchaseGoodreceiptComponent, PurchaseGoodreceiptlistComponent,PurchaseOrdeListComponent, PurchaseOrderCreateComponent, SupplierInvoiceComponent, SupplierInvoiceListComponent, MobileReceivingComponent, RfqComponent,DebitNoteListComponent, DebitNoteCreateComponent],
+  declarations: [CreatePurchaseRequestComponent,PurchaseRequestListComponent,PurchaseGoodreceiptComponent, PurchaseGoodreceiptlistComponent,PurchaseOrdeListComponent, PurchaseOrderCreateComponent, SupplierInvoiceComponent, SupplierInvoiceListComponent, MobileReceivingComponent, RfqComponent,DebitNoteListComponent, DebitNoteCreateComponent,OcruploadmodalComponent],
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
@@ -123,7 +124,7 @@ const routes = [
     NgbModule,
     ReactiveFormsModule,
     SweetAlert2Module.forRoot(),
-     NgSelectModule
+     NgSelectModule,
   ]
 })
 export class PurchaseModule { }

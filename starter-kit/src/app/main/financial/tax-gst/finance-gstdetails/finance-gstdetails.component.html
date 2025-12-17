@@ -78,26 +78,49 @@
           </div>
 
           <!-- Totals -->
-          <div class="row mb-1" *ngIf="rows?.length">
-            <div class="col-md-4 col-sm-6 mb-1">
-              <div class="border rounded p-50 bg-light">
-                <div class="small text-muted">Total Taxable</div>
-                <div class="h6 mb-0">{{ totalTaxable | number:'1.2-2' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4 col-sm-6 mb-1">
-              <div class="border rounded p-50 bg-light">
-                <div class="small text-muted">Total Tax</div>
-                <div class="h6 mb-0">{{ totalTax | number:'1.2-2' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4 col-sm-6 mb-1">
-              <div class="border rounded p-50 bg-light">
-                <div class="small text-muted">Total Net</div>
-                <div class="h6 mb-0">{{ totalNet | number:'1.2-2' }}</div>
-              </div>
-            </div>
-          </div>
+         <div class="ap-summary-row row no-gutters" *ngIf="rows?.length">
+
+  <!-- Total Taxable -->
+  <div class="col-xl-4 col-md-6 col-12">
+    <div class="ap-summary-card ap-summary-total">
+      <div class="ap-summary-icon">
+        <i class="fas fa-receipt"></i>
+      </div>
+      <div class="ap-summary-text">
+        <div class="label">Total Taxable</div>
+        <div class="value">{{ totalTaxable | number:'1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Tax -->
+  <div class="col-xl-4 col-md-6 col-12">
+    <div class="ap-summary-card ap-summary-paid">
+      <div class="ap-summary-icon">
+        <i class="fas fa-percent"></i>
+      </div>
+      <div class="ap-summary-text">
+        <div class="label">Total Tax</div>
+        <div class="value">{{ totalTax | number:'1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Net -->
+  <div class="col-xl-4 col-md-6 col-12">
+    <div class="ap-summary-card ap-summary-debit">
+      <div class="ap-summary-icon">
+        <i class="fas fa-coins"></i>
+      </div>
+      <div class="ap-summary-text">
+        <div class="label">Total Net</div>
+        <div class="value">{{ totalNet | number:'1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 <div class="d-flex flex-column flex-md-row 
               justify-content-between align-items-center
               mt-1 w-100 gst-pagination">
