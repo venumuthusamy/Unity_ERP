@@ -75,7 +75,7 @@ export class UomComponent implements OnInit, AfterViewChecked, AfterViewInit {
   }
 
   // Save or update
-  onSubmit(form: any) {
+ onSubmit(form: any) {
     if (!form.valid) {
       Swal.fire({
         icon: 'warning',

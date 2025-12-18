@@ -103,6 +103,14 @@ export class CountriesComponent implements OnInit, AfterViewInit, AfterViewCheck
       this.isDisplay = false;
       this.isEditMode=false;
     }
+    else{
+Swal.fire({
+        title: "Hi",
+        text: res.message,
+        icon: "error",
+        allowOutsideClick: false,
+      });
+    }
   });
 }
 else{
@@ -118,6 +126,15 @@ else{
       this.getAllCountries();
       this.isDisplay = false;
       this.isEditMode=false;
+    }
+
+        else{
+Swal.fire({
+        title: "Hi",
+        text: res.message,
+        icon: "error",
+        allowOutsideClick: false,
+      });
     }
   });
 }
