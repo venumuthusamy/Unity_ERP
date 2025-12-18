@@ -72,76 +72,87 @@ export class CurrencyComponent implements OnInit {
   }
 
   // Save or update
-  onSubmit(form: any) {
-    if (!form.valid) {
+onSubmit(form: any) {
+  if (!form.valid) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Warning',
+      text: 'Please fill all required fields',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return;
+  }
+
+  const payload = {
+    CurrencyName: this.CurrencyName,
+    description: this.description,
+    CreatedBy: '1',
+    UpdatedBy: '1',
+    UpdatedDate: new Date(),
+    isActive: true,
+  };
+
+  const showApiMessage = (res: any, successText: string) => {
+    if (res?.isSuccess === false) {
       Swal.fire({
-        icon: 'warning',
+        icon: 'error',
         title: 'Warning',
-        text: 'Please fill all required fields',
+        text: res?.message || 'Operation failed',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
       return;
     }
 
-    const payload = {
-      CurrencyName: this.CurrencyName,
-      description: this.description,
-      CreatedBy: '1',
-      UpdatedBy: '1',
-      UpdatedDate: new Date(),
-      isActive: true,
-    };
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: res?.message || successText,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
 
-    if (this.isEditMode) {
-      const updatedCurrency = { ...this.selectedCurrency, ...payload };
-      this.CurrencyService.updateCurrency(this.selectedCurrency.id, updatedCurrency).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Updated!',
-            text: 'Currency updated successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadCurrency();
-          this.cancel();
-        },
-        error: () => {
+    this.loadCurrency();
+    this.cancel();
+  };
+
+  if (this.isEditMode) {
+    const updatedCurrency = { ...this.selectedCurrency, ...payload };
+
+    this.CurrencyService
+      .updateCurrency(this.selectedCurrency.id, updatedCurrency)
+      .subscribe({
+        next: (res: any) => showApiMessage(res, 'Currency updated successfully'),
+        error: (err) => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to update Currency',
+            text: err?.error?.message || 'Failed to update Currency',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
         }
       });
-    } else {
-      this.CurrencyService.createCurrency(payload).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Created!',
-            text: 'Currency created successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadCurrency();
-          this.cancel();
-        },
-        error: () => {
+
+  } else {
+    this.CurrencyService
+      .createCurrency(payload)
+      .subscribe({
+        next: (res: any) => showApiMessage(res, 'Currency created successfully'),
+        error: (err) => {
           Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to create Currency',
+            text: err?.error?.message || 'Failed to create Currency',
             confirmButtonText: 'OK',
             confirmButtonColor: '#d33'
           });
         }
       });
-    }
   }
+}
+
   // Delete
   confirmdeleteCurrency(data: any) {
     Swal.fire({

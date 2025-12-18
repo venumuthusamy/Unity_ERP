@@ -68,75 +68,80 @@ export class IncotermsComponent implements OnInit,AfterViewChecked {
   }
 
   // Save or update
-  onSubmit(form: any) {
-    if (!form.valid) {
+ onSubmit(form: any) {
+  if (!form.valid) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Warning',
+      text: 'Please fill all required fields',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return;
+  }
+
+  const payload = {
+    IncotermsName: this.incotermsName,
+    CreatedBy: this.userId,
+    UpdatedBy: this.userId,
+    CreatedDate: new Date(),
+    UpdatedDate: new Date()
+  };
+
+  const handleResponse = (res: any, successMsg: string) => {
+    if (res?.isSuccess === false) {
       Swal.fire({
         icon: 'warning',
         title: 'Warning',
-        text: 'Please fill all required fields',
+        text: res?.message || 'Operation failed',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
       return;
     }
 
-    const payload = {
-      IncotermsName: this.incotermsName,
-      CreatedBy: this.userId,
-      UpdatedBy: this.userId,
-      CreatedDate: new Date(),
-      UpdatedDate: new Date()
-    };
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: res?.message || successMsg,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
 
-    if (this.isEditMode) {
-      const updatedIncoterms = { ...this.selectedIncoterms, ...payload };
-      this.incotermsService.updateIncoterms(this.selectedIncoterms.id, updatedIncoterms).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Updated!',
-            text: 'Incoterms updated successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadIncoterms();
-          this.cancel();
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to update Incoterms',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#d33'
-          });
-        }
+    this.loadIncoterms();
+    this.cancel();
+  };
+
+  const handleError = (err: any, fallbackMsg: string) => {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: err?.error?.message || fallbackMsg,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#d33'
+    });
+  };
+
+  if (this.isEditMode) {
+    const updatedIncoterms = { ...this.selectedIncoterms, ...payload };
+
+    this.incotermsService
+      .updateIncoterms(this.selectedIncoterms.id, updatedIncoterms)
+      .subscribe({
+        next: (res: any) => handleResponse(res, 'Incoterms updated successfully'),
+        error: (err: any) => handleError(err, 'Failed to update Incoterms')
       });
-    } else {
-      this.incotermsService.createIncoterms(payload).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Created!',
-            text: 'Incoterms created successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadIncoterms();
-          this.cancel();
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to create Incoterms',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#d33'
-          });
-        }
+
+  } else {
+    this.incotermsService
+      .createIncoterms(payload)
+      .subscribe({
+        next: (res: any) => handleResponse(res, 'Incoterms created successfully'),
+        error: (err: any) => handleError(err, 'Failed to create Incoterms')
       });
-    }
   }
+}
+
   // Delete
   confirmdeleteIncoterms(data: any) {
     Swal.fire({

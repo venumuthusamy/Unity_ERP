@@ -69,75 +69,76 @@ export class FlagissueComponent implements OnInit,AfterViewChecked{
   }
 
   // Save or update
-  onSubmit(form: any) {
-    if (!form.valid) {
+onSubmit(form: any) {
+  if (!form.valid) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Warning',
+      text: 'Please fill all required fields',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
+    return;
+  }
+
+  const payload = {
+    FlagIssuesNames: this.flagIssueName,
+    CreatedBy: this.userId,
+    UpdatedBy: this.userId,
+    CreatedDate: new Date(),
+    UpdatedDate: new Date()
+  };
+
+  const handleResponse = (res: any, successMsg: string) => {
+    if (res?.isSuccess === false) {
       Swal.fire({
         icon: 'warning',
         title: 'Warning',
-        text: 'Please fill all required fields',
+        text: res?.message || 'Operation failed',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
       return;
     }
 
-    const payload = {
-      FlagIssuesNames: this.flagIssueName,
-      CreatedBy: this.userId,
-      UpdatedBy: this.userId,
-      CreatedDate: new Date(),
-      UpdatedDate: new Date()
-    };
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: res?.message || successMsg,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#0e3a4c'
+    });
 
-    if (this.isEditMode) {
-      const updatedFlagIssue = { ...this.selectedFlagIssue, ...payload };
-      this.flagIssueService.updateFlagIssue(this.selectedFlagIssue.id, updatedFlagIssue).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Updated!',
-            text: 'FlagIssue updated successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadFlagIssue();
-          this.cancel();
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to update Incoterms',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#d33'
-          });
-        }
-      });
-    } else {
-      this.flagIssueService.createFlagIssue(payload).subscribe({
-        next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Created!',
-            text: 'FlagIssue created successfully',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0e3a4c'
-          });
-          this.loadFlagIssue();
-          this.cancel();
-        },
-        error: () => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to create Incoterms',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#d33'
-          });
-        }
-      });
-    }
+    this.loadFlagIssue();
+    this.cancel();
+  };
+
+  const handleError = (err: any, fallbackMsg: string) => {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: err?.error?.message || fallbackMsg,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#d33'
+    });
+  };
+
+  if (this.isEditMode) {
+    const updatedFlagIssue = { ...this.selectedFlagIssue, ...payload };
+
+    this.flagIssueService.updateFlagIssue(this.selectedFlagIssue.id, updatedFlagIssue).subscribe({
+      next: (res: any) => handleResponse(res, 'FlagIssue updated successfully'),
+      error: (err: any) => handleError(err, 'Failed to update FlagIssue')
+    });
+
+  } else {
+    this.flagIssueService.createFlagIssue(payload).subscribe({
+      next: (res: any) => handleResponse(res, 'FlagIssue created successfully'),
+      error: (err: any) => handleError(err, 'Failed to create FlagIssue')
+    });
   }
+}
+
   // Delete
   confirmdeleteFlagIssue(data: any) {
     Swal.fire({

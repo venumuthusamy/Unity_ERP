@@ -111,6 +111,9 @@ export class StatesComponent implements OnInit, AfterViewChecked, AfterViewInit 
         this.isDisplay = false;
         this.isEditMode = false;
       }
+      else{
+         Swal.fire({ title: 'Hi', text: res.message, icon: 'error', allowOutsideClick: false });
+      }
     });
   }
 
