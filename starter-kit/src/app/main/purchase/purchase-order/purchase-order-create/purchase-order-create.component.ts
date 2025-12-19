@@ -786,6 +786,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       dropdownOpen: '',
       filteredOptions: []
     });
+    this.poLines = [...this.poLines];
   }
 
 

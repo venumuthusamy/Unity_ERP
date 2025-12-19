@@ -39,5 +39,8 @@ export class POService {
     deletePO(id: any) {
         return this.http.delete<any>(this.url + POApiUrls.DeletePO + id);
     }
+    getPoQr(poNo: string) {
+        return this.http.get<any>(this.url+ `/PurchaseOrder/${encodeURIComponent(poNo)}/qr`);
+    }
 
 }
