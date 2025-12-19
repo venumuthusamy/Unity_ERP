@@ -177,6 +177,18 @@
             </ng-template>
           </ngx-datatable-column>
 
+          <ngx-datatable-column name="QR" [width]="80" [sortable]="false">
+          <ng-template ngx-datatable-cell-template let-row="row">
+            <button
+              class="btn btn-sm"
+              style="border:1px solid #2E5F73; color:#2E5F73; background:white;"
+              (click)="openQr(row)">
+              QR
+            </button>
+          </ng-template>
+        </ngx-datatable-column>
+
+
           <!-- Edit/Delete -->
           <ngx-datatable-column name="Action" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
@@ -470,3 +482,45 @@
     </div>
   </div>
 </div>
+<div *ngIf="showQrModal"
+     (click)="closeQr()"
+     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050;
+            display:flex; align-items:center; justify-content:center;">
+
+  <div (click)="$event.stopPropagation()"
+       style="width:420px; max-width:92vw; background:#fff;
+              border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,.25);">
+
+    <div style="display:flex; justify-content:space-between;
+                padding:14px 16px; border-bottom:1px solid #eee;">
+      <h3 style="margin:0; font-size:18px;">PO QR – {{ qrPoNo }}</h3>
+      <button (click)="closeQr()" style="border:0; background:none; font-size:22px;">×</button>
+    </div>
+
+    <div style="padding:16px; text-align:center;">
+      <img *ngIf="qrImgBase64"
+           [src]="qrImgBase64"
+           style="width:260px; height:260px;" />
+
+      <div style="font-size:12px; color:#6b7280; word-break:break-all;">
+        {{ qrPayloadUrl }}
+      </div>
+
+      <div class="mt-3 d-flex justify-content-center gap-2">
+        <a class="btn btn-sm"
+           [href]="qrImgBase64"
+           [attr.download]="'PO-' + qrPoNo + '.png'"
+           style="background:#2E5F73; color:white;">
+          Download
+        </a>
+
+        <button class="btn btn-sm"
+                style="border:1px solid #2E5F73; color:#2E5F73;"
+                (click)="copyQrLink()">
+          Copy Link
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

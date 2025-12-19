@@ -71,6 +71,12 @@ export class PurchaseOrdeListComponent
   reorderCount = 0;         // available reorder PRs (not used in any PO)
 isPeriodLocked = false;
   currentPeriodName = '';
+  // QR modal
+showQrModal = false;
+qrPoNo = '';
+qrPayloadUrl = '';
+qrImgBase64 = '';
+
   constructor(
     private poService: POService,
     private router: Router,
@@ -460,4 +466,37 @@ private showPeriodLockedSwal(action: string): void {
     );
     this.closeReorderModal();
   }
+  openQr(row: any): void {
+  const poNo = row?.purchaseOrderNo;
+  if (!poNo) return;
+
+  this.qrPoNo = poNo;
+  this.showQrModal = true;
+
+  this.poService.getPoQr(poNo).subscribe({
+    next: (res: any) => {
+      this.qrPayloadUrl = res.qrPayloadUrl;
+      this.qrImgBase64 = res.qrCodeSrcBase64;
+    },
+    error: err => {
+      this.showQrModal = false;
+      Swal.fire('Error', 'Failed to load QR', 'error');
+    }
+  });
+}
+
+closeQr(): void {
+  this.showQrModal = false;
+  this.qrPoNo = '';
+  this.qrPayloadUrl = '';
+  this.qrImgBase64 = '';
+}
+
+copyQrLink(): void {
+  if (this.qrPayloadUrl) {
+    navigator.clipboard.writeText(this.qrPayloadUrl);
+    Swal.fire('Copied', 'QR link copied', 'success');
+  }
+}
+
 }

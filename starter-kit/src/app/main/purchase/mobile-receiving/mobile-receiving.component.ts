@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { MobileReceivingApi } from './mobile-receiving-service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-mobile-receiving',
@@ -13,16 +15,25 @@ export class MobileReceivingComponent implements OnInit {
 
   mrRows: Array<{
     ts: Date;
-    po: string;
     barcode: string;
     qty: number;
   }> = [];
+  poLines: any[] = [];
 
-  constructor() { }
+  constructor(private api: MobileReceivingApi,private route: ActivatedRoute) {}
 
-  ngOnInit(): void {
-    // You can load offline data here if needed
-  }
+ ngOnInit(): void {
+  this.loadOffline();
+
+  this.route.queryParamMap.subscribe(params => {
+    const poNo = params.get('poNo');
+    if (poNo) {
+      this.mrPo = poNo;
+      this.loadPo();
+    }
+  });
+}
+
 
   addScan(): void {
     if (!this.mrPo.trim() || !this.mrBarcode.trim()) {
@@ -30,42 +41,72 @@ export class MobileReceivingComponent implements OnInit {
       return;
     }
 
-    const newRow = {
-      ts: new Date(),
-      po: this.mrPo.trim(),
-      barcode: this.mrBarcode.trim(),
-      qty: 1
-    };
+    const poNo = this.mrPo.trim();
+    const barcode = this.mrBarcode.trim();
 
-    this.mrRows.unshift(newRow);  // add new row to the top
+    // ✅ VALIDATE SCAN WITH BACKEND
+    this.api.validateScan(poNo, barcode).subscribe({
+      next: () => {
 
-    // Clear barcode input
-    this.mrBarcode = '';
+        const found = this.mrRows.find(x => x.barcode === barcode);
+        if (found) {
+          found.qty += 1;
+        } else {
+          this.mrRows.unshift({
+            ts: new Date(),
+            barcode,
+            qty: 1
+          });
+        }
 
-    if (this.mrOffline) {
-      this.saveOffline();
+        this.mrBarcode = '';
+
+        if (this.mrOffline) {
+          this.saveOffline();
+        }
+      },
+      error: err => {
+  alert(`Status: ${err.status}\n${err?.error?.message || err?.error || err.message || 'Scan failed'}`);
+}
+
+    });
+  }
+
+  syncMobile(): void {
+    if (this.mrRows.length === 0) {
+      alert('No scans to sync.');
+      return;
     }
+
+    const payload = this.mrRows.map(r => ({
+      purchaseOrderNo: this.mrPo.trim(),
+      itemKey: r.barcode,
+      qty: r.qty,
+      createdBy: 'mobile'
+    }));
+
+    this.api.sync({
+  purchaseOrderNo: this.mrPo.trim(),
+  lines: payload
+}).subscribe({
+      next: () => {
+        alert('Sync completed. Desktop will now show received qty.');
+
+        this.mrRows = [];
+        localStorage.removeItem('mrRows');
+         this.loadPo(); 
+      },
+      error: err => {
+        alert(err?.error?.message || 'Sync failed');
+      }
+    });
   }
 
   toggleOffline(): void {
     this.mrOffline = !this.mrOffline;
   }
 
-  syncMobile(): void {
-    // This function should send the mrRows to a server or sync it from offline
-    if (this.mrRows.length === 0) {
-      alert('No scans to sync.');
-      return;
-    }
-
-    // Dummy sync simulation
-    console.log('Syncing...', this.mrRows);
-
-    alert('Sync completed.');
-  }
-
   saveOffline(): void {
-    // Example using localStorage for simplicity
     localStorage.setItem('mrRows', JSON.stringify(this.mrRows));
   }
 
@@ -83,4 +124,16 @@ export class MobileReceivingComponent implements OnInit {
   gridColsClass(cols: number): string {
     return `grid grid-cols-1 sm:grid-cols-2 md:grid-cols-${cols} gap-4`;
   }
+
+  loadPo(): void {
+  const poNo = this.mrPo?.trim();
+  if (!poNo) return;
+
+  this.api.getPo(poNo).subscribe({
+    next: (res:any) => {
+      this.poLines = res.lines || [];
+    },
+    error: err => alert(err?.error?.message || 'Failed to load PO')
+  });
+}
 }
