@@ -19,58 +19,80 @@ export class MobileReceivingComponent implements OnInit {
     qty: number;
   }> = [];
   poLines: any[] = [];
+  mrToken: string = '';
 
   constructor(private api: MobileReceivingApi,private route: ActivatedRoute) {}
 
- ngOnInit(): void {
-  this.loadOffline();
-
+ngOnInit(): void {
+  // load offline after po set (key needs po)
   this.route.queryParamMap.subscribe(params => {
-    const poNo = params.get('poNo');
+    const poNo = params.get('poNo') || '';
+    const token = params.get('t') || '';
+
+    // if QR has token, store it
+    if (token) {
+      this.mrToken = token;
+      sessionStorage.setItem('mrToken', token);
+    }
+
+    // allow if (logged in) OR (token present)
+    const hasJwt = !!localStorage.getItem('token'); // adjust if your auth storage differs
+    const hasToken = !!sessionStorage.getItem('mrToken');
+
+    if (!hasJwt && !hasToken) {
+      // no login + no token => deny
+      window.location.href = '/pages/authentication/login-v2';
+      return;
+    }
+
     if (poNo) {
       this.mrPo = poNo;
+      this.loadOffline();   // ✅ now key has poNo
       this.loadPo();
     }
   });
 }
 
 
+
   addScan(): void {
-    if (!this.mrPo.trim() || !this.mrBarcode.trim()) {
-      alert('Please enter both PO number and barcode');
-      return;
+  if (!this.mrPo.trim() || !this.mrBarcode.trim()) {
+    alert('Please enter both PO number and barcode');
+    return;
+  }
+
+  const poNo = this.mrPo.trim();
+  const barcode = this.mrBarcode.trim();
+
+  // ✅ OFFLINE MODE: don't call API
+  if (this.mrOffline) {
+    this.addToLocalRows(barcode);
+    this.saveOffline();
+    return;
+  }
+
+  // ✅ ONLINE MODE: validate with backend
+  this.api.validateScan(poNo, barcode).subscribe({
+    next: () => {
+      this.addToLocalRows(barcode);
+    },
+    error: err => {
+      if (err?.status === 0) {
+        alert('Network/API not reachable (Status 0). Check Wi-Fi / API URL / CORS / server.');
+        return;
+      }
+      alert(`Status: ${err.status}\n${err?.error?.message || err?.error || err.message || 'Scan failed'}`);
     }
-
-    const poNo = this.mrPo.trim();
-    const barcode = this.mrBarcode.trim();
-
-    // ✅ VALIDATE SCAN WITH BACKEND
-    this.api.validateScan(poNo, barcode).subscribe({
-      next: () => {
-
-        const found = this.mrRows.find(x => x.barcode === barcode);
-        if (found) {
-          found.qty += 1;
-        } else {
-          this.mrRows.unshift({
-            ts: new Date(),
-            barcode,
-            qty: 1
-          });
-        }
-
-        this.mrBarcode = '';
-
-        if (this.mrOffline) {
-          this.saveOffline();
-        }
-      },
-      error: err => {
-  alert(`Status: ${err.status}\n${err?.error?.message || err?.error || err.message || 'Scan failed'}`);
+  });
 }
 
-    });
-  }
+private addToLocalRows(barcode: string) {
+  const found = this.mrRows.find(x => x.barcode === barcode);
+  if (found) found.qty += 1;
+  else this.mrRows.unshift({ ts: new Date(), barcode, qty: 1 });
+
+  this.mrBarcode = '';
+}
 
   syncMobile(): void {
     if (this.mrRows.length === 0) {
@@ -93,7 +115,7 @@ export class MobileReceivingComponent implements OnInit {
         alert('Sync completed. Desktop will now show received qty.');
 
         this.mrRows = [];
-        localStorage.removeItem('mrRows');
+        localStorage.removeItem(this.offlineKey());
          this.loadPo(); 
       },
       error: err => {
@@ -106,16 +128,18 @@ export class MobileReceivingComponent implements OnInit {
     this.mrOffline = !this.mrOffline;
   }
 
-  saveOffline(): void {
-    localStorage.setItem('mrRows', JSON.stringify(this.mrRows));
-  }
+  private offlineKey(): string {
+  return `mrRows_${this.mrPo?.trim() || 'NA'}`;
+}
 
-  loadOffline(): void {
-    const saved = localStorage.getItem('mrRows');
-    if (saved) {
-      this.mrRows = JSON.parse(saved);
-    }
-  }
+saveOffline(): void {
+  localStorage.setItem(this.offlineKey(), JSON.stringify(this.mrRows));
+}
+
+loadOffline(): void {
+  const saved = localStorage.getItem(this.offlineKey());
+  this.mrRows = saved ? JSON.parse(saved) : [];
+}
 
   trackByIndex(index: number): number {
     return index;

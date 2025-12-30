@@ -22,6 +22,9 @@ import { NgxDatatableModule } from '@swimlane/ngx-datatable';
 import { ChartofaccountComponent } from './main/financial/chartofaccount/chartofaccount-list/chartofaccount.component';
 import { SupplierComponent } from './main/businessPartners/supplier/supplier.component';
 import { AuthGuard } from './auth/helpers';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { MobileLinkInterceptor} from './main/purchase/mobile-receiving/mr-token.interceptor';
+
 
 const appRoutes: Routes = [
   {
@@ -104,6 +107,9 @@ const appRoutes: Routes = [
     SampleModule
     // ❌ Removed MasterModule from here
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
+   providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: MobileLinkInterceptor, multi: true }
+  ]
 })
 export class AppModule { }
