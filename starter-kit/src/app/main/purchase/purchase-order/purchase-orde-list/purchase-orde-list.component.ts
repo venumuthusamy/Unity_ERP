@@ -76,6 +76,11 @@ showQrModal = false;
 qrPoNo = '';
 qrPayloadUrl = '';
 qrImgBase64 = '';
+reorderAlertCount
+showPendingPrModal = false;
+pendingPrList: any[] = [];
+pendingPrCount = 0;
+pendingPrSearch = '';
 
   constructor(
     private poService: POService,
@@ -94,6 +99,7 @@ qrImgBase64 = '';
     this.loadRequests();
     this.loadDrafts();
     this.loadReorderCount();
+    this.loadPendingPrCount();
   }
 
   ngAfterViewInit(): void {
@@ -498,5 +504,69 @@ copyQrLink(): void {
     Swal.fire('Copied', 'QR link copied', 'success');
   }
 }
+ openPendingPrAlerts() {
+    this.showPendingPrModal = true;
+    this.loadPendingPrAlerts();
+    setTimeout(() => feather.replace());
+  }
+
+  closePendingPrModal() {
+    this.showPendingPrModal = false;
+  }
+
+  loadPendingPrAlerts() {
+    // PR status: Pending = 1 :contentReference[oaicite:2]{index=2}
+    this.purchaseService.getAll().subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? [];
+        this.pendingPrList = list.filter((x: any) => +x.status === 1);
+        this.pendingPrCount = this.pendingPrList.length;
+        setTimeout(() => feather.replace());
+      },
+      error: () => {
+        this.pendingPrList = [];
+        this.pendingPrCount = 0;
+      }
+    });
+  }
+
+  loadPendingPrCount() {
+  this.purchaseService.getAll().subscribe({
+    next: (res: any) => {
+      const list = res?.data ?? [];
+      // Pending status = 1
+      this.pendingPrList = list.filter((x: any) => +x.status === 1);
+      this.pendingPrCount = this.pendingPrList.length;
+
+      setTimeout(() => feather.replace());
+    },
+    error: () => {
+      this.pendingPrList = [];
+      this.pendingPrCount = 0;
+    }
+  });
+}
+  filteredPendingPrList(): any[] {
+    const v = (this.pendingPrSearch || '').toLowerCase().trim();
+    if (!v) return this.pendingPrList;
+
+    return this.pendingPrList.filter((p: any) =>
+      (p.purchaseRequestNo || '').toLowerCase().includes(v) ||
+      (p.requester || '').toLowerCase().includes(v) ||
+      (p.departmentName || '').toLowerCase().includes(v)
+    );
+  }
+
+  createPoFromPr(pr: any) {
+    // Redirect to Create PO with PR id
+    this.showPendingPrModal = false;
+    this.router.navigate(['/purchase/create-purchaseorder'], {
+      queryParams: { prId: pr.id }
+    });
+  }
+
+  trackByPrId(_: number, pr: any) {
+    return pr?.id ?? _;
+  }
 
 }

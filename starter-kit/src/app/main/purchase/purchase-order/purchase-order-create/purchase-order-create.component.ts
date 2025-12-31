@@ -35,7 +35,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     paymentTermId: 0,
     currencyId: 0,
     incotermsId: 0,
-    poDate: new Date(),
+    poDate: '',
     deliveryDate: '',
     remarks: '',
     fxRate: 0,
@@ -63,6 +63,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   countries: any[] = [];
   submitted: boolean;
   iserrorDelivery: boolean;
+  iserrorPoDate: boolean;
   minDate = '';
   private draftId: number | null = null;
   userId: string;
@@ -129,6 +130,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
   }
 
   private fromReorderPrId: number | null = null;
+  private fromAlertPrId: number | null = null;
+
 
   ///// for temp data------////
 
@@ -153,6 +156,17 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
       const rId = Number(q.get('fromReorderPrId'));
       this.fromReorderPrId = Number.isFinite(rId) && rId > 0 ? rId : null;
+    });
+    this.route.queryParamMap.subscribe(q => {
+      const dId = Number(q.get('draftId'));
+      this.draftId = Number.isFinite(dId) && dId > 0 ? dId : null;
+
+      const rId = Number(q.get('fromReorderPrId'));
+      this.fromReorderPrId = Number.isFinite(rId) && rId > 0 ? rId : null;
+
+      // ✅ NEW: From Pending PR Alert
+      const pId = Number(q.get('prId'));
+      this.fromAlertPrId = Number.isFinite(pId) && pId > 0 ? pId : null;
     });
     this.route.paramMap.subscribe((params: any) => {
       this.purchaseOrderId = parseInt(params.get('id'));
@@ -194,7 +208,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
           this.poHdr = {
             ...results.poHdr.data,
-            poDate: new Date(results.poHdr.data.poDate),
+            poDate: this.toISODate(new Date(results.poHdr.data.poDate)),
             deliveryDate: this.toISODate(new Date(results.poHdr.data.deliveryDate))
           };
 
@@ -230,7 +244,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
           this.poLines = JSON.parse(results.poHdr.data.poLines);
           this.calculateFxTotal()
-           this.mastersLoaded = true;
+          this.mastersLoaded = true;
         });
       } else {
         debugger
@@ -318,11 +332,38 @@ export class PurchaseOrderCreateComponent implements OnInit {
             this.poLines.forEach(x => this.calculateLineTotal(x));
             this.recalculateTotals();
           }
+          // ✅ NEW: Launched from Pending PR Alert → load that PR lines in table
+          else if (this.fromAlertPrId) {
+            const pr = list.find(x => Number(x.id) === Number(this.fromAlertPrId));
+            this.allPrNos = pr ? [pr] : [];   // dropdown also show only this PR (optional)
+
+            const lines = this.safeParsePrLines(pr?.prLines);
+
+            // auto-pick supplier if unique (same logic)
+            const supplierIds = Array.from(
+              new Set(lines.map((l: any) => Number(l?.supplierId)).filter((n) => Number.isFinite(n) && n > 0))
+            );
+            if (supplierIds.length === 1) {
+              const sid = supplierIds[0];
+              const supplier = (this.suppliers || []).find((s: any) => s.id === sid);
+              if (supplier) {
+                this.searchTexts['supplier'] = supplier.name;
+                this.select('supplier', supplier);
+              } else {
+                this.poHdr.supplierId = sid;
+              }
+            }
+
+            // ✅ Map PR lines → PO lines default load
+            this.poLines = lines.map((l: any) => this.mapPRLineToPOLine(pr?.purchaseRequestNo, l));
+            this.poLines.forEach(x => this.calculateLineTotal(x));
+            this.recalculateTotals();
+          }
           // 2) Normal PO create → show NON-reorder PRs only
           else {
             this.allPrNos = list.filter(p => !isYes(p.isReorder));
           }
-           this.mastersLoaded = true;
+          this.mastersLoaded = true;
         });
       }
     });
@@ -374,7 +415,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
           paymentTermId: d.paymentTermId,
           currencyId: d.currencyId,
           incotermsId: d.incotermsId,
-          poDate: d.poDate ? new Date(d.poDate) : new Date(),
+          poDate: d.poDate ? this.toISODate(new Date(d.poDate)) : '',
           deliveryDate: d.deliveryDate ? this.toISODate(new Date(d.deliveryDate)) : '',
           remarks: d.remarks,
           fxRate: d.fxRate,
@@ -533,6 +574,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
         const foundGst = this.countries.find(x => x.id === item.countryId);
         this.poHdr.tax = foundGst?.gstPercentage || '';
+         
+        const foundTerms = this.paymentTerms.find(x => x.id === item.termsId);
+        this.searchTexts['paymentTerms'] = foundTerms.paymentTermsName;
+
 
         // 🔹 Recalculate all line taxes with new GST%
         this.poLines.forEach(l => this.calculateLineTotal(l));
@@ -1002,38 +1047,41 @@ export class PurchaseOrderCreateComponent implements OnInit {
   deliveryChange() {
     this.iserrorDelivery = false
   }
-validatePO(): boolean {
-
-  // Case 1: No lines
-  if (this.poLines.length === 0) {
-    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line item.' });
-    return false;
+  poDateChange() {
+    this.iserrorPoDate = false
   }
+  validatePO(): boolean {
 
-  // ⭐ NEW: Missing Tax Code
-  const missingTax = this.poLines.find(line =>
-    !line.taxCode || line.taxCode.toString().trim() === ''
-  );
+    // Case 1: No lines
+    if (this.poLines.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line item.' });
+      return false;
+    }
 
-  if (missingTax) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Tax Code required',
-      text: 'Please select Tax Code for all line items before saving.',
-      confirmButtonColor: '#0e3a4c'
-    });
-    return false;
+    // ⭐ NEW: Missing Tax Code
+    const missingTax = this.poLines.find(line =>
+      !line.taxCode || line.taxCode.toString().trim() === ''
+    );
+
+    if (missingTax) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tax Code required',
+        text: 'Please select Tax Code for all line items before saving.',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return false;
+    }
+
+    // Case 2: Missing or invalid price
+    const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
+    if (invalidLine) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
+      return false;
+    }
+
+    return true; // ✅ everything is okay
   }
-
-  // Case 2: Missing or invalid price
-  const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
-  if (invalidLine) {
-    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
-    return false;
-  }
-
-  return true; // ✅ everything is okay
-}
 
   saveRequest() {
 
@@ -1045,9 +1093,14 @@ validatePO(): boolean {
       } else {
         this.iserrorDelivery = false;
       }
+      if (!this.poHdr.poDate) {
+        this.iserrorPoDate = true
+      } else {
+        this.iserrorPoDate = false;
+      }
 
       const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
-      if (missing.length || this.iserrorDelivery) {
+      if (missing.length || this.iserrorDelivery || this.iserrorPoDate) {
 
         Swal.fire({
           icon: 'warning',
@@ -1082,9 +1135,14 @@ validatePO(): boolean {
     } else {
       this.iserrorDelivery = false;
     }
+    if (!this.poHdr.poDate) {
+      this.iserrorPoDate = true
+    } else {
+      this.iserrorPoDate = false;
+    }
 
     const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
-    if (missing.length || this.iserrorDelivery) {
+    if (missing.length || this.iserrorDelivery || this.iserrorPoDate) {
 
       Swal.fire({
         icon: 'warning',
@@ -1311,7 +1369,4 @@ validatePO(): boolean {
     });
   }
   ///// for temp data------////
-
-
-
 }
