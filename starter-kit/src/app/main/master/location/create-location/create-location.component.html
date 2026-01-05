@@ -99,7 +99,7 @@
                        <div class="form-group mb-2">
                         <label class="form-label" for="">Contact Number<span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="deptName"
+                        <input type="number" class="form-control" id="deptName" max="10"
                             [class.error]="locationForm.get('contactNumber').errors && (locationForm.get('contactNumber').dirty || formGroupRef.submitted)"
                             placeholder="Enter contactNumber " formControlName="contactNumber" required />
                         <span
@@ -111,7 +111,7 @@
                     </div>
 
 
-                    <div class="form-group mb-2">
+                    <!-- <div class="form-group mb-2">
                         <label class="form-label" for="">Latitude <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" id="deptName"
@@ -136,12 +136,12 @@
                             <small class="form-text text-danger" *ngIf="locationForm.get('longitude').errors.required">
                                 Longtitude Name field is required!</small>
                         </span>
-                    </div>
+                    </div> -->
                     <div class="d-flex flex-wrap gap-2">
                         <button type="submit" id="submit" class="btn btn-primary mr-1" rippleEffect>Submit</button>
-                        <button type="button" id="cancel" class="btn btn-danger mr-1">Cancel</button>
+                        <button type="button" id="cancel" class="btn btn-danger mr-1" (click)="toggleModal('app-create-location')">Cancel</button>
                         <button type="reset" id="reset" class="btn btn-secondary" rippleEffect>reset</button>
-                    </div>
+                    </div> 
                 </div>
             </form>
         </div>

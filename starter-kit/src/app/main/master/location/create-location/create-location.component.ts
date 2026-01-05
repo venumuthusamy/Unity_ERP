@@ -63,8 +63,8 @@ getLocationById(id: number) {
         this.locationForm.patchValue({
           locationName: location.name,
           contactNumber: location.contactNumber,
-          latitude: location.latitude,
-          longitude: location.longitude,
+         // latitude: location.latitude,
+        //  longitude: location.longitude,
           countryId: location.countryId
         });
 
@@ -156,8 +156,7 @@ this.locationForm.reset({
       stateId: [null, Validators.required],
       cityId: [null, Validators.required],
       contactNumber: ['', Validators.required],
-      latitude: ['', Validators.required],
-      longitude: ['', Validators.required]
+     
     });
   }
 
@@ -183,8 +182,8 @@ this.locationForm.reset({
       id: isEdit ? this.locationId : 0,
       name: this.locationForm.controls['locationName'].value,
       contactNumber: this.locationForm.controls['contactNumber'].value,
-      latitude: this.locationForm.controls['latitude'].value,
-      longitude: this.locationForm.controls['longitude'].value,
+      latitude: null,
+      longitude: null,
       countryId: this.locationForm.controls['countryId'].value,
       stateId: this.locationForm.controls['stateId'].value,
       cityId: this.locationForm.controls['cityId'].value,

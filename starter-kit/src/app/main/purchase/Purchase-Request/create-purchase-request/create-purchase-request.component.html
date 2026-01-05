@@ -45,7 +45,7 @@
             placeholder="Your name"
             [(ngModel)]="prHeader.requester"
             name="requester"
-            autocomplete="off"
+            autocomplete="off" disabled
           />
         </div>
 
@@ -63,10 +63,10 @@
                 class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm pr-10"
                 style="border-color:#0e3a4c"
                 name="departmentSearch"
-                autocomplete="off"
+                autocomplete="off" disabled
               />
               <button
-                type="button"
+                type="button" disabled
                 (click)="toggleDropdown()"
                 class="absolute inset-y-0 right-2 my-auto w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100"
                 aria-label="Toggle department dropdown">
@@ -90,14 +90,14 @@
               </ul>
             </div>
 
-            <button
+            <!-- <button
               type="button"
               (click)="onAddDepartmentClick()"
               class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#0e3a4c] text-white hover:bg-[#0b2e3d] transition"
               title="Add department"
               aria-label="Add department">
               <i class="fas fa-plus"></i>
-            </button>
+            </button> -->
           </div>
         </div>
 
@@ -159,7 +159,7 @@
               <th class="px-3 py-2 text-left">Item</th>
               <th class="px-3 py-2 text-left">Qty</th>
               <th class="px-3 py-2 text-left">UOM</th>
-              <th class="px-3 py-2 text-left">Location</th>
+              <th class="px-3 py-2 text-left">Outlet</th>
               <!-- <th class="px-3 py-2 text-left">LedgerName</th> -->
               <th class="px-3 py-2 text-left">Remarks</th>
               <th class="px-3 py-2 text-right">Action</th>
@@ -180,7 +180,7 @@
               <td class="px-3 py-2">{{ line.qty }}</td>
               <td class="px-3 py-2">{{ line.uomSearch || line.uom }}</td>
               <td class="px-3 py-2">{{ line.locationSearch || line.location }}</td>
-              <td class="px-3 py-2">{{ line.budget }}</td>
+              <!-- <td class="px-3 py-2">{{ line.budget }}</td> -->
               <td class="px-3 py-2">{{ line.remarks }}</td>
               <td class="px-3 py-2 text-right">
                 <button
@@ -268,30 +268,61 @@
             </div>
           </div>
 
-          <div>
-            <h4 class="text-gray-700 font-semibold text-[12px] mb-1">Line Items</h4>
-            <div *ngIf="prLines.length > 0; else noLines" class="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div *ngFor="let l of prLines; let i = index" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                <p class="font-semibold text-gray-800 text-[13px] truncate">
-                  {{ l['item'] || l['itemSearch'] || '(no item)' }}
-                </p>
-                <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-gray-600">
-                  <span>Qty</span><span class="text-right font-medium">
-                    {{ l['qty'] || 0 }} {{ l['uom'] || l['uomSearch'] || '' }}
-                  </span>
-                  <span>Location</span><span class="text-right truncate">
-                    {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
-                  </span>
-                  <!-- <span>Ledger</span><span class="text-right font-semibold text-[#0e3a4c]">
-                    {{ l['budget'] || '-' }}
-                  </span> -->
-                </div>
-              </div>
-            </div>
-            <ng-template #noLines>
-              <p class="text-gray-400 italic text-xs">No lines added</p>
-            </ng-template>
+   <div class="pr-review-tiles">
+  <div class="pr-review-tiles-head">
+    <h4>Line Items</h4>
+    <!-- <div class="total-pill">
+      Total Qty <span>{{ totalQty }}</span>
+    </div> -->
+  </div>
+
+  <ng-container *ngIf="prLines?.length > 0; else noLines">
+
+    <div class="tiles-grid">
+      <div *ngFor="let l of prLines; let i = index" class="tile">
+        <!-- left icon -->
+        <div class="tile-icon">
+          <i class="fas fa-box"></i>
+        </div>
+
+        <!-- middle content -->
+        <div class="tile-body">
+          <div class="tile-title">
+            {{ l['item'] || l['itemSearch'] || '(no item)' }}
           </div>
+
+          <div class="tile-meta">
+            <span class="meta-chip">
+              <i class="fas fa-map-marker-alt"></i>
+              <span class="truncate">
+                {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
+              </span>
+            </span>
+
+            <span *ngIf="l['remarks']" class="meta-chip muted">
+              <i class="fas fa-comment-dots"></i>
+              <span class="truncate">{{ l['remarks'] }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- right qty -->
+        <div class="tile-right">
+          <div class="qty-pill">{{ l['qty'] || 0 }}</div>
+          <div class="uom-pill">{{ l['uom'] || l['uomSearch'] || '-' }}</div>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <ng-template #noLines>
+    <div class="empty-tile">
+      No lines added
+    </div>
+  </ng-template>
+</div>
+
 
           <div class="flex justify-end pt-1 border-t border-gray-200">
             <p class="text-[12px] font-semibold text-gray-700">
@@ -411,7 +442,7 @@
 
         <!-- Location -->
         <div class="prl-col-12 prl-md-6 prl-dropdown">
-          <label class="prl-label">Location</label>
+          <label class="prl-label">Outlet</label>
           <div class="flex items-center gap-2">
             <input
               type="text"
@@ -419,7 +450,7 @@
               [(ngModel)]="modalLine.locationSearch"
               (focus)="onModalLocationFocus()"
               (input)="filterModalLocations()"
-              placeholder="Search Location..."
+              placeholder="Search Outlet..."
               class="prl-input"
               autocomplete="off"
             />
