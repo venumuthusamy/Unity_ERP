@@ -35,7 +35,7 @@
                   class="ctl w-full border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]/20 focus:border-[#0e3a4c]">
             <option [ngValue]="null" disabled>Select PO</option>
             <ng-container *ngFor="let po of purchaseOrder">
-              <option [ngValue]="po.id">{{ po.purchaseOrderNo }}</option>
+              <option [ngValue]="po.id">{{ po.purchaseOrderNo }} - {{po.supplierName}}</option>
             </ng-container>
           </select>
         </div>
@@ -88,7 +88,7 @@
               <th class="text-left">No of pest / Sign</th>
               <th class="text-left">Dry / Spillage</th>
               <th class="text-left">Odor</th>
-              <th class="text-left">Plate Number</th>
+              <th class="text-left">Vehicle Number</th>
               <th class="text-left">Defective Labels</th>
               <th class="text-left">Damaged Package</th>
               <th class="text-left">Time</th>
@@ -450,7 +450,7 @@
           <th class="text-left">Pest Sign</th>
           <th class="text-left">Dry / Spillage</th>
           <th class="text-left">Odor</th>
-          <th class="text-left">Plate #</th>
+          <th class="text-left">Vehicle #</th>
           <th class="text-left">Defect Labels</th>
           <th class="text-left">Damaged Pkg</th>
           <th class="text-left">Time</th>

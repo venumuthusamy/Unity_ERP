@@ -80,6 +80,7 @@
         <thead>
           <tr>
             <th>Item</th>
+            <th>Description</th>
             <th>UOM</th>
             <th class="num">Qty</th>
             <th class="num">Unit Price</th>
@@ -92,7 +93,7 @@
 
         <tbody>
           <tr *ngIf="soLines.length===0">
-            <td [attr.colspan]="8" class="empty">No lines yet.</td>
+            <td [attr.colspan]="9" class="empty">No lines yet.</td>
           </tr>
 
           <tr *ngFor="let ln of soLines; let i=index; trackBy: trackByIndex">
@@ -107,7 +108,6 @@
                 placeholder="Search Item..."
                 [disabled]="editMode" />
 
-              <!-- dropdown only when NOT edit mode -->
               <div *ngIf="!editMode && soLines[i].dropdownOpen==='item'" class="dropdown-panel">
                 <div *ngFor="let it of soLines[i].filteredOptions"
                      (click)="selectOption(i,'item', it)"
@@ -122,6 +122,14 @@
                   {{ w.warehouseName }} · Avl {{ w.available }}
                 </span>
               </div>
+            </td>
+
+            <!-- ✅ Description -->
+            <td>
+              <input class="so-inp w-72"
+                     [(ngModel)]="soLines[i].description"
+                     placeholder="Description"
+                     [disabled]="editMode">
             </td>
 
             <!-- UOM -->
@@ -140,12 +148,14 @@
                      (input)="onQtyChange(i)">
             </td>
 
-            <!-- Unit Price -->
+            <!-- ✅ Unit Price (NOW EDITABLE) -->
             <td class="num">
               <input type="number"
                      class="so-inp w-28 text-right"
                      [(ngModel)]="soLines[i].unitPrice"
-                     readonly>
+                     (input)="onUnitPriceChange(i)"
+                     min="0"
+                     step="0.01">
             </td>
 
             <!-- Discount (ONLY percentage in grid) -->
@@ -160,19 +170,18 @@
             </td>
 
             <!-- Tax -->
-         <!-- Tax -->
-<td>
-  <div class="dim xs mb-1">
-    {{
-      soLines[i].tax === 'Standard-Rated'
-        ? 'Standard-Rated (GST applies)'
-        : soLines[i].tax === 'Zero-Rated'
-          ? 'Zero-Rated (0%)'
-          : 'Exempt (No GST)'
-    }}
-  </div>
-  <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
-</td>
+            <td>
+              <div class="dim xs mb-1">
+                {{
+                  soLines[i].tax === 'Standard-Rated'
+                    ? 'Standard-Rated (GST applies)'
+                    : soLines[i].tax === 'Zero-Rated'
+                      ? 'Zero-Rated (0%)'
+                      : 'Exempt (No GST)'
+                }}
+              </div>
+              <div>Tax: {{ soLines[i].lineTax || 0 | number:'1.2-2' }}</div>
+            </td>
 
             <!-- Total -->
             <td class="num">{{ (soLines[i].total || 0) | number:'1.2-2' }}</td>
@@ -198,51 +207,45 @@
       </table>
     </div>
 
-    <!-- Summary (mini card in right column) -->
+    <!-- Summary -->
     <div class="sum-grid">
       <div class="sum-grid-spacer"></div>
       <aside class="mini-total-card mtc-spaced">
-        <!-- Sub Total (gross before discount) -->
         <div class="mtc-row">
           <span class="mtc-label">Sub Total</span>
           <input id="subTotalInp" class="so-inp mtc-inp text-right" type="text"
                  [value]="(totals.subTotal || 0) | number:'1.2-2'" readonly>
         </div>
 
-        <!-- Total Discount from lines (with dropdown to show % or value) -->
-       <!-- Total Discount from lines -->
-<div class="mtc-row">
-  <span class="mtc-label">Discount</span>
+        <div class="mtc-row">
+          <span class="mtc-label">Discount</span>
 
-  <div class="mtc-discount-wrap">
-    <select
-      class="so-inp mtc-inp mtc-discount-mode"
-      [(ngModel)]="discountDisplayMode"
-      [ngModelOptions]="{standalone:true}">
-      <option value="PCT">%</option>
-      <option value="VAL">Value</option>
-    </select>
+          <div class="mtc-discount-wrap">
+            <select
+              class="so-inp mtc-inp mtc-discount-mode"
+              [(ngModel)]="discountDisplayMode"
+              [ngModelOptions]="{standalone:true}">
+              <option value="PCT">%</option>
+              <option value="VAL">Value</option>
+            </select>
 
-    <input
-      id="discLinesInp"
-      class="so-inp mtc-inp mtc-discount-value text-right"
-      type="text"
-      [value]="discountDisplayMode === 'PCT'
-                 ? (discountPctSummary | number:'1.2-2')
-                 : ((totals.discountLines || 0) | number:'1.2-2')"
-      readonly>
-  </div>
-</div>
+            <input
+              id="discLinesInp"
+              class="so-inp mtc-inp mtc-discount-value text-right"
+              type="text"
+              [value]="discountDisplayMode === 'PCT'
+                         ? (discountPctSummary | number:'1.2-2')
+                         : ((totals.discountLines || 0) | number:'1.2-2')"
+              readonly>
+          </div>
+        </div>
 
-
-        <!-- Total Tax (GST) -->
         <div class="mtc-row">
           <span class="mtc-label">Tax (GST)</span>
           <input id="taxTotalInp" class="so-inp mtc-inp text-right" type="text"
                  [value]="(totals.gstAmount || 0) | number:'1.2-2'" readonly>
         </div>
 
-        <!-- Shipping -->
         <div class="mtc-row">
           <span class="mtc-label">Shipping</span>
           <input id="shipInp" type="number" class="so-inp mtc-inp text-right"
@@ -251,7 +254,6 @@
 
         <div class="mtc-sep"></div>
 
-        <!-- Net Total -->
         <div class="mtc-row mtc-grand">
           <span class="mtc-label">Net Total</span>
           <span class="mtc-amt">{{ totals.netTotal | number:'1.2-2' }}</span>

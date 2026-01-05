@@ -64,27 +64,24 @@
           </div>
         </div>
 
-        <small
-          class="text-muted d-block mt-1"
-          *ngIf="activeCustomerCountry"
-        >
+        <small class="text-muted d-block mt-1" *ngIf="activeCustomerCountry">
           Country: {{ activeCustomerCountry?.countryName }} • GST:
           {{ header.taxPct || 0 }}%
         </small>
       </div>
 
-      <!-- Validity -->
+      <!-- ✅ Delivery Date (ValidityDate replaced) -->
       <div class="col-md-3">
         <label class="text-xs font-medium text-gray-600">
-          Validity
+          Delivery Date
         </label>
         <input
           #dateInput
           type="date"
           class="w-100 rounded-xl border px-3 py-2 text-sm focus:outline-none cursor-pointer"
           style="border-color:#0e3a4c;"
-          [(ngModel)]="header.validityDate"
-          name="validityDate"
+          [(ngModel)]="header.deliveryDate"
+          name="deliveryDate"
           [min]="minDate"
           (click)="dateInput.showPicker?.()"
           (focus)="dateInput.showPicker?.()"
@@ -197,47 +194,21 @@
       <table class="table m-0 align-middle qt-table">
         <thead>
           <tr>
-            <th class="px-3 py-2" style="background:#2E5F73;color:#fff;">
-              Item
-            </th>
+            <th class="px-3 py-2" style="background:#2E5F73;color:#fff;">Item</th>
+            <th style="background:#2E5F73;color:#fff;">Description</th>
             <th style="background:#2E5F73;color:#fff;">UOM</th>
-            <th
-              class="text-center"
-              style="background:#2E5F73;color:#fff;"
-            >
-              Qty
-            </th>
-            <th
-              class="text-center"
-              style="background:#2E5F73;color:#fff;"
-            >
-              Unit Price
-            </th>
-            <th
-              class="text-center"
-              style="background:#2E5F73;color:#fff;"
-            >
-              Discount %
-            </th>
+            <th class="text-center" style="background:#2E5F73;color:#fff;">Qty</th>
+            <th class="text-center" style="background:#2E5F73;color:#fff;">Unit Price</th>
+            <th class="text-center" style="background:#2E5F73;color:#fff;">Discount %</th>
             <th style="background:#2E5F73;color:#fff;">Tax Mode</th>
-            <th
-              class="text-center"
-              style="background:#2E5F73;color:#fff;"
-            >
-              Line Total
-            </th>
-            <th
-              class="text-center"
-              style="background:#2E5F73;color:#fff;"
-            >
-              Action
-            </th>
+            <th class="text-center" style="background:#2E5F73;color:#fff;">Line Total</th>
+            <th class="text-center" style="background:#2E5F73;color:#fff;">Action</th>
           </tr>
         </thead>
 
         <tbody>
           <tr *ngIf="lines.length === 0">
-            <td class="text-center text-muted py-4" [attr.colspan]="8">
+            <td class="text-center text-muted py-4" [attr.colspan]="9">
               No lines yet.
             </td>
           </tr>
@@ -246,33 +217,23 @@
             <td>
               {{ l.itemName || getItemName(l.itemId) || '(select)' }}
             </td>
+
+            <!-- ✅ Description binding -->
+            <td>
+              {{ l.description || '-' }}
+            </td>
+
             <td>{{ getUomName(l.uomId) }}</td>
             <td class="text-center">{{ l.qty }}</td>
+            <td class="text-center">{{ l.unitPrice | number:'1.2-4' }}</td>
+            <td class="text-center">{{ l.discountPct | number:'1.0-2' }}</td>
+            <td>{{ l.taxMode }}</td>
+            <td class="text-center">{{ l.lineTotal | number:'1.2-2' }}</td>
             <td class="text-center">
-              {{ l.unitPrice | number:'1.2-4' }}
-            </td>
-            <td class="text-center">
-              {{ l.discountPct | number:'1.0-2' }}
-            </td>
-            <td>
-              {{ l.taxMode }}
-            </td>
-            <td class="text-center">
-              {{ l.lineTotal | number:'1.2-2' }}
-            </td>
-            <td class="text-center">
-              <button
-                class="btn btn-sm btn-link"
-                (click)="openEdit(i)"
-                title="Edit"
-              >
+              <button class="btn btn-sm btn-link" (click)="openEdit(i)" title="Edit">
                 <i class="fas fa-pen text-primary"></i>
               </button>
-              <button
-                class="btn btn-sm btn-link"
-                (click)="remove(i)"
-                title="Remove"
-              >
+              <button class="btn btn-sm btn-link" (click)="remove(i)" title="Remove">
                 <i class="fas fa-trash text-danger"></i>
               </button>
             </td>
@@ -294,28 +255,20 @@
       </div>
     </div>
 
-    <!-- Remarks + totals -->
+    <!-- Totals -->
     <div class="row mt-2">
-      <div class="col-md-8">
-        <!-- optional remarks -->
-      </div>
+      <div class="col-md-8"></div>
 
       <div class="col-md-4">
         <div class="p-1 border rounded-3">
           <div class="d-flex justify-content-between mb-1">
             <span>Subtotal</span>
-            <strong>
-              {{ header.subtotal | currency:header.currency }}
-            </strong>
+            <strong>{{ header.subtotal | currency:header.currency }}</strong>
           </div>
 
-          <!-- Discount row -->
-          <div
-            class="d-flex justify-content-between mb-1 align-items-center"
-          >
+          <div class="d-flex justify-content-between mb-1 align-items-center">
             <span>Discount</span>
             <div class="d-flex align-items-center">
-              <!-- INPUT -->
               <input
                 type="number"
                 class="form-control me-1"
@@ -325,7 +278,6 @@
                 (ngModelChange)="onDiscountChange()"
               />
 
-              <!-- TYPE SELECTOR -->
               <select
                 class="form-select"
                 style="width: 90px;"
@@ -341,18 +293,14 @@
 
           <div class="d-flex justify-content-between mb-1">
             <span>Tax</span>
-            <strong>
-              {{ header.taxAmount | currency:header.currency }}
-            </strong>
+            <strong>{{ header.taxAmount | currency:header.currency }}</strong>
           </div>
 
           <hr class="my-2" />
 
           <div class="d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Grand Total</span>
-            <h4 class="m-0">
-              {{ header.grandTotal | currency:header.currency }}
-            </h4>
+            <h4 class="m-0">{{ header.grandTotal | currency:header.currency }}</h4>
           </div>
         </div>
 
@@ -372,20 +320,11 @@
 </div>
 
 <!-- Line Modal -->
-<div
-  *ngIf="showModal"
-  class="prl-overlay"
-  aria-modal="true"
-  role="dialog"
->
+<div *ngIf="showModal" class="prl-overlay" aria-modal="true" role="dialog">
   <div class="prl-modal" (click)="onModalContainer($event)">
     <div class="prl-head">
       <h2 class="prl-title">
-        {{
-          editingIndex === null
-            ? 'Add Quotation Line'
-            : 'Edit Quotation Line'
-        }}
+        {{ editingIndex === null ? 'Add Quotation Line' : 'Edit Quotation Line' }}
       </h2>
       <button class="prl-close" (click)="closeModal()">✕</button>
     </div>
@@ -406,15 +345,10 @@
             autocomplete="off"
           />
           <div class="prl-menu" *ngIf="modal.dropdownOpen">
-            <ng-container
-              *ngIf="modal.filteredItems?.length; else noMatches"
-            >
+            <ng-container *ngIf="modal.filteredItems?.length; else noMatches">
               <div
                 class="prl-mi prl-mi-split"
-                *ngFor="
-                  let row of modal.filteredItems;
-                  trackBy: trackByItemId
-                "
+                *ngFor="let row of modal.filteredItems; trackBy: trackByItemId"
                 (mousedown)="$event.preventDefault()"
                 (click)="selectModalItem(row)"
               >
@@ -487,22 +421,26 @@
             name="taxMode"
             (ngModelChange)="previewLineTotals()"
           >
-            <option
-              *ngFor="let m of taxModesForCurrentGst"
-              [ngValue]="m"
-            >
+            <option *ngFor="let m of taxModesForCurrentGst" [ngValue]="m">
               {{ m }}
             </option>
           </select>
 
           <small class="text-gray-500">
-            GST% used:
-            {{
-              modal.taxMode === 'Standard-Rated'
-                ? (header.taxPct || 0)
-                : 0
-            }}%
+            GST% used: {{ modal.taxMode === 'Standard-Rated' ? (header.taxPct || 0) : 0 }}%
           </small>
+        </div>
+
+        <!-- ✅ Description (modal) -->
+        <div class="prl-col-12">
+          <label class="prl-label">Description</label>
+          <textarea
+            class="prl-input"
+            rows="2"
+            [(ngModel)]="modal.description"
+            name="description"
+            placeholder="Enter description..."
+          ></textarea>
         </div>
 
         <!-- Live preview -->

@@ -29,6 +29,9 @@ type SoLine = {
   itemId?: number;
   uom?: string;
 
+  // ✅ NEW
+  description?: string;
+
   quantity?: number | string;
   unitPrice?: number | string;
 
@@ -39,11 +42,11 @@ type SoLine = {
   tax?: LineTaxMode;
 
   // amounts
-  lineGross?: number;     // qty * price (before discount & tax)
-  lineNet?: number;       // after discount, before tax
-  lineTax?: number;       // GST amount
-  total?: number;         // line total including tax (net + tax)
-  lineDiscount?: number;  // discount amount in money
+  lineGross?: number;
+  lineNet?: number;
+  lineTax?: number;
+  total?: number;
+  lineDiscount?: number;
 
   // original snapshot
   __origQty?: number;
@@ -95,11 +98,11 @@ export class SalesOrderCreateComponent implements OnInit {
     requestedDate: '',
     deliveryDate: '',
     shipping: 0,
-    discount: 0,   // total discount AMOUNT (sum of line discounts)
+    discount: 0,
     gstPct: 0,
-    taxAmount: 0,  // 🔹 header tax
-    subTotal: 0,   // 🔹 header subtotal (net + shipping)
-    grandTotal: 0, // 🔹 subtotal + tax
+    taxAmount: 0,
+    subTotal: 0,
+    grandTotal: 0,
     status: 1,
     statusText: 'Pending'
   };
@@ -117,7 +120,6 @@ export class SalesOrderCreateComponent implements OnInit {
 
   submitted = false;
 
-  // summary discount display mode: % or value
   discountDisplayMode: 'PCT' | 'VAL' = 'PCT';
 
   searchTexts: { [k: string]: string } = {
@@ -208,22 +210,13 @@ export class SalesOrderCreateComponent implements OnInit {
   /* ======== helpers for amounts ======== */
   private round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
-  // 🔹 Convert any old/DB values → canonical LineTaxMode
   private canonicalTaxMode(rawMode: any, gstPct: number): LineTaxMode {
     const s = (rawMode ?? '').toString().toUpperCase().trim();
 
-    if (s === 'STANDARD-RATED' || s === 'STANDARD_RATED' || s === 'EXCLUSIVE') {
-      return 'Standard-Rated';
-    }
-    if (s === 'ZERO-RATED' || s === 'ZERO_RATED' || s === 'INCLUSIVE') {
-      // your older code may have used INCLUSIVE for 0-tax in some cases
-      return 'Zero-Rated';
-    }
-    if (s === 'EXEMPT' || s === 'NO GST' || s === 'NO_GST') {
-      return 'Exempt';
-    }
+    if (s === 'STANDARD-RATED' || s === 'STANDARD_RATED' || s === 'EXCLUSIVE') return 'Standard-Rated';
+    if (s === 'ZERO-RATED' || s === 'ZERO_RATED' || s === 'INCLUSIVE') return 'Zero-Rated';
+    if (s === 'EXEMPT' || s === 'NO GST' || s === 'NO_GST') return 'Exempt';
 
-    // Default based on GST rule: 9 => Standard, otherwise Zero
     return gstPct === 9 ? 'Standard-Rated' : 'Zero-Rated';
   }
 
@@ -235,10 +228,9 @@ export class SalesOrderCreateComponent implements OnInit {
     gstPct: number
   ): { gross: number; net: number; tax: number; total: number; discountAmt: number } {
 
-    const sub = qty * unitPrice;          // GROSS before discount & tax
+    const sub = qty * unitPrice;
     const discPct = discountPct || 0;
 
-    // Discount amount
     let discountAmt = sub * discPct / 100;
     if (discountAmt < 0) discountAmt = 0;
     if (discountAmt > sub) discountAmt = sub;
@@ -246,19 +238,16 @@ export class SalesOrderCreateComponent implements OnInit {
     let afterDisc = sub - discountAmt;
     if (afterDisc < 0) afterDisc = 0;
 
-    // 🔹 Canonical tax mode (Standard/Zero/Exempt)
     const mode = this.canonicalTaxMode(taxMode, gstPct);
     const rate = (mode === 'Standard-Rated' ? gstPct : 0) / 100;
 
     let net = afterDisc, tax = 0, tot = afterDisc;
 
     if (mode === 'Standard-Rated' && rate > 0) {
-      // Standard: normal exclusive calculation
       net = afterDisc;
       tax = net * rate;
       tot = net + tax;
     } else {
-      // Zero-Rated / Exempt – no GST
       net = afterDisc;
       tax = 0;
       tot = afterDisc;
@@ -273,13 +262,10 @@ export class SalesOrderCreateComponent implements OnInit {
     };
   }
 
-  // GST rule: if GST ≠ 9 → force all lines to Zero-Rated
   private enforceTaxModesByGst() {
     const gst = Number(this.soHdr.gstPct || 0);
     if (gst !== 9) {
-      this.soLines.forEach(l => {
-        l.tax = 'Zero-Rated';
-      });
+      this.soLines.forEach(l => { l.tax = 'Zero-Rated'; });
     }
   }
 
@@ -299,9 +285,9 @@ export class SalesOrderCreateComponent implements OnInit {
         this.soHdr.deliveryDate  = this.toInputDate(head.deliveryDate);
 
         this.soHdr.shipping = Number(head.shipping ?? 0);
-        this.soHdr.discount = Number(head.discount ?? 0); // total discount amount
+        this.soHdr.discount = Number(head.discount ?? 0);
         this.soHdr.gstPct   = Number(head.gstPct ?? 0);
-        this.soHdr.taxAmount = Number(head.taxAmount ?? head.TaxAmount ?? 0); // header tax
+        this.soHdr.taxAmount = Number(head.taxAmount ?? head.TaxAmount ?? 0);
         this.soHdr.subTotal  = Number(head.subtotal ?? head.Subtotal ?? 0);
         this.soHdr.grandTotal = Number(head.grandTotal ?? head.GrandTotal ?? 0);
 
@@ -341,6 +327,9 @@ export class SalesOrderCreateComponent implements OnInit {
             itemId: Number(l.itemId ?? 0) || undefined,
             uom: l.uom || l.uomName || '',
 
+            // ✅ NEW
+            description: l.description ?? l.Description ?? '',
+
             quantity: qty,
             unitPrice: price,
 
@@ -368,7 +357,6 @@ export class SalesOrderCreateComponent implements OnInit {
           } as SoLine;
         });
 
-        // GST rule apply
         this.enforceTaxModesByGst();
         this.filteredLists.warehouse = [...this.warehousesMaster];
         this.recalcTotals();
@@ -440,7 +428,10 @@ export class SalesOrderCreateComponent implements OnInit {
         const head = res?.data || res || {};
         const lines = (head?.lines ?? []) as any[];
 
-        // 🔹 GST & tax modes from Quotation
+        // ✅ Quotation -> DeliveryDate autobind (header)
+        this.soHdr.deliveryDate = this.toInputDate(head?.deliveryDate ?? head?.DeliveryDate);
+
+        // GST & tax modes from Quotation
         this.soHdr.gstPct = Number(head?.gstPct ?? head?.gst ?? 0);
         const gst = Number(this.soHdr.gstPct || 0);
 
@@ -452,7 +443,6 @@ export class SalesOrderCreateComponent implements OnInit {
           const qty      = Number(l.qty ?? l.quantity ?? 0);
           const price    = Number(l.unitPrice ?? 0);
           const discPct  = Number(l.discountPct ?? l.discount ?? 0);
-          // taxMode from Quotation: Standard-Rated / Zero-Rated / Exempt OR old codes
           const mode     = this.canonicalTaxMode(l.taxMode ?? l.tax, gst);
 
           const amt = this.calcAmounts(qty, price, discPct, mode, gst);
@@ -462,6 +452,10 @@ export class SalesOrderCreateComponent implements OnInit {
             item: l.itemName,
             itemId: l.itemId,
             uom: l.uomName ?? '',
+
+            // ✅ Quotation line -> Description autobind
+            description: (l.description ?? l.Description ?? '').toString(),
+
             quantity: qty,
             unitPrice: price,
             discount: discPct,
@@ -492,7 +486,6 @@ export class SalesOrderCreateComponent implements OnInit {
         this.warehousesMaster = Array.from(seen.entries()).map(([id, warehouseName]) => ({ id, warehouseName }));
         this.filteredLists.warehouse = [...this.warehousesMaster];
 
-        // 🔹 GST rule
         this.enforceTaxModesByGst();
         this.recalcTotals();
       });
@@ -567,15 +560,19 @@ export class SalesOrderCreateComponent implements OnInit {
       this.soLines[i].itemId = opt.id;
       this.soLines[i].uom = opt.defaultUom || this.soLines[i].uom || '';
       if (!this.soLines[i].unitPrice) this.soLines[i].unitPrice = Number(opt.price || 0);
+
+      // optional: if item master has description
+      if (!this.soLines[i].description && opt.description) {
+        this.soLines[i].description = String(opt.description);
+      }
     } else {
-      // Tax select – if you later use taxCodes, map to Standard/Zero/Exempt here.
       this.soLines[i].tax = this.canonicalTaxMode(opt.code, Number(this.soHdr.gstPct || 0));
     }
     this.soLines[i].dropdownOpen = '';
     this.soLines[i].filteredOptions = [];
   }
 
-  /* ============ Qty & Discount change ============ */
+  /* ============ Qty & Discount & UnitPrice change ============ */
   onQtyChange(i: number) {
     const L = this.soLines[i];
     const qtyNow = Number(L.quantity) || 0;
@@ -594,6 +591,15 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 
   onDiscountChange(i: number) {
+    this.computeLineFromQty(i);
+  }
+
+  // ✅ NEW: UnitPrice editable + calculation auto update
+  onUnitPriceChange(i: number) {
+    // sanitize
+    const L = this.soLines[i];
+    const p = Number(L.unitPrice);
+    if (!isFinite(p) || p < 0) L.unitPrice = 0;
     this.computeLineFromQty(i);
   }
 
@@ -624,8 +630,7 @@ export class SalesOrderCreateComponent implements OnInit {
     const discLines = this.soLines.reduce((s, x) => s + (x.lineDiscount || 0), 0);
     const shipping  = Number(this.soHdr.shipping || 0);
 
-    const netAfterDisc = net; // lineNet already after discount
-    const subTotal     = this.round2(netAfterDisc + shipping);
+    const subTotal     = this.round2(net + shipping);
     const gstAmount    = this.round2(tax);
     const grandTotal   = this.round2(subTotal + gstAmount);
 
@@ -638,7 +643,6 @@ export class SalesOrderCreateComponent implements OnInit {
     };
   }
 
-  // summary-la % show panna use panra helper
   get discountPctSummary(): number {
     const line = this.soLines.find(l => Number(l.discount || 0) > 0);
     return line ? Number(line.discount) || 0 : 0;
@@ -686,12 +690,9 @@ export class SalesOrderCreateComponent implements OnInit {
       deliveryDate: this.soHdr.deliveryDate,
       shipping: Number(this.soHdr.shipping || 0),
 
-      // header discount amount (sum of lines)
       discount: t.discountLines,
-
       gstPct: Number(this.soHdr.gstPct || 0),
 
-      // 🔹 header totals
       subTotal: t.subTotal,
       taxAmount: t.gstAmount,
       grandTotal: t.grandTotal,
@@ -706,19 +707,15 @@ export class SalesOrderCreateComponent implements OnInit {
         itemId: l.itemId!,
         itemName: (l.item || '').toString(),
         uom: l.uom || '',
+
+        // ✅ NEW
+        description: (l.description || '').toString(),
+
         quantity: Number(l.quantity) || 0,
         unitPrice: Number(l.unitPrice) || 0,
-
-        // line discount as PERCENT
         discount: Number(l.discount) || 0,
-
-        // Tax mode stored as Standard-Rated / Zero-Rated / Exempt
         tax: l.tax || null,
-
-        // 🔹 store tax amount separately
         taxAmount: Number(l.lineTax || 0),
-
-        // line total (net + tax)
         total: Number(l.total) || 0,
         createdBy: this.userId,
         updatedBy: this.userId
@@ -796,7 +793,6 @@ export class SalesOrderCreateComponent implements OnInit {
 
   closePreview(): void { this.showPreview = false; }
 
-  /* ============ Misc UI ============ */
   removeLine(i: number) {
     this.soLines.splice(i, 1);
     this.recalcTotals();
@@ -821,7 +817,6 @@ export class SalesOrderCreateComponent implements OnInit {
   }
 }
 
-/* ============ safe JSON parse helper ============ */
 function safeJsonParse<T>(txt: string, fallback: T): T {
   try { return JSON.parse(txt) as T; } catch { return fallback; }
 }
