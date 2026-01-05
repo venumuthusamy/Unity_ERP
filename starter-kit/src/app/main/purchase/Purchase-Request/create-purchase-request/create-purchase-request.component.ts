@@ -152,6 +152,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     private _cityService: CitiesService,
     private _countriesService: CountriesService
   ) {
+    debugger
     this.userId = localStorage.getItem('id') || 'System';
   }
 
@@ -161,6 +162,8 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.clearDraft();            // <- reset to defaults (not null)
     this.setMinDate();
     this.getAllCountries();
+    this.applyRequesterDefault();
+    this.applyDepartmentFromTeams();
     this.loadDepartments();
     this.loadCatalogs();
     this.loadRequests();
@@ -215,6 +218,93 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       document.removeEventListener('click', this.captureHandler, { capture: true } as any);
     }
   }
+private getLoginUsername(): string {
+  // ✅ your localStorage is separate keys, so get directly
+  return (localStorage.getItem('username') || '').trim();
+}
+
+private getLoginTeams(): string[] {
+  const raw = localStorage.getItem('teams'); // ex: ["Purchase Team"]
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(x => (x || '').toString()) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** ✅ Auto fill Requester from localStorage username */
+private applyRequesterDefault(): void {
+  const uname = this.getLoginUsername();
+  if (!uname) return;
+
+  if (!this.prHeader) this.prHeader = {};
+  if (!this.prHeader.requester || this.prHeader.requester.toString().trim() === '') {
+    this.prHeader.requester = uname;
+  }
+}
+
+/**
+ * ✅ Auto bind Department by Team name
+ * Example: "Purchase Team" -> picks department that contains "Purchase"
+ */
+private applyDepartmentFromTeams(): void {
+  // already selected by user -> don't override
+  if ((this.searchText || '').trim()) return;
+
+  const raw = localStorage.getItem('teams'); // "[\"Purchase Team\"]"
+  if (!raw) return;
+
+  let teamsArr: string[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    teamsArr = Array.isArray(parsed) ? parsed.map(x => (x || '').toString()) : [];
+  } catch {
+    teamsArr = [];
+  }
+
+  const deptName = (teamsArr[0] || '').trim();
+  if (!deptName) return;
+
+  // ✅ show department name in input
+  this.searchText = deptName;
+
+  // OPTIONAL: keep departmentID as 0 (since teams is department)
+  if (!this.prHeader) this.prHeader = {};
+  if (!this.prHeader.departmentID) this.prHeader.departmentID = 0;
+}
+private applyDepartmentFromTeamsAndSetId(): void {
+  const raw = localStorage.getItem('teams'); // '["Purchase Team"]'
+  if (!raw) return;
+
+  let teams: string[] = [];
+  try { teams = JSON.parse(raw) || []; } catch { teams = []; }
+
+  const deptText = (teams[0] || '').trim();
+  if (!deptText) return;
+
+  // ✅ show in input
+  if (!this.searchText || !this.searchText.trim()) {
+    this.searchText = deptText;
+  }
+
+  // ✅ if master departments loaded, set departmentID
+  if (Array.isArray(this.departments) && this.departments.length) {
+    const t = deptText.toLowerCase();
+
+    // Try exact / contains match
+    const match = this.departments.find((d: any) => {
+      const name = (d.departmentName || d.DepartmentName || '').toString().toLowerCase();
+      return name === t || name.includes(t) || t.includes(name);
+    });
+
+    if (match) {
+      const id = this.toNum(match?.id ?? match?.Id ?? match?.departmentID ?? match?.DepartmentID);
+      if (id > 0) this.prHeader.departmentID = id;
+    }
+  }
+}
 
   // ---------------- New Item modal open/close ----------------
 
@@ -593,6 +683,7 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
       }
 
       this.resolveDepartmentName();
+       this.applyDepartmentFromTeamsAndSetId();
     });
   }
 
@@ -694,11 +785,11 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
   }
 
   private validateModal(): boolean {
-    if (!this.modalLine?.itemSearch || !this.modalLine?.qty) {
+    if (!this.modalLine?.itemSearch || !this.modalLine?.qty || !this.modalLine.location) {
       Swal.fire({
         icon: 'warning',
         title: 'Required',
-        text: 'Item and Qty are required',
+        text: 'Item,Location and Qty are required',
         confirmButtonColor: '#0e3a4c'
       });
       return false;
@@ -718,25 +809,98 @@ export class CreatePurchaseRequestComponent implements OnInit, OnDestroy {
     this.showModal = true;
   }
 
-  addAnotherPR() {
-    if (!this.validateModal()) return;
-    if (this.draftIndex !== null) {
-      this.prLines[this.draftIndex].isDraft = false;
-    }
-    const draft = this.makeEmptyDraft();
-    this.prLines.push(draft);
-    this.draftIndex = this.prLines.length - 1;
-    this.modalLine = this.prLines[this.draftIndex];
+ addAnotherPR() {
+  if (!this.validateModal()) return;
+
+  const incomingQty = Number(this.modalLine?.qty) || 0;
+  const dupIndex = this.findSameItemLocationIndex(this.modalLine);
+
+  const isSameRow = (this.draftIndex !== null && dupIndex === this.draftIndex) ||
+                    (this.editingIndex !== null && dupIndex === this.editingIndex);
+
+  if (dupIndex >= 0 && !isSameRow) {
+    const oldQty = Number(this.prLines[dupIndex]?.qty) || 0;
+    this.prLines[dupIndex].qty = oldQty + incomingQty;
+
+    // remarks append optional
+    const oldRem = (this.prLines[dupIndex]?.remarks || '').toString().trim();
+    const newRem = (this.modalLine?.remarks || '').toString().trim();
+    if (newRem) this.prLines[dupIndex].remarks = oldRem ? `${oldRem} | ${newRem}` : newRem;
+
+    // keep modal open but clear fields for next line
+    this.modalLine = this.makeEmptyDraft();
+    return;
   }
 
-  addAndClose() {
-    if (!this.validateModal()) return;
+  // normal add flow
+  if (this.draftIndex !== null) {
+    this.prLines[this.draftIndex].isDraft = false;
+  }
+
+  const draft = this.makeEmptyDraft();
+  this.prLines.push(draft);
+  this.draftIndex = this.prLines.length - 1;
+  this.modalLine = this.prLines[this.draftIndex];
+}
+
+
+ addAndClose() {
+  if (!this.validateModal()) return;
+
+  const incomingQty = Number(this.modalLine?.qty) || 0;
+
+  // ✅ check duplicate (same item + same location)
+  const dupIndex = this.findSameItemLocationIndex(this.modalLine);
+
+  // if the existing row is not the same draft row we are editing/adding
+  const isSameRow = (this.draftIndex !== null && dupIndex === this.draftIndex) ||
+                    (this.editingIndex !== null && dupIndex === this.editingIndex);
+
+  if (dupIndex >= 0 && !isSameRow) {
+    // OPTIONAL: ensure UOM same (avoid wrong merge)
+    const existingUom = this.norm(this.prLines[dupIndex]?.uom || this.prLines[dupIndex]?.uomSearch);
+    const incomingUom = this.norm(this.modalLine?.uom || this.modalLine?.uomSearch);
+
+    if (existingUom && incomingUom && existingUom !== incomingUom) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'UOM mismatch',
+        text: `Same item + location ஆனால் UOM different. Please correct UOM.`,
+        confirmButtonColor: '#0e3a4c'
+      });
+      return;
+    }
+
+    // ✅ MERGE QTY
+    const oldQty = Number(this.prLines[dupIndex]?.qty) || 0;
+    this.prLines[dupIndex].qty = oldQty + incomingQty;
+
+    // OPTIONAL: merge remarks (keep existing + append new)
+    const oldRem = (this.prLines[dupIndex]?.remarks || '').toString().trim();
+    const newRem = (this.modalLine?.remarks || '').toString().trim();
+    if (newRem) {
+      this.prLines[dupIndex].remarks = oldRem ? `${oldRem} | ${newRem}` : newRem;
+    }
+
+    // ✅ remove draft row if exists
     if (this.draftIndex !== null) {
-      this.prLines[this.draftIndex].isDraft = false;
+      this.prLines.splice(this.draftIndex, 1);
       this.draftIndex = null;
     }
+
     this.showModal = false;
+    return;
   }
+
+  // ✅ normal flow (no duplicate)
+  if (this.draftIndex !== null) {
+    this.prLines[this.draftIndex].isDraft = false;
+    this.draftIndex = null;
+  }
+
+  this.showModal = false;
+}
+
 
   closeModal() {
     if (this.draftIndex !== null) {
@@ -1122,30 +1286,29 @@ selectModalItem(item: any) {
     }
   }
 
-  resetForm() {
-    this.prHeader = {
-      id: 0,
-      requester: '',
-      departmentID: 0,
-      neededBy: null,
-      description: '',
-      multiLoc: false,
-      oversea: false
-    };
-    this.searchText = '';
-    this.filteredDepartments = [...this.departments];
-    this.dropdownOpen = false;
-    this.prLines = [];
-    this.prStep = 0;
-    this.draftIndex = null;
-    this.editingIndex = null;
+resetForm() {
+  this.prHeader = {
+    id: 0,
+    requester: '',
+    departmentID: 0,
+    neededBy: null,
+    description: '',
+    multiLoc: false,
+    oversea: false
+  };
 
-    this.headerLoaded = false;
-    this.pendingDeptId = null;
-    this.pendingDeptName = null;
+  // ✅ re-apply requester default
+  this.applyRequesterDefault();
 
-    this.updateBaseline();
-  }
+  this.searchText = '';
+  this.dropdownOpen = false;
+  this.prLines = [];
+  this.prStep = 0;
+
+  // ✅ if departments already loaded, bind dept again
+  this.applyDepartmentFromTeams();
+}
+
 
   editRequest(res: any) {
     const data = res.data;
@@ -1306,4 +1469,21 @@ selectModalItem(item: any) {
       }
     });
   }
+  private norm(v: any): string {
+  return (v ?? '').toString().trim().toLowerCase();
+}
+
+private findSameItemLocationIndex(line: any): number {
+  const itemKey = this.norm(line?.itemCode || line?.itemSearch);
+  const locKey  = this.norm(line?.location || line?.locationSearch);
+
+  if (!itemKey || !locKey) return -1;
+
+  return (this.prLines || []).findIndex((x: any) => {
+    const xItemKey = this.norm(x?.itemCode || x?.itemSearch);
+    const xLocKey  = this.norm(x?.location || x?.locationSearch);
+    return xItemKey === itemKey && xLocKey === locKey && !x?.isDraft;
+  });
+}
+
 }
