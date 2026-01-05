@@ -40,6 +40,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     remarks: '',
     fxRate: 0,
     tax: 0,
+    location:'',
+    contactNumber:'',
     shipping: 0.00,
     discount: 0.00,
     subTotal: 0,
@@ -392,6 +394,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
           incotermsId: Number(raw.incotermsId ?? raw.IncotermsId ?? 0),
           poDate: raw.poDate ?? raw.PoDate,
           deliveryDate: raw.deliveryDate ?? raw.DeliveryDate,
+          location:raw.location ?? raw.location,
+          contactNumber:raw.contactNumber ?? raw.contactNumber,
           remarks: raw.remarks ?? raw.Remarks ?? '',
           fxRate: Number(raw.fxRate ?? raw.FxRate ?? 0),
           tax: Number(raw.tax ?? raw.Tax ?? 0),
@@ -417,6 +421,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
           incotermsId: d.incotermsId,
           poDate: d.poDate ? this.toISODate(new Date(d.poDate)) : '',
           deliveryDate: d.deliveryDate ? this.toISODate(new Date(d.deliveryDate)) : '',
+          location:d.location,
+          contactNumber:d.contactNumber,
           remarks: d.remarks,
           fxRate: d.fxRate,
           tax: d.tax,
@@ -573,10 +579,11 @@ export class PurchaseOrderCreateComponent implements OnInit {
         this.searchTexts['currency'] = this.poHdr.currencyName;
 
         const foundGst = this.countries.find(x => x.id === item.countryId);
-        this.poHdr.tax = foundGst?.gstPercentage || '';
+        this.poHdr.tax = foundGst?.gstPercentage;
          
         const foundTerms = this.paymentTerms.find(x => x.id === item.termsId);
         this.searchTexts['paymentTerms'] = foundTerms.paymentTermsName;
+        this.poHdr.paymentTermId  = foundTerms.id
 
 
         // 🔹 Recalculate all line taxes with new GST%
@@ -769,19 +776,23 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
     po.description = line.remarks ?? '';
     po.budget = line.budget ?? '';
-    po.location = line.location ?? line.locationSearch ?? '';
+    // po.location = line.location ?? line.locationSearch ?? '';
+    this.poHdr.location = line.location ?? line.locationSearch ?? '';
 
     // Safe lookup for contact number from deliveries list
     try {
       const loc = (this.deliveries || []).find((x: any) =>
-        (x?.name || '').toLowerCase() === (po.location || '').toLowerCase()
+        (x?.name || '').toLowerCase() === (this.poHdr.location || '').toLowerCase()
       );
-      po.contactNumber = loc?.contactNumber || '';
+      // po.contactNumber = loc?.contactNumber || '';
+      this.poHdr.contactNumber = loc?.contactNumber || '';
     } catch {
-      po.contactNumber = '';
+      // po.contactNumber = '';
+      this.poHdr.contactNumber = '';
     }
 
     po.qty = Number(line.qty) || 0;
+    po.taxCode = this.getDefaultTaxName();
 
     return po;
   }
@@ -793,8 +804,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       budget: '',
       recurring: '',
       taxCode: '',
-      location: '',
-      contactNumber: '',
+      // location: '',
+      // contactNumber: '',
       qty: 0,
       price: '',
       discount: '',
@@ -818,8 +829,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       budget: '',
       recurring: '',
       taxCode: '',
-      location: '',
-      contactNumber: '',
+      // location: '',
+      // contactNumber: '',
       qty: 0,
       price: '',
       discount: '',
@@ -1167,6 +1178,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       incotermsId: this.poHdr.incotermsId,
       poDate: this.poHdr.poDate,
       deliveryDate: this.poHdr.deliveryDate,
+      location:this.poHdr.location,
+      contactNumber: this.poHdr.contactNumber,
       remarks: this.poHdr.remarks,
       tax: this.poHdr.tax,
       shipping: this.poHdr.shipping,
@@ -1267,6 +1280,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
     // Recalculate using current qty, price, discount, GST% and tax mode
     this.calculateLineTotal(line);
   }
+  private getDefaultTaxName(): string {
+  // try to find "EXCLUSIVE" from master list, else fallback
+  const def = (this.allTaxCodes || []).find((x: any) =>
+    (x?.name || '').toString().toUpperCase().includes('EXCLUSIVE')
+  );
+  return def?.name || 'Exclusive';
+  }
 
   ///// for temp data------////
 
@@ -1326,6 +1346,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
       incotermsId: this.poHdr.incotermsId || 0,
       poDate: this.poHdr.poDate,
       deliveryDate: this.poHdr.deliveryDate || null,
+      location:this.poHdr.location,
+      contactNumber: this.poHdr.contactNumber,
       remarks: this.poHdr.remarks || '',
       tax: this.poHdr.tax || 0,
       shipping: this.poHdr.shipping || 0,
