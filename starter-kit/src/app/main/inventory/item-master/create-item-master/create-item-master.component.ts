@@ -12,7 +12,6 @@ import Swal from 'sweetalert2';
 
 import { ItemMasterService } from '../item-master.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
-import { ItemsService } from 'app/main/master/items/items.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { TaxCodeService } from 'app/main/master/taxcode/taxcode.service';
@@ -20,16 +19,10 @@ import { CoastingMethodService } from 'app/main/master/coasting-method/coasting-
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { StrategyService } from 'app/main/master/strategies/strategy.service';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
+import { CatagoryService } from 'app/main/master/catagory/catagory.service';
+import { RecurringService } from 'app/main/master/recurring/recurring.service';
 
 /* ----------------- Lightweight view models ----------------- */
-type SimpleItem = {
-  id: number;
-  itemName: string;
-  itemCode?: string;
-  uomName?: string;
-  catagoryName: string;
-};
-
 type PriceRow = {
   price: number | null;
   qty: number | null;
@@ -38,29 +31,41 @@ type PriceRow = {
   supplierName?: string | null;
   supplierSearch?: string | null;
   warehouseId?: number | string | null;
-  isTransfered: boolean; // <-- correct, lowercase i
+  isTransfered: boolean;
+  countedQty?: any;
+  badCountedQty?: any;
+  reasonId?: any;
 };
 
-interface Warehouse { id: number | string; name: string; }
+interface Warehouse {
+  id: number | string;
+  name: string;
+}
+
 interface Bin {
   id?: number | string;
   name?: string;
-  binID?: number|string;
+  binID?: number | string;
   binName?: string;
   warehouseId?: number | string;
 }
-interface SupplierLite { id: number | string; name: string; code?: string; }
+
+interface SupplierLite {
+  id: number | string;
+  name: string;
+  code?: string;
+}
 
 interface ItemMasterAudit {
   auditId: number;
   itemId: number;
-  action: 'CREATE'|'UPDATE'|'DELETE'|string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | string;
   occurredAtUtc: string;
-  userId?: number|null;
-  userName?: string|null;
-  oldValuesJson?: string|null;
-  newValuesJson?: string|null;
-  remarks?: string|null;
+  userId?: number | null;
+  userName?: string | null;
+  oldValuesJson?: string | null;
+  newValuesJson?: string | null;
+  remarks?: string | null;
 }
 
 interface ItemStockRow {
@@ -81,7 +86,7 @@ interface ItemStockRow {
   stockIssueID: number;
   isFullTransfer: boolean;
   isPartialTransfer: boolean;
-  approvedBy:number;
+  approvedBy: number;
 }
 
 /* ----------------- BOM contracts ----------------- */
@@ -121,9 +126,13 @@ interface BomInlineRow {
   existingCost: number;
   unitCost: number | null;
 }
-interface BomTotals { rollup: number; count: number; }
+interface BomTotals {
+  rollup: number;
+  count: number;
+}
 
-/* ----------------- Component ----------------- */
+type ItemType = 'SALES' | 'PURCHASE' | 'BOTH' | null;
+
 @Component({
   selector: 'app-create-item-master',
   templateUrl: './create-item-master.component.html',
@@ -133,22 +142,44 @@ interface BomTotals { rollup: number; count: number; }
 export class CreateItemMasterComponent implements OnInit {
   /* Steps */
   private readonly stepsCreate = ['Summary'] as const;
-  private readonly stepsEdit   = ['Summary','Warehouses','Suppliers','BOM','Audit','Review'] as const;
+  private readonly stepsEdit = ['Summary', 'Warehouses', 'Suppliers', 'BOM', 'Audit', 'Review'] as const;
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
   get lastStepIndex() { return this.stepsView.length - 1; }
   step = 0;
 
   next() {
     if (this.step === 0) {
-      if (!this.item.name?.trim() && !this.selectedItemId) {
-        Swal.fire({ icon:'warning', title:'Select Item', text:'Pick an Item Name first (or create one).' });
+      // ✅ new required validations (based on your new HTML)
+      if (!this.item.itemCode?.trim()) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Code is required.' });
+        return;
+      }
+      if (!this.item.itemName?.trim()) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Name is required.' });
+        return;
+      }
+      if (!this.item.itemType) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Type is required.' });
+        return;
+      }
+      if (!this.item.categoryId) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Category is required.' });
+        return;
+      }
+      if (!this.item.uomId) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'UOM is required.' });
+        return;
+      }
+      if (!this.item.budgetLineId) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Budget Line is required.' });
         return;
       }
     }
+
     if (this.step < this.stepsView.length - 1) {
       this.step++;
       if (this.isEdit && this.step === 3) this.loadBomSnapshotOrFallback(); // BOM
-      if (this.isEdit && this.step === 4) this.loadAudits();                // Audit
+      if (this.isEdit && this.step === 4) this.loadAudits(); // Audit
       this.maybeScrollToReviewBottom();
     }
   }
@@ -167,23 +198,23 @@ export class CreateItemMasterComponent implements OnInit {
   /* Header model */
   item: any = this.makeEmptyItem();
 
-  /* Lists / selectors */
-  selectedItemId: number | null = null;
+  /* Lists */
+  CategoryList: Array<{ id: number; catagoryName: string }> = []; // ✅ for Category dropdown
+  uomList: Array<{ id?: number; name: string }> = [];
+  parentHeadList: Array<{ value: number; label: string }> = []; // ✅ Budget Line dropdown
+
+  strategyList: any;
+  taxCodeList: Array<{ id: number; name: string }> = [];
+  costingMethodList: Array<{ id: number; name: string }> = [];
+  warehouseList: Warehouse[] = [];
+  binList: Bin[] = [];
+
+  /* Suppliers / prices */
   prices: PriceRow[] = [];
   supplierList: SupplierLite[] = [];
   supplierDropdownOpen = false;
   filteredSuppliers: SupplierLite[] = [];
   activePriceIndex: number | null = null;
-
-  modalLine = { itemSearch: '', dropdownOpen: false, filteredItems: [] as SimpleItem[] };
-
-  strategyList: any;
-  itemsList: SimpleItem[] = [];
-  uomList: Array<{ id?: number; name: string }> = [];
-  taxCodeList: Array<{ id: number; name: string }> = [];
-  costingMethodList: Array<{ id: number; name: string }> = [];
-  warehouseList: Warehouse[] = [];
-  binList: Bin[] = [];
 
   /* Per-warehouse stock */
   itemStocks: ItemStockRow[] = [];
@@ -197,7 +228,6 @@ export class CreateItemMasterComponent implements OnInit {
   /* BOM (INLINE) */
   bomRows: BomInlineRow[] = [];
   bomTotals: BomTotals = { rollup: 0, count: 0 };
-
   bomHistoryBySupplier = new Map<number, BomHistoryPoint[]>();
 
   brand = '#2E5F73';
@@ -205,36 +235,41 @@ export class CreateItemMasterComponent implements OnInit {
   userId: any;
   showRaw: Record<string | number, boolean> = {};
   reasonList: any;
+
   @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
-  @ViewChild('itemSearchBox', { static: false }) itemSearchBox!: ElementRef<HTMLElement>;
-  @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
   @ViewChild('bottomOfWizard') bottomOfWizard!: ElementRef<HTMLDivElement>;
 
   constructor(
     private itemsSvc: ItemMasterService,
     private chartOfAccountService: ChartofaccountService,
-    private itemsService: ItemsService,
     private uomService: UomService,
     private warehouseService: WarehouseService,
     private taxCodeService: TaxCodeService,
     private coastingmethodService: CoastingMethodService,
-    private supplierService : SupplierService,
+    private supplierService: SupplierService,
     private strategyService: StrategyService,
     private router: Router,
     private route: ActivatedRoute,
     private StockissueService: StockIssueService,
+     private CategoryService: CatagoryService,
+     private recurringService: RecurringService
   ) {
     this.userId = localStorage.getItem('id');
   }
 
-  /* Lifecycle */
   ngOnInit(): void {
     this.setMinDate();
-    this.loadCatalogs();
+
+    // ✅ load dropdowns for step-0
+    this.loadUoms();
+    this.loadBudgetLines();
+    this.loadCategories(); // ⚠️ replace with your category API call
+
+    // existing loads
     this.loadWarehouses();
     this.loadCostingMethods();
-    this.getAllTaxCode();
+    this.getAllRecurrring();
     this.getAllSupplier();
     this.getAllStrategy();
 
@@ -243,12 +278,11 @@ export class CreateItemMasterComponent implements OnInit {
       this.isEdit = true;
       this.editingId = Number(idParam);
       this.loadForEdit(this.editingId);
-    } else {
-      this.loadItems();
     }
-     this.StockissueService.getAllStockissue().subscribe((res:any)=>{
-       this.reasonList = res.data
-    })
+
+    this.StockissueService.getAllStockissue().subscribe((res: any) => {
+      this.reasonList = res?.data ?? [];
+    });
   }
 
   /* Derived totals */
@@ -264,104 +298,98 @@ export class CreateItemMasterComponent implements OnInit {
     return t;
   }
 
-  /* Items list */
-  itemsTable: any[] = [];
-  loadItems(): void {
-    this.itemsSvc.getAllItemMaster().subscribe({
-      next: (res: any) => {
-        const list = res?.data ?? res ?? [];
-        this.itemsTable = (list || []).map((x: any) => ({
-          ...x,
-          available: Number(x.onHand || 0) - Number(x.reserved || 0),
-        }));
-      },
-      error: _ => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load items' }),
-    });
-  }
-
-  /* Edit loader */
+  /* -------------------- Edit loader -------------------- */
   private loadForEdit(id: number): void {
     forkJoin({
       header: this.itemsSvc.getItemMasterById(id),
       stocks: this.itemsSvc.getWarehouseStock(id),
       prices: this.itemsSvc.getSupplierPrices(id),
     } as { header: Observable<any>; stocks: Observable<any>; prices: Observable<any>; })
-    .subscribe({
-      next: ({ header, stocks, prices }) => {
-        const h: any = Array.isArray(header)
-          ? header[0]
-          : (header && 'data' in header ? (header as any).data : header) || {};
+      .subscribe({
+        next: ({ header, stocks, prices }) => {
+          const h: any = Array.isArray(header)
+            ? header[0]
+            : (header && 'data' in header ? (header as any).data : header) || {};
 
-        this.item = {
-          id: h.id,
-          sku: h.sku ?? h.itemCode ?? '',
-          name: h.name ?? h.itemName ?? '',
-          category: h.category ?? h.catagoryName ?? '',
-          uom: h.uom ?? h.uomName ?? '',
-          costingMethodId: h.costingMethodId ?? null,
-          taxCodeId: h.taxCodeId ?? null,
-          specs: h.specs ?? '',
-          pictureUrl: h.pictureUrl ?? '',
-          lastCost: h.lastCost ?? null,
-          isActive: h.isActive ?? true,
-          createdBy: this.userId,
-          updatedBy: this.userId,
-          expiryDate: this.toDateOnly(h.expiryDate)
-        };
+          // ✅ map edit record -> new fields
+          this.item = {
+            id: h.id,
 
-        const stockArr: any[] = Array.isArray(stocks)
-          ? stocks
-          : (stocks && 'data' in stocks ? (stocks as any).data : []) || [];
+            itemCode: h.itemCode ?? h.sku ?? '',
+            itemName: h.itemName ?? h.name ?? '',
+            itemType: (h.itemType ?? null) as ItemType,
 
-        this.itemStocks = stockArr.map((r: any) => ({
-          warehouseId: r.warehouseId,
-          binId: r.binId,
-          strategyId: r.strategyId ?? null,
-          onHand: Number(r.onHand || 0),
-          reserved: Number(r.reserved || 0),
-          available: Math.max(0, Number(r.available ?? (Number(r.onHand || 0) - Number(r.reserved || 0)))),
-          min: r.min ?? r.minQty ?? null,
-          max: r.max ?? r.maxQty ?? null,
-          reorderQty: r.reorderQty ?? null,
-          leadTimeDays: r.leadTimeDays ?? null,
-          batchFlag: !!r.batchFlag,
-          serialFlag: !!r.serialFlag,
-          isApproved: !!r.isApproved,
-          isTransfered: !!r.isTransfered,
-          stockIssueID: r.stockIssueID ?? 0,
-          isFullTransfer: !!r.isFullTransfer,
-          isPartialTransfer: !!r.isPartialTransfer,
-         approvedBy: Number(r.approvedBy ?? 0)
+            categoryId: h.categoryId ?? h.categoryID ?? null,
+            uomId: h.uomId ?? h.uomID ?? null,
+            budgetLineId: h.budgetLineId ?? h.budgetLineID ?? null,
 
-        }));
+            // keep old fields too (if your backend expects)
+            sku: h.sku ?? h.itemCode ?? '',
+            name: h.name ?? h.itemName ?? '',
+            category: h.category ?? h.catagoryName ?? '',
+            uom: h.uom ?? h.uomName ?? '',
+            costingMethodId: h.costingMethodId ?? null,
+            taxCodeId: h.taxCodeId ?? null,
+            specs: h.specs ?? '',
+            pictureUrl: h.pictureUrl ?? '',
+            lastCost: h.lastCost ?? null,
+            isActive: h.isActive ?? true,
+            createdBy: this.userId,
+            updatedBy: this.userId,
+            expiryDate: this.toDateOnly(h.expiryDate),
+          };
 
-        const priceArr: any[] = Array.isArray(prices)
-          ? prices
-          : (prices && 'data' in prices ? (prices as any).data : []) || [];
+          const stockArr: any[] = Array.isArray(stocks)
+            ? stocks
+            : (stocks && 'data' in stocks ? (stocks as any).data : []) || [];
 
-        this.prices = priceArr.map((p: any) => ({
-          price: p.price ?? null,
-          qty: (p.qty != null ? Number(p.qty)
-               : (p.quantity != null ? Number(p.quantity) : null)),
-          barcode: p.barcode ?? null,
-          SupplierId: p.supplierId ?? p.SupplierId ?? null,
-          supplierName: p.supplierName ?? p.name ?? null,
-          supplierSearch: (p.supplierName ?? p.name ?? '') as string,
-          warehouseId: p.warehouseId ?? p.WarehouseId ?? null,
-          isTransfered: !!(p.isTransfered ?? p.IsTransfered ?? false),
-          countedQty: p.countedQty,
-          badCountedQty: p.badCountedQty,
-          reasonId: p.reasonId ? p.reasonId : '-'
-        }));
+          this.itemStocks = stockArr.map((r: any) => ({
+            warehouseId: r.warehouseId,
+            binId: r.binId,
+            strategyId: r.strategyId ?? null,
+            onHand: Number(r.onHand || 0),
+            reserved: Number(r.reserved || 0),
+            available: Math.max(0, Number(r.available ?? (Number(r.onHand || 0) - Number(r.reserved || 0)))),
+            min: r.min ?? r.minQty ?? null,
+            max: r.max ?? r.maxQty ?? null,
+            reorderQty: r.reorderQty ?? null,
+            leadTimeDays: r.leadTimeDays ?? null,
+            batchFlag: !!r.batchFlag,
+            serialFlag: !!r.serialFlag,
+            isApproved: !!r.isApproved,
+            isTransfered: !!r.isTransfered,
+            stockIssueID: r.stockIssueID ?? 0,
+            isFullTransfer: !!r.isFullTransfer,
+            isPartialTransfer: !!r.isPartialTransfer,
+            approvedBy: Number(r.approvedBy ?? 0),
+          }));
 
-        this.modalLine.itemSearch = this.item.name || '';
-        this.loadBomSnapshotOrFallback();
-      },
-      error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
-    });
+          const priceArr: any[] = Array.isArray(prices)
+            ? prices
+            : (prices && 'data' in prices ? (prices as any).data : []) || [];
+
+          this.prices = priceArr.map((p: any) => ({
+            price: p.price ?? null,
+            qty: (p.qty != null ? Number(p.qty) : (p.quantity != null ? Number(p.quantity) : null)),
+            barcode: p.barcode ?? null,
+            SupplierId: p.supplierId ?? p.SupplierId ?? null,
+            supplierName: p.supplierName ?? p.name ?? null,
+            supplierSearch: (p.supplierName ?? p.name ?? '') as string,
+            warehouseId: p.warehouseId ?? p.WarehouseId ?? null,
+            isTransfered: !!(p.isTransfered ?? p.IsTransfered ?? false),
+            countedQty: p.countedQty,
+            badCountedQty: p.badCountedQty,
+            reasonId: p.reasonId ? p.reasonId : '-',
+          }));
+
+          this.loadBomSnapshotOrFallback();
+        },
+        error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
+      });
   }
+
   getReason(id: number | string | null) {
-    const x = this.reasonList.find(i => i.id === id);
+    const x = this.reasonList?.find((i: any) => i.id === id);
     return x?.stockIssuesNames ?? String(id ?? '');
   }
 
@@ -373,12 +401,20 @@ export class CreateItemMasterComponent implements OnInit {
     return local.toISOString().split('T')[0];
   }
 
-  /* Save */
+  /* -------------------- Save -------------------- */
   async onSave(): Promise<void> {
-    if (!this.item.sku?.trim() || !this.item.name?.trim()) {
-      await Swal.fire({ icon: 'warning', title: 'Required', text: 'SKU and Name are required.' });
+    if (!this.item.itemCode?.trim() || !this.item.itemName?.trim()) {
+      await Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Code and Item Name are required.' });
       return;
     }
+    if (!this.item.itemType || !this.item.categoryId || !this.item.uomId || !this.item.budgetLineId) {
+      await Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Type, Category, UOM and Budget Line are required.' });
+      return;
+    }
+
+    // ✅ map to old backend fields (so existing API continues)
+    this.item.sku = this.item.itemCode?.trim();
+    this.item.name = this.item.itemName?.trim();
 
     const stocksPayload = this.itemStocks.map(r => ({
       warehouseId: r.warehouseId,
@@ -399,7 +435,6 @@ export class CreateItemMasterComponent implements OnInit {
       isFullTransfer: !!r.isFullTransfer,
       isPartialTransfer: !!r.isPartialTransfer,
       approvedBy: Number(r.approvedBy ?? 0)
-
     }));
 
     const bomPayload = (this.bomRows || []).map(r => ({
@@ -422,6 +457,13 @@ export class CreateItemMasterComponent implements OnInit {
 
     const payload: any = {
       ...this.item,
+
+      // ✅ new fields
+      itemType: this.item.itemType,
+      categoryId: Number(this.item.categoryId),
+      uomId: Number(this.item.uomId),
+      budgetLineId: Number(this.item.budgetLineId),
+
       itemStocks: stocksPayload,
       prices: pricesPayload,
       ...(this.isEdit ? { bomLines: bomPayload } : {})
@@ -441,12 +483,12 @@ export class CreateItemMasterComponent implements OnInit {
         });
 
         if (creating) { this.onGoToItemList(); return; }
-        this.loadItems();
         if (this.item?.id) this.loadBomSnapshotOrFallback();
       } else {
         Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
       }
     };
+
     const onApiError = (_: any) =>
       Swal.fire({ icon: 'error', title: 'Error', text: creating ? 'Create failed' : 'Update failed', confirmButtonColor: '#0e3a4c' });
 
@@ -454,7 +496,7 @@ export class CreateItemMasterComponent implements OnInit {
     else this.itemsSvc.updateItemMaster(payload.id, payload).subscribe({ next: onApiSuccess, error: onApiError });
   }
 
-  /* Misc UI helpers */
+  /* -------------------- Misc UI helpers -------------------- */
   setMinDate() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -462,16 +504,18 @@ export class CreateItemMasterComponent implements OnInit {
     const dd = String(d.getDate()).padStart(2, '0');
     this.minDate = `${yyyy}-${mm}-${dd}`;
   }
+
   onExpiryChange(e: Event) {
     const value = (e.target as HTMLInputElement).value || null;
     this.item.expiryDate = value;
     this.item.createdBy = this.userId;
     this.item.updatedBy = this.userId;
   }
+
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
 
-  /* Warehouse modal */
+  /* -------------------- Warehouse modal -------------------- */
   openWhModal(): void {
     this.whDraft = this.makeEmptyStockDraft();
     this.showWhModal = true;
@@ -481,13 +525,7 @@ export class CreateItemMasterComponent implements OnInit {
     this.showWhModal = false;
     (document.body.style as any).overflow = '';
   }
-  onModalRootClick(ev: MouseEvent) {
-    ev.stopPropagation();
-    const t = ev.target as HTMLElement;
-    const insideDropdown = t.closest('.prl-dropdown') || t.closest('.prl-menu');
-    if (insideDropdown) return;
-    this.modalLine.dropdownOpen = false;
-  }
+
   editLine(i: number): void {
     const r = this.itemStocks[i];
     if (!r) return;
@@ -512,24 +550,30 @@ export class CreateItemMasterComponent implements OnInit {
       isFullTransfer: !!r.isFullTransfer,
       isPartialTransfer: !!r.isPartialTransfer,
       approvedBy: Number(r.approvedBy ?? 0)
-
     };
     this.getBinsForWarehouse(this.whDraft.warehouseId);
     this.showWhModal = true;
   }
+
   submitWarehouse(closeAfter: boolean): void {
     this.recalcDraft();
     if (!this.whDraft.warehouseId) { Swal.fire({ icon: 'warning', title: 'Select warehouse' }); return; }
     if (!this.whDraft.binId) { Swal.fire({ icon: 'warning', title: 'Select bin' }); return; }
-    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) { Swal.fire({ icon:'warning', title:'Invalid min/max', text:'Min cannot exceed Max' }); return; }
-    if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) { Swal.fire({ icon:'warning', title:'Invalid reserved', text:'Reserved cannot exceed On Hand' }); return; }
+    if ((this.whDraft.min ?? 0) > (this.whDraft.max ?? 0)) {
+      Swal.fire({ icon: 'warning', title: 'Invalid min/max', text: 'Min cannot exceed Max' });
+      return;
+    }
+    if ((this.whDraft.reserved ?? 0) > (this.whDraft.onHand ?? 0)) {
+      Swal.fire({ icon: 'warning', title: 'Invalid reserved', text: 'Reserved cannot exceed On Hand' });
+      return;
+    }
 
     const dupIdx = this.itemStocks.findIndex(x =>
       String(x.warehouseId) === String(this.whDraft.warehouseId) &&
       String(x.binId) === String(this.whDraft.binId)
     );
     if (dupIdx !== -1 && (!this.isEditMode || dupIdx !== this.editingIndex)) {
-      Swal.fire({ icon:'warning', title:'Duplicate', text:'This Warehouse + Bin already exists.' });
+      Swal.fire({ icon: 'warning', title: 'Duplicate', text: 'This Warehouse + Bin already exists.' });
       return;
     }
 
@@ -552,7 +596,6 @@ export class CreateItemMasterComponent implements OnInit {
       isFullTransfer: !!this.whDraft.isFullTransfer,
       isPartialTransfer: !!this.whDraft.isPartialTransfer,
       approvedBy: this.whDraft.approvedBy ?? 0
-
     };
 
     if (this.isEditMode && this.editingIndex > -1) {
@@ -578,17 +621,26 @@ export class CreateItemMasterComponent implements OnInit {
       else this.whDraft = this.makeEmptyStockDraft();
     }
   }
-  
+
   removeWarehouseRow(i: number): void {
     if (i >= 0 && i < this.itemStocks.length) this.itemStocks.splice(i, 1);
   }
 
-  /* Lookups */
+  recalcDraft(): void {
+    const onHand = Math.max(0, Number(this.whDraft.onHand || 0));
+    const reserved = Math.max(0, Number(this.whDraft.reserved || 0));
+    this.whDraft.onHand = onHand;
+    this.whDraft.reserved = reserved;
+    this.whDraft.available = Math.max(0, onHand - reserved);
+  }
+
+  /* -------------------- Lookups -------------------- */
   getBinsForWarehouse(id: number | string | null) {
     this.warehouseService.getBinNameByIdAsync(id).subscribe((response: any) => {
       this.binList = response?.data ?? [];
     });
   }
+
   getWarehouseName(id: any): string {
     const w = this.warehouseList.find(x => String(x.id) === String(id));
     return w?.name ?? '-';
@@ -603,12 +655,11 @@ export class CreateItemMasterComponent implements OnInit {
     const s = (this.strategyList || []).find((x: any) => String(x.id) === String(id));
     return s?.strategyName || s?.name || '-';
   }
-  getById(list: any[], id: any) { return list?.find?.(x => String(x.id)===String(id)); }
 
-  /* Suppliers */
+  /* -------------------- Suppliers -------------------- */
   getAllSupplier() {
     this.supplierService.GetAllSupplier().subscribe((response: any) => {
-      this.supplierList = (response?.data ?? []).map((s:any) => ({
+      this.supplierList = (response?.data ?? []).map((s: any) => ({
         id: s.id,
         name: s.name ?? s.supplierName ?? `Supplier-${s.id}`,
         code: s.code ?? s.supplierCode ?? undefined
@@ -617,52 +668,85 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  /* Catalogs */
+  /* -------------------- Dropdown loads (Step-0) -------------------- */
+  private loadUoms(): void {
+    this.uomService.getAllUom().subscribe((res: any) => {
+      this.uomList = (res?.data ?? []).map((u: any) => ({ id: u.id, name: u.name }));
+    });
+  }
+
+  private loadBudgetLines(): void {
+    this.chartOfAccountService.getAllChartOfAccount().subscribe((res: any) => {
+      const all = (res?.data ?? res ?? []).filter((x: any) => x?.isActive !== false);
+      this.parentHeadList = all.map((head: any) => ({
+        value: Number(head.id),
+        label: this.buildFullHeadPath(head, all)
+      }));
+    });
+  }
+
+  // ✅ IMPORTANT: Replace this with your Category API call/service
+  private loadCategories(): void {
+     this.CategoryService.getAllCatagory().subscribe((res: any) => {
+        // Filter only active ones
+        this.CategoryList = res.data.filter((item: any) => item.isActive === true);
+       
+      });
+  }
+
+  private buildFullHeadPath(item: any, all: any[]): string {
+    let path = item.headName ?? '';
+    let current = all.find((x: any) => x.headCode === item.parentHead);
+    while (current) {
+      path = `${current.headName} >> ${path}`;
+      current = all.find((x: any) => x.headCode === current.parentHead);
+    }
+    return path;
+  }
+
+  /* -------------------- Other catalogs -------------------- */
   loadWarehouses() {
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
         const raw = res?.data ?? [];
-        this.warehouseList = raw.map((w: any) => ({ id: w.id, name: w.name || w.warehouseName || `WH-${w.id}` }));
+        this.warehouseList = raw.map((w: any) => ({
+          id: w.id,
+          name: w.name || w.warehouseName || `WH-${w.id}`
+        }));
       },
       error: (err: any) => console.error('Error loading warehouses', err)
     });
   }
+
   loadCostingMethods() {
     this.coastingmethodService.getAllCoastingMethod().subscribe((res: any) => {
       const data = res?.data ?? [];
-      this.costingMethodList = data.filter((x:any)=>x.isActive===true).map((x:any)=>({ id:x.id, name:x.costingName }));
-    });
-  }
-  getAllTaxCode() {
-    this.taxCodeService.getTaxCode().subscribe((response: any) => {
-      const data = response?.data ?? [];
-      this.taxCodeList = data.map((t:any)=>({ id:t.id, name:t.name }));
-    });
-  }
-  getAllStrategy() {
-    this.strategyService.getStrategy().subscribe((response: any) => {
-      this.strategyList = response.data;
-    });
-  }
-  loadCatalogs() {
-    this.chartOfAccountService.getAllChartOfAccount().subscribe(() => {
-      this.itemsService.getAllItem().subscribe((ires: any) => {
-        const raw = ires?.data ?? [];
-        this.itemsList = raw.map((item: any) => ({
-          id: Number(item.id ?? item.itemId ?? 0),
-          itemName: item.itemName ?? item.name ?? '',
-          itemCode: item.itemCode ?? '',
-          uomName: item.uomName ?? item.uom ?? '',
-          catagoryName: item.catagoryName
-        } as SimpleItem));
-      });
-    });
-    this.uomService.getAllUom().subscribe((res: any) => {
-      this.uomList = (res?.data ?? []).map((u:any)=>({ id:u.id, name:u.name }));
+      this.costingMethodList = data
+        .filter((x: any) => x.isActive === true)
+        .map((x: any) => ({ id: x.id, name: x.costingName }));
     });
   }
 
-  /* Pricing */
+ // getAllTaxCode() {
+   // this.taxCodeService.getTaxCode().subscribe((response: any) => {
+   //   const data = response?.data ?? [];
+    //  this.taxCodeList = data.map((t: any) => ({ id: t.id, name: t.name }));
+ //   });
+ // }
+  getAllRecurrring() {
+    this.recurringService.getRecurring().subscribe((response: any) => {
+      const data = response?.data ?? [];
+      this.taxCodeList = data.map((t: any) => ({ id: t.id, recurringName: t.recurringName }));
+    })
+  }
+
+  getAllStrategy() {
+    this.strategyService.getStrategy().subscribe((response: any) => {
+      this.strategyList = response?.data ?? response?.data ?? response;
+    });
+  }
+
+  /* -------------------- Pricing -------------------- */
   addPriceLine(): void {
     this.prices = [
       ...this.prices,
@@ -674,44 +758,17 @@ export class CreateItemMasterComponent implements OnInit {
         supplierName: null,
         supplierSearch: '',
         warehouseId: null,
-        isTransfered: false // <-- correct property
+        isTransfered: false
       }
     ];
     this.activePriceIndex = null;
     this.filteredSuppliers = [];
     this.supplierDropdownOpen = false;
   }
+
   removePriceLine(i: number): void {
     this.prices = this.prices.filter((_, idx) => idx !== i);
     if (this.isEdit) this.syncBomFromPrices();
-  }
-
-  /* Item dropdown */
-  onModalItemFocus(open: boolean = true): void {
-    this.modalLine.dropdownOpen = open;
-    if (open) {
-      const q = (this.modalLine.itemSearch || '').trim();
-      if (q) this.filterModalItems();
-      else this.modalLine.filteredItems = [...this.itemsList];
-      setTimeout(() => this.itemSearchInput?.nativeElement?.focus(), 0);
-    }
-  }
-  filterModalItems(): void {
-    const q = (this.modalLine.itemSearch || '').toLowerCase();
-    this.modalLine.filteredItems = this.itemsList.filter(
-      (it: any) =>
-        (it.itemName || '').toLowerCase().includes(q) ||
-        (it.itemCode || '').toLowerCase().includes(q)
-    );
-  }
-  trackByItemId = (_: number, row: SimpleItem) => row.id;
-  selectModalItem(row: SimpleItem): void {
-    this.item.name = row.itemName || '';
-    this.item.sku = row.itemCode || '';
-    this.item.uom = row.uomName || '';
-    this.item.category = row.catagoryName || '';
-    this.modalLine.itemSearch = row.itemName || '';
-    this.modalLine.dropdownOpen = false;
   }
 
   /* Supplier dropdown */
@@ -720,12 +777,13 @@ export class CreateItemMasterComponent implements OnInit {
     this.filteredSuppliers = !q
       ? this.supplierList.slice(0, 20)
       : this.supplierList.filter(s =>
-          (s.name && s.name.toLowerCase().includes(q)) ||
-          (s.code && s.code.toLowerCase().includes(q)) ||
-          String(s.id).toLowerCase().includes(q)
-        );
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.code && s.code.toLowerCase().includes(q)) ||
+        String(s.id).toLowerCase().includes(q)
+      );
   }
   trackBySupplierId = (_: number, s: SupplierLite) => s.id;
+
   selectSupplierForRow(i: number, s: SupplierLite, ev?: MouseEvent): void {
     ev?.stopPropagation();
     const row = this.prices[i];
@@ -753,64 +811,15 @@ export class CreateItemMasterComponent implements OnInit {
       }
     }
   }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(ev: MouseEvent) {
     const t = ev.target as Node;
-    const itemBox = this.itemSearchBox?.nativeElement;
-    if (itemBox && !itemBox.contains(t)) this.modalLine.dropdownOpen = false;
     const supplierBox = this.supplierSearchBox?.nativeElement;
     if (supplierBox && !supplierBox.contains(t)) this.supplierDropdownOpen = false;
   }
 
-  /* Small utilities */
-  private makeEmptyItem() {
-    return {
-      id: 0,
-      sku: '',
-      name: '',
-      category: '',
-      uom: '',
-      costingMethodId: null as number | null,
-      taxCodeId: null as number | null,
-      specs: '',
-      pictureUrl: '',
-      lastCost: null,
-      isActive: true,
-      createdBy: this.userId,
-      updatedBy: this.userId,
-      expiryDate: null as string | null
-    };
-  }
-  private makeEmptyStockDraft(): ItemStockRow {
-    return {
-      warehouseId: null,
-      binId: null,
-      strategyId: null,
-      onHand: null,
-      reserved: null,
-      available: null,
-      min: null,
-      max: null,
-      reorderQty: null,
-      leadTimeDays: null,
-      batchFlag: false,
-      serialFlag: false,
-      isApproved: false,
-      isTransfered: false,
-      stockIssueID: 0,
-      isFullTransfer:false,
-      isPartialTransfer:false,
-      approvedBy:0
-    };
-  }
-  recalcDraft(): void {
-    const onHand = Math.max(0, Number(this.whDraft.onHand || 0));
-    const reserved = Math.max(0, Number(this.whDraft.reserved || 0));
-    this.whDraft.onHand = onHand;
-    this.whDraft.reserved = reserved;
-    this.whDraft.available = Math.max(0, onHand - reserved);
-  }
-
+  /* -------------------- Audits -------------------- */
   loadAudits(): void {
     const id = Number(this.item?.id || 0);
     if (!id) { this.audits = []; return; }
@@ -820,132 +829,7 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  chipStyle(action: string) {
-    const a = (action || '').toUpperCase();
-    const map: any = {
-      CREATE: { bg: '#DCFCE7', color: '#166534', border: '#BBF7D0' },
-      UPDATE: { bg: '#E0F2FE', color: '#075985', border: '#BAE6FD' },
-      DELETE: { bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' }
-    };
-    const s = map[a] || { bg:'#F1F5F9', color:'#334155', border:'#E2E8F0' };
-    return {
-      display:'inline-block',
-      padding:'2px 8px',
-      borderRadius:'9999px',
-      background:s.bg,
-      border:`1px solid ${s.border}`,
-      color:s.color,
-      fontSize:'11px',
-      fontWeight:600
-    };
-  }
-  avatarStyle(_name?: string) {
-    return {
-      display: 'inline-grid',
-      placeItems: 'center',
-      width: '20px',
-      height: '20px',
-      borderRadius: '9999px',
-      fontSize: '10px',
-      fontWeight: 700,
-      color: '#fff',
-      background: this.brand,
-      border: '1px solid #dbe7ee',
-      boxShadow: '0 1px 0 rgba(0,0,0,.03)',
-      marginRight: '6px'
-    } as any;
-  }
-  get userPillStyle() {
-    return {
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '9999px',
-      background: '#F1F5F9',
-      border: '1px solid #E2E8F0',
-      fontSize: '11px',
-      color: '#334155'
-    } as any;
-  }
-  initials(full: string) {
-    if (!full) return '?';
-    const parts = full.trim().split(/\s+/);
-    const first = parts[0]?.[0] || '';
-    const last  = parts[1]?.[0] || '';
-    return (first + last).toUpperCase();
-  }
-  toggleDetails(id: string | number) { this.expandedAudit[id] = !this.expandedAudit[id]; }
-  prettyJson(payload: any): string {
-    if (!payload) return '—';
-    try {
-      const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
-      return JSON.stringify(obj, null, 2);
-    } catch { return String(payload); }
-  }
-  private valueToText(v: any): string {
-    if (v === null || v === undefined) return '—';
-    if (typeof v === 'object') return JSON.stringify(v);
-    return String(v);
-  }
-  safeParse(x: any) {
-    if (!x) return null;
-    try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return x; }
-  }
-
-  async copyJson(a: any) {
-    const k = String(a.auditId ?? a.occurredAtUtc ?? '');
-    this.busy[k] = true;
-    const payload = {
-      action: a.action,
-      occurredAtUtc: a.occurredAtUtc,
-      user: a.userName || a.userId,
-      before: this.safeParse(a.oldValuesJson),
-      after: this.safeParse(a.newValuesJson)
-    };
-    const text = JSON.stringify(payload, null, 2);
-
-    try {
-      if ((navigator as any).clipboard?.writeText) {
-        await (navigator as any).clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      this.copied[k] = true;
-      setTimeout(()=> this.copied[k] = false, 1500);
-    } catch {
-      Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'Copy failed', showConfirmButton: false, timer: 1500 });
-    } finally { this.busy[k] = false; }
-  }
-
-  keyOf(a: any, index: number): string {
-    return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
-  }
-  isExpanded(a: any, index: number): boolean {
-    return !!this.expandedAudit[this.keyOf(a, index)];
-  }
-  isUpdate(a: any): boolean {
-    return (a?.action || '').toString().toUpperCase() === 'UPDATE';
-  }
-  diffs(a: any): Array<{ field: string; before: any; after: any }> {
-    const oldObj = this.safeParse(a?.oldValuesJson) || {};
-    const newObj = this.safeParse(a?.newValuesJson) || {};
-    if (typeof oldObj !== 'object' || typeof newObj !== 'object') return [];
-    const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
-    return keys
-      .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
-      .map(k => ({
-        field: k,
-        before: this.valueToText((oldObj as any)[k]),
-        after:  this.valueToText((newObj as any)[k]),
-      }));
-  }
-
   /* ----------------- BOM logic ----------------- */
-
   private loadBomSnapshotOrFallback(): void {
     const id = Number(this.item?.id || 0);
     if (!this.isEdit || !id) { this.syncBomFromPrices(); return; }
@@ -1032,7 +916,7 @@ export class CreateItemMasterComponent implements OnInit {
       supplierName: this.supplierList.find(s => String(s.id) === String(r.supplierId))?.name ?? '',
       existingCost: Number(r.existingCost ?? 0),
       unitCost: Number(r.unitCost ?? r.existingCost ?? 0),
-      createdDate: r.createdDate,
+      createdDate: r.createdDate
     });
 
     for (const r of rows) {
@@ -1056,7 +940,7 @@ export class CreateItemMasterComponent implements OnInit {
       supplierId: r.supplierId,
       supplierName: this.supplierList.find(s => String(s.id) === String(r.supplierId))?.name ?? '—',
       existingCost: Number(r.existingCost ?? 0),
-      unitCost: Number(r.unitCost ?? r.existingCost ?? 0),
+      unitCost: Number(r.unitCost ?? r.existingCost ?? 0)
     }));
     this.recomputeBomTotalsInline();
   }
@@ -1073,14 +957,12 @@ export class CreateItemMasterComponent implements OnInit {
     const next: BomInlineRow[] = (this.prices || [])
       .filter(p => p.price != null)
       .map(p => {
-        const supplierId   = p.SupplierId ?? null;
+        const supplierId = p.SupplierId ?? null;
         const supplierName = p.supplierName ?? null;
         const existingCost = Number(p.price || 0);
         const key = `${String(supplierId ?? '')}::${norm(supplierName)}`;
         const prev = prevByKey.get(key);
-        const unitCost = preserve && prev && prev.unitCost != null
-          ? Number(prev.unitCost)
-          : existingCost;
+        const unitCost = preserve && prev && prev.unitCost != null ? Number(prev.unitCost) : existingCost;
         return { supplierId, supplierName, existingCost, unitCost };
       });
 
@@ -1088,56 +970,27 @@ export class CreateItemMasterComponent implements OnInit {
     this.recomputeBomTotalsInline();
   }
 
-  applyBomToPrices(): void {
-    if (!this.bomRows?.length || !this.prices?.length) return;
-    const norm = (s: any) => String(s ?? '').trim().toLowerCase();
-    const mapById = new Map<string, number>();
-    const mapByName = new Map<string, number>();
-
-    for (const r of this.bomRows) {
-      const cost = Number((r.unitCost ?? r.existingCost ?? 0));
-      if (r.supplierId != null) mapById.set(String(r.supplierId), cost);
-      if (r.supplierName) mapByName.set(norm(r.supplierName), cost);
-    }
-
-    this.prices = this.prices.map(p => {
-      const idKey = p.SupplierId != null ? String(p.SupplierId) : '';
-      const nameKey = norm(p.supplierName);
-      let nextPrice: number | null = null;
-      if (idKey && mapById.has(idKey)) nextPrice = mapById.get(idKey)!;
-      else if (nameKey && mapByName.has(nameKey)) nextPrice = mapByName.get(nameKey)!;
-      if (nextPrice == null) return p;
-      return { ...p, price: nextPrice };
-    });
-  }
-
-  addBomRow(): void {
-    this.bomRows = [...this.bomRows, { supplierId: null, supplierName: null, existingCost: 0, unitCost: null }];
-    this.recomputeBomTotalsInline();
-  }
-  removeBomRow(i: number): void {
-    this.bomRows = this.bomRows.filter((_, idx) => idx !== i);
-    this.recomputeBomTotalsInline();
-  }
   recomputeBomTotalsInline(): void {
     const roll = (this.bomRows || []).reduce((sum, r) => sum + Number(r.unitCost || 0), 0);
     this.bomTotals = { rollup: this.toNum(roll, 6), count: this.bomRows.length };
   }
+
   private toNum(v: any, dp = 6): number {
     const n = Number(v ?? 0);
     if (!isFinite(n)) return 0;
     const p = Math.pow(10, dp);
     return Math.round(n * p) / p;
   }
-  trackByIdx = (i: number, _l: any) => i;
 
   /* Navigation */
   onGoToItemList(): void {
     this.router.navigate(['/Inventory/List-itemmaster']);
   }
+
   private isOnReviewStep(): boolean {
     return (this.isEdit && this.step === this.lastStepIndex);
   }
+
   private maybeScrollToReviewBottom() {
     if (!this.isOnReviewStep()) return;
     setTimeout(() => {
@@ -1145,53 +998,64 @@ export class CreateItemMasterComponent implements OnInit {
     }, 0);
   }
 
-  getLast3CostsForSupplier(supplierId: number | string | null): Array<{ value: number; when: Date }> {
-    const sid = Number(supplierId ?? 0);
-    if (!sid) return [];
-    const hist = this.bomHistoryBySupplier.get(sid) ?? [];
-    if (!hist.length) return [];
-    const sorted = [...hist].sort(
-      (a,b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
-    );
-    const seen = new Set<string>();
-    const out: Array<{ value: number; when: Date }> = [];
-    for (const h of sorted) {
-      const val = Number((h.unitCost ?? h.existingCost) ?? 0);
-      const key = val.toFixed(4);
-      if (!seen.has(key)) {
-        out.push({ value: val, when: new Date(h.createdDate) });
-        seen.add(key);
-      }
-      if (out.length >= 3) break;
-    }
-    return out;
-  }
-  isCurrentCost(curr: number | null | undefined, val: number | null | undefined): boolean {
-    const a = Number(curr ?? 0);
-    const b = Number(val ?? 0);
-    return a.toFixed(4) === b.toFixed(4);
-  }
-
-  deltaVsPrev(supplierId: number | string | null, current: number | null | undefined) {
-    const arr = this.getLast3CostsForSupplier(supplierId) || [];
-    const prev = arr.length > 1 ? Number(arr[1].value ?? 0) : Number(arr[0]?.value ?? 0);
-    const curr = Number(current ?? 0);
-    const abs  = curr - prev;
-    const pct  = prev !== 0 ? (abs / prev) * 100 : 0;
-    const dir  = abs > 0 ? 'up' : abs < 0 ? 'down' : 'flat';
+  /* Small utilities */
+  private makeEmptyItem() {
     return {
-      abs: Math.abs(abs),
-      pct: Math.abs(pct),
-      dir,
-      tooltip: dir === 'flat' ? 'No change vs previous' :
-               dir === 'up'   ? 'Increased vs previous' :
-                                'Decreased vs previous'
+      id: 0,
+
+      // ✅ NEW fields used in your HTML
+      itemCode: '',
+      itemName: '',
+      itemType: null as ItemType,
+      categoryId: null as number | null,
+      uomId: null as number | null,
+      budgetLineId: null as number | null,
+
+      // keep old fields too (for existing API)
+      sku: '',
+      name: '',
+      category: '',
+      uom: '',
+
+      costingMethodId: null as number | null,
+      taxCodeId: null as number | null,
+      specs: '',
+      pictureUrl: '',
+      lastCost: null,
+      isActive: true,
+      createdBy: this.userId,
+      updatedBy: this.userId,
+      expiryDate: null as string | null
     };
   }
 
-  deltaColorStyle(delta: {dir:'up'|'down'|'flat'}): any {
-    if (delta.dir === 'up')   return {'border-color':'#fecaca','background':'#fff1f2','color':'#991b1b'};
-    if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
-    return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
+  private makeEmptyStockDraft(): ItemStockRow {
+    return {
+      warehouseId: null,
+      binId: null,
+      strategyId: null,
+      onHand: null,
+      reserved: null,
+      available: null,
+      min: null,
+      max: null,
+      reorderQty: null,
+      leadTimeDays: null,
+      batchFlag: false,
+      serialFlag: false,
+      isApproved: false,
+      isTransfered: false,
+      stockIssueID: 0,
+      isFullTransfer: false,
+      isPartialTransfer: false,
+      approvedBy: 0
+    };
   }
+   loadCatagory() {
+      this.CategoryService.getAllCatagory().subscribe((res: any) => {
+        // Filter only active ones
+        this.CategoryList = res.data.filter((item: any) => item.isActive === true);
+       
+      });
+    }
 }

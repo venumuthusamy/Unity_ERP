@@ -160,7 +160,7 @@
               <th class="px-3 py-2 text-left">Qty</th>
               <th class="px-3 py-2 text-left">UOM</th>
               <th class="px-3 py-2 text-left">Location</th>
-              <th class="px-3 py-2 text-left">LedgerName</th>
+              <!-- <th class="px-3 py-2 text-left">LedgerName</th> -->
               <th class="px-3 py-2 text-left">Remarks</th>
               <th class="px-3 py-2 text-right">Action</th>
             </tr>
@@ -282,9 +282,9 @@
                   <span>Location</span><span class="text-right truncate">
                     {{ l['loc'] || l['location'] || l['locationSearch'] || '-' }}
                   </span>
-                  <span>Ledger</span><span class="text-right font-semibold text-[#0e3a4c]">
+                  <!-- <span>Ledger</span><span class="text-right font-semibold text-[#0e3a4c]">
                     {{ l['budget'] || '-' }}
-                  </span>
+                  </span> -->
                 </div>
               </div>
             </div>
@@ -444,10 +444,10 @@
         </div>
 
         <!-- Budget -->
-        <div class="prl-col-12 prl-md-6">
+        <!-- <div class="prl-col-12 prl-md-6">
           <label class="prl-label">Ledger Name</label>
           <input type="text" name="budget" [(ngModel)]="modalLine.budget" [disabled]="isItemSelected" class="prl-input" />
-        </div>
+        </div> -->
 
         <!-- Remarks -->
         <div class="prl-col-12">
@@ -518,7 +518,7 @@
           </select>
         </div>
 
-        <div class="prl-col-12 prl-md-6 prl-dropdown">
+        <!-- <div class="prl-col-12 prl-md-6 prl-dropdown">
           <label class="prl-label">Ledger Name</label>
           <select
             class="prl-input"
@@ -529,7 +529,7 @@
             <option value="" disabled selected>Select Ledger</option>
             <option *ngFor="let head of parentHeadList" [value]="head.value">{{ head.label }}</option>
           </select>
-        </div>
+        </div> -->
       </div>
 
       <div class="prl-foot">
