@@ -8,12 +8,6 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
-
-import {
-  QuotationHeader,
-  QuotationLine,
-  QuotationsService
-} from '../quotations.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { UomService } from 'app/main/master/uom/uom.service';
@@ -21,6 +15,7 @@ import { CountriesService } from 'app/main/master/countries/countries.service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { CurrencyService } from 'app/main/master/currency/currency.service';
 import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
+import {  QuotationHeader, QuotationLine,QuotationsService } from '../quotations.service';
 
 // ---------- Types ----------
 type SimpleItem = {
@@ -32,8 +27,6 @@ type SimpleItem = {
   catagoryName: string;
 };
 
-// Stored values & UI labels:
-// "Standard-Rated" / "Zero-Rated" / "Exempt"
 type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
 
 type Country = { id: number; countryName: string; gstPercentage: number };
@@ -45,6 +38,10 @@ type DiscountType = 'VALUE' | 'PERCENT';
 
 type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
   uomId: number | null;
+
+  // ✅ NEW: Description column (QuotationLine.Description)
+  description?: string;
+
   taxMode?: LineTaxMode;
   taxCodeId?: number | null;
   lineNet?: number;
@@ -52,7 +49,10 @@ type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
   lineTotal?: number;
 };
 
-type UiQuotationHeader = QuotationHeader & {
+type UiQuotationHeader = Omit<QuotationHeader, 'validityDate'> & {
+  // ✅ NEW: DeliveryDate (Quotation.DeliveryDate)
+  deliveryDate: string | null;
+
   taxPct?: number;
   countryId?: number | null;
   currency?: string;
@@ -84,7 +84,10 @@ export class QuotationscreateComponent implements OnInit {
     currencyId: 0,
     fxRate: 1,
     paymentTermsId: 0,
-    validityDate: null,
+
+    // ✅ delivery date
+    deliveryDate: null,
+
     subtotal: 0,
     taxAmount: 0,
     rounding: 0,
@@ -92,10 +95,12 @@ export class QuotationscreateComponent implements OnInit {
     needsHodApproval: false,
     remarks: '',
     lines: [],
+
     taxPct: 0,
     countryId: null,
     currency: '',
     paymentTerms: '',
+
     discountType: 'PERCENT',
     discountInput: 0,
     docDiscount: 0,
@@ -129,6 +134,7 @@ export class QuotationscreateComponent implements OnInit {
 
   showModal = false;
   editingIndex: number | null = null;
+
   modal: {
     itemId: number | null;
     itemSearch: string;
@@ -137,7 +143,10 @@ export class QuotationscreateComponent implements OnInit {
     unitPrice: number;
     discountPct: number;
     taxMode: LineTaxMode;
-    remarks: string;
+
+    // ✅ NEW
+    description: string;
+
     dropdownOpen: boolean;
     filteredItems: SimpleItem[];
   } = {
@@ -148,10 +157,11 @@ export class QuotationscreateComponent implements OnInit {
     unitPrice: 0,
     discountPct: 0,
     taxMode: 'Standard-Rated',
-    remarks: '',
+    description: '',
     dropdownOpen: false,
     filteredItems: []
   };
+
   modalPreview: { net: number; tax: number; total: number } | null = null;
 
   private editId: number | null = null;
@@ -170,7 +180,6 @@ export class QuotationscreateComponent implements OnInit {
   ) {}
 
   // -------- TaxMode → TaxCodeId mapping --------------
-  // 1 = Standard rated, 2 = Zero-rated, 3 = Exempt / No GST
   private taxModeToTaxCodeId(mode?: LineTaxMode): number {
     switch (mode) {
       case 'Standard-Rated':
@@ -184,14 +193,9 @@ export class QuotationscreateComponent implements OnInit {
     }
   }
 
-  // === Tax mode helpers (dropdown options based on GST) ===
   get taxModesForCurrentGst(): LineTaxMode[] {
     const gst = +this.header.taxPct || 0;
-    // GST 9% => all 3 options
-    if (gst === 9) {
-      return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
-    }
-    // Any other GST => Only Zero-Rated
+    if (gst === 9) return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
     return ['Zero-Rated'];
   }
 
@@ -211,33 +215,16 @@ export class QuotationscreateComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent) {
     const t = ev.target as Node;
-    if (
-      this.customerDdOpen &&
-      this.customerBox &&
-      !this.customerBox.nativeElement.contains(t)
-    ) {
+    if (this.customerDdOpen && this.customerBox && !this.customerBox.nativeElement.contains(t)) {
       this.customerDdOpen = false;
     }
-    if (
-      this.currencyDdOpen &&
-      this.currencyBox &&
-      !this.currencyBox.nativeElement.contains(t)
-    ) {
+    if (this.currencyDdOpen && this.currencyBox && !this.currencyBox.nativeElement.contains(t)) {
       this.currencyDdOpen = false;
     }
-    if (
-      this.paymentTermsDdOpen &&
-      this.paymentBox &&
-      !this.paymentBox.nativeElement.contains(t)
-    ) {
+    if (this.paymentTermsDdOpen && this.paymentBox && !this.paymentBox.nativeElement.contains(t)) {
       this.paymentTermsDdOpen = false;
     }
-    if (
-      this.showModal &&
-      this.modal.dropdownOpen &&
-      this.modalItemBox &&
-      !this.modalItemBox.nativeElement.contains(t)
-    ) {
+    if (this.showModal && this.modal.dropdownOpen && this.modalItemBox && !this.modalItemBox.nativeElement.contains(t)) {
       this.modal.dropdownOpen = false;
     }
   }
@@ -253,6 +240,8 @@ export class QuotationscreateComponent implements OnInit {
     if (!v) return null;
     const d = typeof v === 'string' ? new Date(v) : v;
     if (isNaN(d.getTime())) return null;
+
+    // yyyy-mm-dd for <input type="date">
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
       .toISOString()
       .slice(0, 10);
@@ -290,15 +279,19 @@ export class QuotationscreateComponent implements OnInit {
       const discAmount = Number(dto.docDiscount ?? dto.discount ?? 0) || 0;
       const discType = (dto.discountType as DiscountType) || 'PERCENT';
 
+      // ✅ Support both old validityDate + new deliveryDate (backward compatibility)
+      const incomingDate = dto.deliveryDate ?? dto.DeliveryDate ?? dto.validityDate ?? dto.ValidityDate;
+
       this.header = {
         ...this.header,
         ...dto,
         customerId: Number(dto.customerId ?? this.header.customerId ?? 0),
         currencyId: Number(dto.currencyId ?? this.header.currencyId ?? 0),
-        paymentTermsId: Number(
-          dto.paymentTermsId ?? this.header.paymentTermsId ?? 0
-        ),
-        validityDate: this.toDateInput(dto.validityDate),
+        paymentTermsId: Number(dto.paymentTermsId ?? this.header.paymentTermsId ?? 0),
+
+        // ✅ set delivery date
+        deliveryDate: this.toDateInput(incomingDate),
+
         discountType: discType,
         discountInput:
           discType === 'PERCENT'
@@ -311,58 +304,45 @@ export class QuotationscreateComponent implements OnInit {
       (this.header as any).id = Number(dto.id);
 
       if (dto.customerName) this.customerSearch = String(dto.customerName);
+
       if (dto.currencyName || dto.currency) {
         this.header.currency = String(dto.currencyName ?? dto.currency);
         this.currencySearch = this.header.currency!;
       }
+
       if (dto.paymentTermsName || dto.paymentTerms) {
-        this.header.paymentTerms = String(
-          dto.paymentTermsName ?? dto.paymentTerms
-        );
+        this.header.paymentTerms = String(dto.paymentTermsName ?? dto.paymentTerms);
         this.paymentTermsSearch = this.header.paymentTerms!;
       }
 
       const apiLines = dto.lines ?? [];
       this.lines = apiLines.map((l: any) => {
-        // Map any old codes (EXCLUSIVE/INCLUSIVE/EXEMPT) to new labels
         const rawMode = String(l.taxMode ?? l.TaxMode ?? '').toUpperCase();
         let taxMode: LineTaxMode;
 
-        if (
-          rawMode === 'EXCLUSIVE' ||
-          rawMode === 'STANDARD-RATED' ||
-          rawMode === 'STANDARD_RATED'
-        ) {
+        if (rawMode === 'EXCLUSIVE' || rawMode === 'STANDARD-RATED' || rawMode === 'STANDARD_RATED') {
           taxMode = 'Standard-Rated';
-        } else if (
-          rawMode === 'INCLUSIVE' ||
-          rawMode === 'ZERO-RATED' ||
-          rawMode === 'ZERO_RATED'
-        ) {
+        } else if (rawMode === 'INCLUSIVE' || rawMode === 'ZERO-RATED' || rawMode === 'ZERO_RATED') {
           taxMode = 'Zero-Rated';
         } else if (rawMode === 'EXEMPT' || rawMode === 'NO GST') {
           taxMode = 'Exempt';
         } else {
-          taxMode =
-            this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated';
+          taxMode = this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated';
         }
 
         return {
           itemId: Number(l.itemId ?? l.ItemId ?? 0),
           itemName: String(l.itemName ?? l.ItemName ?? ''),
-          uomId:
-            (l.uomId ?? l.UomId ?? null) !== null
-              ? Number(l.uomId ?? l.UomId)
-              : null,
+          uomId: (l.uomId ?? l.UomId ?? null) !== null ? Number(l.uomId ?? l.UomId) : null,
           qty: Number(l.qty ?? l.Qty ?? 0),
           unitPrice: Number(l.unitPrice ?? l.UnitPrice ?? 0),
           discountPct: Number(l.discountPct ?? l.DiscountPct ?? 0),
+
+          // ✅ Description support (new + fallback from old Remarks)
+          description: String(l.description ?? l.Description ?? l.remarks ?? l.Remarks ?? ''),
+
           taxMode,
-          taxCodeId:
-            l.taxCodeId ??
-            l.TaxCodeId ??
-            this.taxModeToTaxCodeId(taxMode),
-          remarks: String(l.remarks ?? l.Remarks ?? ''),
+          taxCodeId: l.taxCodeId ?? l.TaxCodeId ?? this.taxModeToTaxCodeId(taxMode),
           lineNet: Number(l.lineNet ?? l.LineNet ?? 0),
           lineTax: Number(l.lineTax ?? l.LineTax ?? 0),
           lineTotal: Number(l.lineTotal ?? l.LineTotal ?? 0)
@@ -449,9 +429,7 @@ export class QuotationscreateComponent implements OnInit {
       })) as PaymentTermsRow[];
 
       if (this.header.paymentTermsId) {
-        const row = this.paymentTermsSrv.find(
-          x => x.id === this.header.paymentTermsId
-        );
+        const row = this.paymentTermsSrv.find(x => x.id === this.header.paymentTermsId);
         if (row) {
           this.header.paymentTerms = row.name;
           this.paymentTermsSearch = row.name;
@@ -489,11 +467,10 @@ export class QuotationscreateComponent implements OnInit {
 
     const country =
       this.countries.find(c => c.id === (cust?.countryId ?? -1)) || null;
-    this.activeCustomerCountry = country;
 
+    this.activeCustomerCountry = country;
     this.header.taxPct = country?.gstPercentage ?? 0;
 
-    // 🔹 If GST is not 9, force all lines to Zero-Rated
     const gst = +this.header.taxPct || 0;
     if (gst !== 9) {
       this.lines.forEach(l => {
@@ -538,9 +515,7 @@ export class QuotationscreateComponent implements OnInit {
     const q = (this.paymentTermsSearch || '').trim().toLowerCase();
     this.filteredPaymentTerms = !q
       ? this.paymentTermsSrv.slice()
-      : this.paymentTermsSrv.filter(p =>
-          p.name.toLowerCase().includes(q)
-        );
+      : this.paymentTermsSrv.filter(p => p.name.toLowerCase().includes(q));
     this.paymentTermsDdOpen = true;
   }
 
@@ -590,11 +565,7 @@ export class QuotationscreateComponent implements OnInit {
     const discountAmt = gross * (discP / 100);
     const afterDisc = gross - discountAmt;
 
-    // 🔹 GST logic:
-    // Standard-Rated -> header.taxPct
-    // Zero-Rated / Exempt -> 0%
-    const rate =
-      l.taxMode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
+    const rate = l.taxMode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
 
     const lineNet = afterDisc;
     const lineTax = rate > 0 ? (afterDisc * rate) / 100 : 0;
@@ -626,7 +597,6 @@ export class QuotationscreateComponent implements OnInit {
 
     const rounding = this.header.rounding || 0;
 
-    // -------- Document level discount --------
     let discountAmt: number;
 
     if (this.header.discountManual) {
@@ -643,17 +613,14 @@ export class QuotationscreateComponent implements OnInit {
     }
 
     if (discountAmt < 0) discountAmt = 0;
-    if (discountAmt > this.header.subtotal)
-      discountAmt = this.header.subtotal;
+    if (discountAmt > this.header.subtotal) discountAmt = this.header.subtotal;
 
     this.header.docDiscount = this.round2(discountAmt);
 
     if (!this.header.discountManual) {
       if (this.header.discountType === 'PERCENT') {
         if (this.header.subtotal > 0) {
-          this.header.discountInput = this.round2(
-            (discountAmt * 100) / this.header.subtotal
-          );
+          this.header.discountInput = this.round2((discountAmt * 100) / this.header.subtotal);
         } else {
           this.header.discountInput = 0;
         }
@@ -663,9 +630,7 @@ export class QuotationscreateComponent implements OnInit {
     }
 
     const netAfterDiscount = this.header.subtotal - this.header.docDiscount;
-    this.header.grandTotal = this.round2(
-      netAfterDiscount + this.header.taxAmount + rounding
-    );
+    this.header.grandTotal = this.round2(netAfterDiscount + this.header.taxAmount + rounding);
     this.header.needsHodApproval = hod;
   }
 
@@ -675,39 +640,28 @@ export class QuotationscreateComponent implements OnInit {
     if (open) {
       const q = (this.modal.itemSearch || '').trim().toLowerCase();
       this.modal.filteredItems = q
-        ? this.itemsList.filter(
-            it =>
-              (it.itemName || '').toLowerCase().includes(q) ||
-              (it.itemCode || '').toLowerCase().includes(q)
+        ? this.itemsList.filter(it =>
+            (it.itemName || '').toLowerCase().includes(q) ||
+            (it.itemCode || '').toLowerCase().includes(q)
           )
         : this.itemsList.slice(0, 50);
-      setTimeout(
-        () => this.itemSearchInput?.nativeElement?.focus(),
-        0
-      );
+
+      setTimeout(() => this.itemSearchInput?.nativeElement?.focus(), 0);
     }
   }
 
   filterModalItems(): void {
-    const text = this.modal.itemSearch || '';
-    const q = text.trim().toLowerCase();
+    const q = (this.modal.itemSearch || '').trim().toLowerCase();
 
-    if (
-      !q ||
-      (this.modal.itemId &&
-        !this.getItemName(this.modal.itemId)
-          ?.toLowerCase()
-          .includes(q))
-    ) {
+    if (!q || (this.modal.itemId && !this.getItemName(this.modal.itemId)?.toLowerCase().includes(q))) {
       this.modal.itemId = null;
       this.modal.uomId = null;
     }
 
     this.modal.filteredItems = q
-      ? this.itemsList.filter(
-          it =>
-            (it.itemName || '').toLowerCase().includes(q) ||
-            (it.itemCode || '').toLowerCase().includes(q)
+      ? this.itemsList.filter(it =>
+          (it.itemName || '').toLowerCase().includes(q) ||
+          (it.itemCode || '').toLowerCase().includes(q)
         )
       : this.itemsList.slice(0, 50);
 
@@ -773,8 +727,7 @@ export class QuotationscreateComponent implements OnInit {
     const base = qty * price * (1 - disc / 100);
     const mode = this.modal.taxMode as LineTaxMode;
 
-    const rate =
-      mode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
+    const rate = mode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
 
     const net = base;
     const tax = rate > 0 ? (base * rate) / 100 : 0;
@@ -796,9 +749,11 @@ export class QuotationscreateComponent implements OnInit {
       uomId: null,
       unitPrice: 0,
       discountPct: 0,
-      // If GST 9 → Standard-Rated, otherwise Zero-Rated
       taxMode: this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated',
-      remarks: '',
+
+      // ✅ description reset
+      description: '',
+
       dropdownOpen: false,
       filteredItems: []
     };
@@ -811,14 +766,16 @@ export class QuotationscreateComponent implements OnInit {
     const l = this.lines[i];
     this.modal = {
       itemId: l.itemId || null,
-      itemSearch:
-        (l as any).itemName || this.getItemName(l.itemId) || '',
+      itemSearch: (l as any).itemName || this.getItemName(l.itemId) || '',
       qty: l.qty || null,
       uomId: l.uomId ?? null,
       unitPrice: l.unitPrice || 0,
       discountPct: l.discountPct || 0,
       taxMode: (l.taxMode as LineTaxMode) || 'Standard-Rated',
-      remarks: (l as any).remarks || '',
+
+      // ✅ take description from line
+      description: l.description ?? '',
+
       dropdownOpen: false,
       filteredItems: []
     };
@@ -834,11 +791,7 @@ export class QuotationscreateComponent implements OnInit {
 
   onModalContainer(ev: MouseEvent) {
     const t = ev.target as Node;
-    if (
-      this.modal.dropdownOpen &&
-      this.modalItemBox &&
-      !this.modalItemBox.nativeElement.contains(t)
-    ) {
+    if (this.modal.dropdownOpen && this.modalItemBox && !this.modalItemBox.nativeElement.contains(t)) {
       this.modal.dropdownOpen = false;
     }
     ev.stopPropagation();
@@ -854,6 +807,7 @@ export class QuotationscreateComponent implements OnInit {
       });
       return;
     }
+
     const payload: UiLine = {
       itemId: this.modal.itemId!,
       itemName: this.modal.itemSearch,
@@ -861,20 +815,22 @@ export class QuotationscreateComponent implements OnInit {
       qty: +this.modal.qty!,
       unitPrice: +this.modal.unitPrice || 0,
       discountPct: +this.modal.discountPct || 0,
-      remarks: this.modal.remarks ?? '',
+
+      // ✅ save description into line
+      description: (this.modal.description || '').trim(),
+
       taxMode: this.modal.taxMode || 'Standard-Rated',
       taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
     };
 
     this.computeLine(payload);
+
     if (this.editingIndex === null) {
       this.lines.push(payload);
     } else {
-      this.lines[this.editingIndex] = {
-        ...this.lines[this.editingIndex],
-        ...payload
-      };
+      this.lines[this.editingIndex] = { ...this.lines[this.editingIndex], ...payload };
     }
+
     this.computeTotals();
     this.closeModal();
   }
@@ -884,46 +840,43 @@ export class QuotationscreateComponent implements OnInit {
     this.computeTotals();
   }
 
-  // ---------- Actions ----------
-  submit() {
-    this.header.status = 1;
-  }
-  approve() {
-    this.header.status = 2;
-  }
-  reject() {
-    this.header.status = 3;
-  }
-  post() {
-    this.header.status = 4;
-  }
-
   // ---------- Save ----------
   save() {
     const dto: any = {
       ...this.header,
+
+      // ✅ new field
+      deliveryDate: this.header.deliveryDate,
+
+      // ✅ keep old key also (if API still expects validityDate for some time)
+      validityDate: this.header.deliveryDate,
+
       discountType: this.header.discountType,
       docDiscount: this.header.docDiscount,
       discountInput: this.header.discountInput,
       currencyId: this.header.currencyId ?? null,
       paymentTermsId: this.header.paymentTermsId ?? null,
+
       lines: this.lines.map(l => ({
         ...l,
+
+        // ✅ send Description for DB column
+        description: (l.description || '').trim(),
+
+        // ✅ keep old key fallback if backend uses Remarks
+        remarks: (l.description || '').trim(),
+
         uomId: l.uomId ?? null,
         qty: +l.qty,
         unitPrice: +l.unitPrice,
         discountPct: +l.discountPct,
         taxMode: l.taxMode || 'Standard-Rated',
-        taxCodeId:
-          l.taxCodeId ?? this.taxModeToTaxCodeId(l.taxMode)
+        taxCodeId: l.taxCodeId ?? this.taxModeToTaxCodeId(l.taxMode)
       }))
     };
 
     if (!dto.number || !dto.number.trim?.()) {
-      dto.number = `QT-${new Date()
-        .toISOString()
-        .replace(/\D/g, '')
-        .slice(0, 14)}`;
+      dto.number = `QT-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
     }
 
     if (dto.id) {
@@ -948,8 +901,7 @@ export class QuotationscreateComponent implements OnInit {
     } else {
       this.qt.create(dto).subscribe({
         next: (res: any) => {
-          const id =
-            res && typeof res === 'object' ? res.data : res;
+          const id = res && typeof res === 'object' ? res.data : res;
           Swal.fire({
             icon: 'success',
             title: 'Saved',

@@ -39,6 +39,7 @@ type SoHeader = {
   subtotal?: number;
   grandTotal?: number;
 };
+
 export interface PeriodStatusDto {
   isLocked: boolean;
   periodName?: string;
@@ -46,6 +47,7 @@ export interface PeriodStatusDto {
   startDate?: string;
   endDate?: string;
 }
+
 @Component({
   selector: 'app-sales-order-list',
   templateUrl: './sales-order-list.component.html',
@@ -82,8 +84,10 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     total: true,
     lockedQty: true
   };
+
   isPeriodLocked = false;
   currentPeriodName = '';
+
   getLinesColsCount(): number {
     return 1 + Object.values(this.lineCols).filter(Boolean).length; // 1 for Item
   }
@@ -92,7 +96,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     private salesOrderService: SalesOrderService,
     private router: Router,
     private datePipe: DatePipe,
-     private periodService: PeriodCloseService
+    private periodService: PeriodCloseService
   ) {}
 
   ngOnInit(): void {
@@ -101,9 +105,11 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     this.loadRequests();
     this.prefetchDraftsCount(); // show Drafts badge immediately
   }
+
   ngAfterViewInit(): void { feather.replace(); }
   ngAfterViewChecked(): void { feather.replace(); }
-private checkPeriodLockForDate(dateStr: string): void {
+
+  private checkPeriodLockForDate(dateStr: string): void {
     if (!dateStr) { return; }
 
     this.periodService.getStatusForDateWithName(dateStr).subscribe({
@@ -128,6 +134,20 @@ private checkPeriodLockForDate(dateStr: string): void {
       'warning'
     );
   }
+
+  // ✅ MAIN FIX helper
+  // Shortage row identify: warehouseId null (or 0) and lockedQty > 0
+  displayDraftQty(r: any): number {
+    const wh = r?.warehouseId;
+    const qty = Number(r?.quantity ?? 0);
+    const locked = Number(r?.lockedQty ?? 0);
+
+    const isShortageRow = (wh == null || wh === 0) && locked > 0;
+
+    // If shortage row, show locked as qty (balance qty)
+    return isShortageRow ? locked : qty;
+  }
+
   // ---------- Data load ----------
   loadRequests(): void {
     this.salesOrderService.getSO().subscribe({
@@ -176,6 +196,7 @@ private checkPeriodLockForDate(dateStr: string): void {
       default: return (v ?? '').toString();
     }
   }
+
   statusClass(row: SoHeader): string {
     const v = Number(row?.status ?? row?.approvalStatus);
     return v === 1 ? 'badge-warning'
@@ -183,6 +204,7 @@ private checkPeriodLockForDate(dateStr: string): void {
          : v === 3 ? 'badge-primary'
          : 'badge-secondary';
   }
+
   isRowLocked(row: SoHeader): boolean {
     const v = row?.approvalStatus ?? row?.status;
     if (v == null) return false;
@@ -193,6 +215,7 @@ private checkPeriodLockForDate(dateStr: string): void {
     const code = Number(v);
     return [2, 3].includes(code);
   }
+
   canApprove(row: SoHeader): boolean {
     const status = Number(row?.status ?? row?.approvalStatus);
     const isActive = (row?.isActive ?? true) === true || row?.isActive === 1;
@@ -200,23 +223,28 @@ private checkPeriodLockForDate(dateStr: string): void {
   }
 
   // ---------- Routing / CRUD ----------
-  openCreate(): void { 
+  openCreate(): void {
     if (this.isPeriodLocked) {
       this.showPeriodLockedSwal('create Purchase Requests');
       return;
     }
-    this.router.navigate(['/Sales/Sales-Order-create']); }
-  editSO(row: SoHeader): void { 
+    this.router.navigate(['/Sales/Sales-Order-create']);
+  }
+
+  editSO(row: SoHeader): void {
     if (this.isPeriodLocked) {
       this.showPeriodLockedSwal('edit Purchase Requests');
       return;
     }
-    this.router.navigateByUrl(`/Sales/Sales-Order-edit/${row.id}`); }
+    this.router.navigateByUrl(`/Sales/Sales-Order-edit/${row.id}`);
+  }
+
   deletePO(id: number): void {
     if (this.isPeriodLocked) {
       this.showPeriodLockedSwal('delete Purchase Requests');
       return;
     }
+
     Swal.fire({
       title: 'Are you sure?',
       text: 'This will permanently delete the Sales Order.',
@@ -246,7 +274,12 @@ private checkPeriodLockForDate(dateStr: string): void {
     }).then(res => {
       if (!res.isConfirmed) return;
       this.salesOrderService.approveSO(row.id, 1).subscribe({
-        next: () => { row.status = 2; row.approvalStatus = 2; row.approvedBy = 1; Swal.fire('Approved', 'Sales Order approved successfully.', 'success'); },
+        next: () => {
+          row.status = 2;
+          row.approvalStatus = 2;
+          row.approvedBy = 1;
+          Swal.fire('Approved', 'Sales Order approved successfully.', 'success');
+        },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to approve Sales Order.', 'error'); }
       });
     });
@@ -289,6 +322,7 @@ private checkPeriodLockForDate(dateStr: string): void {
     this.modalTotal = total;
     this.showLinesModal = true;
   }
+
   closeLinesModal(): void { this.showLinesModal = false; }
 
   // ---------- Drafts ----------
@@ -315,5 +349,6 @@ private checkPeriodLockForDate(dateStr: string): void {
       error: (err) => { this.draftLoading = false; console.error(err); }
     });
   }
+
   closeDrafts(): void { this.showDraftsModal = false; }
 }

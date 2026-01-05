@@ -21,7 +21,7 @@
               entries
             </label>
           </div>
- 
+
           <!-- middle: search (smaller + push to right) -->
           <div class="search-wrap">
             <input [(ngModel)]="searchValue" name="searchValue" type="search"
@@ -38,23 +38,19 @@
               <span *ngIf="draftCount > 0" class="notif-count">{{ draftCount }}</span>
             </button>
 
-            <!-- <button (click)="openCreate()" class="btn btn-add">
-              <i data-feather="plus-circle" class="me-1"></i>
-              <span>Add</span>
-            </button> -->
             <button
-                  (click)="openCreate()"
-                  class="btn m-1 d-inline-flex align-items-center"
-                  style="background-color:#2E5F73;color:white;gap:6px;"
-                  [disabled]="isPeriodLocked"
-                  [attr.title]="isPeriodLocked
-                    ? (currentPeriodName
-                        ? 'Period ' + currentPeriodName + ' is locked'
-                        : 'Accounting period is locked')
-                    : 'Create Purchase Request'">
-                  <i data-feather="plus-circle" class="w-4 h-4"></i>
-                  <span>Add</span>
-                </button>
+              (click)="openCreate()"
+              class="btn m-1 d-inline-flex align-items-center"
+              style="background-color:#2E5F73;color:white;gap:6px;"
+              [disabled]="isPeriodLocked"
+              [attr.title]="isPeriodLocked
+                ? (currentPeriodName
+                    ? 'Period ' + currentPeriodName + ' is locked'
+                    : 'Accounting period is locked')
+                : 'Create Purchase Request'">
+              <i data-feather="plus-circle" class="w-4 h-4"></i>
+              <span>Add</span>
+            </button>
           </div>
         </div>
 
@@ -80,13 +76,14 @@
           </ngx-datatable-column>
 
           <ngx-datatable-column name="SO Number" prop="salesOrderNo" [width]="140"></ngx-datatable-column>
+
           <ngx-datatable-column name="Customer Name" prop="customerName" [width]="210">
-          <ng-template let-row="row" ngx-datatable-cell-template>
-            <div class="po-wrap-cell" [title]="row.customerName">
-              {{ row.customerName || '-' }}
-            </div>
-          </ng-template>
-        </ngx-datatable-column>
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              <div class="po-wrap-cell" [title]="row.customerName">
+                {{ row.customerName || '-' }}
+              </div>
+            </ng-template>
+          </ngx-datatable-column>
 
           <ngx-datatable-column name="Requested Date" prop="requestedDate" [width]="150">
             <ng-template let-row="row" ngx-datatable-cell-template>
@@ -118,7 +115,7 @@
             </ng-template>
           </ngx-datatable-column>
 
-           <!-- Approval -->
+          <!-- Approval -->
           <ngx-datatable-column name="Approval" [width]="170">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <button *ngIf="row.status === 1"
@@ -137,40 +134,32 @@
           </ngx-datatable-column>
 
           <!-- Edit/Delete -->
-         <ngx-datatable-column name="Action" [width]="120">
-  <ng-template let-row="row" ngx-datatable-cell-template>
+          <ngx-datatable-column name="Action" [width]="120">
+            <ng-template let-row="row" ngx-datatable-cell-template>
 
-    <!-- Locked when row is locked -->
-    <ng-container *ngIf="isRowLocked(row); else actionsEnabled">
-      <i
-        class="fas fa-pen text-gray-300 mr-2"
-        title="Disabled for approved/rejected SO">
-      </i>
-      <i
-        class="fas fa-trash text-gray-300"
-        title="Disabled for approved/rejected SO">
-      </i>
-    </ng-container>
+              <!-- Locked when row is locked -->
+              <ng-container *ngIf="isRowLocked(row); else actionsEnabled">
+                <i class="fas fa-pen text-gray-300 mr-2" title="Disabled for approved/rejected SO"></i>
+                <i class="fas fa-trash text-gray-300" title="Disabled for approved/rejected SO"></i>
+              </ng-container>
 
-    <!-- Normal state -->
-    <ng-template #actionsEnabled>
-      <i
-        class="fas fa-pen text-success mr-2"
-        style="cursor: pointer;"
-        (click)="editSO(row)"
-        title="Edit">
-      </i>
+              <!-- Normal state -->
+              <ng-template #actionsEnabled>
+                <i class="fas fa-pen text-success mr-2"
+                   style="cursor: pointer;"
+                   (click)="editSO(row)"
+                   title="Edit">
+                </i>
 
-      <i
-        class="fas fa-trash text-danger"
-        style="cursor: pointer;"
-        (click)="deletePO(row.id)"
-        title="Delete">
-      </i>
-    </ng-template>
+                <i class="fas fa-trash text-danger"
+                   style="cursor: pointer;"
+                   (click)="deletePO(row.id)"
+                   title="Delete">
+                </i>
+              </ng-template>
 
-  </ng-template>
-</ngx-datatable-column>
+            </ng-template>
+          </ngx-datatable-column>
 
         </ngx-datatable>
       </div>
@@ -242,8 +231,10 @@
       </div>
       <button (click)="closeDrafts()" aria-label="Close" class="modal-close">×</button>
     </div>
+
     <div class="modal-body">
       <div *ngIf="draftLoading" class="draft-loading">Loading…</div>
+
       <div *ngIf="!draftLoading" class="lines-wrap">
         <table class="lines-table">
           <thead>
@@ -251,7 +242,10 @@
               <th>SO No</th>
               <th>Item</th>
               <th>UOM</th>
+
+              <!-- ✅ Qty heading stays Qty (but shows LockedQty for shortage rows) -->
               <th class="num">Qty</th>
+
               <th class="num">WH Id</th>
               <th class="num">Bin Id</th>
               <th class="num">Supplier Id</th>
@@ -259,18 +253,23 @@
               <th class="num">LockedQty</th>
             </tr>
           </thead>
+
           <tbody>
             <tr *ngFor="let r of draftRows; let i = index" [class.alt]="i % 2 === 0">
               <td>{{ r.salesOrderNo }}</td>
               <td>{{ r.itemName }}</td>
               <td>{{ r.uom || '-' }}</td>
-              <td class="num">{{ r.quantity }}</td>
+
+              <!-- ✅ MAIN FIX: if shortage row (no warehouse), show LockedQty as Qty -->
+              <td class="num">{{ displayDraftQty(r) }}</td>
+
               <td class="num">{{ r.warehouseId ?? '-' }}</td>
               <td class="num">{{ r.binId ?? '-' }}</td>
               <td class="num">{{ r.supplierId ?? '-' }}</td>
               <td class="reason">{{ r.reason }}</td>
               <td class="num">{{ r.lockedQty ?? 0 }}</td>
             </tr>
+
             <tr *ngIf="!draftRows?.length">
               <td colspan="9" class="empty">No drafts</td>
             </tr>
@@ -278,6 +277,7 @@
         </table>
       </div>
     </div>
+
     <div class="modal-foot">
       <button (click)="closeDrafts()" class="btn-close">Close</button>
     </div>
