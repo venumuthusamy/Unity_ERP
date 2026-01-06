@@ -7,9 +7,9 @@ import Swal from 'sweetalert2';
 export interface ItemMaster {
   id: number;
   sku: string;
-  name: string;
-  category?: string;
-  uom?: string;
+  itemName: string;
+  catagoryName?: string;
+  uomName?: string;
   wareHouse?: string; // matches your payload key
   // add other keys if your API returns them (e.g., bin, brand, etc.)
 }
@@ -80,9 +80,9 @@ export class ItemMasterListComponent implements OnInit {
     this.filteredRows = this.rows.filter(r => {
       const id = String(r.id ?? '').toLowerCase();
       const sku = String(r.sku ?? '').toLowerCase();
-      const name = String(r.name ?? '').toLowerCase();
-      const cat = String(r.category ?? '').toLowerCase();
-      const uom = String(r.uom ?? '').toLowerCase();
+      const name = String(r.itemName ?? '').toLowerCase();
+      const cat = String(r.catagoryName ?? '').toLowerCase();
+      const uom = String(r.uomName ?? '').toLowerCase();
       const wh  = String(r.wareHouse ?? '').toLowerCase();
 
       return (

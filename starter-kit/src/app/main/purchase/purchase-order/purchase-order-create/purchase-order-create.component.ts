@@ -71,6 +71,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   userId: string;
   mastersLoaded = false;
   disabledButton: boolean;
+  showShipping: boolean = false;
 
   formatDate(date: Date | string): string {
     if (!date) return '';
@@ -239,6 +240,11 @@ export class PurchaseOrderCreateComponent implements OnInit {
           const selectedCurrency = this.currencies?.find((d: any) => d.id === this.poHdr.currencyId);
           if (selectedCurrency) {
             this.searchTexts['currency'] = selectedCurrency.currencyName;
+            if(selectedCurrency.currencyName?.trim().toUpperCase() === "SGD"){
+              this.showShipping = false
+            }else{
+              this.showShipping = true
+            }
           }
           const selectedIncoterms = this.incoterms?.find((d: any) => d.id === this.poHdr.incotermsId);
           if (selectedIncoterms) {
@@ -583,8 +589,10 @@ export class PurchaseOrderCreateComponent implements OnInit {
         if(this.poHdr.currencyName === 'SGD'){
         const foundGst = this.countries.find(x => x.id === item.countryId);
         this.poHdr.tax = foundGst?.gstPercentage;
+        this.showShipping = false
         }else{
           this.poHdr.tax = 0
+          this.showShipping = true
         }
         
          
@@ -1042,7 +1050,11 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
   const ship = Number(shipping) || 0;
   const hdrDisc = Number(headerDiscount) || 0;
 
-  const shippingWithTax = ship + (ship * gst / 100);
+  const foundGst = this.countries.find(
+  x => x.countryName?.toLowerCase() === 'singapore'
+  );
+
+  const shippingWithTax = ship + (ship * (foundGst?.gstPercentage) / 100);
 
   // ✅ Net Total always based on line.total
   const netTotal = linesGrandTotal - hdrDisc + shippingWithTax;
