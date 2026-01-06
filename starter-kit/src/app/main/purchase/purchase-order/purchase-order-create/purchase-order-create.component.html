@@ -428,7 +428,7 @@
                 </div>
 
                 <!-- Shipping cost input -->
-                <div class="flex justify-between items-center gap-2">
+                <div *ngIf = "showShipping" class="flex justify-between items-center gap-2">
                     <span>Shipping Cost</span>
                     <input type="number" class="w-24 rounded-xl border px-2 py-1 text-sm text-right"
                         [(ngModel)]="poHdr.shipping" (keydown)="allowOnlyNumbers($event)"
@@ -443,7 +443,7 @@
                 </div> -->
 
                 <!-- New: Shipping + Tax -->
-                <div class="flex items-center justify-between gap-2">
+                <div *ngIf = "showShipping" class="flex items-center justify-between gap-2">
                     <span>Shipping + TaxPctAmt</span>
                     <span class="inline-block w-28 text-right px-1">
                         {{ poTotals.shippingWithTax.toFixed(2) }}
