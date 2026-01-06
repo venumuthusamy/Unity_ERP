@@ -70,6 +70,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
   private draftId: number | null = null;
   userId: string;
   mastersLoaded = false;
+  disabledButton: boolean;
 
   formatDate(date: Date | string): string {
     if (!date) return '';
@@ -500,6 +501,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
   setApprovalStatus(status) {
     debugger
+    this.disabledButton = true
     this.poHdr.approvalStatus = status;
     // this.notify(`PO ${status} at ${this.poHdr.approvalLevel} level`);
     this.saveRequest()
@@ -578,8 +580,13 @@ export class PurchaseOrderCreateComponent implements OnInit {
         this.poHdr.fxRate = this.poHdr.currencyName === 'SGD' ? 1 : 0;
         this.searchTexts['currency'] = this.poHdr.currencyName;
 
+        if(this.poHdr.currencyName === 'SGD'){
         const foundGst = this.countries.find(x => x.id === item.countryId);
         this.poHdr.tax = foundGst?.gstPercentage;
+        }else{
+          this.poHdr.tax = 0
+        }
+        
          
         const foundTerms = this.paymentTerms.find(x => x.id === item.termsId);
         this.searchTexts['paymentTerms'] = foundTerms.paymentTermsName;
@@ -827,7 +834,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
       item: '',
       description: '',
       budget: '',
-      recurring: '',
+      // recurring: '',
       taxCode: '',
       // location: '',
       // contactNumber: '',
@@ -997,42 +1004,61 @@ export class PurchaseOrderCreateComponent implements OnInit {
   //   };
   // }
 
-  calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
-    let subTotal = 0;
-    let lineDiscountTotal = 0;
-    let lineTaxTotal = 0;
+calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
+  let subTotal = 0;                 // display subtotal
+  let lineDiscountTotal = 0;        // display discount
+  let lineTaxTotal = 0;
+  let linesGrandTotal = 0;
 
-    for (const l of lines || []) {
+  const gst = Math.max(0, +this.poHdr.tax || 0);
+  const gstFactor = gst > 0 ? (1 + gst / 100) : 1;
+
+  for (const l of lines || []) {
+    const tax = Number(l.taxAmount) || 0;
+    const disc = Number(l.discountAmount) || 0; // currently tax-included for inclusive
+    const total = Number(l.total) || 0;
+
+    const mode = (this.getTaxFlag(l) || '').toString().toUpperCase();
+
+    lineTaxTotal += tax;
+    linesGrandTotal += total;
+
+    if (mode === 'INCLUSIVE' && gst > 0 && tax > 0) {
+      // ✅ Convert to EXCL TAX (to look like Exclusive summary)
+
+      const afterDiscExclTax = total - tax;         // (incl total - tax) => excl after discount
+      const discExclTax = disc / gstFactor;         // ✅ discount shown like exclusive
+      const beforeDiscExclTax = afterDiscExclTax + discExclTax;
+
+      subTotal += beforeDiscExclTax;
+      lineDiscountTotal += discExclTax;             // ✅ FIX
+    } else {
+      // ✅ keep old behavior for Exclusive/Exempt
       subTotal += Number(l.baseAmount) || 0;
-      lineDiscountTotal += Number(l.discountAmount) || 0;
-      lineTaxTotal += Number(l.taxAmount) || 0;
+      lineDiscountTotal += disc;
     }
-
-    const ship = Number(shipping) || 0;
-    const hdrDisc = Number(headerDiscount) || 0;
-
-
-    // const shippingTax = 0;
-    const gst = Number(this.poHdr.tax) || 0;
-    const shippingWithTax = ship + (ship * gst / 100);
-
-    const netTotal =
-      subTotal
-      - lineDiscountTotal
-      - hdrDisc
-      + lineTaxTotal
-      + shippingWithTax;
-
-    return {
-      subTotal: this.round(subTotal),
-      lineDiscountTotal: this.round(lineDiscountTotal),
-      lineTaxTotal: this.round(lineTaxTotal),
-      shipping: this.round(ship),
-      // shippingTax: this.round(shippingTax),
-      shippingWithTax: this.round(shippingWithTax),
-      netTotal: this.round(netTotal)
-    };
   }
+
+  const ship = Number(shipping) || 0;
+  const hdrDisc = Number(headerDiscount) || 0;
+
+  const shippingWithTax = ship + (ship * gst / 100);
+
+  // ✅ Net Total always based on line.total
+  const netTotal = linesGrandTotal - hdrDisc + shippingWithTax;
+
+  return {
+    subTotal: this.round(subTotal),
+    lineDiscountTotal: this.round(lineDiscountTotal),
+    lineTaxTotal: this.round(lineTaxTotal),
+    shipping: this.round(ship),
+    shippingWithTax: this.round(shippingWithTax),
+    netTotal: this.round(netTotal)
+  };
+}
+
+
+
 
 
   round(val: number) {
@@ -1255,11 +1281,24 @@ export class PurchaseOrderCreateComponent implements OnInit {
       event.preventDefault();
     }
   }
-  sanitizeNumberInput(field: string, index: number) {
-    this.poLines[index][field] = this.poLines[index][field]
-      ?.toString()
-      .replace(/\D/g, '') || '';
+ sanitizeNumberInput(field: string, index: number) {
+  let val = (this.poLines[index][field] ?? '').toString();
+
+  // allow only digits and dot
+  val = val.replace(/[^0-9.]/g, '');
+
+  // keep only first dot
+  const firstDot = val.indexOf('.');
+  if (firstDot !== -1) {
+    val =
+      val.substring(0, firstDot + 1) +
+      val.substring(firstDot + 1).replace(/\./g, '');
   }
+
+  this.poLines[index][field] = val;
+}
+
+
 
   private getTaxFlag(line: any): 'EXCLUSIVE' | 'INCLUSIVE' | 'EXEMPT' {
     const txt = (line?.taxCode || '').toString().toUpperCase();

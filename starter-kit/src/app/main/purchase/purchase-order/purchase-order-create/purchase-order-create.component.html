@@ -219,7 +219,7 @@
                         <!-- <th class="text-left px-3 py-2 font-medium whitespace-nowrap">LedgerName</th> -->
                         <!-- <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Location</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Contact Number</th> -->
-                        <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Recurring</th>
+                        <!-- <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Recurring</th> -->
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Tax Code</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Qty</th>
                         <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Unit Price</th>
@@ -310,7 +310,7 @@
                             <input class="w-[150px] rounded-xl border px-3 py-2 text-sm"
                                 [(ngModel)]="poLines[i]['contactNumber']" placeholder="contactNumber" disabled />
                         </td> -->
-                        <td class="px-3 py-2 relative dropdown-cell">
+                        <!-- <td class="px-3 py-2 relative dropdown-cell">
                             <input type="text" [(ngModel)]="poLines[i].recurring" (focus)="openDropdown(i, 'recurring')"
                                 (input)="filterOptions(i, 'recurring')" placeholder="Search Recurring..."
                                 class="w-[150px] rounded-xl border px-3 py-2 text-sm" />
@@ -323,7 +323,7 @@
                                     {{ option.recurringName }}
                                 </div>
                             </div>
-                        </td>
+                        </td> -->
 
                         <!-- Tax Code column -->
                         <td class="px-3 py-2 relative dropdown-cell">
@@ -350,13 +350,13 @@
 
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['price']" (keydown)="allowOnlyNumbers($event)"
+                                [(ngModel)]="poLines[i]['price']" 
                                 (input)="sanitizeNumberInput('price', i); calculateLineTotal(poLines[i])" />
                         </td>
 
                         <td class="px-3 py-2">
                             <input type="number" class="w-[100px] rounded-xl border px-3 py-2 text-sm"
-                                [(ngModel)]="poLines[i]['discount']" (keydown)="allowOnlyNumbers($event)"
+                                [(ngModel)]="poLines[i]['discount']" 
                                 (input)="sanitizeNumberInput('discount', i); calculateLineTotal(poLines[i])" />
                         </td>
 
@@ -498,14 +498,16 @@
             </div>
 
             <button class="px-3 py-2 rounded-xl text-sm font-medium border text-yellow-700 hover:bg-yellow-50"
-                (mouseenter)="hover = true" (mouseleave)="hover = false" type="button" (click)="setApprovalStatus(1)">
+                (mouseenter)="hover = true" (mouseleave)="hover = false" type="button" (click)="setApprovalStatus(1)"
+                [disabled]="disabledButton">
                 Pending
             </button>
 
             <!-- Approve Button -->
             <button class="px-3 py-2 rounded-xl text-sm font-medium text-white" style="background-color: #2E5F73"
                 (mouseenter)="hover = true" (mouseleave)="hover = false"
-                [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" type="button" (click)="setApprovalStatus(2)">
+                [style.backgroundColor]="hover ? '#092f3f' : '#2E5F73'" type="button" (click)="setApprovalStatus(2)"
+                [disabled]="disabledButton">
                 Approve
             </button>
 
