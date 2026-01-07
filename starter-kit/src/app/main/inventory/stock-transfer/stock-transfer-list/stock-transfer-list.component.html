@@ -78,10 +78,10 @@
           </ngx-datatable-column>
 
           <ngx-datatable-column name="Item Name" prop="name" [width]="160"></ngx-datatable-column>
-          <ngx-datatable-column name="From Warehouse" prop="fromWarehouseName" [width]="180"></ngx-datatable-column>
+          <ngx-datatable-column name="From Outlet" prop="fromWarehouseName" [width]="180"></ngx-datatable-column>
 
           <!-- To Warehouse -->
-          <ngx-datatable-column name="To Warehouse" [width]="180">
+          <ngx-datatable-column name="To Outlet" [width]="180">
             <ng-template ngx-datatable-cell-template let-row="row">
               {{ row?.toWarehouseName && row.toWarehouseName.trim() ? row.toWarehouseName : '—' }}
             </ng-template>

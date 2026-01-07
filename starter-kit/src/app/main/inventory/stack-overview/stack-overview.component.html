@@ -29,12 +29,12 @@
     <div class="row g-3 align-items-end">
       <!-- Warehouse -->
       <div class="col-sm-6 col-md-3">
-        <label class="form-label">Warehouse</label>
+        <label class="form-label">Outlet</label>
         <ng-select
           [items]="warehouses"
           bindLabel="name"
           bindValue="id"
-          placeholder="Search warehouse"
+          placeholder="Search Outlet"
           [(ngModel)]="selectedWarehouse"
           (ngModelChange)="applyFilters()"
           class="w-100">
@@ -89,7 +89,7 @@
                  (change)="toggleAll($event)">
         </th>
         <th style="background-color:#2E5F73;color:white;">Supplier Name</th>
-        <th style="background-color:#2E5F73;color:white;">Warehouse</th>
+        <th style="background-color:#2E5F73;color:white;">Outlet</th>
         <th style="background-color:#2E5F73;color:white;">Item</th>
         <th style="background-color:#2E5F73;color:white;">SKU</th>
         <th style="background-color:#2E5F73;color:white;">Bin</th>
@@ -148,7 +148,7 @@
 
       <div class="small text-danger mt-1"
            *ngIf="selectedKeys.size > 0 && (!sameWarehouseSelected || !sameSupplierSelected)">
-        Select items from a single <b>warehouse</b> and a single <b>supplier</b> to enable Transfer.
+        Select items from a single <b>Outlet</b> and a single <b>supplier</b> to enable Transfer.
       </div>
     </div>
   </div>

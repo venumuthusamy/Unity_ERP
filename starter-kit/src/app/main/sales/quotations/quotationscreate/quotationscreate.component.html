@@ -70,7 +70,7 @@
         </small>
       </div>
 
-      <!-- ✅ Delivery Date (ValidityDate replaced) -->
+      <!-- Delivery Date -->
       <div class="col-md-3">
         <label class="text-xs font-medium text-gray-600">
           Delivery Date
@@ -187,6 +187,30 @@
           Derived from customer's country.
         </small>
       </div>
+
+      <!-- ✅ Delivery To (NEW) -->
+      <div class="col-md-6">
+        <label class="form-label form-label-xs">Delivery To</label>
+        <textarea
+          class="form-control"
+          rows="2"
+          [(ngModel)]="header.deliveryTo"
+          name="deliveryTo"
+          placeholder="Enter delivery address / delivery location..."
+        ></textarea>
+      </div>
+
+      <!-- ✅ Remarks (NEW header textarea) -->
+      <div class="col-md-6">
+        <label class="form-label form-label-xs">Remarks</label>
+        <textarea
+          class="form-control"
+          rows="2"
+          [(ngModel)]="header.remarks"
+          name="remarks"
+          placeholder="Enter remarks..."
+        ></textarea>
+      </div>
     </div>
 
     <!-- Lines -->
@@ -218,7 +242,6 @@
               {{ l.itemName || getItemName(l.itemId) || '(select)' }}
             </td>
 
-            <!-- ✅ Description binding -->
             <td>
               {{ l.description || '-' }}
             </td>
@@ -431,7 +454,7 @@
           </small>
         </div>
 
-        <!-- ✅ Description (modal) -->
+        <!-- Description -->
         <div class="prl-col-12">
           <label class="prl-label">Description</label>
           <textarea
