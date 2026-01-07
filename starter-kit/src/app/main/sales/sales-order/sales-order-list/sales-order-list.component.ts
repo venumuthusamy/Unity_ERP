@@ -13,9 +13,12 @@ type SoLine = {
   salesOrderId?: number;
   itemId?: number;
   itemName?: string;
+  item?: string;
   uom?: string;
   quantity?: number;
+  qty?: number;
   unitPrice?: number;
+  price?: number;
   discount?: number;
   tax?: string | number;
   total?: number;
@@ -79,8 +82,8 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     uom: true,
     qty: true,
     unitPrice: true,
-    discount: true,
-    tax: true,
+    discount: false,
+    tax: false,
     total: true,
     lockedQty: true
   };
@@ -103,7 +106,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     const today = new Date().toISOString().substring(0, 10);
     this.checkPeriodLockForDate(today);
     this.loadRequests();
-    this.prefetchDraftsCount(); // show Drafts badge immediately
+    this.prefetchDraftsCount(); // badge immediately
   }
 
   ngAfterViewInit(): void { feather.replace(); }
@@ -118,7 +121,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
         this.currentPeriodName = res?.periodName || '';
       },
       error: () => {
-        // if fails, UI side don’t hard-lock; backend will still protect
         this.isPeriodLocked = false;
         this.currentPeriodName = '';
       }
@@ -135,17 +137,12 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     );
   }
 
-  // ✅ MAIN FIX helper
-  // Shortage row identify: warehouseId null (or 0) and lockedQty > 0
-  displayDraftQty(r: any): number {
-    const wh = r?.warehouseId;
-    const qty = Number(r?.quantity ?? 0);
+  // ✅ NEW: shortage = ordered - allocated
+  getShortageQty(r: any): number {
+    const qty = Number(r?.quantity ?? r?.qty ?? 0);
     const locked = Number(r?.lockedQty ?? 0);
-
-    const isShortageRow = (wh == null || wh === 0) && locked > 0;
-
-    // If shortage row, show locked as qty (balance qty)
-    return isShortageRow ? locked : qty;
+    const s = qty - locked;
+    return s > 0 ? s : 0;
   }
 
   // ---------- Data load ----------
@@ -171,6 +168,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
       const delDateStr = this.datePipe.transform(d.deliveryDate, 'dd-MM-yyyy')?.toLowerCase() || '';
       const statusCode = (d.approvalStatus ?? d.status);
       const statusStr = this.statusToText(statusCode).toLowerCase();
+
       return (
         !val ||
         soNo.includes(val) ||
@@ -197,14 +195,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     }
   }
 
-  statusClass(row: SoHeader): string {
-    const v = Number(row?.status ?? row?.approvalStatus);
-    return v === 1 ? 'badge-warning'
-         : v === 2 ? 'badge-success'
-         : v === 3 ? 'badge-primary'
-         : 'badge-secondary';
-  }
-
   isRowLocked(row: SoHeader): boolean {
     const v = row?.approvalStatus ?? row?.status;
     if (v == null) return false;
@@ -216,16 +206,10 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     return [2, 3].includes(code);
   }
 
-  canApprove(row: SoHeader): boolean {
-    const status = Number(row?.status ?? row?.approvalStatus);
-    const isActive = (row?.isActive ?? true) === true || row?.isActive === 1;
-    return isActive && status === 1;
-  }
-
   // ---------- Routing / CRUD ----------
   openCreate(): void {
     if (this.isPeriodLocked) {
-      this.showPeriodLockedSwal('create Purchase Requests');
+      this.showPeriodLockedSwal('create Sales Orders');
       return;
     }
     this.router.navigate(['/Sales/Sales-Order-create']);
@@ -233,21 +217,21 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
 
   editSO(row: SoHeader): void {
     if (this.isPeriodLocked) {
-      this.showPeriodLockedSwal('edit Purchase Requests');
+      this.showPeriodLockedSwal('edit Sales Orders');
       return;
     }
     this.router.navigateByUrl(`/Sales/Sales-Order-edit/${row.id}`);
   }
 
-  deletePO(id: number): void {
+  deleteSO(id: number): void {
     if (this.isPeriodLocked) {
-      this.showPeriodLockedSwal('delete Purchase Requests');
+      this.showPeriodLockedSwal('delete Sales Orders');
       return;
     }
 
     Swal.fire({
       title: 'Are you sure?',
-      text: 'This will permanently delete the Sales Order.',
+      text: 'This will delete the Sales Order (soft delete).',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -279,6 +263,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
           row.approvalStatus = 2;
           row.approvedBy = 1;
           Swal.fire('Approved', 'Sales Order approved successfully.', 'success');
+          this.prefetchDraftsCount(); // refresh badge
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to approve Sales Order.', 'error'); }
       });
@@ -295,7 +280,13 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     }).then(res => {
       if (!res.isConfirmed) return;
       this.salesOrderService.rejectSO(row.id).subscribe({
-        next: () => { row.isActive = false; Swal.fire('Rejected', 'Sales Order rejected and lines unlocked.', 'success'); },
+        next: () => {
+          row.status = 3;
+          row.approvalStatus = 3;
+          row.isActive = false;
+          Swal.fire('Rejected', 'Sales Order rejected and lines unlocked.', 'success');
+          this.prefetchDraftsCount(); // refresh badge
+        },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to reject Sales Order.', 'error'); }
       });
     });
@@ -303,10 +294,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
 
   // ---------- Lines modal ----------
   openLinesModal(row: SoHeader): void {
-    // Example: hide discount & tax
-    this.lineCols.discount = false;
-    this.lineCols.tax = false;
-
     let lines: SoLine[] = [];
     try {
       if (Array.isArray(row?.lineItems)) lines = row.lineItems as SoLine[];
@@ -341,7 +328,10 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
       next: (res) => {
         this.draftRows = (res?.data ?? []).map((x: any) => ({
           ...x,
-          reason: 'Warehouse and Supplier is not in the item'
+          // reason message (you can change)
+          reason: this.getShortageQty(x) > 0
+            ? 'Insufficient stock / allocation incomplete'
+            : 'Allocation missing (WH/SUP/BIN)'
         }));
         this.draftLoading = false;
         this.showDraftsModal = true;
