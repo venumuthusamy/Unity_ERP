@@ -15,7 +15,7 @@ import { CountriesService } from 'app/main/master/countries/countries.service';
 import { CustomerMasterService } from 'app/main/businessPartners/customer-master/customer-master.service';
 import { CurrencyService } from 'app/main/master/currency/currency.service';
 import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
-import {  QuotationHeader, QuotationLine,QuotationsService } from '../quotations.service';
+import { QuotationHeader, QuotationLine, QuotationsService } from '../quotations.service';
 
 // ---------- Types ----------
 type SimpleItem = {
@@ -38,8 +38,6 @@ type DiscountType = 'VALUE' | 'PERCENT';
 
 type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
   uomId: number | null;
-
-  // ✅ NEW: Description column (QuotationLine.Description)
   description?: string;
 
   taxMode?: LineTaxMode;
@@ -50,8 +48,11 @@ type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
 };
 
 type UiQuotationHeader = Omit<QuotationHeader, 'validityDate'> & {
-  // ✅ NEW: DeliveryDate (Quotation.DeliveryDate)
   deliveryDate: string | null;
+
+  // ✅ NEW header textarea fields
+  remarks?: string;
+  deliveryTo?: string;
 
   taxPct?: number;
   countryId?: number | null;
@@ -85,7 +86,6 @@ export class QuotationscreateComponent implements OnInit {
     fxRate: 1,
     paymentTermsId: 0,
 
-    // ✅ delivery date
     deliveryDate: null,
 
     subtotal: 0,
@@ -93,7 +93,11 @@ export class QuotationscreateComponent implements OnInit {
     rounding: 0,
     grandTotal: 0,
     needsHodApproval: false,
+
+    // ✅ NEW
     remarks: '',
+    deliveryTo: '',
+
     lines: [],
 
     taxPct: 0,
@@ -143,10 +147,7 @@ export class QuotationscreateComponent implements OnInit {
     unitPrice: number;
     discountPct: number;
     taxMode: LineTaxMode;
-
-    // ✅ NEW
     description: string;
-
     dropdownOpen: boolean;
     filteredItems: SimpleItem[];
   } = {
@@ -215,6 +216,7 @@ export class QuotationscreateComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent) {
     const t = ev.target as Node;
+
     if (this.customerDdOpen && this.customerBox && !this.customerBox.nativeElement.contains(t)) {
       this.customerDdOpen = false;
     }
@@ -279,7 +281,6 @@ export class QuotationscreateComponent implements OnInit {
       const discAmount = Number(dto.docDiscount ?? dto.discount ?? 0) || 0;
       const discType = (dto.discountType as DiscountType) || 'PERCENT';
 
-      // ✅ Support both old validityDate + new deliveryDate (backward compatibility)
       const incomingDate = dto.deliveryDate ?? dto.DeliveryDate ?? dto.validityDate ?? dto.ValidityDate;
 
       this.header = {
@@ -289,8 +290,11 @@ export class QuotationscreateComponent implements OnInit {
         currencyId: Number(dto.currencyId ?? this.header.currencyId ?? 0),
         paymentTermsId: Number(dto.paymentTermsId ?? this.header.paymentTermsId ?? 0),
 
-        // ✅ set delivery date
         deliveryDate: this.toDateInput(incomingDate),
+
+        // ✅ NEW header fields
+        remarks: String(dto.remarks ?? dto.Remarks ?? this.header.remarks ?? ''),
+        deliveryTo: String(dto.deliveryTo ?? dto.DeliveryTo ?? this.header.deliveryTo ?? ''),
 
         discountType: discType,
         discountInput:
@@ -338,7 +342,6 @@ export class QuotationscreateComponent implements OnInit {
           unitPrice: Number(l.unitPrice ?? l.UnitPrice ?? 0),
           discountPct: Number(l.discountPct ?? l.DiscountPct ?? 0),
 
-          // ✅ Description support (new + fallback from old Remarks)
           description: String(l.description ?? l.Description ?? l.remarks ?? l.Remarks ?? ''),
 
           taxMode,
@@ -635,107 +638,72 @@ export class QuotationscreateComponent implements OnInit {
   }
 
   // ---------- Modal / items ----------
+  trackByItemId = (_: number, it: SimpleItem) => it.id;
+
   onModalItemFocus(open: boolean = true): void {
     this.modal.dropdownOpen = open;
     if (open) {
       const q = (this.modal.itemSearch || '').trim().toLowerCase();
       this.modal.filteredItems = q
-        ? this.itemsList.filter(it =>
-            (it.itemName || '').toLowerCase().includes(q) ||
-            (it.itemCode || '').toLowerCase().includes(q)
-          )
-        : this.itemsList.slice(0, 50);
-
-      setTimeout(() => this.itemSearchInput?.nativeElement?.focus(), 0);
+        ? this.itemsList.filter(x => (x.itemName || '').toLowerCase().includes(q)).slice(0, 100)
+        : this.itemsList.slice(0, 100);
     }
   }
 
-  filterModalItems(): void {
+  filterModalItems() {
     const q = (this.modal.itemSearch || '').trim().toLowerCase();
-
-    if (!q || (this.modal.itemId && !this.getItemName(this.modal.itemId)?.toLowerCase().includes(q))) {
-      this.modal.itemId = null;
-      this.modal.uomId = null;
-    }
-
-    this.modal.filteredItems = q
-      ? this.itemsList.filter(it =>
-          (it.itemName || '').toLowerCase().includes(q) ||
-          (it.itemCode || '').toLowerCase().includes(q)
-        )
-      : this.itemsList.slice(0, 50);
-
+    this.modal.filteredItems = !q
+      ? this.itemsList.slice(0, 100)
+      : this.itemsList
+          .filter(x =>
+            (x.itemName || '').toLowerCase().includes(q) ||
+            (x.itemCode || '').toLowerCase().includes(q)
+          )
+          .slice(0, 100);
     this.modal.dropdownOpen = true;
   }
 
-  trackByItemId = (_: number, row: SimpleItem) => row.id;
-
-  selectModalItem(row: SimpleItem): void {
-    if (!row.itemCode || !row.itemCode.trim()) {
-      this.applySelectedItem(row);
-      return;
-    }
-
-    this.itemsService.checkItemExists(row.itemCode).subscribe({
-      next: (res: any) => {
-        const exists = res?.data === true || res === true;
-        if (exists) {
-          this.applySelectedItem(row);
-        } else {
-          this.clearSelectedItemAndKeepDropdown();
-          Swal.fire({
-            icon: 'warning',
-            title: 'Item not found in ItemMaster',
-            text: 'Please add this item to ItemMaster before proceeding.',
-            confirmButtonColor: '#2E5F73'
-          });
-        }
-      },
-      error: err => {
-        this.clearSelectedItemAndKeepDropdown();
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Failed to verify item existence.',
-          confirmButtonColor: '#d33'
-        });
-        console.error(err);
-      }
-    });
-  }
-
-  private applySelectedItem(row: SimpleItem): void {
+  selectModalItem(row: SimpleItem) {
     this.modal.itemId = row.id;
-    this.modal.itemSearch = row.itemName || '';
-    this.modal.uomId = row.uomId != null ? Number(row.uomId) : null;
+    this.modal.itemSearch = row.itemName;
+    this.modal.uomId = row.uomId ?? null;
+
     this.modal.dropdownOpen = false;
+
+    // focus qty
+    setTimeout(() => {
+      try {
+        this.itemSearchInput?.nativeElement?.blur();
+      } catch {}
+    }, 0);
+
     this.previewLineTotals();
   }
 
-  private clearSelectedItemAndKeepDropdown(): void {
-    this.modal.itemId = null;
-    this.modal.itemSearch = '';
-    this.modal.uomId = null;
-    this.modal.dropdownOpen = true;
-    this.modal.filteredItems = this.itemsList.slice(0, 50);
-  }
-
   previewLineTotals() {
-    const qty = +this.modal.qty || 0;
-    const price = +this.modal.unitPrice || 0;
-    const disc = Math.min(Math.max(+this.modal.discountPct || 0, 0), 100);
-    const base = qty * price * (1 - disc / 100);
-    const mode = this.modal.taxMode as LineTaxMode;
+    if (!this.modal.itemId || !this.modal.qty) {
+      this.modalPreview = null;
+      return;
+    }
 
-    const rate = mode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
+    const tmp: UiLine = {
+      itemId: this.modal.itemId!,
+      itemName: this.modal.itemSearch,
+      uomId: this.modal.uomId ?? null,
+      qty: +this.modal.qty!,
+      unitPrice: +this.modal.unitPrice || 0,
+      discountPct: +this.modal.discountPct || 0,
+      description: (this.modal.description || '').trim(),
+      taxMode: this.modal.taxMode || 'Standard-Rated',
+      taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
+    };
 
-    const net = base;
-    const tax = rate > 0 ? (base * rate) / 100 : 0;
+    this.computeLine(tmp);
 
     this.modalPreview = {
-      net: this.round2(net),
-      tax: this.round2(tax),
-      total: this.round2(net + tax)
+      net: tmp.lineNet || 0,
+      tax: tmp.lineTax || 0,
+      total: tmp.lineTotal || 0
     };
   }
 
@@ -750,10 +718,7 @@ export class QuotationscreateComponent implements OnInit {
       unitPrice: 0,
       discountPct: 0,
       taxMode: this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated',
-
-      // ✅ description reset
       description: '',
-
       dropdownOpen: false,
       filteredItems: []
     };
@@ -764,6 +729,7 @@ export class QuotationscreateComponent implements OnInit {
   openEdit(i: number) {
     this.editingIndex = i;
     const l = this.lines[i];
+
     this.modal = {
       itemId: l.itemId || null,
       itemSearch: (l as any).itemName || this.getItemName(l.itemId) || '',
@@ -772,13 +738,11 @@ export class QuotationscreateComponent implements OnInit {
       unitPrice: l.unitPrice || 0,
       discountPct: l.discountPct || 0,
       taxMode: (l.taxMode as LineTaxMode) || 'Standard-Rated',
-
-      // ✅ take description from line
       description: l.description ?? '',
-
       dropdownOpen: false,
       filteredItems: []
     };
+
     this.previewLineTotals();
     this.showModal = true;
   }
@@ -815,10 +779,7 @@ export class QuotationscreateComponent implements OnInit {
       qty: +this.modal.qty!,
       unitPrice: +this.modal.unitPrice || 0,
       discountPct: +this.modal.discountPct || 0,
-
-      // ✅ save description into line
       description: (this.modal.description || '').trim(),
-
       taxMode: this.modal.taxMode || 'Standard-Rated',
       taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
     };
@@ -845,10 +806,13 @@ export class QuotationscreateComponent implements OnInit {
     const dto: any = {
       ...this.header,
 
-      // ✅ new field
+      // ✅ make sure these go to API
+      remarks: (this.header.remarks || '').trim(),
+      deliveryTo: (this.header.deliveryTo || '').trim(),
+
       deliveryDate: this.header.deliveryDate,
 
-      // ✅ keep old key also (if API still expects validityDate for some time)
+      // optional backward compatibility
       validityDate: this.header.deliveryDate,
 
       discountType: this.header.discountType,
@@ -859,13 +823,8 @@ export class QuotationscreateComponent implements OnInit {
 
       lines: this.lines.map(l => ({
         ...l,
-
-        // ✅ send Description for DB column
         description: (l.description || '').trim(),
-
-        // ✅ keep old key fallback if backend uses Remarks
         remarks: (l.description || '').trim(),
-
         uomId: l.uomId ?? null,
         qty: +l.qty,
         unitPrice: +l.unitPrice,

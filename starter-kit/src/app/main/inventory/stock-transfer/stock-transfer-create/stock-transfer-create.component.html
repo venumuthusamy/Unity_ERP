@@ -28,7 +28,7 @@
               <input type="checkbox" [checked]="allVisibleChecked" (change)="toggleSelectAll($event)"/>
             </th>
 
-            <th style="background:#2E5F73;color:#fff;">WAREHOUSE</th>
+            <th style="background:#2E5F73;color:#fff;">Outlet</th>
             <th style="background:#2E5F73;color:#fff;">SUPPLIER</th>
             <th style="background:#2E5F73;color:#fff;">ITEM</th>
             <th style="background:#2E5F73;color:#fff;">SKU</th>
@@ -92,7 +92,7 @@
     <div class="d-flex align-items-center pt-3 mt-3 border-top">
       <div class="ms-auto d-flex flex-column align-items-end">
         <small *ngIf="selectedCount > 0 && !sameWarehouseSelected" class="text-danger mb-2">
-          Selected rows must be from the same warehouse.
+          Selected rows must be from the same outlet.
         </small>
         <small *ngIf="hasInvalidSelected()" class="text-danger mb-2">
           Fix transfer quantities for selected rows before submitting.
@@ -128,7 +128,7 @@
     <div class="modal-body uxv2__body">
       <div class="row g-4">
         <div class="col-12 col-md-6">
-          <label class="uxv2__label">FROM WAREHOUSE <span class="text-danger">*</span></label>
+          <label class="uxv2__label">FROM Outlet <span class="text-danger">*</span></label>
           <div class="uxv2__chip" [class.is-invalid]="modalTouched && !modal.fromWarehouseId">
             <i class="fas fa-warehouse me-2"></i>
             <span>{{ fromWarehouseName || '—' }}</span>
@@ -137,12 +137,12 @@
         </div>
 
         <div class="col-12 col-md-6">
-          <label class="uxv2__label">TO WAREHOUSE <span class="text-danger">*</span></label>
+          <label class="uxv2__label">TO Outlet <span class="text-danger">*</span></label>
           <ng-select class="uxv2__select"
                      [items]="toWarehouseList"
                      bindLabel="name"
                      bindValue="id"
-                     placeholder="Select warehouse"
+                     placeholder="Select Outlet"
                      [(ngModel)]="modal.toWarehouseId"
                      (change)="onToWarehouseChange(modal.toWarehouseId)"
                      [ngClass]="{'is-invalid': modalTouched && (!modal.toWarehouseId || sameWarehouse())}">
@@ -161,7 +161,7 @@
                      [(ngModel)]="modal.toBinId"
                      [disabled]="!modal.toWarehouseId || toBinLoading"
                      [loading]="toBinLoading"
-                     [notFoundText]="modal.toWarehouseId ? 'No bins found' : 'Select a warehouse first'"
+                     [notFoundText]="modal.toWarehouseId ? 'No bins found' : 'Select a Outlet first'"
                      [ngClass]="{'is-invalid': modalTouched && !modal.toBinId}">
             <ng-template ng-option-tmp let-item="item">
               <div class="d-flex justify-content-between">
