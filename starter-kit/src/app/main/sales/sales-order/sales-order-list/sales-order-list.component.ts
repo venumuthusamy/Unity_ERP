@@ -74,6 +74,9 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   draftLoading = false;
   get draftCount(): number { return this.draftRows?.length || 0; }
 
+  // ✅ NEW: SO ids which have shortage / drafts -> approve disabled
+  private blockedSoIds = new Set<number>();
+
   // SO Lines modal (dynamic columns)
   showLinesModal = false;
   modalLines: SoLine[] = [];
@@ -105,8 +108,11 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   ngOnInit(): void {
     const today = new Date().toISOString().substring(0, 10);
     this.checkPeriodLockForDate(today);
+
     this.loadRequests();
-    this.prefetchDraftsCount(); // badge immediately
+
+    // ✅ IMPORTANT: load drafts cache so approve can be disabled
+    this.prefetchDraftsCount();
   }
 
   ngAfterViewInit(): void { feather.replace(); }
@@ -137,12 +143,40 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     );
   }
 
-  // ✅ NEW: shortage = ordered - allocated
+  // ✅ shortage = ordered - allocated
   getShortageQty(r: any): number {
     const qty = Number(r?.quantity ?? r?.qty ?? 0);
     const locked = Number(r?.lockedQty ?? 0);
     const s = qty - locked;
     return s > 0 ? s : 0;
+  }
+
+  // ✅ NEW: build blockedSoIds from draftRows
+  private rebuildBlockedSoIds(): void {
+    const set = new Set<number>();
+
+    for (const r of (this.draftRows ?? [])) {
+      const soId = Number(r?.salesOrderId ?? 0);
+      if (!soId) continue;
+
+      const shortage = this.getShortageQty(r);
+
+      // if allocation missing or shortage exists => block approve
+      const missingAlloc =
+        (r?.warehouseId == null || r?.warehouseId === 0) ||
+        (r?.supplierId == null || r?.supplierId === 0) ||
+        (r?.binId == null || r?.binId === 0);
+
+      if (shortage > 0 || missingAlloc) set.add(soId);
+    }
+
+    this.blockedSoIds = set;
+  }
+
+  // ✅ NEW: UI helper (used by html)
+  hasInsufficientQty(row: SoHeader): boolean {
+    const id = Number(row?.id ?? 0);
+    return id > 0 && this.blockedSoIds.has(id);
   }
 
   // ---------- Data load ----------
@@ -240,7 +274,11 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     }).then(res => {
       if (!res.isConfirmed) return;
       this.salesOrderService.deleteSO(id, 1).subscribe({
-        next: () => { this.loadRequests(); Swal.fire('Deleted!', 'Sales Order has been deleted.', 'success'); },
+        next: () => {
+          this.loadRequests();
+          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
+          Swal.fire('Deleted!', 'Sales Order has been deleted.', 'success');
+        },
         error: (err) => { console.error(err); Swal.fire('Error', 'Delete failed.', 'error'); }
       });
     });
@@ -248,6 +286,16 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
 
   // ---------- Approve / Reject ----------
   onApprove(row: SoHeader): void {
+    // ✅ BLOCK APPROVE IF shortage exists
+    if (this.hasInsufficientQty(row)) {
+      Swal.fire(
+        'Cannot Approve',
+        'This Sales Order has Insufficient stock / allocation incomplete. Please resolve Draft lines first.',
+        'warning'
+      );
+      return;
+    }
+
     Swal.fire({
       title: 'Approve this Sales Order?',
       text: `SO #${row.salesOrderNo} will be marked as Approved.`,
@@ -263,7 +311,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
           row.approvalStatus = 2;
           row.approvedBy = 1;
           Swal.fire('Approved', 'Sales Order approved successfully.', 'success');
-          this.prefetchDraftsCount(); // refresh badge
+          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to approve Sales Order.', 'error'); }
       });
@@ -285,7 +333,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
           row.approvalStatus = 3;
           row.isActive = false;
           Swal.fire('Rejected', 'Sales Order rejected and lines unlocked.', 'success');
-          this.prefetchDraftsCount(); // refresh badge
+          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to reject Sales Order.', 'error'); }
       });
@@ -316,7 +364,10 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   /** Preload badge on first paint */
   prefetchDraftsCount(): void {
     this.salesOrderService.getDrafts().subscribe({
-      next: (res) => { this.draftRows = (res?.data ?? []); },
+      next: (res) => {
+        this.draftRows = (res?.data ?? []);
+        this.rebuildBlockedSoIds(); // ✅ IMPORTANT
+      },
       error: (err) => console.error('draft count error', err)
     });
   }
@@ -328,11 +379,12 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
       next: (res) => {
         this.draftRows = (res?.data ?? []).map((x: any) => ({
           ...x,
-          // reason message (you can change)
           reason: this.getShortageQty(x) > 0
             ? 'Insufficient stock / allocation incomplete'
             : 'Allocation missing (WH/SUP/BIN)'
         }));
+
+        this.rebuildBlockedSoIds(); // ✅ IMPORTANT
         this.draftLoading = false;
         this.showDraftsModal = true;
       },
