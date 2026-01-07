@@ -19,6 +19,7 @@ type LineRow = { [k: string]: any };
 import * as feather from 'feather-icons';
 import { POTempService } from '../purchase-order-temp.service';
 import { switchMap } from 'rxjs/operators';
+import { ItemMasterService } from 'app/main/inventory/item-master/item-master.service';
 
 @Component({
   selector: 'app-purchase-order-create',
@@ -112,6 +113,109 @@ export class PurchaseOrderCreateComponent implements OnInit {
   isEmpty(v: any): boolean {
     return (v ?? '').toString().trim() === '';
   }
+
+  // default load supplier price for item ///
+    // ✅ cache: itemId -> price rows (supplierId, price...)
+private supplierPriceCache: { [itemId: number]: any[] } = {};
+private loadingPriceFor: { [itemId: number]: boolean } = {};
+
+private normalizeCode(v: any): string {
+  return (v ?? '').toString().trim().toLowerCase();
+}
+
+private getItemIdFromLine(line: any): number {
+  const itemText = (line?.item || '').toString().trim();
+  if (!itemText) return 0;
+
+  // ✅ 1) Best case: your display format is "CODE - NAME" (space-dash-space)
+  let codeFromText = itemText.includes(' - ')
+    ? itemText.split(' - ')[0].trim()
+    : '';
+
+  // ✅ 2) Fallback: if string is like "CS-2586-Ginger Flower" or extra hyphens,
+  // capture first pattern like ABC-1234
+  if (!codeFromText) {
+    const m = itemText.match(/^[A-Za-z0-9]+-\d+/); // ex: CS-2586
+    if (m?.[0]) codeFromText = m[0].trim();
+  }
+
+  // ✅ 3) Last fallback
+  if (!codeFromText) codeFromText = itemText.trim();
+
+  const code = this.normalizeCode(codeFromText);
+  if (!code) return 0;
+
+  const found = (this.allItems || []).find((x: any) =>
+    this.normalizeCode(x?.itemCode) === code
+  );
+
+  return Number(found?.id || 0);
+}
+
+
+private fetchSupplierPricesForItem(itemId: number) {
+  if (!itemId) return;
+  if (this.supplierPriceCache[itemId]) return; // already loaded
+  if (this.loadingPriceFor[itemId]) return;    // avoid duplicate calls
+  this.loadingPriceFor[itemId] = true;
+
+  this.itemsSvc.getSupplierPrices(itemId).subscribe({
+    next: (res: any) => {
+      this.supplierPriceCache[itemId] = res?.data || [];
+      this.loadingPriceFor[itemId] = false;
+
+      // ✅ if supplier already selected, immediately apply default for that item
+      this.applySupplierPriceToLinesByItem(itemId);
+    },
+    error: () => {
+      this.supplierPriceCache[itemId] = [];
+      this.loadingPriceFor[itemId] = false;
+    }
+  });
+}
+
+private applySupplierPriceToLinesByItem(itemId: number) {
+  const sid = Number(this.poHdr?.supplierId || 0);
+  if (!sid || !itemId) return;
+
+  const prices = this.supplierPriceCache[itemId] || [];
+  const row = prices.find((p: any) => Number(p.supplierId) === sid);
+  if (!row) return;
+
+  for (const l of this.poLines || []) {
+    const lid = this.getItemIdFromLine(l);
+    if (lid === itemId) {
+      l.price = row.price;     // ✅ set default
+      this.calculateLineTotal(l);
+    }
+  }
+  this.recalculateTotals();
+}
+
+private applySupplierPricesToAllLines() {
+  const sid = Number(this.poHdr?.supplierId || 0);
+  if (!sid) return;
+
+  for (const l of this.poLines || []) {
+    const itemId = this.getItemIdFromLine(l);
+    if (!itemId) continue;
+
+    // ensure prices loaded
+    this.fetchSupplierPricesForItem(itemId);
+
+    const prices = this.supplierPriceCache[itemId] || [];
+    const row = prices.find((p: any) => Number(p.supplierId) === sid);
+    if (row) {
+      l.price = row.price;
+      this.calculateLineTotal(l);
+    }
+  }
+  this.recalculateTotals();
+}
+
+
+  // default load supplier price for item ///
+
   ///// for temp data------////
   private cleanHash = '';
 
@@ -148,6 +252,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     private purchaseService: PurchaseService, private _SupplierService: SupplierService,
     private recurringService: RecurringService, private taxCodeService: TaxCodeService,
     private _countriesService: CountriesService, private poTempService: POTempService,
+    private itemsSvc: ItemMasterService,
   ) { this.userId = localStorage.getItem('id') || 'System'; }
 
 
@@ -604,6 +709,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
         // 🔹 Recalculate all line taxes with new GST%
         this.poLines.forEach(l => this.calculateLineTotal(l));
 
+        // ✅ NEW: when supplier changes, auto fill price for all existing lines
+        this.applySupplierPricesToAllLines();
         break;
 
       case 'paymentTerms':
@@ -712,6 +819,16 @@ export class PurchaseOrderCreateComponent implements OnInit {
 
       // ✅ Append PR lines
       this.appendPRToPOLines(pr);
+
+      // ✅ NEW: after PR lines appended, fetch supplier prices for those items
+      for (const l of this.poLines) {
+        const itemId = this.getItemIdFromLine(l);
+        if (itemId) this.fetchSupplierPricesForItem(itemId);
+      }
+
+      // ✅ if supplier already selected, auto-fill prices now
+      this.applySupplierPricesToAllLines();
+
 
       // ✅ Remove the picker row if it's empty or only has PR No
       if (this.isOnlyPrNo(this.poLines[index]) || this.isEmptyLine(this.poLines[index])) {
@@ -1133,6 +1250,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
   }
 
   saveRequest() {
+    debugger
 
     if (this.draftId) {
 
@@ -1157,6 +1275,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
           text: 'Please fill required Fields',
           confirmButtonColor: '#0e3a4c'
         });
+        this.disabledButton = false
         return;
       }
 
@@ -1199,6 +1318,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
         text: 'Please fill required Fields',
         confirmButtonColor: '#0e3a4c'
       });
+      this.disabledButton = false
       return;
     }
 
