@@ -47,7 +47,7 @@
                 ? (currentPeriodName
                     ? 'Period ' + currentPeriodName + ' is locked'
                     : 'Accounting period is locked')
-                : 'Create Purchase Request'">
+                : 'Create Sales Order'">
               <i data-feather="plus-circle" class="w-4 h-4"></i>
               <span>Add</span>
             </button>
@@ -101,15 +101,15 @@
             <ng-template let-row="row" ngx-datatable-cell-template>
               <span class="badge badge-pill"
                     [ngClass]="{
-                      'badge-warning'  : row.status === 1,
-                      'badge-success'  : row.status === 2,
-                      'badge-primary'  : row.status === 3
+                      'badge-warning'  : +row.status === 1,
+                      'badge-success'  : +row.status === 2,
+                      'badge-primary'  : +row.status === 3
                     }"
                     style="padding:6px 12px; font-size:13px;">
                 {{
-                  row.status === 1 ? 'Pending'   :
-                  row.status === 2 ? 'Approved'  :
-                  row.status === 3 ? 'Completed' : 'Unknown'
+                  +row.status === 1 ? 'Pending'   :
+                  +row.status === 2 ? 'Approved'  :
+                  +row.status === 3 ? 'Rejected'  : 'Unknown'
                 }}
               </span>
             </ng-template>
@@ -118,13 +118,13 @@
           <!-- Approval -->
           <ngx-datatable-column name="Approval" [width]="170">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              <button *ngIf="row.status === 1"
+              <button *ngIf="+row.status === 1"
                       (click)="onApprove(row)"
                       class="btn btn-sm btn-success mr-1"
                       style="padding:3px 8px; font-size:12px;">
                 Approve
               </button>
-              <button *ngIf="row.status === 1"
+              <button *ngIf="+row.status === 1"
                       (click)="onReject(row)"
                       class="btn btn-sm btn-danger"
                       style="padding:3px 8px; font-size:12px;">
@@ -153,7 +153,7 @@
 
                 <i class="fas fa-trash text-danger"
                    style="cursor: pointer;"
-                   (click)="deletePO(row.id)"
+                   (click)="deleteSO(row.id)"
                    title="Delete">
                 </i>
               </ng-template>
@@ -174,6 +174,7 @@
       <h3>SO Lines</h3>
       <button (click)="closeLinesModal()" aria-label="Close" class="modal-close">×</button>
     </div>
+
     <div class="modal-body">
       <div class="lines-wrap">
         <table class="lines-table">
@@ -186,33 +187,39 @@
               <th *ngIf="lineCols.discount" class="num">Discount(%)</th>
               <th *ngIf="lineCols.tax" class="num">Tax</th>
               <th *ngIf="lineCols.total" class="num">Total</th>
-              <th *ngIf="lineCols.lockedQty" class="num">LockedQty</th>
+              <th *ngIf="lineCols.lockedQty" class="num">Allocated</th>
+              <th class="num">Shortage</th>
             </tr>
           </thead>
+
           <tbody>
             <tr *ngFor="let l of modalLines; let i = index" [class.alt]="i % 2 === 0">
               <td>{{ l.itemName || l.item || '-' }}</td>
               <td *ngIf="lineCols.uom">{{ l.uom || '-' }}</td>
-              <td *ngIf="lineCols.qty" class="num">{{ l.quantity || l.qty || 0 }}</td>
-              <td *ngIf="lineCols.unitPrice" class="num">{{ l.unitPrice || l.price || 0 }}</td>
+              <td *ngIf="lineCols.qty" class="num">{{ (l.quantity ?? l.qty ?? 0) }}</td>
+              <td *ngIf="lineCols.unitPrice" class="num">{{ (l.unitPrice ?? l.price ?? 0) }}</td>
               <td *ngIf="lineCols.discount" class="num">{{ l.discount ?? 0 }}</td>
               <td *ngIf="lineCols.tax" class="num">{{ l.tax ?? 0 }}</td>
               <td *ngIf="lineCols.total" class="num">{{ l.total ?? 0 }}</td>
               <td *ngIf="lineCols.lockedQty" class="num">{{ l.lockedQty ?? 0 }}</td>
+              <td class="num">{{ getShortageQty(l) }}</td>
             </tr>
+
             <tr *ngIf="!modalLines?.length">
-              <td [attr.colspan]="getLinesColsCount()" class="empty">No lines</td>
+              <td [attr.colspan]="getLinesColsCount() + 1" class="empty">No lines</td>
             </tr>
           </tbody>
+
           <tfoot *ngIf="modalLines?.length">
             <tr>
-              <td [attr.colspan]="getLinesColsCount() - 1" class="total-label">Total</td>
+              <td [attr.colspan]="getLinesColsCount()" class="total-label">Total</td>
               <td class="total-val num">{{ modalTotal | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
+
     <div class="modal-foot">
       <button (click)="closeLinesModal()" class="btn-close">Close</button>
     </div>
@@ -243,14 +250,14 @@
               <th>Item</th>
               <th>UOM</th>
 
-              <!-- ✅ Qty heading stays Qty (but shows LockedQty for shortage rows) -->
-              <th class="num">Qty</th>
+              <th class="num">Ordered Qty</th>
+              <th class="num">Allocated Qty</th>
+              <th class="num">Shortage Qty</th>
 
               <th class="num">WH Id</th>
               <th class="num">Bin Id</th>
               <th class="num">Supplier Id</th>
               <th class="reason">Reason</th>
-              <th class="num">LockedQty</th>
             </tr>
           </thead>
 
@@ -260,18 +267,19 @@
               <td>{{ r.itemName }}</td>
               <td>{{ r.uom || '-' }}</td>
 
-              <!-- ✅ MAIN FIX: if shortage row (no warehouse), show LockedQty as Qty -->
-              <td class="num">{{ displayDraftQty(r) }}</td>
+              <td class="num">{{ r.quantity ?? 0 }}</td>
+              <td class="num">{{ r.lockedQty ?? 0 }}</td>
+              <td class="num">{{ getShortageQty(r) }}</td>
 
               <td class="num">{{ r.warehouseId ?? '-' }}</td>
               <td class="num">{{ r.binId ?? '-' }}</td>
               <td class="num">{{ r.supplierId ?? '-' }}</td>
+
               <td class="reason">{{ r.reason }}</td>
-              <td class="num">{{ r.lockedQty ?? 0 }}</td>
             </tr>
 
             <tr *ngIf="!draftRows?.length">
-              <td colspan="9" class="empty">No drafts</td>
+              <td colspan="10" class="empty">No drafts</td>
             </tr>
           </tbody>
         </table>
