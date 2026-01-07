@@ -993,7 +993,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
               Swal.fire({
                 icon: 'success',
                 title: 'Created',
-                text: `Invoice #${res.data} created successfully`
+                text: `Invoice created successfully`
               });
               this.router.navigate(['/Sales/Sales-Invoice-list']);
             } else {
@@ -1064,7 +1064,7 @@ export class SalesInvoicecreateComponent implements OnInit, OnDestroy {
     let path = item.headName;
     let current = all.find((x: any) => x.headCode === item.parentHead);
     while (current) {
-      path = `${current.headName} >> ${path}`;
+      path = `${path}`;
       current = all.find((x: any) => x.headCode === current.parentHead);
     }
     return path;

@@ -128,3 +128,18 @@
   word-break: break-word;
   overflow-wrap: anywhere;
 }
+.actions{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+}
+
+.actions i{
+  font-size: 16px;
+  transition: transform .12s ease, opacity .12s ease;
+}
+
+.actions i:hover{
+  transform: translateY(-1px);
+}

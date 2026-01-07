@@ -110,46 +110,43 @@
               <div class="text-right">{{ row.total | number:'1.2-2' }}</div>
             </ng-template>
           </ngx-datatable-column>
-
-         <ngx-datatable-column name="Action" [width]="170">
+<ngx-datatable-column name="Action" [width]="170">
   <ng-template let-row="row" ngx-datatable-cell-template>
 
-    <!-- Locked state -->
-    <ng-container >
-      <i class="fas fa-pen text-gray-300 mr-2" title="Disabled"></i>
-      <i class="fas fa-trash text-gray-300" title="Disabled"></i>
-      <!-- <i class="fas fa-print text-gray-300" title="Disabled"></i> -->
+    <!-- Edit/Delete : locked হলে disabled icon -->
+    <ng-container *ngIf="isPeriodLocked; else actionsEnabled">
+      <i class="fas fa-pen text-gray-300 mr-2" title="Period Locked"></i>
+      <i class="fas fa-trash text-gray-300 mr-2" title="Period Locked"></i>
     </ng-container>
 
-    <!-- Enabled state -->
+    <!-- Edit/Delete : enabled -->
     <ng-template #actionsEnabled>
-      <i 
-        class="fas fa-pen text-primary mr-2" 
-        style="cursor: pointer;" 
-        (click)="edit(row.id)" 
+      <i
+        class="fas fa-pen text-primary mr-2"
+        style="cursor:pointer;"
+        (click)="edit(row.id)"
         title="Edit">
       </i>
 
-      <i 
-        class="fas fa-trash text-danger mr-2" 
-        style="cursor: pointer;" 
-        (click)="delete(row.id)" 
+      <i
+        class="fas fa-trash text-danger mr-2"
+        style="cursor:pointer;"
+        (click)="delete(row.id)"
         title="Delete">
       </i>
-
-      <!-- Optional print action -->
-      <!-- 
-      <i 
-        class="fas fa-print text-secondary" 
-        style="cursor: pointer;" 
-        (click)="print(row.id)" 
-        title="Print">
-      </i> 
-      -->
     </ng-template>
+
+    <!-- ✅ Print : ALWAYS enabled -->
+    <i
+      class="fas fa-print text-info"
+      style="cursor:pointer;"
+      (click)="printInvoice(row)"
+      title="Print">
+    </i>
 
   </ng-template>
 </ngx-datatable-column>
+
 
         </ngx-datatable>
       </div>
