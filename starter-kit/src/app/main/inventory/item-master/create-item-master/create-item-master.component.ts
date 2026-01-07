@@ -171,7 +171,7 @@ export class CreateItemMasterComponent implements OnInit {
         return;
       }
       if (!this.item.budgetLineId) {
-        Swal.fire({ icon: 'warning', title: 'Required', text: 'Budget Line is required.' });
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Ledger Name is required.' });
         return;
       }
     }
@@ -408,7 +408,7 @@ export class CreateItemMasterComponent implements OnInit {
       return;
     }
     if (!this.item.itemType || !this.item.categoryId || !this.item.uomId || !this.item.budgetLineId) {
-      await Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Type, Category, UOM and Budget Line are required.' });
+      await Swal.fire({ icon: 'warning', title: 'Required', text: 'Item Type, Category, UOM and Ledger Name are required.' });
       return;
     }
 

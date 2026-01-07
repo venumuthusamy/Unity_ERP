@@ -9,6 +9,7 @@
             <h4 class="card-text page-title">
               Delivery Order List
             </h4>
+
             <div class="d-flex justify-content-between align-items-center m-1">
               <label class="d-flex align-items-center gap-1">
                 Show
@@ -21,6 +22,7 @@
                 entries
               </label>
             </div>
+
             <div *ngIf="isPeriodLocked"
                  class="alert alert-warning py-1 px-2 mx-2 mb-2"
                  style="font-size: 0.8rem;">
@@ -45,27 +47,20 @@
                 />
               </label>
 
-              <!-- <button
+              <button
                 (click)="goToCreate()"
                 class="btn m-1 d-inline-flex align-items-center"
                 style="background-color:#2E5F73;color:white;gap:6px;"
-              >
+                [disabled]="isPeriodLocked"
+                [attr.title]="isPeriodLocked
+                  ? (currentPeriodName
+                      ? 'Period ' + currentPeriodName + ' is locked'
+                      : 'Accounting period is locked')
+                  : 'Create Delivery Order'">
                 <i data-feather="plus-circle" class="w-4 h-4"></i>
                 <span>Add</span>
-              </button> -->
-                <button
-                  (click)="goToCreate()"
-                  class="btn m-1 d-inline-flex align-items-center"
-                  style="background-color:#2E5F73;color:white;gap:6px;"
-                  [disabled]="isPeriodLocked"
-                  [attr.title]="isPeriodLocked
-                    ? (currentPeriodName
-                        ? 'Period ' + currentPeriodName + ' is locked'
-                        : 'Accounting period is locked')
-                    : 'Create Purchase Request'">
-                  <i data-feather="plus-circle" class="w-4 h-4"></i>
-                  <span>Add</span>
-                </button>
+              </button>
+
             </div>
           </div>
         </div>
@@ -104,30 +99,30 @@
               {{ getDriverName(row.driverId) || ('#' + row.driverId) }}
             </ng-template>
           </ngx-datatable-column>
-<ngx-datatable-column name="Driver Contact" [width]="170">
-  <ng-template let-row="row" ngx-datatable-cell-template>
-    {{ row.driverMobileNo || '-' }}
-  </ng-template>
-</ngx-datatable-column>
 
-<ngx-datatable-column name="Received Person" [width]="200">
-  <ng-template let-row="row" ngx-datatable-cell-template>
-    {{ row.receivedPersonName || '-' }}
-  </ng-template>
-</ngx-datatable-column>
+          <ngx-datatable-column name="Driver Contact" [width]="170">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.driverMobileNo || '-' }}
+            </ng-template>
+          </ngx-datatable-column>
 
-<ngx-datatable-column name="Received Contact" [width]="170">
-  <ng-template let-row="row" ngx-datatable-cell-template>
-    {{ row.receivedPersonMobileNo || '-' }}
-  </ng-template>
-</ngx-datatable-column>
+          <ngx-datatable-column name="Received Person" [width]="200">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.receivedPersonName || '-' }}
+            </ng-template>
+          </ngx-datatable-column>
+
+          <ngx-datatable-column name="Received Contact" [width]="170">
+            <ng-template let-row="row" ngx-datatable-cell-template>
+              {{ row.receivedPersonMobileNo || '-' }}
+            </ng-template>
+          </ngx-datatable-column>
 
           <ngx-datatable-column name="Vehicle" [width]="160">
             <ng-template let-row="row" ngx-datatable-cell-template>
-              
               <div class="po-wrap-cell" [title]="row.vehicleId">
-            {{ getVehicleNo(row.vehicleId) || '-' }}
-            </div>
+                {{ getVehicleNo(row.vehicleId) || '-' }}
+              </div>
             </ng-template>
           </ngx-datatable-column>
 
@@ -151,58 +146,44 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <!-- <ngx-datatable-column name="Status" prop="status" [width]="120">
-            <ng-template let-value="value" ngx-datatable-cell-template>
-              <div
-                class="badge badge-pill status-pill"
-                [ngClass]="statusClass(value)"
-                [title]="statusLabel(value)">
-                {{ statusLabel(value) }}
-              </div>
-            </ng-template>
-          </ngx-datatable-column> -->
-
-          <ngx-datatable-column name="Action" [width]="170">
+          <!-- Action -->
+          <ngx-datatable-column name="Action" [width]="210">
             <ng-template let-row="row" ngx-datatable-cell-template>
               <div class="actions">
-                <ng-container
-                  *ngIf="+row.status === 2 || +row.status === 3 || +row.status === 4 || isPeriodLocked; else actionsEnabled">
-                  <i
-                    class="fas fa-pen text-gray-300 mr-2"
-                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
-                  <i
-                    class="fas fa-trash text-gray-300"
-                    [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
+
+                <!-- EDIT / DELETE disabled when Posted OR Period Locked -->
+                <ng-container *ngIf="row?.isPosted || isPeriodLocked; else editDeleteEnabled">
+                  <i class="fas fa-pen text-muted me-2"
+                     [attr.title]="isPeriodLocked ? 'Period locked' : 'Posted - Edit disabled'"
+                     style="pointer-events:none; opacity:.45;"></i>
+
+                  <i class="fas fa-trash text-muted me-2"
+                     [attr.title]="isPeriodLocked ? 'Period locked' : 'Posted - Delete disabled'"
+                     style="pointer-events:none; opacity:.45;"></i>
                 </ng-container>
-                <ng-template #actions let-row="row">
-  <!-- If Posted: show disabled icons -->
-  <ng-container *ngIf="row?.isPosted; else actionsEnabled">
-    <i class="fas fa-pen text-muted me-2"
-       title="Posted - Edit disabled"
-       style="pointer-events:none; opacity:.5;"></i>
 
-    <i class="fas fa-trash text-muted"
-       title="Posted - Delete disabled"
-       style="pointer-events:none; opacity:.5;"></i>
-  </ng-container>
+                <ng-template #editDeleteEnabled>
+                  <i class="fas fa-pen text-primary me-2"
+                     (click)="editDo(row.id)"
+                     title="Edit"
+                     style="cursor:pointer;"></i>
 
-  <!-- If NOT Posted: normal actions -->
-  <ng-template #actionsEnabled>
-    <i class="fas fa-pen text-primary me-2"
-       (click)="editDo(row.id)"
-       title="Edit"
-       style="cursor:pointer;"></i>
+                  <i class="fas fa-trash text-danger me-2"
+                     (click)="deleteDo(row.id)"
+                     title="Delete"
+                     style="cursor:pointer;"></i>
+                </ng-template>
 
-    <i class="fas fa-trash text-danger"
-       (click)="deleteDo(row.id)"
-       title="Delete"
-       style="cursor:pointer;"></i>
-  </ng-template>
-</ng-template>
+                <!-- PRINT always enabled (prints from modal data if opened, else loads lines and prints) -->
+                <i class="fas fa-print text-info"
+                   (click)="printFromRow(row)"
+                   title="Print"
+                   style="cursor:pointer;"></i>
 
               </div>
             </ng-template>
           </ngx-datatable-column>
+
         </ngx-datatable>
       </div>
     </section>
@@ -214,7 +195,14 @@
   <div (click)="$event.stopPropagation()" class="modal-card">
     <div class="modal-head">
       <h3>DO Lines — {{ activeDo?.doNumber }}</h3>
-      <button (click)="closeLinesModal()" aria-label="Close" class="close-btn">×</button>
+
+      <div class="modal-head-actions">
+        <!-- <button type="button" class="btn-print" (click)="printLines()">
+          <i class="fas fa-print"></i> Print
+        </button> -->
+
+        <button (click)="closeLinesModal()" aria-label="Close" class="close-btn">×</button>
+      </div>
     </div>
 
     <div class="modal-body">
@@ -255,3 +243,5 @@
     </div>
   </div>
 </div>
+
+

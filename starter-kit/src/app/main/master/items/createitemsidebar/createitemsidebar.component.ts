@@ -157,7 +157,7 @@ export class CreateitemsidebarComponent implements OnInit, OnChanges {
       Swal.fire({
         icon: 'warning',
         title: 'Warning',
-        text: 'Please select UOM and Budget Line',
+        text: 'Please select UOM and Ledger Name',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });

@@ -1146,7 +1146,7 @@ selectModalItem(item: any) {
       Swal.fire({
         icon: 'warning',
         title: 'Missing Fields',
-        text: 'Please enter Item Name, Item Code, UOM, and Budget Line.',
+        text: 'Please enter Item Name, Item Code, UOM, and Ledger Name.',
         confirmButtonText: 'OK',
         confirmButtonColor: '#0e3a4c'
       });
