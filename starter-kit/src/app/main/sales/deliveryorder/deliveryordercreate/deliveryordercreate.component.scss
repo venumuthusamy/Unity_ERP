@@ -115,3 +115,16 @@
   .prl-headbar{ flex-direction:column; align-items:stretch; gap:10px; }
   .prl-head-actions{ justify-content:flex-end; }
 }
+::ng-deep .ng-dropdown-panel {
+  z-index: 99999 !important;   // ✅ dropdown panel visible
+}
+
+::ng-deep .custom-ng-select .ng-select-container {
+  min-height: 38px;
+}
+
+::ng-deep .custom-ng-select .ng-value,
+::ng-deep .custom-ng-select .ng-placeholder,
+::ng-deep .custom-ng-select .ng-option {
+  color: #111 !important;      // ✅ text not hidden by css
+}

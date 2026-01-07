@@ -79,7 +79,7 @@
           [footerHeight]="50"
           [limit]="selectedOption"
           [columnMode]="'force'"
-          [scrollbarH]="false"
+          [scrollbarH]="true"
           [reorderable]="true">
 
           <!-- View lines -->
@@ -93,7 +93,7 @@
 
           <ngx-datatable-column name="DO No" prop="doNumber" [width]="160"></ngx-datatable-column>
 
-          <ngx-datatable-column name="SO #" [width]="160">
+          <ngx-datatable-column name="SO No" [width]="160">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.salesOrderNo || '-' }}
             </ng-template>
@@ -104,6 +104,23 @@
               {{ getDriverName(row.driverId) || ('#' + row.driverId) }}
             </ng-template>
           </ngx-datatable-column>
+<ngx-datatable-column name="Driver Contact" [width]="170">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    {{ row.driverMobileNo || '-' }}
+  </ng-template>
+</ngx-datatable-column>
+
+<ngx-datatable-column name="Received Person" [width]="200">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    {{ row.receivedPersonName || '-' }}
+  </ng-template>
+</ngx-datatable-column>
+
+<ngx-datatable-column name="Received Contact" [width]="170">
+  <ng-template let-row="row" ngx-datatable-cell-template>
+    {{ row.receivedPersonMobileNo || '-' }}
+  </ng-template>
+</ngx-datatable-column>
 
           <ngx-datatable-column name="Vehicle" [width]="160">
             <ng-template let-row="row" ngx-datatable-cell-template>
@@ -114,7 +131,7 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Route" [width]="200">
+          <ngx-datatable-column name="Location" [width]="200">
             <ng-template let-row="row" ngx-datatable-cell-template>
               {{ row.routeName || '-' }}
             </ng-template>
@@ -157,10 +174,32 @@
                     class="fas fa-trash text-gray-300"
                     [attr.title]="isPeriodLocked ? 'Period locked' : 'Disabled'"></i>
                 </ng-container>
-                <ng-template #actionsEnabled>
-                  <i class="fas fa-pen text-primary" (click)="editDo(row.id)" title="Edit"></i>
-                  <i class="fas fa-trash text-danger" (click)="deleteDo(row.id)" title="Delete"></i>
-                </ng-template>
+                <ng-template #actions let-row="row">
+  <!-- If Posted: show disabled icons -->
+  <ng-container *ngIf="row?.isPosted; else actionsEnabled">
+    <i class="fas fa-pen text-muted me-2"
+       title="Posted - Edit disabled"
+       style="pointer-events:none; opacity:.5;"></i>
+
+    <i class="fas fa-trash text-muted"
+       title="Posted - Delete disabled"
+       style="pointer-events:none; opacity:.5;"></i>
+  </ng-container>
+
+  <!-- If NOT Posted: normal actions -->
+  <ng-template #actionsEnabled>
+    <i class="fas fa-pen text-primary me-2"
+       (click)="editDo(row.id)"
+       title="Edit"
+       style="cursor:pointer;"></i>
+
+    <i class="fas fa-trash text-danger"
+       (click)="deleteDo(row.id)"
+       title="Delete"
+       style="cursor:pointer;"></i>
+  </ng-template>
+</ng-template>
+
               </div>
             </ng-template>
           </ngx-datatable-column>

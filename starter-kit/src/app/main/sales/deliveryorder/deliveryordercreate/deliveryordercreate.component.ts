@@ -11,7 +11,7 @@ import { UomService } from 'app/main/master/uom/uom.service';
 /* ---------- local types ---------- */
 
 type SoBrief = { id: number; salesOrderNo: string; customerName?: string };
-type Driver  = { id: number; name: string };
+type Driver  = { id: number; name: string; mobileNumber: string };
 type Vehicle = { id: number; vehicleNo: string; vehicleType?: string };
 type UomRow  = { id: number; name: string };
 
@@ -69,12 +69,10 @@ type SoRedeliveryRow = {
   pending: number;
   deliverMore?: number;
 
-  // NEW: show/use these from SalesOrderLines
   warehouseId?: string | null;
   binId?: string | null;
   supplierId?: string | null;
 };
-
 
 type DoUpdateHeaderRequest = {
   driverId: number | null;
@@ -83,14 +81,13 @@ type DoUpdateHeaderRequest = {
   deliveryDate: string | null;
 };
 
-/* ================================================= */
-
 @Component({
   selector: 'app-deliveryordercreate',
   templateUrl: './deliveryordercreate.component.html',
   styleUrls: ['./deliveryordercreate.component.scss']
 })
 export class DeliveryordercreateComponent implements OnInit {
+
   // mode
   isEdit = false;
   doId: number | null = null;
@@ -107,10 +104,10 @@ export class DeliveryordercreateComponent implements OnInit {
 
   // header selections
   selectedSoId: number | null = null;
-  driverId:    number | null = null;
-  vehicleId:   number | null = null;
+  driverId: number | null = null;
+  vehicleId: number | null = null;
   deliveryDate: string | null = null; // yyyy-MM-dd
-  routeText:    string | null = null;
+  routeText: string | null = null;
 
   // create-mode lines
   soLines: UiSoLine[] = [];
@@ -126,6 +123,10 @@ export class DeliveryordercreateComponent implements OnInit {
   totalDeliverMore = 0;
 
   today = this.toDateInput(new Date());
+
+  driverMobileNo: string = '';
+  receivedPersonName: string = '';
+  receivedPersonMobileNo: string = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -175,14 +176,20 @@ export class DeliveryordercreateComponent implements OnInit {
 
   /* ---------------- Lookups ---------------- */
   private loadDropdowns() {
-    // SO list
+
+    // SO list (status=2 only)
     this.soSrv.getSOByStatus(2).subscribe((res: any) => {
       const arr = res?.data ?? res ?? [];
-      this.soList = arr.map((r: any) => ({
+      this.soList = (arr || []).map((r: any) => ({
         id: Number(r.id ?? r.Id),
-        salesOrderNo: String(r.salesOrderNo ?? r.soNumber ?? r.number ?? r.Number ?? ''),
+        salesOrderNo: String(r.salesOrderNo ?? r.SalesOrderNo ?? r.soNumber ?? ''),
         customerName: String(r.customerName ?? r.CustomerName ?? '')
       }));
+
+      // ✅ FIX: if edit mode selected SO not in list, fetch it and add
+      if (this.isEdit && this.selectedSoId) {
+        this.ensureSelectedSoInList(this.selectedSoId);
+      }
     });
 
     // Drivers
@@ -190,7 +197,8 @@ export class DeliveryordercreateComponent implements OnInit {
       const arr = res?.data ?? res ?? [];
       this.driverList = arr.map((r: any) => ({
         id: Number(r.id ?? r.Id),
-        name: String(r.name ?? r.Name ?? r.driverName ?? '')
+        name: String(r.name ?? r.Name ?? r.driverName ?? ''),
+        mobileNumber: String(r.mobileNumber ?? r.mobileNumber ?? '')
       }));
     });
 
@@ -202,6 +210,34 @@ export class DeliveryordercreateComponent implements OnInit {
         vehicleNo: String(r.vehicleNo ?? r.VehicleNo ?? r.vehicleNumber ?? ''),
         vehicleType: r.vehicleType ?? r.VehicleType ?? null
       }));
+    });
+  }
+
+  /* ---------------- IMPORTANT FIX ----------------
+     Edit mode-la selected SO list-la illa na,
+     getSOById call pannitu soList-la add pannum,
+     appuram ng-select label show aagum.
+  -------------------------------------------------- */
+  private ensureSelectedSoInList(soId: number | null) {
+    if (!soId) return;
+
+    const exists = (this.soList || []).some(x => Number(x.id) === Number(soId));
+    if (exists) return;
+
+    this.soSrv.getSOById(soId).subscribe((res: any) => {
+      const dto = res?.data ?? res;
+      if (!dto) return;
+
+      const so: SoBrief = {
+        id: Number(dto.id ?? dto.Id),
+        salesOrderNo: String(dto.salesOrderNo ?? dto.SalesOrderNo ?? dto.soNumber ?? ''),
+        customerName: String(dto.customerName ?? dto.CustomerName ?? '')
+      };
+
+      this.soList = [so, ...(this.soList || [])];
+
+      // re-assign to trigger ng-select refresh
+      this.selectedSoId = so.id;
     });
   }
 
@@ -217,12 +253,18 @@ export class DeliveryordercreateComponent implements OnInit {
         return;
       }
 
-      this.selectedSoId = hdr.soId ?? null;
-      this.driverId     = hdr.driverId ?? null;
-      this.vehicleId    = hdr.vehicleId ?? null;
+      this.selectedSoId = hdr.soId != null ? Number(hdr.soId) : null;
+      this.driverId     = hdr.driverId != null ? Number(hdr.driverId) : null;
+      this.vehicleId    = hdr.vehicleId != null ? Number(hdr.vehicleId) : null;
       this.routeText    = hdr.routeName ?? null;
       this.deliveryDate = this.toDateInput(hdr.deliveryDate);
       this.isPosted     = !!(hdr.isPosted as any);
+this.driverMobileNo = this.sanitizePhone((hdr as any).driverMobileNo ?? (hdr as any).DriverMobileNo ?? '');
+this.receivedPersonName = String((hdr as any).receivedPersonName ?? (hdr as any).ReceivedPersonName ?? '');
+this.receivedPersonMobileNo = this.sanitizePhone((hdr as any).receivedPersonMobileNo ?? (hdr as any).ReceivedPersonMobileNo ?? '');
+
+      // ✅ Ensure SO label show in edit mode
+      this.ensureSelectedSoInList(this.selectedSoId);
 
       this.editLines = (lines || []).map(l => ({
         ...l,
@@ -232,34 +274,31 @@ export class DeliveryordercreateComponent implements OnInit {
       this.recalcEditTotals();
 
       if (hdr.soId) {
-       this.doSrv.getSoSnapshot(id).subscribe((rows: any[]) => {
-  this.redeliveryRows = (rows || []).map(r => {
-    const ordered = Number(r.ordered ?? r.Ordered ?? 0);
-    const deliveredBefore = Number(r.deliveredBefore ?? r.DeliveredBefore ?? 0);
-    const deliveredOnThisDo = Number(r.deliveredOnThisDo ?? r.DeliveredOnThisDo ?? 0);
-    const pending = Math.max(ordered - (deliveredBefore + deliveredOnThisDo), 0);
+        this.doSrv.getSoSnapshot(id).subscribe((rows: any[]) => {
+          this.redeliveryRows = (rows || []).map(r => {
+            const ordered = Number(r.ordered ?? r.Ordered ?? 0);
+            const deliveredBefore = Number(r.deliveredBefore ?? r.DeliveredBefore ?? 0);
+            const deliveredOnThisDo = Number(r.deliveredOnThisDo ?? r.DeliveredOnThisDo ?? 0);
+            const pending = Math.max(ordered - (deliveredBefore + deliveredOnThisDo), 0);
 
-    return {
-      soLineId: Number(r.soLineId ?? r.SoLineId ?? 0),
-      itemId: (r.itemId ?? r.ItemId) != null ? Number(r.itemId ?? r.ItemId) : null,
-      itemName: String(r.itemName ?? r.ItemName ?? ''),
-      uom: r.uomName ?? r.UomName ?? r.uom ?? r.Uom ?? null,
-      ordered,
-      deliveredBefore,
-      deliveredOnThisDo,
-      pending,
-      deliverMore: 0,
+            return {
+              soLineId: Number(r.soLineId ?? r.SoLineId ?? 0),
+              itemId: (r.itemId ?? r.ItemId) != null ? Number(r.itemId ?? r.ItemId) : null,
+              itemName: String(r.itemName ?? r.ItemName ?? ''),
+              uom: r.uomName ?? r.UomName ?? r.uom ?? r.Uom ?? null,
+              ordered,
+              deliveredBefore,
+              deliveredOnThisDo,
+              pending,
+              deliverMore: 0,
+              warehouseId: r.warehouseId ?? r.WarehouseId ?? null,
+              binId: r.binId ?? r.BinId ?? null,
+              supplierId: r.supplierId ?? r.SupplierId ?? null
+            } as SoRedeliveryRow;
+          });
 
-      // NEW: keep as strings (UI display / debugging / tooltips)
-      warehouseId: r.warehouseId ?? r.WarehouseId ?? null,
-      binId: r.binId ?? r.BinId ?? null,
-      supplierId: r.supplierId ?? r.SupplierId ?? null
-    } as SoRedeliveryRow;
-  });
-
-  this.computeRedeliveryTotals();
-});
-
+          this.computeRedeliveryTotals();
+        });
       }
     });
   }
@@ -279,12 +318,14 @@ export class DeliveryordercreateComponent implements OnInit {
 
   addSelectedRedeliveries() {
     if (!this.isEdit || !this.doId || this.isPosted) return;
+
     const picks = this.redeliveryRows.filter(r => (Number(r.deliverMore) || 0) > 0);
     if (!picks.length) {
       return Swal.fire({ icon: 'info', title: 'Nothing to add', text: 'Enter Deliver More qty first.' });
     }
 
     let idx = 0, ok = 0, fail = 0;
+
     const next = () => {
       if (idx >= picks.length) {
         if (fail === 0) Swal.fire({ icon: 'success', title: 'Lines added', text: `${ok} line(s) added` });
@@ -292,45 +333,48 @@ export class DeliveryordercreateComponent implements OnInit {
         this.loadForEdit(this.doId!);
         return;
       }
+
       const r = picks[idx++];
+
       this.doSrv.addLine({
-  doId: this.doId!,
-  soLineId: r.soLineId,
-  packLineId: null,
-  itemId: r.itemId,
-  itemName: r.itemName,
-  uom: r.uom,
-  qty: Number(r.deliverMore) || 0,
-  notes: null,
-  warehouseId: r.warehouseId ?? null, // strings are OK
-  binId: r.binId ?? null,
-  supplierId: r.supplierId ?? null
-})
-.subscribe({
+        doId: this.doId!,
+        soLineId: r.soLineId,
+        packLineId: null,
+        itemId: r.itemId,
+        itemName: r.itemName,
+        uom: r.uom,
+        qty: Number(r.deliverMore) || 0,
+        notes: null,
+        warehouseId: r.warehouseId ?? null,
+        binId: r.binId ?? null,
+        supplierId: r.supplierId ?? null
+      }).subscribe({
         next: () => { ok++; next(); },
         error: () => { fail++; next(); }
       });
     };
+
     next();
   }
 
   /* ---------------- Create mode: SO change -> SO lines ---------------- */
   onSoChanged(soId: number | null) {
-    debugger
     if (this.isEdit) return;
+
     this.soLines = [];
     this.totalDeliverQty = 0;
+
     if (!soId) return;
 
     this.soSrv.getSOById(soId).subscribe((res: any) => {
-      const dto   = res?.data ?? res ?? {};
+      const dto = res?.data ?? res ?? {};
       const lines = dto.lineItemsList ?? dto.lineItems ?? dto.lines ?? dto.items ?? [];
 
-      this.soLines = lines.map((l: any) => {
-        const ordered   = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
+      this.soLines = (lines || []).map((l: any) => {
+        const ordered = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
         const delivered = Number(l.deliveredQty ?? l.shippedQty ?? 0);
-        const pending   = Math.max(ordered - delivered, 0);
-console.log("pending",pending)
+        const pending = Math.max(ordered - delivered, 0);
+
         return {
           soLineId: Number(l.id ?? l.soLineId ?? 0),
           itemId: Number(l.itemId ?? 0),
@@ -341,9 +385,9 @@ console.log("pending",pending)
           deliverQty: pending || ordered,
           notes: '',
           warehouseId: l.warehouseId ?? null,
-          binId:       l.binId ?? null,
-          supplierId:  l.supplierId ?? null,
-          available:   l.available ?? null
+          binId: l.binId ?? null,
+          supplierId: l.supplierId ?? null,
+          available: l.available ?? null
         } as UiSoLine;
       });
 
@@ -383,13 +427,18 @@ console.log("pending",pending)
       if (!anyQty) return Swal.fire({ icon: 'warning', title: 'Enter at least one deliver quantity' });
 
       const payload = {
-        req: 'currentUserId', 
+        req: 'currentUserId',
         soId: this.selectedSoId,
         packId: null,
         driverId: this.driverId!,
         vehicleId: this.vehicleId!,
         routeName: (this.routeText || '').trim() || null,
         deliveryDate: this.deliveryDate,
+
+        driverMobileNo: this.driverMobileNo || null,
+        receivedPersonName: (this.receivedPersonName || '').trim() || null,
+        receivedPersonMobileNo: this.receivedPersonMobileNo || null,
+
         lines: this.soLines
           .filter(l => (Number(l.deliverQty) || 0) > 0)
           .map(l => ({
@@ -400,7 +449,7 @@ console.log("pending",pending)
             uom: (l.uom || '').toString(),
             qty: Number(l.deliverQty) || 0,
             notes: l.notes || null,
-            warehouseId: l.warehouseId!,
+            warehouseId: l.warehouseId ?? null,
             binId: l.binId ?? null,
             supplierId: l.supplierId ?? null
           }))
@@ -414,6 +463,7 @@ console.log("pending",pending)
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed to create DO' })
       });
+
     } else {
       const payload: DoUpdateHeaderRequest = {
         driverId: this.driverId,
@@ -432,6 +482,7 @@ console.log("pending",pending)
   /* ---------------- Remove line (edit mode) ---------------- */
   removeEditLine(lineId: number) {
     if (!this.isEdit || this.isPosted) return;
+
     Swal.fire({
       icon: 'warning',
       title: 'Remove this line?',
@@ -440,6 +491,7 @@ console.log("pending",pending)
       confirmButtonColor: '#d33'
     }).then(result => {
       if (!result.isConfirmed) return;
+
       this.doSrv.removeLine(lineId).subscribe({
         next: () => this.loadForEdit(this.doId!),
         error: () => Swal.fire({ icon: 'error', title: 'Failed to remove line' })
@@ -454,25 +506,48 @@ console.log("pending",pending)
     this.vehicleId = null;
     this.routeText = null;
     this.deliveryDate = null;
+
     this.soLines = [];
     this.editLines = [];
     this.redeliveryRows = [];
+
     this.totalDeliverQty = 0;
     this.totalEditQty = 0;
     this.totalPending = 0;
     this.totalDeliverMore = 0;
+
     this.isPosted = false;
+
+    this.driverMobileNo = '';
+    this.receivedPersonName = '';
+    this.receivedPersonMobileNo = '';
   }
 
   private toDateInput(d: Date | string | null): string | null {
     if (!d) return null;
     const date = typeof d === 'string' ? new Date(d) : d;
     if (isNaN(date.getTime())) return null;
+
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  goDoList() { this.router.navigate(['/Sales/Delivery-order-list']); }
+  goDoList() {
+    this.router.navigate(['/Sales/Delivery-order-list']);
+  }
+
+  onDriverChanged(id: any) {
+    const d = (this.driverList || []).find(x => x.id == id);
+    if (!d) {
+      this.driverMobileNo = '';
+      return;
+    }
+    this.driverMobileNo = this.sanitizePhone(d.mobileNumber);
+  }
+
+  sanitizePhone(val: any): string {
+    return (val ?? '').toString().replace(/\D/g, '').slice(0, 15);
+  }
 }
