@@ -7,9 +7,8 @@
         <!-- Title -->
         <h4 class="card-text heading">Sales Order List</h4>
 
-        <!-- Controls row: left(entries) | middle(search right-aligned) | right(drafts+add) -->
+        <!-- Controls row -->
         <div class="so-controls">
-          <!-- left: show entries -->
           <div class="entries">
             <label class="d-flex align-items-center gap-2">Show
               <select class="form-control mx-25" [(ngModel)]="selectedOption">
@@ -22,7 +21,6 @@
             </label>
           </div>
 
-          <!-- middle: search (smaller + push to right) -->
           <div class="search-wrap">
             <input [(ngModel)]="searchValue" name="searchValue" type="search"
                    class="form-control so-search"
@@ -30,7 +28,6 @@
                    (keyup)="filterUpdate($event)" (search)="filterUpdate($event)" />
           </div>
 
-          <!-- right: buttons -->
           <div class="actions">
             <button (click)="openDrafts()" class="btn btn-drafts">
               <i class="fas fa-file-alt me-1"></i>
@@ -115,21 +112,26 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <!-- Approval -->
+          <!-- ✅ Approval (Disable if shortage exists) -->
           <ngx-datatable-column name="Approval" [width]="170">
             <ng-template let-row="row" ngx-datatable-cell-template>
+
               <button *ngIf="+row.status === 1"
                       (click)="onApprove(row)"
                       class="btn btn-sm btn-success mr-1"
+                      [disabled]="hasInsufficientQty(row)"
+                      [attr.title]="hasInsufficientQty(row) ? 'Cannot approve: Insufficient stock / allocation incomplete' : 'Approve'"
                       style="padding:3px 8px; font-size:12px;">
                 Approve
               </button>
+
               <button *ngIf="+row.status === 1"
                       (click)="onReject(row)"
                       class="btn btn-sm btn-danger"
                       style="padding:3px 8px; font-size:12px;">
                 Reject
               </button>
+
             </ng-template>
           </ngx-datatable-column>
 
@@ -137,13 +139,11 @@
           <ngx-datatable-column name="Action" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
 
-              <!-- Locked when row is locked -->
               <ng-container *ngIf="isRowLocked(row); else actionsEnabled">
                 <i class="fas fa-pen text-gray-300 mr-2" title="Disabled for approved/rejected SO"></i>
                 <i class="fas fa-trash text-gray-300" title="Disabled for approved/rejected SO"></i>
               </ng-container>
 
-              <!-- Normal state -->
               <ng-template #actionsEnabled>
                 <i class="fas fa-pen text-success mr-2"
                    style="cursor: pointer;"
