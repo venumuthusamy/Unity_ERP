@@ -298,6 +298,16 @@
           <!-- Edit/Delete -->
           <ngx-datatable-column name="Action" [width]="120">
             <ng-template let-row="row" ngx-datatable-cell-template>
+
+              
+              <!-- ✅ PRINT -->
+              <i
+                class="fas fa-print mr-2"
+                style="cursor:pointer;color:#17a2b8;"
+                title="Print / Download PDF"
+                (click)="openPoPdfPreview(row)">
+              </i>
+
               <!-- Edit -->
               <i
                 class="fas fa-pen mr-2"
@@ -629,4 +639,66 @@
     </div>
   </div>
 </div>
+
+<!-- ✅ PO PDF Preview Modal -->
+<div *ngIf="showPoPdfModal" class="pdf-overlay" (click)="closePoPdfModal()">
+  <div class="pdf-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="pdf-head">
+      <div class="pdf-title">
+        <h3>Print Preview — {{ poPdfMeta?.purchaseOrderNo }}</h3>
+        <small *ngIf="poPdfLoading">Generating PDF...</small>
+      </div>
+
+      <div class="pdf-actions">
+        <button type="button" class="btn btn-outline-secondary"
+                (click)="printCurrentPoPdf()"
+                [disabled]="poPdfLoading || !poPdfBlob">
+          <i class="fas fa-print mr-50"></i> Print
+        </button>
+
+        <button type="button" class="btn btn-brand"
+                (click)="downloadCurrentPoPdf()"
+                [disabled]="poPdfLoading || !poPdfBlob">
+          <i class="fas fa-download mr-50"></i> Download
+        </button>
+
+        <button type="button" class="btn btn-light close-x" (click)="closePoPdfModal()">×</button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="pdf-body">
+      <div *ngIf="poPdfLoading" class="pdf-loading">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-1 mb-0">Preparing PDF preview...</p>
+      </div>
+
+      <ng-container *ngIf="!poPdfLoading">
+        <div *ngIf="poPdfSafeUrl; else noPoPdf" class="pdf-frame-wrap">
+          <iframe class="pdf-frame"
+                  [src]="poPdfSafeUrl"
+                  title="PO PDF Preview"
+                  loading="eager">
+          </iframe>
+        </div>
+
+        <ng-template #noPoPdf>
+          <div class="pdf-empty">
+            <i class="far fa-file-pdf"></i>
+            <p class="mb-0">PDF not available.</p>
+          </div>
+        </ng-template>
+      </ng-container>
+    </div>
+
+    <!-- Footer -->
+    <div class="pdf-foot">
+      <button class="btn btn-secondary" (click)="closePoPdfModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+
 
