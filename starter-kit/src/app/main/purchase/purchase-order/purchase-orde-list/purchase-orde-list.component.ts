@@ -81,6 +81,7 @@ showPendingPrModal = false;
 pendingPrList: any[] = [];
 pendingPrCount = 0;
 pendingPrSearch = '';
+  modalLocation: any;
 
   constructor(
     private poService: POService,
@@ -262,6 +263,7 @@ private showPeriodLockedSwal(action: string): void {
     );
 
     this.modalLines = lines;
+    this.modalLocation = row?.location || ''; 
     this.modalTotal = total;
     this.showLinesModal = true;
   }
@@ -553,9 +555,29 @@ copyQrLink(): void {
     return this.pendingPrList.filter((p: any) =>
       (p.purchaseRequestNo || '').toLowerCase().includes(v) ||
       (p.requester || '').toLowerCase().includes(v) ||
-      (p.departmentName || '').toLowerCase().includes(v)
+      (p.departmentName || '').toLowerCase().includes(v) 
     );
   }
+    private getPrLocation(p: any): string {
+  try {
+    const lines = Array.isArray(p?.prLines)
+      ? p.prLines
+      : JSON.parse(p?.prLines || '[]');
+
+    if (!Array.isArray(lines) || lines.length === 0) return '';
+
+    // take first line locationSearch (or join if multiple)
+    const locs = lines
+      .map((l: any) => (l?.locationSearch || l?.location || '').toString().trim())
+      .filter((x: string) => !!x);
+
+    // if same location for all lines, show one
+    const uniq = Array.from(new Set(locs));
+    return uniq.join(', ');
+  } catch {
+    return '';
+  }
+}
 
   createPoFromPr(pr: any) {
     // Redirect to Create PO with PR id

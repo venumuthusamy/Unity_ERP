@@ -136,7 +136,7 @@
                             </td>
                             <td style="padding:10px 12px;">{{ pr.requester }}</td>
                             <td style="padding:10px 12px;">{{ pr.departmentName }}</td>
-                            <td style="padding:10px 12px;">{{ pr.deliveryDate | date:'dd-MM-yyyy' }}</td>
+                            <td style="padding:10px 12px;">{{ getPrLocation(pr) }}</td>
 
                             <td style="padding:10px 12px;text-align:center;">
                               <button
@@ -382,7 +382,7 @@
                 {{ l.taxCode || '-' }}
               </td>
               <td style="padding:10px 12px;">
-                {{ l.location || '-' }}
+                {{ modalLocation || '-' }}
               </td>
               <td style="padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums;">
                 {{ l.qty || 0 }}
