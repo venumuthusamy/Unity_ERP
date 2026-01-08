@@ -74,6 +74,9 @@ export class PurchaseOrderCreateComponent implements OnInit {
   disabledButton: boolean;
   showShipping: boolean = false;
 
+  lockHeaderByPR: boolean = false;
+
+
   formatDate(date: Date | string): string {
     if (!date) return '';
     const d = new Date(date);
@@ -90,6 +93,7 @@ export class PurchaseOrderCreateComponent implements OnInit {
     paymentTerms: '',
     currency: '',
     incoterms: '',
+    deliveryLoc: ''
   };
 
   dropdownOpen: { [key: string]: boolean } = {
@@ -97,7 +101,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     supplier: false,
     paymentTerms: false,
     currency: false,
-    incoterms: false
+    incoterms: false,
+     deliveryLoc: false
   };
 
   filteredLists: { [key: string]: any[] } = {
@@ -105,7 +110,8 @@ export class PurchaseOrderCreateComponent implements OnInit {
     supplier: [],
     paymentTerms: [],
     currency: [],
-    incoterms: []
+    incoterms: [],
+    deliveryLoc: [] 
   };
 
   requiredKeys = ['supplier', 'approval', 'paymentTerms']; // add more if needed
@@ -321,12 +327,17 @@ private applySupplierPricesToAllLines() {
             deliveryDate: this.toISODate(new Date(results.poHdr.data.deliveryDate))
           };
 
+          this.filteredLists.deliveryLoc = [...(this.deliveries || [])];
+          this.searchTexts['deliveryLoc'] = this.poHdr.location || '';  // show selected value
+
+
           this.filteredLists = {
             approval: [...this.approvalLevel],
             supplier: [...this.suppliers],
             paymentTerms: [...this.paymentTerms],
             currency: [...this.currencies],
             incoterms: [...this.incoterms],
+            deliveryLoc: [...(this.deliveries || [])] 
           };
 
 
@@ -357,6 +368,7 @@ private applySupplierPricesToAllLines() {
           }
 
           this.poLines = JSON.parse(results.poHdr.data.poLines);
+          this.updateHeaderLockState();
           this.calculateFxTotal()
           this.mastersLoaded = true;
         });
@@ -395,12 +407,16 @@ private applySupplierPricesToAllLines() {
           this.deliveries = results.delivery.data;
           this.countries = results.country.data;
 
+          this.filteredLists.deliveryLoc = [...(this.deliveries || [])];
+          this.searchTexts['deliveryLoc'] = this.poHdr.location || '';
+
           this.filteredLists = {
             approval: [...this.approvalLevel],
             supplier: [...this.suppliers],
             paymentTerms: [...this.paymentTerms],
             currency: [...this.currencies],
             incoterms: [...this.incoterms],
+            deliveryLoc: [...(this.deliveries || [])] 
           };
 
           if (this.draftId) {
@@ -646,6 +662,7 @@ private applySupplierPricesToAllLines() {
         case 'paymentTerms': this.filteredLists[field] = [...this.paymentTerms]; break;
         case 'currency': this.filteredLists[field] = [...this.currencies]; break;
         case 'incoterms': this.filteredLists[field] = [...this.incoterms]; break;
+        case 'deliveryLoc': this.filteredLists[field] = [...(this.deliveries || [])]; break;
       }
     }
   }
@@ -671,6 +688,10 @@ private applySupplierPricesToAllLines() {
       case 'incoterms':
         this.filteredLists[field] = this.incoterms.filter((s: any) => s.incotermsName.toLowerCase().includes(search));
         break;
+      case 'deliveryLoc':
+        this.filteredLists[field] = (this.deliveries || [])
+          .filter((x: any) => (x?.name || '').toLowerCase().includes(search));
+        break;  
     }
   }
 
@@ -723,6 +744,13 @@ private applySupplierPricesToAllLines() {
       case 'incoterms':
         this.poHdr.incotermsId = item.id;
         break;
+      case 'deliveryLoc':
+        this.poHdr.location = item?.name || '';
+        // auto-fill contact number (only if not locked)
+        if (!this.lockHeaderByPR) {
+          this.poHdr.contactNumber = item?.contactNumber || '';
+        }
+        break;  
     }
     this.dropdownOpen[field] = false;
   }
@@ -842,6 +870,28 @@ private applySupplierPricesToAllLines() {
     // Other fields
     if (field === 'item') {
       this.poLines[index].item = `${option.itemCode} - ${option.itemName}`;
+
+        // optional: auto-fill description
+        if (!this.poLines[index].description?.trim()) {
+          this.poLines[index].description = option?.description || option?.name || option?.itemName || '';
+        }
+
+        // default tax code if empty
+        if (!this.poLines[index].taxCode) {
+          this.poLines[index].taxCode = this.getDefaultTaxName();
+        }
+
+        // ✅ load supplier price for this item (if supplier already selected)
+        const itemId = Number(option?.id || 0);
+        if (itemId) {
+          this.fetchSupplierPricesForItem(itemId);
+          // apply if supplier already selected
+          this.applySupplierPriceToLinesByItem(itemId);
+        }
+
+        this.calculateLineTotal(this.poLines[index]);
+        this.poLines[index].dropdownOpen = '';
+        return;
     } else if (field === 'budget') {
       this.poLines[index][field] = option.label;
     } else if (field === 'location') {
@@ -884,6 +934,7 @@ private applySupplierPricesToAllLines() {
     // refresh totals
     this.poLines.forEach(x => this.calculateLineTotal(x));
     this.recalculateTotals();
+    this.updateHeaderLockState();
   }
 
   private safeParsePrLines(raw: any): any[] {
@@ -899,6 +950,7 @@ private applySupplierPricesToAllLines() {
 
   private mapPRLineToPOLine(prNo: string, line: any) {
     const po = this.makeEmptyPOLine();
+    po.__fromPR = true;
     po.prNo = prNo;
 
     // Prefer "code - name" if both exist; fallback to whatever is present
@@ -926,10 +978,13 @@ private applySupplierPricesToAllLines() {
     po.qty = Number(line.qty) || 0;
     po.taxCode = this.getDefaultTaxName();
 
+    this.searchTexts['deliveryLoc'] = this.poHdr.location || '';
+
     return po;
   }
   private makeEmptyPOLine() {
     return {
+       __fromPR: false, 
       prNo: '',
       item: '',
       description: '',
@@ -951,10 +1006,15 @@ private applySupplierPricesToAllLines() {
       filteredOptions: []
     };
   }
+  private updateHeaderLockState(): void {
+  this.lockHeaderByPR = (this.poLines || []).some(l => l?.__fromPR === true);
+  this.searchTexts['deliveryLoc'] = this.poHdr.location || '';
+  }
 
   poAddLine() {
     debugger
     this.poLines.push({
+      __fromPR: false,
       prNo: '',
       item: '',
       description: '',
@@ -1017,6 +1077,7 @@ private applySupplierPricesToAllLines() {
 
   poRemoveLine(i: number) {
     this.poLines.splice(i, 1);
+    this.updateHeaderLockState();  
     this.recalculateTotals();
   }
 
@@ -1224,6 +1285,19 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
       return false;
     }
 
+    // ⭐ NEW: Missing Item
+    const missingItem = this.poLines.find(line =>
+      !line.item || line.item.toString().trim() === ''
+    );
+    if (missingItem) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Item required',
+        text: 'Please select Item for all line items before saving.',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return false;
+    }
     // ⭐ NEW: Missing Tax Code
     const missingTax = this.poLines.find(line =>
       !line.taxCode || line.taxCode.toString().trim() === ''
@@ -1240,7 +1314,10 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
     }
 
     // Case 2: Missing or invalid price
-    const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
+    // const invalidLine = this.poLines.find(line => !line.price || line.price <= 0);
+    const invalidLine = this.poLines.find(line =>
+      line.item && (!line.price || Number(line.price) <= 0)
+    );
     if (invalidLine) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a valid price for all Line items.' });
       return false;
@@ -1248,6 +1325,18 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
 
     return true; // ✅ everything is okay
   }
+
+  private normalizeLinesBeforeSave(): void {
+  this.poLines = (this.poLines || []).map(l => ({
+    ...l,
+    prNo: (l.prNo || '').toString().trim()
+  }));
+}
+ private getRequiredKeysForSave(): string[] {
+  const base = ['supplier', 'approval', 'paymentTerms'];
+  if (!this.lockHeaderByPR) base.push('deliveryLoc'); // ✅ required only when no PR
+  return base;
+}
 
   saveRequest() {
     debugger
@@ -1266,7 +1355,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
         this.iserrorPoDate = false;
       }
 
-      const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
+      const missing = this.getRequiredKeysForSave().filter(k => this.isEmpty(this.searchTexts[k]))
       if (missing.length || this.iserrorDelivery || this.iserrorPoDate) {
 
         Swal.fire({
@@ -1281,6 +1370,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
 
 
       if (!this.validatePO()) return;
+      this.normalizeLinesBeforeSave();
       const draftPayload = this.buildPayloadForSaveDraft();
 
       this.poTempService.updatePODraft(this.draftId, draftPayload).pipe(
@@ -1309,7 +1399,7 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
       this.iserrorPoDate = false;
     }
 
-    const missing = this.requiredKeys.filter(k => this.isEmpty(this.searchTexts[k]));
+    const missing = this.getRequiredKeysForSave().filter(k => this.isEmpty(this.searchTexts[k]))
     if (missing.length || this.iserrorDelivery || this.iserrorPoDate) {
 
       Swal.fire({
@@ -1324,6 +1414,8 @@ calcTotals(lines: any[], shipping = 0, headerDiscount = 0) {
 
 
     if (!this.validatePO()) return;
+
+    this.normalizeLinesBeforeSave();
 
     const payload = {
       id: this.poHdr.id ? this.poHdr.id : 0,

@@ -195,16 +195,67 @@
             </div>
         </div>
         <div [ngClass]="gridColsClass(4)">
-            <div>
-                <label class="text-xs font-medium text-gray-600">Outlet</label>
-                <input type="text" class="w-full rounded-xl border px-3 py-2 text-sm bg-gray-100"
-                    style="border-color: #0e3a4c" [value]="poHdr.location" disabled />
+           <div class="relative dropdown-input">
+            <label class="text-xs font-medium text-gray-600">Outlet</label>
+
+            <div class="relative">
+                <input
+                type="text"
+                [(ngModel)]="searchTexts['deliveryLoc']"
+                (input)="filter('deliveryLoc')"
+                (focus)="!lockHeaderByPR && toggleDropdown('deliveryLoc', true)"
+                placeholder="Search Outlet..."
+                class="w-full rounded-xl border focus:outline-none focus:ring-2 px-4 py-2 text-sm"
+                style="border-color: #0e3a4c"
+                [disabled]="lockHeaderByPR"
+                [ngClass]="lockHeaderByPR ? 'bg-gray-100 cursor-not-allowed' : ''"
+                />
+
+                <button
+                *ngIf="searchTexts['deliveryLoc'] && !lockHeaderByPR"
+                type="button"
+                (click)="onClearSearch('deliveryLoc')"
+                class="absolute inset-y-0 right-7 flex items-center text-gray-400 hover:text-gray-600 px-2 btn-clear">
+                ✕
+                </button>
+
+                <button
+                type="button"
+                (click)="!lockHeaderByPR && toggleDropdown('deliveryLoc')"
+                class="absolute inset-y-0 right-2 flex items-center text-gray-500 px-2 btn-caret"
+                [disabled]="lockHeaderByPR">
+                ▼
+                </button>
             </div>
-            <div>
-                <label class="text-xs font-medium text-gray-600">contact Number</label>
-                <input type="number" class="w-full rounded-xl border px-3 py-2 text-sm bg-gray-100"
-                    style="border-color: #0e3a4c" [value]="poHdr.contactNumber" disabled />
+
+             <p *ngIf="submitted && !lockHeaderByPR && isEmpty(searchTexts['deliveryLoc'])"
+                class="text-xs text-red-600 mt-1">
+                Outlet is required.
+            </p>
+
+            <ul *ngIf="dropdownOpen['deliveryLoc'] && !lockHeaderByPR"
+                class="absolute top-full left-0 right-0 bg-white border rounded-xl mt-1 shadow z-10 max-h-40 overflow-y-auto">
+                <li *ngFor="let item of filteredLists['deliveryLoc']"
+                    (click)="select('deliveryLoc', item)"
+                    class="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm">
+                {{ item.name }}
+                </li>
+            </ul>
             </div>
+
+           <div>
+            <label class="text-xs font-medium text-gray-600">Contact Number</label>
+            <input
+                type="number"
+                class="w-full rounded-xl border px-3 py-2 text-sm"
+                style="border-color: #0e3a4c"
+                [(ngModel)]="poHdr.contactNumber"
+                [disabled]="lockHeaderByPR"
+                [ngClass]="lockHeaderByPR ? 'bg-gray-100 cursor-not-allowed' : ''"
+                placeholder="Enter contact number"
+            />
+            </div>
+
         </div>
 
         <!-- Line Items -->
@@ -255,20 +306,29 @@
                         </td>
 
                         <td class="px-3 py-2 relative dropdown-cell">
-                            <input type="text" [(ngModel)]="poLines[i].item" (focus)="openDropdown(i, 'item')"
-                                (input)="filterOptions(i, 'item')" placeholder="Search Item..."
-                                class="w-[150px] rounded-xl border px-3 py-2 text-sm" disabled />
+                <input
+                    type="text"
+                    [(ngModel)]="poLines[i].item"
+                    (focus)="!poLines[i].__fromPR && openDropdown(i, 'item')"
+                    (click)="!poLines[i].__fromPR && openDropdown(i, 'item')"
+                    (input)="!poLines[i].__fromPR && filterOptions(i, 'item')"
+                    placeholder="Search Item..."
+                    class="w-[150px] rounded-xl border px-3 py-2 text-sm"
+                    [disabled]="poLines[i].__fromPR === true"
+                    [ngClass]="poLines[i].__fromPR ? 'bg-gray-100 cursor-not-allowed' : ''"
+                />
 
-                            <div *ngIf="poLines[i].dropdownOpen === 'item'"
-                                class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
-                                <div *ngFor="let option of poLines[i].filteredOptions"
-                                    (click)="selectOption(i, 'item', option)"
-                                    class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
-                                    <span>{{ option.itemCode }}</span>
-                                    <span>{{ option.itemName }}</span>
-                                </div>
-                            </div>
-                        </td>
+                <div *ngIf="poLines[i].dropdownOpen === 'item' && !poLines[i].__fromPR"
+                    class="absolute left-0 top-full mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                    <div *ngFor="let option of poLines[i].filteredOptions"
+                        (click)="selectOption(i, 'item', option)"
+                        class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between">
+                    <span>{{ option.itemCode }}</span>
+                    <span>{{ option.itemName }}</span>
+                    </div>
+                </div>
+                </td>
+
 
                         <td class="px-3 py-2">
                             <input class="w-[150px] rounded-xl border px-3 py-2 text-sm"
@@ -521,7 +581,7 @@
             <button
                 class="px-3 py-2 rounded-xl text-sm font-medium border border-emerald-600 text-emerald-700 hover:bg-emerald-50"
                 (click)="notify('PO PDF generated & sent')" type="button">
-                Send (PDF/Email/WA)
+                Send (Email)
             </button>
             <button (click)="cancel()" class="btn btn-danger m-1 d-inline-flex align-items-center"
                 style="padding: 6px 18px; font-size: 0.9rem; border-radius: 4px;">
