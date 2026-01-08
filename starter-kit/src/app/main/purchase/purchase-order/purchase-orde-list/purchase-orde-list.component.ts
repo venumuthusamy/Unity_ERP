@@ -24,6 +24,45 @@ export interface PeriodStatusDto {
   startDate?: string;
   endDate?: string;
 }
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
+type PoLinePrintRow = {
+  description: string;
+  taxCode?: string;
+  qty: number;
+  uom: string;
+  unitPrice: number;
+  discountPct?: number;
+  taxAmt?: number;
+  amount: number;
+};
+
+type PurchaseOrderPrintDTO = {
+  purchaseOrderNo: string;
+  poDate: any;
+  deliveryDate: any;
+  currency: string;
+  terms?: string;
+
+  orderTo?: string;
+  billTo?: string;
+  deliverTo?: string;
+  remarks?: string;
+
+  lines: Array<PoLinePrintRow>;
+
+  subTotal: number;
+
+  discountLines: number;
+  discountAbsolute: number;
+  taxLines: number;
+  shippingCost: number;
+  taxPct: number;
+  taxPctAmt: number;
+  netTotal: number;
+};
+
+
 
 // this matches what you showed
 export interface PeriodStatusResponseRaw {
@@ -83,13 +122,43 @@ pendingPrCount = 0;
 pendingPrSearch = '';
   modalLocation: any;
 
+
+  // Print details 
+      // ✅ PO PDF modal
+    showPoPdfModal = false;
+    poPdfLoading = false;
+
+    poPdfMeta: any = null;
+
+    poPdfBlob: Blob | null = null;
+    poPdfObjectUrl: string | null = null;
+    poPdfSafeUrl: SafeResourceUrl | null = null;
+
+    // pdfmake cache
+    private _pdfMake: any = null;
+    private _pdfReady = false;
+
+    // company info (match your real company)
+    private companyInfo = {
+      name: 'Catering Solutions Pte Ltd',
+      address1: '96, Tuas South Boulevard #01-41',
+      address2: 'Singapore-637051',
+      phone: 'Tel : 63699660',
+      fax: 'Fax : 63699271',
+      gst: 'GST No: 201315114E'
+    };
+
+    private _logoDataUrl: string | null = null;
+
+
   constructor(
     private poService: POService,
     private router: Router,
     private datePipe: DatePipe,
     private poTempService: POTempService,
     private purchaseService: PurchaseService,
-    private periodService: PeriodCloseService
+    private periodService: PeriodCloseService,
+     private sanitizer: DomSanitizer
   ) {}
 
   // ================== Lifecycle ==================
@@ -132,6 +201,23 @@ pendingPrSearch = '';
       }
     });
   }
+
+  private lockBodyScroll() {
+  document.body.classList.add('modal-open-no-scroll');
+  }
+  private unlockBodyScroll() {
+    document.body.classList.remove('modal-open-no-scroll');
+  }
+
+  private clearPoPdfPreview() {
+    if (this.poPdfObjectUrl) {
+      URL.revokeObjectURL(this.poPdfObjectUrl);
+      this.poPdfObjectUrl = null;
+    }
+    this.poPdfSafeUrl = null;
+    this.poPdfBlob = null;
+  }
+
   // ================== List / Search ==================
 
   loadRequests(): void {
@@ -590,5 +676,491 @@ copyQrLink(): void {
   trackByPrId(_: number, pr: any) {
     return pr?.id ?? _;
   }
+
+  private async ensurePdfMakeReady(): Promise<any> {
+  if (this._pdfReady && this._pdfMake) return this._pdfMake;
+
+  const pdfMakeMod: any = await import('pdfmake/build/pdfmake');
+  const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts');
+
+  const pdfMake = pdfMakeMod?.default || pdfMakeMod;
+
+  const vfs =
+    pdfFontsMod?.pdfMake?.vfs ||
+    pdfFontsMod?.default?.pdfMake?.vfs ||
+    pdfFontsMod?.vfs ||
+    pdfFontsMod?.default?.vfs ||
+    pdfFontsMod?.pdfMake?.vfs;
+
+  if (!vfs) throw new Error('pdfMake vfs not found. Ensure pdfmake & vfs_fonts installed.');
+
+  pdfMake.vfs = vfs;
+  this._pdfMake = pdfMake;
+  this._pdfReady = true;
+  return pdfMake;
+}
+private async getCanvasLogoDataUrl(): Promise<string> {
+  if (this._logoDataUrl) return this._logoDataUrl;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 520;
+  canvas.height = 140;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    // 1x1 png fallback
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X8kKkAAAAASUVORK5CYII=';
+  }
+
+  ctx.fillStyle = '#2E5F73';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 54px Arial';
+  ctx.fillText('UnityWorks', 34, 82);
+
+  ctx.fillStyle = '#DDEFF6';
+  ctx.font = '22px Arial';
+  ctx.fillText('Purchase Order', 36, 118);
+
+  this._logoDataUrl = canvas.toDataURL('image/png');
+  return this._logoDataUrl;
+}
+openPoPdfPreview(row: any) {
+  this.poPdfMeta = row;
+  this.showPoPdfModal = true;
+  this.lockBodyScroll();
+
+  this.poPdfLoading = true;
+  this.clearPoPdfPreview();
+
+  this.poService.getPOById(row.id).subscribe({
+    next: async (res: any) => {
+      try {
+        const po = res?.data ?? res;
+        const dto = this.buildPoPrintDto(po);
+        const blob = await this.generatePoPdfBlob(dto);
+
+        this.poPdfBlob = blob;
+        const url = URL.createObjectURL(blob);
+        this.poPdfObjectUrl = url;
+
+        const hash = '#toolbar=1&navpanes=0&scrollbar=1&view=FitH&zoom=110';
+        setTimeout(() => {
+          this.poPdfSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url + hash);
+        }, 30);
+
+        this.poPdfLoading = false;
+        setTimeout(() => feather.replace(), 0);
+      } catch (e: any) {
+        this.poPdfLoading = false;
+        Swal.fire({ icon: 'error', title: 'PDF generate failed', text: String(e?.message || e) });
+      }
+    },
+    error: () => {
+      this.poPdfLoading = false;
+      Swal.fire('Error', 'Failed to load PO details', 'error');
+    }
+  });
+}
+
+
+closePoPdfModal() {
+  this.showPoPdfModal = false;
+  this.poPdfMeta = null;
+  this.poPdfLoading = false;
+  this.clearPoPdfPreview();
+  this.unlockBodyScroll();
+}
+downloadCurrentPoPdf() {
+  if (!this.poPdfBlob) return;
+
+  const fileNo = (this.poPdfMeta?.purchaseOrderNo || 'PurchaseOrder').replace(/[^\w\-]+/g, '_');
+  const filename = `${fileNo}.pdf`;
+
+  const url = URL.createObjectURL(this.poPdfBlob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+printCurrentPoPdf() {
+  if (!this.poPdfBlob) return;
+
+  const url = URL.createObjectURL(this.poPdfBlob);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    Swal.fire({ icon: 'info', title: 'Popup blocked', text: 'Allow popups to print.' });
+    URL.revokeObjectURL(url);
+    return;
+  }
+  w.onload = () => {
+    w.focus();
+    w.print();
+  };
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+private buildPoPrintDto(row: any): PurchaseOrderPrintDTO {
+  let linesRaw: any[] = [];
+  try {
+    linesRaw = Array.isArray(row?.poLines) ? row.poLines : JSON.parse(row?.poLines || '[]');
+  } catch {
+    linesRaw = [];
+  }
+
+  // ✅ build lines + compute line discount/tax if available
+  let computedSubTotal = 0;
+  let computedDiscLines = 0;
+  let computedTaxLines = 0;
+
+  const lines = (linesRaw || []).map((l: any) => {
+    const qty = Number(l?.qty ?? l?.Qty ?? 0);
+    const unitPrice = Number(l?.price ?? l?.unitPrice ?? l?.UnitPrice ?? 0);
+
+    // try common discount fields
+    const discPct = Number(l?.discountPct ?? l?.discount ?? l?.DiscountPct ?? 0);
+
+    // try common tax amount field
+    const taxAmt = Number(l?.taxAmt ?? l?.taxAmount ?? l?.TaxAmt ?? 0);
+
+    // base line total
+    const gross = qty * unitPrice;
+    const discAmt = gross * (discPct / 100);
+
+    // prefer API totals if present
+    const amount =
+      Number(l?.total ?? l?.lineTotal ?? l?.amount ?? l?.Total) ||
+      (gross - discAmt + taxAmt);
+
+    computedSubTotal += (Number(l?.lineNet ?? l?.net ?? l?.LineNet) || (gross - discAmt));
+    computedDiscLines += discAmt;
+    computedTaxLines += taxAmt;
+
+    return {
+      description: String(l?.item ?? l?.description ?? l?.itemName ?? '-'),
+      qty,
+      uom: String(l?.uom ?? l?.UOM ?? l?.uomName ?? 'UOM'),
+      unitPrice,
+      amount,
+      taxCode: String(l?.taxCode ?? l?.taxCodeName ?? l?.taxName ?? l?.TaxCode ?? '-'),
+      discountPct: Number(l?.discountPct ?? l?.discount ?? l?.DiscountPct ?? 0),
+      taxAmt: Number(l?.taxAmt ?? l?.taxAmount ?? l?.TaxAmt ?? 0),
+
+    };
+  });
+
+  // ✅ read from row first (if your API already provides), else use computed values
+  const subTotal = Number(row?.subTotal ?? row?.subtotal ?? row?.SubTotal) || +computedSubTotal.toFixed(2);
+
+  const discountLines =
+    Number(row?.discountLines ?? row?.discountLineAmount ?? row?.DiscountLines) ||
+    +computedDiscLines.toFixed(2);
+
+  const discountAbsolute =
+    Number(row?.discountAbsolute ?? row?.discountAmt ?? row?.DiscountAbsolute ?? row?.Discount) || 0;
+
+  const taxLines =
+    Number(row?.taxLines ?? row?.taxLineAmount ?? row?.TaxLines) ||
+    +computedTaxLines.toFixed(2);
+
+  const shippingCost =
+    Number(row?.shippingCost ?? row?.shipping ?? row?.ShippingCost) || 0;
+
+  const taxPct =
+    Number(row?.taxPct ?? row?.taxPercentage ?? row?.TaxPct) || 0;
+
+  // your UI shows "Shipping + TaxPctAmt" as a separate number (taxPctAmt)
+  // if backend sends it, take it. otherwise compute from (subTotal - discounts + taxLines + shipping) * taxPct%
+  const baseForPct = (subTotal - discountLines - discountAbsolute + taxLines + shippingCost);
+  const taxPctAmt =
+    Number(row?.taxPctAmt ?? row?.TaxPctAmt ?? row?.shippingTaxPctAmt) ||
+    +(baseForPct * (taxPct / 100)).toFixed(2);
+
+  const netTotal =
+    Number(row?.netTotal ?? row?.NetTotal ?? row?.totalAmount ?? row?.TotalAmount) ||
+    +(baseForPct + taxPctAmt).toFixed(2);
+
+  const supplierName = (row?.supplierName || 'Supplier').toString().trim();
+  const deliverTo = (row?.deliveryTo || row?.location || row?.deliveryAddress || '').toString().trim();
+
+  return {
+    purchaseOrderNo: String(row?.purchaseOrderNo || ''),
+    poDate: row?.poDate,
+    deliveryDate: row?.deliveryDate,
+    currency: String(row?.currencyName || row?.currency || 'INR'),
+    terms: String(row?.terms || row?.paymentTermName || ''),
+
+    orderTo: supplierName,
+    billTo: `${this.companyInfo.name}\n${this.companyInfo.address1}\n${this.companyInfo.address2}\n${this.companyInfo.phone}`,
+    deliverTo: deliverTo || '-',
+    remarks: String(row?.remarks || row?.remark || ''),
+
+    lines,
+
+    subTotal,
+    discountLines,
+    discountAbsolute,
+    taxLines,
+    shippingCost,
+    taxPct,
+    taxPctAmt,
+    netTotal
+  };
+}
+
+private formatDate(d: any) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '-';
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const yy = dt.getFullYear();
+  return `${dd}/${mm}/${yy}`;
+}
+
+private n(v: any, dec: number) {
+  const x = Number(v ?? 0);
+  return x.toFixed(dec);
+}
+
+private async generatePoPdfBlob(dto: PurchaseOrderPrintDTO): Promise<Blob> {
+  const pdfMake: any = await this.ensurePdfMakeReady();
+  const logoDataUrl = await this.getCanvasLogoDataUrl();
+
+  // --------------------------
+  // Lines table (now with TaxCode + Discount% + TaxAmt)
+  // --------------------------
+  const body: any[] = [];
+
+  body.push([
+    { text: 'Sl.No', style: 'th', alignment: 'center' },
+    { text: 'Description', style: 'th' },
+    { text: 'Tax Code', style: 'th', alignment: 'center' },
+    { text: 'Qty', style: 'th', alignment: 'right' },
+    { text: 'UOM', style: 'th', alignment: 'center' },
+    { text: `Unit Price (${dto.currency})`, style: 'th', alignment: 'right' },
+    { text: 'Discount %', style: 'th', alignment: 'right' },
+    { text: `Tax Amt (${dto.currency})`, style: 'th', alignment: 'right' },
+    { text: `Amount (${dto.currency})`, style: 'th', alignment: 'right' }
+  ]);
+
+  (dto.lines || []).forEach((l, i) => {
+    const taxCode = (l?.taxCode ?? '-').toString();
+    const discPct = Number(l?.discountPct ?? 0);
+    const taxAmt = Number(l?.taxAmt ?? 0);
+
+    body.push([
+      { text: String(i + 1), style: 'td', alignment: 'center' },
+      { text: l.description || '-', style: 'td' },
+      { text: taxCode, style: 'td', alignment: 'center' },
+      { text: this.n(l.qty, 2), style: 'td', alignment: 'right' },
+      { text: l.uom || '-', style: 'td', alignment: 'center' },
+      { text: this.n(l.unitPrice, 3), style: 'td', alignment: 'right' },
+      { text: this.n(discPct, 2), style: 'td', alignment: 'right' },
+      { text: this.n(taxAmt, 2), style: 'td', alignment: 'right' },
+      { text: this.n(l.amount, 2), style: 'td', alignment: 'right' }
+    ]);
+  });
+
+  if (!dto.lines?.length) {
+    body.push([
+      { text: 'No line items', colSpan: 9, alignment: 'center', margin: [0, 12, 0, 12] },
+      {}, {}, {}, {}, {}, {}, {}, {}
+    ]);
+  }
+
+  // --------------------------
+  // Totals box (your existing totals)
+  // --------------------------
+  const totalsBody = [
+    [{ text: 'Sub Total', style: 'totLabel' }, { text: this.n(dto.subTotal, 2), style: 'totVal' }],
+    [{ text: 'Discount (Lines)', style: 'totLabel' }, { text: this.n(dto.discountLines, 2), style: 'totVal' }],
+    [{ text: 'Discount (absolute)', style: 'totLabel' }, { text: this.n(dto.discountAbsolute, 2), style: 'totVal' }],
+    [{ text: 'Tax (Lines)', style: 'totLabel' }, { text: this.n(dto.taxLines, 2), style: 'totVal' }],
+    [{ text: 'Shipping Cost', style: 'totLabel' }, { text: this.n(dto.shippingCost, 2), style: 'totVal' }],
+    [{ text: 'Shipping + TaxPctAmt', style: 'totLabel' }, { text: this.n(dto.taxPctAmt, 2), style: 'totVal' }],
+    [{ text: 'Net Total', style: 'totLabelBold' }, { text: `${this.n(dto.netTotal, 2)} ${dto.currency}`, style: 'totValBold' }]
+  ];
+
+  // --------------------------
+  // PDF definition
+  // --------------------------
+  const dd: any = {
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    pageMargins: [24, 18, 24, 28],
+    defaultStyle: { fontSize: 10, color: '#111827' },
+
+    content: [
+      // Header row
+      {
+        columns: [
+          {
+            width: 180,
+            stack: [
+              { image: logoDataUrl, width: 165, height: 45, margin: [0, 0, 0, 6] },
+              { text: this.companyInfo.name, style: 'compName' },
+              { text: this.companyInfo.address1, style: 'compText' },
+              { text: this.companyInfo.address2, style: 'compText' },
+              { text: `${this.companyInfo.phone}  |  ${this.companyInfo.fax}`, style: 'compText' },
+              { text: this.companyInfo.gst, style: 'compText' }
+            ]
+          },
+          {
+            width: '*',
+            stack: [
+              { text: 'PURCHASE ORDER', style: 'docTitle', alignment: 'right' },
+              { text: `PO No : ${dto.purchaseOrderNo}`, style: 'meta', alignment: 'right' },
+              { text: `PO Date : ${this.formatDate(dto.poDate)}`, style: 'meta', alignment: 'right' },
+              { text: `Delivery : ${this.formatDate(dto.deliveryDate)}`, style: 'meta', alignment: 'right' },
+              { text: `Currency : ${dto.currency || '-'}`, style: 'meta', alignment: 'right' },
+              { text: dto.terms ? `Terms : ${dto.terms}` : '', style: 'meta', alignment: 'right' }
+            ].filter((x: any) => !!x.text)
+          }
+        ],
+        columnGap: 10
+      },
+
+      // 3 blocks
+      {
+        margin: [0, 14, 0, 10],
+        columns: [
+          this.makeBlock('Order To', dto.orderTo || '-'),
+          this.makeBlock('Bill To', dto.billTo || '-'),
+          this.makeBlock('Deliver To', dto.deliverTo || '-')
+        ],
+        columnGap: 10
+      },
+
+      // Remarks
+      dto.remarks
+        ? {
+            margin: [0, 0, 0, 10],
+            table: {
+              widths: ['*'],
+              body: [[
+                {
+                  stack: [
+                    { text: 'Remarks', style: 'boxHead' },
+                    { text: dto.remarks, style: 'boxText' }
+                  ],
+                  margin: [8, 6, 8, 6]
+                }
+              ]]
+            },
+            layout: {
+              fillColor: () => '#F6FAFC',
+              hLineColor: () => '#D9E2E8',
+              vLineColor: () => '#D9E2E8'
+            }
+          }
+        : {},
+
+      // Lines table (updated columns)
+      {
+        table: {
+          headerRows: 1,
+          widths: [30, '*', 55, 40, 40, 60, 55, 60, 60],
+          body
+        },
+        layout: {
+          fillColor: (rowIndex: number) => {
+            if (rowIndex === 0) return '#2E5F73';
+            return rowIndex % 2 === 0 ? '#F3F6F8' : null;
+          },
+          hLineColor: () => '#D9E2E8',
+          vLineColor: () => '#D9E2E8',
+          paddingLeft: () => 6,
+          paddingRight: () => 6,
+          paddingTop: () => 5,
+          paddingBottom: () => 5
+        }
+      },
+
+      // Totals box
+      {
+        margin: [0, 12, 0, 0],
+        columns: [
+          { width: '*', text: '' },
+          {
+            width: 260,
+            table: { widths: ['*', 110], body: totalsBody },
+            layout: {
+              fillColor: (row: number) => (row === 2 ? '#EEF6F2' : null),
+              hLineColor: () => '#D9E2E8',
+              vLineColor: () => '#D9E2E8',
+              paddingLeft: () => 8,
+              paddingRight: () => 8,
+              paddingTop: () => 6,
+              paddingBottom: () => 6
+            }
+          }
+        ]
+      }
+    ],
+
+    footer: (currentPage: number, pageCount: number) => ({
+      margin: [24, 0, 24, 0],
+      columns: [
+        { text: `Printed on : ${this.formatDate(new Date())}`, fontSize: 8, color: '#6b7280' },
+        { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', fontSize: 8, color: '#6b7280' }
+      ]
+    }),
+
+    styles: {
+      docTitle: { fontSize: 16, bold: true, color: '#111827' },
+      compName: { fontSize: 12, bold: true, color: '#0f172a' },
+      compText: { fontSize: 9, color: '#334155' },
+      meta: { fontSize: 9, color: '#334155' },
+
+      th: { color: '#ffffff', bold: true, fontSize: 9 },
+      td: { fontSize: 9, color: '#111827' },
+
+      totLabel: { fontSize: 10, color: '#111827' },
+      totVal: { fontSize: 10, alignment: 'right', color: '#111827' },
+      totLabelBold: { fontSize: 10, bold: true, color: '#111827' },
+      totValBold: { fontSize: 10, bold: true, alignment: 'right', color: '#111827' },
+
+      boxHead: { fontSize: 9, bold: true, color: '#2E5F73' },
+      boxText: { fontSize: 10, color: '#111827' }
+    }
+  };
+
+  return new Promise((resolve, reject) => {
+    try {
+      pdfMake.createPdf(dd).getBlob((blob: Blob) => resolve(blob));
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+
+private makeBlock(title: string, value: string) {
+  return {
+    width: '*',
+    table: {
+      widths: ['*'],
+      body: [[{
+        stack: [
+          { text: title, style: 'boxHead' },
+          { text: value || '-', style: 'boxText' }
+        ],
+        margin: [8, 6, 8, 6]
+      }]]
+    },
+    layout: {
+      fillColor: () => '#F6FAFC',
+      hLineColor: () => '#D9E2E8',
+      vLineColor: () => '#D9E2E8'
+    }
+  };
+}
+
 
 }
