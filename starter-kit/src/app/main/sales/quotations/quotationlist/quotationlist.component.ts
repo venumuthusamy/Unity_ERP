@@ -119,8 +119,8 @@ export class QuotationlistComponent implements OnInit, OnDestroy {
   pdfObjectUrl: string | null = null;
   pdfSafeUrl: SafeResourceUrl | null = null;
 
-  private _pdfMake: any = null;
-  private _pdfReady = false;
+private _pdfReady = false;
+private _pdfMake: any = null;
 
   private companyInfo = {
     name: 'UnityWorks ERP',
@@ -161,29 +161,49 @@ export class QuotationlistComponent implements OnInit, OnDestroy {
     document.body.classList.remove('modal-open-no-scroll');
   }
 
-  // ✅ SUPER SAFE lazy load pdfMake + set vfs
-  private async ensurePdfMakeReady(): Promise<any> {
-    if (this._pdfReady && this._pdfMake) return this._pdfMake;
+private async ensurePdfMakeReady(): Promise<any> {
+  if (this._pdfReady && this._pdfMake) return this._pdfMake;
 
-    const pdfMakeMod: any = await import('pdfmake/build/pdfmake');
-    const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts');
+  // 1) Load pdfMake
+  const pdfMakeMod: any = await import('pdfmake/build/pdfmake');
+  const pdfMake: any = pdfMakeMod?.default ?? pdfMakeMod;
 
-    const pdfMake = pdfMakeMod?.default || pdfMakeMod;
+  // 2) Load vfs_fonts
+  const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts');
 
-    const vfs =
-      pdfFontsMod?.pdfMake?.vfs ||
-      pdfFontsMod?.default?.pdfMake?.vfs ||
-      pdfFontsMod?.vfs ||
-      pdfFontsMod?.default?.vfs ||
-      pdfFontsMod?.pdfMake?.vfs;
+  // Your build exports VFS directly (font file keys), so use:
+  const vfs: any =
+    pdfFontsMod?.default ||          // ✅ your console shows "default"
+    pdfFontsMod?.vfs ||              // other possible shapes
+    pdfFontsMod;                     // last fallback: module itself
 
-    if (!vfs) throw new Error('pdfMake vfs not found. Ensure pdfmake & vfs_fonts installed.');
+  // If module wrapper, unwrap again
+  const resolvedVfs =
+    (vfs && typeof vfs === 'object' && (vfs.default || vfs)) || vfs;
 
-    pdfMake.vfs = vfs;
-    this._pdfMake = pdfMake;
-    this._pdfReady = true;
-    return pdfMake;
+  // Basic validation: should contain Roboto font keys
+  if (!resolvedVfs || !resolvedVfs['Roboto-Regular.ttf']) {
+    console.error('vfs_fonts exports:', Object.keys(pdfFontsMod), pdfFontsMod);
+    throw new Error('pdfMake VFS not found/invalid. vfs_fonts did not provide Roboto VFS.');
   }
+
+  // 3) Assign
+  pdfMake.vfs = resolvedVfs;
+
+  // (Optional) ensure font mapping exists
+  pdfMake.fonts = pdfMake.fonts || {
+    Roboto: {
+      normal: 'Roboto-Regular.ttf',
+      bold: 'Roboto-Medium.ttf',
+      italics: 'Roboto-Italic.ttf',
+      bolditalics: 'Roboto-MediumItalic.ttf'
+    }
+  };
+
+  this._pdfMake = pdfMake;
+  this._pdfReady = true;
+  return pdfMake;
+}
 
   // ✅ generate a PNG logo via canvas (always valid for pdfMake)
   private async getCanvasLogoDataUrl(): Promise<string> {

@@ -1058,4 +1058,207 @@ export class CreateItemMasterComponent implements OnInit {
        
       });
     }
+     chipStyle(action: string) {
+    const a = (action || '').toUpperCase();
+    const map: any = {
+      CREATE: { bg: '#DCFCE7', color: '#166534', border: '#BBF7D0' },
+      UPDATE: { bg: '#E0F2FE', color: '#075985', border: '#BAE6FD' },
+      DELETE: { bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' }
+    };
+    const s = map[a] || { bg:'#F1F5F9', color:'#334155', border:'#E2E8F0' };
+    return {
+      display:'inline-block',
+      padding:'2px 8px',
+      borderRadius:'9999px',
+      background:s.bg,
+      border:`1px solid ${s.border}`,
+      color:s.color,
+      fontSize:'11px',
+      fontWeight:600
+    };
+  }
+  avatarStyle(_name?: string) {
+    return {
+      display: 'inline-grid',
+      placeItems: 'center',
+      width: '20px',
+      height: '20px',
+      borderRadius: '9999px',
+      fontSize: '10px',
+      fontWeight: 700,
+      color: '#fff',
+      background: this.brand,
+      border: '1px solid #dbe7ee',
+      boxShadow: '0 1px 0 rgba(0,0,0,.03)',
+      marginRight: '6px'
+    } as any;
+  }
+  get userPillStyle() {
+    return {
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: '9999px',
+      background: '#F1F5F9',
+      border: '1px solid #E2E8F0',
+      fontSize: '11px',
+      color: '#334155'
+    } as any;
+  }
+  initials(full: string) {
+    if (!full) return '?';
+    const parts = full.trim().split(/\s+/);
+    const first = parts[0]?.[0] || '';
+    const last  = parts[1]?.[0] || '';
+    return (first + last).toUpperCase();
+  }
+  toggleDetails(id: string | number) { this.expandedAudit[id] = !this.expandedAudit[id]; }
+  prettyJson(payload: any): string {
+    if (!payload) return '—';
+    try {
+      const obj = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      return JSON.stringify(obj, null, 2);
+    } catch { return String(payload); }
+  }
+  private valueToText(v: any): string {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  }
+  safeParse(x: any) {
+    if (!x) return null;
+    try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return x; }
+  }
+
+  async copyJson(a: any) {
+    const k = String(a.auditId ?? a.occurredAtUtc ?? '');
+    this.busy[k] = true;
+    const payload = {
+      action: a.action,
+      occurredAtUtc: a.occurredAtUtc,
+      user: a.userName || a.userId,
+      before: this.safeParse(a.oldValuesJson),
+      after: this.safeParse(a.newValuesJson)
+    };
+    const text = JSON.stringify(payload, null, 2);
+
+    try {
+      if ((navigator as any).clipboard?.writeText) {
+        await (navigator as any).clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      this.copied[k] = true;
+      setTimeout(()=> this.copied[k] = false, 1500);
+    } catch {
+      Swal.fire({ toast: true, position: 'top', icon: 'error', title: 'Copy failed', showConfirmButton: false, timer: 1500 });
+    } finally { this.busy[k] = false; }
+  }
+
+  keyOf(a: any, index: number): string {
+    return String(a?.auditId ?? `${(a?.action || '').toUpperCase()}_${a?.occurredAtUtc ?? ''}_${index}`);
+  }
+  isExpanded(a: any, index: number): boolean {
+    return !!this.expandedAudit[this.keyOf(a, index)];
+  }
+  isUpdate(a: any): boolean {
+    return (a?.action || '').toString().toUpperCase() === 'UPDATE';
+  }
+  diffs(a: any): Array<{ field: string; before: any; after: any }> {
+    const oldObj = this.safeParse(a?.oldValuesJson) || {};
+    const newObj = this.safeParse(a?.newValuesJson) || {};
+    if (typeof oldObj !== 'object' || typeof newObj !== 'object') return [];
+    const keys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
+    return keys
+      .filter(k => (oldObj as any)[k] !== (newObj as any)[k])
+      .map(k => ({
+        field: k,
+        before: this.valueToText((oldObj as any)[k]),
+        after:  this.valueToText((newObj as any)[k]),
+      }));
+  }
+  applyBomToPrices(): void {
+    if (!this.bomRows?.length || !this.prices?.length) return;
+    const norm = (s: any) => String(s ?? '').trim().toLowerCase();
+    const mapById = new Map<string, number>();
+    const mapByName = new Map<string, number>();
+
+    for (const r of this.bomRows) {
+      const cost = Number((r.unitCost ?? r.existingCost ?? 0));
+      if (r.supplierId != null) mapById.set(String(r.supplierId), cost);
+      if (r.supplierName) mapByName.set(norm(r.supplierName), cost);
+    }
+
+    this.prices = this.prices.map(p => {
+      const idKey = p.SupplierId != null ? String(p.SupplierId) : '';
+      const nameKey = norm(p.supplierName);
+      let nextPrice: number | null = null;
+      if (idKey && mapById.has(idKey)) nextPrice = mapById.get(idKey)!;
+      else if (nameKey && mapByName.has(nameKey)) nextPrice = mapByName.get(nameKey)!;
+      if (nextPrice == null) return p;
+      return { ...p, price: nextPrice };
+    });
+  }
+
+  addBomRow(): void {
+    this.bomRows = [...this.bomRows, { supplierId: null, supplierName: null, existingCost: 0, unitCost: null }];
+    this.recomputeBomTotalsInline();
+  }
+  removeBomRow(i: number): void {
+    this.bomRows = this.bomRows.filter((_, idx) => idx !== i);
+    this.recomputeBomTotalsInline();
+  }
+  getLast3CostsForSupplier(supplierId: number | string | null): Array<{ value: number; when: Date }> {
+    const sid = Number(supplierId ?? 0);
+    if (!sid) return [];
+    const hist = this.bomHistoryBySupplier.get(sid) ?? [];
+    if (!hist.length) return [];
+    const sorted = [...hist].sort(
+      (a,b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+    );
+    const seen = new Set<string>();
+    const out: Array<{ value: number; when: Date }> = [];
+    for (const h of sorted) {
+      const val = Number((h.unitCost ?? h.existingCost) ?? 0);
+      const key = val.toFixed(4);
+      if (!seen.has(key)) {
+        out.push({ value: val, when: new Date(h.createdDate) });
+        seen.add(key);
+      }
+      if (out.length >= 3) break;
+    }
+    return out;
+  }
+  isCurrentCost(curr: number | null | undefined, val: number | null | undefined): boolean {
+    const a = Number(curr ?? 0);
+    const b = Number(val ?? 0);
+    return a.toFixed(4) === b.toFixed(4);
+  }
+
+  deltaVsPrev(supplierId: number | string | null, current: number | null | undefined) {
+    const arr = this.getLast3CostsForSupplier(supplierId) || [];
+    const prev = arr.length > 1 ? Number(arr[1].value ?? 0) : Number(arr[0]?.value ?? 0);
+    const curr = Number(current ?? 0);
+    const abs  = curr - prev;
+    const pct  = prev !== 0 ? (abs / prev) * 100 : 0;
+    const dir  = abs > 0 ? 'up' : abs < 0 ? 'down' : 'flat';
+    return {
+      abs: Math.abs(abs),
+      pct: Math.abs(pct),
+      dir,
+      tooltip: dir === 'flat' ? 'No change vs previous' :
+               dir === 'up'   ? 'Increased vs previous' :
+                                'Decreased vs previous'
+    };
+  }
+
+  deltaColorStyle(delta: {dir:'up'|'down'|'flat'}): any {
+    if (delta.dir === 'up')   return {'border-color':'#fecaca','background':'#fff1f2','color':'#991b1b'};
+    if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
+    return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
+  }
 }
