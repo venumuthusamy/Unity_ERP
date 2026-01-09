@@ -131,6 +131,12 @@ interface BomTotals {
   count: number;
 }
 
+type SnapEmpty = { kind: 'empty' };
+type SnapArray = { kind: 'array'; columns: string[]; items: any[] };
+type SnapObject = { kind: 'object'; rows: { key: string; value: any }[]; arrays: { key: string; columns: string[]; items: any[] }[] };
+
+type Snap = SnapEmpty | SnapArray | SnapObject;
+
 type ItemType = 'SALES' | 'PURCHASE' | 'BOTH' | null;
 
 @Component({
@@ -146,6 +152,29 @@ export class CreateItemMasterComponent implements OnInit {
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
   get lastStepIndex() { return this.stepsView.length - 1; }
   step = 0;
+expandedAudit: Record<number, boolean> = {};
+busy: Record<number, boolean> = {};
+copied: Record<number, boolean> = {};
+
+drawer: {
+  open: boolean;
+  auditId: number;
+  title: string;
+  tab: 'before' | 'after';
+  mode: 'snapshot' | 'field';
+  field: string;
+  audit: any;
+  data: Snap;
+} = {
+  open: false,
+  auditId: 0,
+  title: '',
+  tab: 'before',
+  mode: 'snapshot',
+  field: '',
+  audit: null,
+  data: { kind: 'empty' }
+};
 
   next() {
     if (this.step === 0) {
@@ -191,9 +220,7 @@ export class CreateItemMasterComponent implements OnInit {
 
   /* Audit */
   audits: ItemMasterAudit[] = [];
-  expandedAudit: Record<string | number, boolean> = {};
-  busy: Record<string, boolean> = {};
-  copied: Record<string, boolean> = {};
+
 
   /* Header model */
   item: any = this.makeEmptyItem();
@@ -819,15 +846,32 @@ export class CreateItemMasterComponent implements OnInit {
     if (supplierBox && !supplierBox.contains(t)) this.supplierDropdownOpen = false;
   }
 
-  /* -------------------- Audits -------------------- */
   loadAudits(): void {
-    const id = Number(this.item?.id || 0);
-    if (!id) { this.audits = []; return; }
-    this.itemsSvc.getItemAudit(id).subscribe({
-      next: r => this.audits = r?.data ?? [],
-      error: _ => this.audits = []
-    });
-  }
+  const id = Number(this.item?.id || 0);
+  if (!id) { this.audits = []; return; }
+
+  this.itemsSvc.getItemAudit(id).subscribe({
+    next: (r: any) => {
+      const arr = r?.data ?? r ?? [];
+      this.audits = (Array.isArray(arr) ? arr : []).map((a: any) => ({
+        auditId: a.auditId ?? a.AuditId ?? a.id ?? a.Id ?? 0,
+        itemId:  a.itemId  ?? a.ItemId  ?? id,
+        action:  (a.action ?? a.Action ?? '').toString(),
+        occurredAtUtc: a.occurredAtUtc ?? a.OccurredAtUtc ?? a.occurredAt ?? a.OccurredAt ?? a.createdDate ?? a.CreatedDate ?? '',
+        userId:   a.userId ?? a.UserId ?? null,
+        userName: a.userName ?? a.UserName ?? null,
+
+        // ✅ THIS is why your drawer is empty (case mismatch)
+        oldValuesJson: a.oldValuesJson ?? a.OldValuesJson ?? a.oldValues ?? a.OldValues ?? a.beforeJson ?? a.BeforeJson ?? null,
+        newValuesJson: a.newValuesJson ?? a.NewValuesJson ?? a.newValues ?? a.NewValues ?? a.afterJson  ?? a.AfterJson  ?? null,
+
+        remarks: a.remarks ?? a.Remarks ?? null
+      }));
+    },
+    error: _ => this.audits = []
+  });
+}
+
 
   /* ----------------- BOM logic ----------------- */
   private loadBomSnapshotOrFallback(): void {
@@ -1111,7 +1155,7 @@ export class CreateItemMasterComponent implements OnInit {
     const last  = parts[1]?.[0] || '';
     return (first + last).toUpperCase();
   }
-  toggleDetails(id: string | number) { this.expandedAudit[id] = !this.expandedAudit[id]; }
+ 
   prettyJson(payload: any): string {
     if (!payload) return '—';
     try {
@@ -1261,4 +1305,221 @@ export class CreateItemMasterComponent implements OnInit {
     if (delta.dir === 'down') return {'border-color':'#bbf7d0','background':'#f0fdf4','color':'#166534'};
     return {'border-color':'#e5e7eb','background':'#f8fafc','color':'#64748b'};
   }
+  toggleDetails(id: number) {
+  this.expandedAudit[id] = !this.expandedAudit[id];
+}
+
+/** SUMMARY for changed fields row */
+fieldSummary(v: any): string {
+  const obj = this.tryParseJson(v);
+  if (Array.isArray(obj)) return `${obj.length} row${obj.length === 1 ? '' : 's'}`;
+  if (obj && typeof obj === 'object') return 'Object';
+  const s = (v ?? '').toString().trim();
+  if (!s) return '-';
+  return s.length > 28 ? s.slice(0, 28) + '…' : s;
+}
+
+/** hint like +1 row */
+fieldDeltaHint(before: any, after: any): string {
+  const b = this.tryParseJson(before);
+  const n = this.tryParseJson(after);
+  if (Array.isArray(b) || Array.isArray(n)) {
+    const bl = Array.isArray(b) ? b.length : 0;
+    const nl = Array.isArray(n) ? n.length : 0;
+    if (bl === nl) return 'updated';
+    const d = nl - bl;
+    return d > 0 ? `+${d} row${d === 1 ? '' : 's'}` : `${d} row${d === -1 ? '' : 's'}`;
+  }
+  return '';
+}
+
+isComplex(v: any) {
+  const s = (v ?? '').toString().trim();
+  return s.startsWith('{') || s.startsWith('[');
+}
+private auditRaw(a: any, tab: 'before'|'after') {
+  if (!a) return null;
+
+  if (tab === 'before') {
+    return a.oldValuesJson ?? a.OldValuesJson ?? a.oldValues ?? a.OldValues ?? a.beforeJson ?? a.BeforeJson ?? null;
+  } else {
+    return a.newValuesJson ?? a.NewValuesJson ?? a.newValues ?? a.NewValues ?? a.afterJson ?? a.AfterJson ?? null;
+  }
+}
+
+/** open full snapshots */
+openSnapshot(a: any) {
+  this.drawer.open = true;
+  this.drawer.auditId = a.auditId;
+  this.drawer.audit = a;
+  this.drawer.mode = 'snapshot';
+  this.drawer.field = '';
+  this.drawer.title = 'Full snapshots';
+  this.drawer.tab = 'before';
+  this.drawer.data = this.getSnapFromAudit(a, 'before');
+}
+
+openField(a: any, field: string) {
+  this.drawer.open = true;
+  this.drawer.auditId = a.auditId;
+  this.drawer.audit = a;
+  this.drawer.mode = 'field';
+  this.drawer.field = field;
+  this.drawer.title = field;
+
+  this.setDrawerTab('before'); // ✅ loads drawer.data using strict+loose logic
+}
+
+
+private getFieldSnapLoose(a: any, tab: 'before'|'after', field: string): Snap {
+  const raw = tab === 'after' ? a.newValuesJson : a.oldValuesJson;
+  const obj = this.tryParseJson(raw);
+  if (!obj || typeof obj !== 'object') return { kind: 'empty' };
+
+  const keys = Object.keys(obj);
+  const target = field?.toLowerCase()?.trim();
+
+  // try exact
+  let key = keys.find(k => k === field);
+
+  // try case-insensitive
+  if (!key) key = keys.find(k => k.toLowerCase().trim() === target);
+
+  // try remove spaces/underscores
+  if (!key) {
+    const norm = (s: string) => s.toLowerCase().replace(/[\s_]/g, '');
+    key = keys.find(k => norm(k) === norm(field));
+  }
+
+  if (!key) return { kind: 'empty' };
+
+  const v = (obj as any)[key];
+  if (v == null) return { kind: 'empty' };
+
+  if (Array.isArray(v)) return this.toArraySnap(v);
+  if (typeof v === 'object') return this.toObjectSnap(v);
+  return this.toObjectSnap({ [key]: v });
+}
+setDrawerTab(tab: 'before'|'after') {
+  this.drawer.tab = tab;
+  if (!this.drawer.audit) return;
+
+  this.drawer.data = this.drawer.mode === 'snapshot'
+    ? this.getSnapFromAudit(this.drawer.audit, tab)
+    : (this.getFieldSnap(this.drawer.audit, tab, this.drawer.field).kind !== 'empty'
+        ? this.getFieldSnap(this.drawer.audit, tab, this.drawer.field)
+        : this.getFieldSnapLoose(this.drawer.audit, tab, this.drawer.field));
+}
+
+
+
+closeDrawer() {
+  this.drawer.open = false;
+}
+
+
+
+private getSnapFromAudit(a: any, tab: 'before'|'after'): Snap {
+  const raw = tab === 'after' ? a.newValuesJson : a.oldValuesJson;
+  const obj = this.tryParseJson(raw);
+  if (obj == null) return { kind: 'empty' };
+  if (Array.isArray(obj)) return this.toArraySnap(obj);
+  if (typeof obj === 'object') return this.toObjectSnap(obj);
+  return { kind: 'empty' };
+}
+
+private getFieldSnap(a: any, tab: 'before'|'after', field: string): Snap {
+  const raw = tab === 'after' ? a.newValuesJson : a.oldValuesJson;
+  const obj = this.tryParseJson(raw);
+  if (!obj || typeof obj !== 'object') return { kind: 'empty' };
+
+  const v = (obj as any)[field];
+  if (v == null) return { kind: 'empty' };
+
+  if (Array.isArray(v)) return this.toArraySnap(v);
+  if (typeof v === 'object') return this.toObjectSnap(v);
+  return this.toObjectSnap({ [field]: v });
+}
+
+private tryParseJson(raw: any) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+private toObjectSnap(obj: any): Snap {
+  const rows: { key: string; value: any }[] = [];
+  const arrays: { key: string; columns: string[]; items: any[] }[] = [];
+
+  Object.keys(obj).forEach(k => {
+    const v = obj[k];
+    if (Array.isArray(v)) {
+      arrays.push(this.buildArrayBlock(k, v));
+      rows.push({ key: k, value: `${v.length} row${v.length === 1 ? '' : 's'}` });
+      return;
+    }
+    if (v && typeof v === 'object') {
+      rows.push({ key: k, value: 'Object' });
+      return;
+    }
+    rows.push({ key: k, value: v ?? '-' });
+  });
+
+  return { kind: 'object', rows, arrays };
+}
+
+private toArraySnap(arr: any[]): Snap {
+  const block = this.buildArrayBlock('Rows', arr);
+  return { kind: 'array', columns: block.columns, items: block.items };
+}
+
+private buildArrayBlock(key: string, arr: any[]) {
+  const items = (arr || []).slice(0, 80).map(x => (x && typeof x === 'object') ? x : ({ Value: x }));
+  const colSet = new Set<string>();
+  items.slice(0, 10).forEach(r => Object.keys(r || {}).forEach(c => colSet.add(c)));
+  const columns = Array.from(colSet);
+  if (columns.length === 0) columns.push('Value');
+  return { key, columns, items };
+}
+
+// -------- COPY/DOWNLOAD (DATA) --------
+
+copyAuditData(a: any) {
+  const before = this.getSnapFromAudit(a, 'before');
+  const after = this.getSnapFromAudit(a, 'after');
+  const text = `--- BEFORE ---\n${this.exportSnap(before)}\n\n--- AFTER ---\n${this.exportSnap(after)}`;
+  this.copyText(text, a.auditId);
+}
+
+downloadAuditData(a: any) {
+  const before = this.getSnapFromAudit(a, 'before');
+  const after = this.getSnapFromAudit(a, 'after');
+  const text = `--- BEFORE ---\n${this.exportSnap(before)}\n\n--- AFTER ---\n${this.exportSnap(after)}`;
+  this.downloadText(text, `audit-${a.auditId}-data.txt`);
+}
+
+private exportSnap(s: any): string {
+  if (!s || s.kind === 'empty') return 'No data';
+  if (s.kind === 'array') return `Rows(${s.items.length})`;
+  // object
+  return (s.rows || []).map((r: any) => `${r.key}: ${r.value}`).join('\n');
+}
+
+private copyText(text: string, auditId: number) {
+  this.busy[auditId] = true;
+  navigator.clipboard.writeText(text).then(() => {
+    this.copied[auditId] = true;
+    setTimeout(() => (this.copied[auditId] = false), 1000);
+  }).finally(() => (this.busy[auditId] = false));
+}
+
+private downloadText(text: string, fileName: string) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 }
