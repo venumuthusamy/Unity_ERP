@@ -502,130 +502,237 @@
       </div>
 
       <!-- STEP 4: AUDIT (EDIT) -->
-      <div *ngIf="isEdit && step === 4" class="rounded-xl border p-3 text-sm text-gray-700">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-base font-semibold text-[#2E5F73]">Audit trail</h3>
-          <div class="flex items-center gap-3">
-            <span *ngIf="item?.id" class="text-xs text-gray-500">Item #{{ item.id }}</span>
-            <button class="px-2 py-1 rounded border hover:bg-gray-50" (click)="loadAudits()">Refresh</button>
+   
+
+  <!-- Header -->
+  
+
+  <ng-container *ngIf="item?.id">
+
+  <div *ngIf="isEdit && step === 4" class="aud2">
+
+  <!-- header -->
+  <div class="aud2-head">
+    <div>
+      <div class="aud2-title">Audit trail</div>
+      <div class="aud2-sub" *ngIf="item?.id">Item #{{ item.id }}</div>
+    </div>
+    <button class="aud2-btn" (click)="loadAudits()">
+      <i class="fas fa-rotate-right"></i>
+      Refresh
+    </button>
+  </div>
+
+  <div *ngIf="!item?.id" class="aud2-empty">
+    Save the item first to see its audit history.
+  </div>
+
+  <ng-container *ngIf="item?.id">
+
+    <div *ngIf="!audits?.length" class="aud2-empty">No audit entries yet.</div>
+
+    <!-- audit cards -->
+    <div class="aud2-list" *ngIf="audits?.length">
+
+      <div class="aud2-card" *ngFor="let a of audits; trackBy: trackByIdx">
+
+        <!-- card top row -->
+        <div class="aud2-cardtop">
+          <div class="aud2-left">
+            <span class="aud2-chip" [ngStyle]="chipStyle(a.action)">{{ a.action }}</span>
+
+            <span class="aud2-dot"></span>
+
+            <span class="aud2-time">
+              {{ a.occurredAtUtc | date:'yyyy-MM-dd HH:mm:ss' }} UTC
+            </span>
+
+            <span class="aud2-dot light"></span>
+
+            <ng-container *ngIf="a.userId || a.userName">
+              <span class="aud2-avatar" [ngStyle]="avatarStyle(a.userName)">
+                {{ initials(a.userName || ('User ' + a.userId)) }}
+              </span>
+              <span class="aud2-user">{{ a.userName || ('User #' + a.userId) }}</span>
+            </ng-container>
+
+            <ng-container *ngIf="a.remarks">
+              <span class="aud2-dot light"></span>
+              <span class="aud2-remarks">{{ a.remarks }}</span>
+            </ng-container>
           </div>
+
+          <button class="aud2-link" (click)="toggleDetails(a.auditId)">
+            {{ expandedAudit[a.auditId] ? 'Hide' : 'View' }}
+            <i class="fas"
+              [class.fa-chevron-up]="expandedAudit[a.auditId]"
+              [class.fa-chevron-down]="!expandedAudit[a.auditId]"></i>
+          </button>
         </div>
 
-        <div *ngIf="!item?.id" class="text-gray-500">Save the item first to see its audit history.</div>
+        <!-- body -->
+        <div *ngIf="expandedAudit[a.auditId]" class="aud2-body">
 
-        <ng-container *ngIf="item?.id">
-          <div *ngIf="!audits?.length" class="text-gray-500">No audit entries yet.</div>
+          <!-- UPDATE -->
+          <ng-container *ngIf="isUpdate(a); else aud2SnapshotOnly">
 
-          <ul class="space-y-3" *ngIf="audits?.length">
-            <li *ngFor="let a of audits; let idx = index; trackBy: trackByIdx" class="rounded-2xl border p-1 shadow-sm">
+            <div class="aud2-sectiontitle">Changed fields</div>
 
-              <!-- header row -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span [ngStyle]="chipStyle(a.action)">{{ a.action }}</span>
-                  <span style="color:#4b5563;">{{ a.occurredAtUtc | date:'yyyy-MM-dd HH:mm:ss' }} UTC</span>
-                  <span style="display:inline-block;width:4px;height:4px;margin:0 8px;border-radius:9999px;background:#9ca3af;vertical-align:middle;"></span>
+            <!-- changed fields list -->
+            <div class="aud2-changes">
+              <div class="aud2-change" *ngFor="let d of diffs(a)">
 
-                  <ng-container *ngIf="a.userId || a.userName">
-                    <span [ngStyle]="avatarStyle(a.userName)" title="User">
-                      {{ initials(a.userName || ('User ' + a.userId)) }}
-                    </span>
-                    <span [ngStyle]="userPillStyle">
-                      {{ a.userName || ('User #' + a.userId) }}
-                    </span>
-                  </ng-container>
+                <div class="aud2-field">{{ d.field }}</div>
 
-                  <ng-container *ngIf="a.remarks">
-                    <span style="display:inline-block;width:4px;height:4px;margin:0 8px;border-radius:9999px;background:#e5e7eb;vertical-align:middle;"></span>
-                    <span style="color:#4b5563;">{{ a.remarks }}</span>
-                  </ng-container>
+                <div class="aud2-values">
+                  <div class="aud2-col">
+                    <div class="aud2-label">Before</div>
+                    <div class="aud2-pillbox">
+                      <span class="aud2-pill muted">
+                        {{ fieldSummary(d.before) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="aud2-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                  </div>
+
+                  <div class="aud2-col">
+                    <div class="aud2-label">After</div>
+                    <div class="aud2-pillbox">
+                      <span class="aud2-pill warn">
+                        {{ fieldSummary(d.after) }}
+                      </span>
+                      <span *ngIf="fieldDeltaHint(d.before, d.after)" class="aud2-hint">
+                        {{ fieldDeltaHint(d.before, d.after) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="flex items-center gap-2">
-                  <button class="link" (click)="toggleDetails(a.auditId)">
-                    {{ expandedAudit[a.auditId] ? 'Hide details' : 'View details' }}
-                    <i class="fas" [class.fa-chevron-up]="expandedAudit[a.auditId]" [class.fa-chevron-down]="!expandedAudit[a.auditId]"></i>
+                <!-- <div class="aud2-actions">
+                  <button class="aud2-mini"
+                          
+                          (click)="openField(a, d.field)">
+                    View details
                   </button>
-                </div>
+                </div> -->
+
               </div>
+            </div>
 
-              <!-- body -->
-              <div *ngIf="expandedAudit[a.auditId]" class="mt-1 space-y-3">
+            <div class="aud2-footer">
+              <button class="aud2-mini" (click)="openSnapshot(a)">
+                View full snapshots
+              </button>
 
-                <!-- UPDATE: diff table -->
-                <ng-container *ngIf="isUpdate(a); else snapshotBlock">
-                  <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500">Showing changed fields only</div>
-                    <div class="flex gap-2 items-center">
-                      <button class="btn-muted" [disabled]="busy[a.auditId]" (click)="copyJson(a)">
-                        {{ busy[a.auditId] ? 'Copying…' : 'Copy JSON' }}
-                      </button>
-                      <span *ngIf="copied[a.auditId]" class="ml-2 text-xs text-green-700">Copied!</span>
-                      <button class="btn-muted" (click)="downloadJson(a)">Download</button>
-                    </div>
-                  </div>
-
-                  <div class="overflow-auto rounded-lg border">
-                    <table class="w-full text-xs">
-                      <thead class="bg-gray-50">
-                        <tr>
-                          <th class="text-left px-3 py-2 w-40">Field</th>
-                          <th class="text-left px-3 py-2">Before</th>
-                          <th class="text-left px-3 py-2">After</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr *ngFor="let d of diffs(a)" class="border-t">
-                          <td class="px-3 py-2 font-medium text-gray-700">{{ d.field }}</td>
-                          <td class="px-3 py-2 text-gray-600 break-words">{{ d.before }}</td>
-                          <td class="px-3 py-2 text-gray-900 break-words">{{ d.after }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <button class="link mt-2" (click)="showRaw[a.auditId] = !showRaw[a.auditId]">
-                    {{ showRaw[a.auditId] ? 'Hide snapshots' : 'Show full Before/After snapshots' }}
-                  </button>
-
-                  <div *ngIf="showRaw[a.auditId]" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="codepanel">
-                      <div class="codepanel-title">Before</div>
-                      <pre>{{ prettyJson(a.oldValuesJson) }}</pre>
-                    </div>
-                    <div class="codepanel">
-                      <div class="codepanel-title">After</div>
-                      <pre>{{ prettyJson(a.newValuesJson) }}</pre>
-                    </div>
-                  </div>
-                </ng-container>
-
-                <!-- CREATE / DELETE: snapshots -->
-                <ng-template #snapshotBlock>
-                  <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500">Snapshot</div>
-                    <div class="flex gap-2">
-                      <button class="btn-muted" (click)="copyJson(a)">Copy JSON</button>
-                      <button class="btn-muted" (click)="downloadJson(a)">Download</button>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="codepanel">
-                      <div class="codepanel-title">Before</div>
-                      <pre>{{ prettyJson(a.oldValuesJson) }}</pre>
-                    </div>
-                    <div class="codepanel">
-                      <div class="codepanel-title">After</div>
-                      <pre>{{ prettyJson(a.newValuesJson) }}</pre>
-                    </div>
-                  </div>
-                </ng-template>
+              <div class="aud2-rightbtns">
+                <button class="aud2-mini" [disabled]="busy[a.auditId]" (click)="copyAuditData(a)">
+                  {{ busy[a.auditId] ? 'Copying…' : 'Copy data' }}
+                </button>
+                <button class="aud2-mini" (click)="downloadAuditData(a)">Download</button>
+                <span *ngIf="copied[a.auditId]" class="aud2-copied">Copied!</span>
               </div>
-            </li>
-          </ul>
-        </ng-container>
+            </div>
+
+          </ng-container>
+
+          <!-- CREATE/DELETE -->
+          <ng-template #aud2SnapshotOnly>
+            <div class="aud2-sectiontitle">Snapshot</div>
+
+            <div class="aud2-footer">
+              <button class="aud2-mini" (click)="openSnapshot(a)">
+                View snapshot
+              </button>
+
+              <div class="aud2-rightbtns">
+                <button class="aud2-mini" [disabled]="busy[a.auditId]" (click)="copyAuditData(a)">
+                  {{ busy[a.auditId] ? 'Copying…' : 'Copy data' }}
+                </button>
+                <button class="aud2-mini" (click)="downloadAuditData(a)">Download</button>
+                <span *ngIf="copied[a.auditId]" class="aud2-copied">Copied!</span>
+              </div>
+            </div>
+          </ng-template>
+
+        </div>
       </div>
+    </div>
+  </ng-container>
+
+  <!-- Drawer / Modal -->
+  <div class="aud2-drawer-backdrop" *ngIf="drawer.open" (click)="closeDrawer()"></div>
+
+  <div class="aud2-drawer" *ngIf="drawer.open">
+    <div class="aud2-drawer-head">
+      <div>
+        <div class="aud2-drawer-title">{{ drawer.title }}</div>
+        <div class="aud2-drawer-sub">Audit #{{ drawer.auditId }}</div>
+      </div>
+      <button class="aud2-close" (click)="closeDrawer()"><i class="fas fa-xmark"></i></button>
+    </div>
+
+    <div class="aud2-drawer-tabs">
+     <button class="aud2-tab" [class.active]="drawer.tab==='before'" (click)="setDrawerTab('before')">Before</button>
+<button class="aud2-tab" [class.active]="drawer.tab==='after'" (click)="setDrawerTab('after')">After</button>
+
+    </div>
+
+    <div class="aud2-drawer-body">
+
+      <ng-container *ngIf="drawer.data as snap">
+        <!-- object -->
+        <ng-container *ngIf="snap.kind === 'object'">
+          <!-- <div class="aud2-kv">
+            <div class="aud2-kvrow" *ngFor="let r of snap.rows">
+              <div class="aud2-k">{{ r.key }}</div>
+              <div class="aud2-v">{{ r.value }}</div>
+            </div>
+          </div> -->
+
+          <div class="aud2-arr" *ngFor="let arr of snap.arrays">
+            <div class="aud2-arrhead">{{ arr.key }} ({{ arr.items.length }})</div>
+            <div class="aud2-tablewrap">
+              <table class="aud2-table">
+                <thead>
+                  <tr><th *ngFor="let c of arr.columns">{{ c }}</th></tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of arr.items">
+                    <td *ngFor="let c of arr.columns">{{ row[c] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- array root -->
+        <ng-container *ngIf="snap.kind === 'array'">
+          <div class="aud2-tablewrap">
+            <table class="aud2-table">
+              <thead><tr><th *ngFor="let c of snap.columns">{{ c }}</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let row of snap.items">
+                  <td *ngFor="let c of snap.columns">{{ row[c] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+
+        <div *ngIf="snap.kind==='empty'" class="aud2-empty">No data</div>
+      </ng-container>
+
+    </div>
+  </div>
+</div>
+
+  </ng-container>
+
+
 
       <!-- STEP 5: REVIEW -->
       <div *ngIf="isEdit && step === lastStepIndex" class="rounded-xl border p-2 space-y-3">
