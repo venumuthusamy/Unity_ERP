@@ -334,25 +334,56 @@ private showPeriodLockedSwal(action: string): void {
   // ================== PO Lines Modal ==================
 
   openLinesModal(row: any): void {
-    let lines: any[] = [];
-    try {
-      lines = Array.isArray(row?.poLines)
-        ? row.poLines
-        : JSON.parse(row?.poLines || '[]');
-    } catch {
-      lines = [];
-    }
-
-    const total = lines.reduce(
-      (sum, l) => sum + (Number(l?.total) || 0),
-      0
-    );
-
-    this.modalLines = lines;
-    this.modalLocation = row?.location || ''; 
-    this.modalTotal = total;
-    this.showLinesModal = true;
+  let linesRaw: any[] = [];
+  try {
+    linesRaw = Array.isArray(row?.poLines)
+      ? row.poLines
+      : JSON.parse(row?.poLines || '[]');
+  } catch {
+    linesRaw = [];
   }
+
+  // ✅ Normalize each line and compute taxAmt if missing
+  const normalized = (linesRaw || []).map((l: any) => {
+    const qty = Number(l?.qty ?? l?.Qty ?? 0);
+    const price = Number(l?.price ?? l?.unitPrice ?? l?.UnitPrice ?? 0);
+    const discountPct = Number(l?.discount ?? l?.discountPct ?? l?.DiscountPct ?? 0);
+
+    // gross & discount
+    const gross = qty * price;
+    const discAmt = gross * (discountPct / 100);
+    const netBeforeTax = gross - discAmt;
+
+    // take taxAmt from any known field
+    const taxAmtFromApi =
+      Number(l?.taxAmt ?? l?.taxAmount ?? l?.TaxAmt ?? l?.TaxAmount ?? 0);
+
+    // if taxAmt not provided, try derive from total - netBeforeTax
+    const total = Number(l?.total ?? l?.lineTotal ?? l?.Total ?? 0);
+    const computedTax =
+      taxAmtFromApi > 0
+        ? taxAmtFromApi
+        : (total > 0 ? +(total - netBeforeTax).toFixed(2) : 0);
+
+    return {
+      ...l,
+      qty,
+      price,
+      discount: discountPct,
+      taxAmt: computedTax,
+      total: total || +(netBeforeTax + computedTax).toFixed(2)
+    };
+  });
+
+  // ✅ Total remains sum of total (as before)
+  const total = normalized.reduce((sum, l) => sum + (Number(l?.total) || 0), 0);
+
+  this.modalLines = normalized;
+  this.modalLocation = row?.location || '';
+  this.modalTotal = +total.toFixed(2);
+  this.showLinesModal = true;
+ }
+
 
   closeLinesModal(): void {
     this.showLinesModal = false;
@@ -869,24 +900,44 @@ private buildPoPrintDto(row: any): PurchaseOrderPrintDTO {
     +computedTaxLines.toFixed(2);
 
   const shippingCost =
-    Number(row?.shippingCost ?? row?.shipping ?? row?.ShippingCost) || 0;
+  Number(row?.shippingCost ?? row?.shipping ?? row?.ShippingCost) || 0;
 
-  const taxPct =
-    Number(row?.taxPct ?? row?.taxPercentage ?? row?.TaxPct) || 0;
+// ✅ Real tax percent from PO/DB (THIS is what header should show)
+const taxPct =
+  Number(
+    row?.taxPct ??
+    row?.taxPercentage ??
+    row?.TaxPct ??
+    row?.tax ??
+    row?.Tax
+  ) || 0;
 
-  // your UI shows "Shipping + TaxPctAmt" as a separate number (taxPctAmt)
-  // if backend sends it, take it. otherwise compute from (subTotal - discounts + taxLines + shipping) * taxPct%
-  const baseForPct = (subTotal - discountLines - discountAbsolute + taxLines + shippingCost);
+  // ✅ Effective tax ONLY for shipping-tax calculation
+  // Rule: if shipping > 0 and taxPct is 0 => default 9%, else use taxPct
+  const shippingTaxPct =
+    (shippingCost > 0 && taxPct <= 0) ? 9 : taxPct;
+
+  // ✅ compute shipping tax amount
+  const computedShippingTax =
+    (shippingCost > 0 && shippingTaxPct > 0)
+      ? +((shippingCost * shippingTaxPct) / 100).toFixed(2)
+      : 0;
+
+  // ✅ if backend sends already, take it; else compute
   const taxPctAmt =
-    Number(row?.taxPctAmt ?? row?.TaxPctAmt ?? row?.shippingTaxPctAmt) ||
-    +(baseForPct * (taxPct / 100)).toFixed(2);
+    Number(row?.taxPctAmt ?? row?.TaxPctAmt ?? row?.shippingTaxPctAmt) || computedShippingTax;
+
+  // ✅ Net = (SubTotal - discounts + taxLines) + (Shipping + shippingTax)
+  const baseForNet = (subTotal - discountLines - discountAbsolute + taxLines);
+  const shippingPlusTax = +(shippingCost + taxPctAmt).toFixed(2);
 
   const netTotal =
     Number(row?.netTotal ?? row?.NetTotal ?? row?.totalAmount ?? row?.TotalAmount) ||
-    +(baseForPct + taxPctAmt).toFixed(2);
+    +(baseForNet + shippingPlusTax).toFixed(2);
 
-  const supplierName = (row?.supplierName || 'Supplier').toString().trim();
-  const deliverTo = (row?.deliveryTo || row?.location || row?.deliveryAddress || '').toString().trim();
+   const supplierName = (row?.supplierName || 'Supplier').toString().trim();
+
+  const deliverTo = (row?.deliveryTo || row?.location || row?.deliveryAddress || '').toString().trim(); 
 
   return {
     purchaseOrderNo: String(row?.purchaseOrderNo || ''),
@@ -907,10 +958,17 @@ private buildPoPrintDto(row: any): PurchaseOrderPrintDTO {
     discountAbsolute,
     taxLines,
     shippingCost,
+
+    // ✅ IMPORTANT:
+    // Header should show ONLY real taxPct (not default 9)
     taxPct,
+
+    // ✅ this is shipping tax amount (computed using 9% only when taxPct=0 & shipping>0)
     taxPctAmt,
+
     netTotal
   };
+
 }
 
 private formatDate(d: any) {
@@ -983,7 +1041,7 @@ private async generatePoPdfBlob(dto: PurchaseOrderPrintDTO): Promise<Blob> {
     [{ text: 'Discount (absolute)', style: 'totLabel' }, { text: this.n(dto.discountAbsolute, 2), style: 'totVal' }],
     [{ text: 'Tax (Lines)', style: 'totLabel' }, { text: this.n(dto.taxLines, 2), style: 'totVal' }],
     [{ text: 'Shipping Cost', style: 'totLabel' }, { text: this.n(dto.shippingCost, 2), style: 'totVal' }],
-    [{ text: 'Shipping + TaxPctAmt', style: 'totLabel' }, { text: this.n(dto.taxPctAmt, 2), style: 'totVal' }],
+    [{ text: 'Shipping + TaxPctAmt', style: 'totLabel' }, { text: this.n(dto.shippingCost + dto.taxPctAmt, 2), style: 'totVal' }],
     [{ text: 'Net Total', style: 'totLabelBold' }, { text: `${this.n(dto.netTotal, 2)} ${dto.currency}`, style: 'totValBold' }]
   ];
 
@@ -1014,13 +1072,18 @@ private async generatePoPdfBlob(dto: PurchaseOrderPrintDTO): Promise<Blob> {
           {
             width: '*',
             stack: [
-              { text: 'PURCHASE ORDER', style: 'docTitle', alignment: 'right' },
-              { text: `PO No : ${dto.purchaseOrderNo}`, style: 'meta', alignment: 'right' },
-              { text: `PO Date : ${this.formatDate(dto.poDate)}`, style: 'meta', alignment: 'right' },
-              { text: `Delivery : ${this.formatDate(dto.deliveryDate)}`, style: 'meta', alignment: 'right' },
-              { text: `Currency : ${dto.currency || '-'}`, style: 'meta', alignment: 'right' },
-              { text: dto.terms ? `Terms : ${dto.terms}` : '', style: 'meta', alignment: 'right' }
-            ].filter((x: any) => !!x.text)
+                { text: 'PURCHASE ORDER', style: 'docTitle', alignment: 'right' },
+                { text: `PO No : ${dto.purchaseOrderNo}`, style: 'meta', alignment: 'right' },
+                { text: `PO Date : ${this.formatDate(dto.poDate)}`, style: 'meta', alignment: 'right' },
+                { text: `Delivery : ${this.formatDate(dto.deliveryDate)}`, style: 'meta', alignment: 'right' },
+                { text: `Currency : ${dto.currency || '-'}`, style: 'meta', alignment: 'right' },
+
+                // ✅ ALWAYS show tax line (even 0.00%)
+                { text: `Tax % : ${this.n(dto.taxPct ?? 0, 2)}%`, style: 'meta', alignment: 'right' },
+
+                // ✅ show terms only if exists
+                ...(dto.terms ? [{ text: `Terms : ${dto.terms}`, style: 'meta', alignment: 'right' }] : [])
+                          ].filter((x: any) => !!x.text)
           }
         ],
         columnGap: 10
