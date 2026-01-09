@@ -74,15 +74,19 @@
     <div class="md:col-span-1">
       <label class="text-xs font-semibold text-gray-600 block">Item Type <span class="text-red-500">*</span></label>
       <select
-        class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]"
-        [(ngModel)]="item.itemType"
-        name="itemType"
-        required>
-        <option [ngValue]="null" disabled>Select Item Type</option>
-        <option *ngFor="let i of ItemTypeList" [ngValue]="i.id">
-          {{ i.itemTypeName }}
-        </option>
-      </select>
+  class="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0e3a4c]"
+  [(ngModel)]="item.itemType"
+  name="itemType"
+  [compareWith]="compareById"
+  required>
+
+  <option [ngValue]="null" disabled>Select Item Type</option>
+
+  <option *ngFor="let i of ItemTypeList" [ngValue]="i.id">
+    {{ i.itemTypeName }}
+  </option>
+</select>
+
     </div>
 
     <!-- Category -->

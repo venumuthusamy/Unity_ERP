@@ -350,8 +350,7 @@ getItemType(){
 
             itemCode: h.itemCode ?? h.sku ?? '',
             itemName: h.itemName ?? h.name ?? '',
-            itemType: (h.itemType ?? null),
-
+             itemType: h.itemTypeId != null ? Number(h.itemTypeId) : null,
             categoryId: h.categoryId ?? h.categoryID ?? null,
             uomId: h.uomId ?? h.uomID ?? null,
             budgetLineId: h.budgetLineId ?? h.budgetLineID ?? null,
@@ -1528,4 +1527,9 @@ private downloadText(text: string, fileName: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+compareById = (a: any, b: any) => {
+  if (a == null || b == null) return a === b;
+  return Number(a) === Number(b);
+};
+
 }
