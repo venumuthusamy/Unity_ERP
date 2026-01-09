@@ -9,6 +9,7 @@
 
     <!-- Header fields -->
     <div [ngClass]="gridColsClass(4)" class="so-grid">
+
       <!-- Quotation -->
       <div class="so-header-dd dropdown-input">
         <label class="lbl">Quotation No</label>
@@ -63,7 +64,7 @@
       <div class="col-span-1 md:col-span-1">
         <label class="lbl">Delivery Date</label>
         <div class="field-stack">
-          <input class="so-inp" type="date" [(ngModel)]="soHdr.deliveryDate" [disabled]="editMode"/>
+          <input class="so-inp" type="date" [(ngModel)]="soHdr.deliveryDate" [disabled]="true"/>
           <button type="button"
                   class="btn-outline sm btn-preview-under"
                   *ngIf="!editMode"
@@ -72,6 +73,31 @@
           </button>
         </div>
       </div>
+
+      <!-- ✅ NEW: Delivery To -->
+      <div class="md:col-span-2">
+        <label class="lbl">Delivery To</label>
+        <textarea
+          class="so-inp so-textarea"
+          rows="3"
+          [(ngModel)]="soHdr.deliveryTo"
+          placeholder="Delivery address / site / contact person"></textarea>
+
+        <p *ngIf="submitted && isEmpty(soHdr.deliveryTo)" class="err">
+          Delivery To is required.
+        </p>
+      </div>
+
+      <!-- ✅ NEW: Remarks -->
+      <div class="md:col-span-2">
+        <label class="lbl">Remarks</label>
+        <textarea
+          class="so-inp so-textarea"
+          rows="3"
+          [(ngModel)]="soHdr.remarks"
+          placeholder="Any remarks..."></textarea>
+      </div>
+
     </div>
 
     <!-- Lines -->
@@ -98,7 +124,7 @@
 
           <tr *ngFor="let ln of soLines; let i=index; trackBy: trackByIndex">
             <!-- Item (disabled in edit mode) -->
-            <td class="relative dropdown-input">
+            <td class="relative dropdown-input so-line-dd">
               <input
                 type="text"
                 class="so-inp w-64"
@@ -124,7 +150,7 @@
               </div>
             </td>
 
-            <!-- ✅ Description -->
+            <!-- Description -->
             <td>
               <input class="so-inp w-72"
                      [(ngModel)]="soLines[i].description"
@@ -148,7 +174,7 @@
                      (input)="onQtyChange(i)">
             </td>
 
-            <!-- ✅ Unit Price (NOW EDITABLE) -->
+            <!-- Unit Price -->
             <td class="num">
               <input type="number"
                      class="so-inp w-28 text-right"
@@ -158,15 +184,13 @@
                      step="0.01">
             </td>
 
-            <!-- Discount (ONLY percentage in grid) -->
+            <!-- Discount -->
             <td class="num">
-              <input
-                type="number"
-                class="so-inp w-20 text-right"
-                [(ngModel)]="soLines[i].discount"
-                (input)="onDiscountChange(i)"
-                placeholder="0"
-              />
+              <input type="number"
+                     class="so-inp w-20 text-right"
+                     [(ngModel)]="soLines[i].discount"
+                     (input)="onDiscountChange(i)"
+                     placeholder="0"/>
             </td>
 
             <!-- Tax -->
@@ -188,11 +212,10 @@
 
             <!-- Action -->
             <td class="text-right">
-              <button
-                type="button"
-                class="btn-chip btn-chip--danger-outline btn-chip--sm"
-                (click)="removeLine(i)"
-                aria-label="Remove line">
+              <button type="button"
+                      class="btn-chip btn-chip--danger-outline btn-chip--sm"
+                      (click)="removeLine(i)"
+                      aria-label="Remove line">
                 <span class="btn-chip__icon">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M3 6h18M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M7 6l1 14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-14"
@@ -221,22 +244,20 @@
           <span class="mtc-label">Discount</span>
 
           <div class="mtc-discount-wrap">
-            <select
-              class="so-inp mtc-inp mtc-discount-mode"
-              [(ngModel)]="discountDisplayMode"
-              [ngModelOptions]="{standalone:true}">
+            <select class="so-inp mtc-inp mtc-discount-mode"
+                    [(ngModel)]="discountDisplayMode"
+                    [ngModelOptions]="{standalone:true}">
               <option value="PCT">%</option>
               <option value="VAL">Value</option>
             </select>
 
-            <input
-              id="discLinesInp"
-              class="so-inp mtc-inp mtc-discount-value text-right"
-              type="text"
-              [value]="discountDisplayMode === 'PCT'
-                         ? (discountPctSummary | number:'1.2-2')
-                         : ((totals.discountLines || 0) | number:'1.2-2')"
-              readonly>
+            <input id="discLinesInp"
+                   class="so-inp mtc-inp mtc-discount-value text-right"
+                   type="text"
+                   [value]="discountDisplayMode === 'PCT'
+                             ? (discountPctSummary | number:'1.2-2')
+                             : ((totals.discountLines || 0) | number:'1.2-2')"
+                   readonly>
           </div>
         </div>
 
