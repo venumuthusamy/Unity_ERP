@@ -85,4 +85,7 @@ getBom(itemId: number) {
 GetItemDetailsByItemId(id: number): Observable<any[]> {
     return this.http.get<any[]>(this.url + ItemMasterAPIUrls.GetItemDetailsByItemId+id);
   }
+    getAllItemType(): Observable<any> {
+    return this.http.get<any>(this.url + ItemMasterAPIUrls.getItemType);
+  }
 }
