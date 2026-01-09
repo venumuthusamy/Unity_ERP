@@ -8,6 +8,13 @@ import * as feather from 'feather-icons';
 import { SalesOrderService } from '../sales-order.service';
 import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-close-fx.service';
 
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
+// pdfmake
+import * as pdfMake from 'pdfmake/build/pdfmake';
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+(pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+
 type SoLine = {
   id?: number;
   salesOrderId?: number;
@@ -74,7 +81,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   draftLoading = false;
   get draftCount(): number { return this.draftRows?.length || 0; }
 
-  // ✅ NEW: SO ids which have shortage / drafts -> approve disabled
+  // SO ids which have shortage / drafts -> approve disabled
   private blockedSoIds = new Set<number>();
 
   // SO Lines modal (dynamic columns)
@@ -91,18 +98,28 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     lockedQty: true
   };
 
+  // period lock
   isPeriodLocked = false;
   currentPeriodName = '';
 
+  // ✅ PDF modal (toolbar preview)
+  showPdfModal = false;
+  pdfUrl: SafeResourceUrl | null = null;
+  private pdfBlobUrl: string | null = null;
+  private lastPdfBlob: Blob | null = null;
+  pdfSoNo = '';
+  private pdfDocDef: any = null;
+
   getLinesColsCount(): number {
-    return 1 + Object.values(this.lineCols).filter(Boolean).length; // 1 for Item
+    return 1 + Object.values(this.lineCols).filter(Boolean).length;
   }
 
   constructor(
     private salesOrderService: SalesOrderService,
     private router: Router,
     private datePipe: DatePipe,
-    private periodService: PeriodCloseService
+    private periodService: PeriodCloseService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -110,8 +127,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     this.checkPeriodLockForDate(today);
 
     this.loadRequests();
-
-    // ✅ IMPORTANT: load drafts cache so approve can be disabled
     this.prefetchDraftsCount();
   }
 
@@ -119,7 +134,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   ngAfterViewChecked(): void { feather.replace(); }
 
   private checkPeriodLockForDate(dateStr: string): void {
-    if (!dateStr) { return; }
+    if (!dateStr) return;
 
     this.periodService.getStatusForDateWithName(dateStr).subscribe({
       next: (res: PeriodStatusDto | null) => {
@@ -143,7 +158,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     );
   }
 
-  // ✅ shortage = ordered - allocated
+  // shortage = ordered - allocated
   getShortageQty(r: any): number {
     const qty = Number(r?.quantity ?? r?.qty ?? 0);
     const locked = Number(r?.lockedQty ?? 0);
@@ -151,7 +166,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     return s > 0 ? s : 0;
   }
 
-  // ✅ NEW: build blockedSoIds from draftRows
   private rebuildBlockedSoIds(): void {
     const set = new Set<number>();
 
@@ -160,8 +174,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
       if (!soId) continue;
 
       const shortage = this.getShortageQty(r);
-
-      // if allocation missing or shortage exists => block approve
       const missingAlloc =
         (r?.warehouseId == null || r?.warehouseId === 0) ||
         (r?.supplierId == null || r?.supplierId === 0) ||
@@ -173,7 +185,6 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
     this.blockedSoIds = set;
   }
 
-  // ✅ NEW: UI helper (used by html)
   hasInsufficientQty(row: SoHeader): boolean {
     const id = Number(row?.id ?? 0);
     return id > 0 && this.blockedSoIds.has(id);
@@ -276,7 +287,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
       this.salesOrderService.deleteSO(id, 1).subscribe({
         next: () => {
           this.loadRequests();
-          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
+          this.prefetchDraftsCount();
           Swal.fire('Deleted!', 'Sales Order has been deleted.', 'success');
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Delete failed.', 'error'); }
@@ -286,10 +297,8 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
 
   // ---------- Approve / Reject ----------
   onApprove(row: SoHeader): void {
-    // ✅ BLOCK APPROVE IF shortage exists
     if (this.hasInsufficientQty(row)) {
-      Swal.fire(
-        'Cannot Approve',
+      Swal.fire('Cannot Approve',
         'This Sales Order has Insufficient stock / allocation incomplete. Please resolve Draft lines first.',
         'warning'
       );
@@ -311,7 +320,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
           row.approvalStatus = 2;
           row.approvedBy = 1;
           Swal.fire('Approved', 'Sales Order approved successfully.', 'success');
-          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
+          this.prefetchDraftsCount();
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to approve Sales Order.', 'error'); }
       });
@@ -333,7 +342,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
           row.approvalStatus = 3;
           row.isActive = false;
           Swal.fire('Rejected', 'Sales Order rejected and lines unlocked.', 'success');
-          this.prefetchDraftsCount(); // refresh badge + rebuild blocked list
+          this.prefetchDraftsCount();
         },
         error: (err) => { console.error(err); Swal.fire('Error', 'Failed to reject Sales Order.', 'error'); }
       });
@@ -342,17 +351,13 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
 
   // ---------- Lines modal ----------
   openLinesModal(row: SoHeader): void {
-    let lines: SoLine[] = [];
-    try {
-      if (Array.isArray(row?.lineItems)) lines = row.lineItems as SoLine[];
-      else if (row?.lineItems) lines = JSON.parse(row.lineItems as unknown as string);
-      else if ((row as any)?.poLines) {
-        const poLines = (row as any).poLines;
-        lines = Array.isArray(poLines) ? poLines : JSON.parse(poLines);
-      }
-    } catch { lines = []; }
+    const lines = this.extractLinesFromRow(row);
 
-    const total = (lines ?? []).reduce((sum, l) => sum + (Number((l as any)?.total) || 0), 0);
+    const total = (lines || []).reduce((sum, l: any) => {
+      const t = Number(l?.total ?? 0);
+      return sum + (isNaN(t) ? 0 : t);
+    }, 0);
+
     this.modalLines = lines ?? [];
     this.modalTotal = total;
     this.showLinesModal = true;
@@ -361,18 +366,16 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   closeLinesModal(): void { this.showLinesModal = false; }
 
   // ---------- Drafts ----------
-  /** Preload badge on first paint */
   prefetchDraftsCount(): void {
     this.salesOrderService.getDrafts().subscribe({
       next: (res) => {
         this.draftRows = (res?.data ?? []);
-        this.rebuildBlockedSoIds(); // ✅ IMPORTANT
+        this.rebuildBlockedSoIds();
       },
       error: (err) => console.error('draft count error', err)
     });
   }
 
-  /** Open modal + refresh list */
   openDrafts(): void {
     this.draftLoading = true;
     this.salesOrderService.getDrafts().subscribe({
@@ -384,7 +387,7 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
             : 'Allocation missing (WH/SUP/BIN)'
         }));
 
-        this.rebuildBlockedSoIds(); // ✅ IMPORTANT
+        this.rebuildBlockedSoIds();
         this.draftLoading = false;
         this.showDraftsModal = true;
       },
@@ -393,4 +396,207 @@ export class SalesOrderListComponent implements OnInit, AfterViewInit, AfterView
   }
 
   closeDrafts(): void { this.showDraftsModal = false; }
+
+  // =========================
+  // ✅ PRINT / PDF PREVIEW
+  // =========================
+  openPrint(row: SoHeader): void {
+    const lines = this.extractLinesFromRow(row);
+
+    this.pdfSoNo = row?.salesOrderNo || '';
+    this.showPdfModal = true;
+    this.pdfUrl = null;
+    this.lastPdfBlob = null;
+
+    this.pdfDocDef = this.buildSoPdfDoc(row, lines);
+
+    (pdfMake as any).createPdf(this.pdfDocDef).getBlob((blob: Blob) => {
+      this.lastPdfBlob = blob;
+
+      if (this.pdfBlobUrl) URL.revokeObjectURL(this.pdfBlobUrl);
+      this.pdfBlobUrl = URL.createObjectURL(blob);
+
+      // ✅ Force toolbar like screenshot
+      const viewerUrl = this.pdfBlobUrl + '#toolbar=1&navpanes=0&scrollbar=1';
+      this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(viewerUrl);
+    });
+  }
+
+  closePdf(): void {
+    this.showPdfModal = false;
+    this.pdfUrl = null;
+    this.pdfSoNo = '';
+    this.pdfDocDef = null;
+    this.lastPdfBlob = null;
+
+    if (this.pdfBlobUrl) {
+      URL.revokeObjectURL(this.pdfBlobUrl);
+      this.pdfBlobUrl = null;
+    }
+  }
+
+  printPdf(): void {
+    // ✅ Best print: open blob in new tab then print (same like your screenshot behavior)
+    if (this.lastPdfBlob) {
+      const url = URL.createObjectURL(this.lastPdfBlob);
+      const w = window.open(url, '_blank');
+      if (!w) return;
+
+      const timer = setInterval(() => {
+        try {
+          if (w.document.readyState === 'complete') {
+            clearInterval(timer);
+            w.focus();
+            w.print();
+          }
+        } catch {}
+      }, 300);
+
+      // cleanup url later
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return;
+    }
+
+    // fallback
+    if (this.pdfDocDef) (pdfMake as any).createPdf(this.pdfDocDef).print();
+  }
+
+  downloadPdf(): void {
+    // ✅ Download from blob (fast)
+    if (this.lastPdfBlob) {
+      const fileName = (this.pdfSoNo ? this.pdfSoNo : 'SalesOrder') + '.pdf';
+      const url = URL.createObjectURL(this.lastPdfBlob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+
+      setTimeout(() => URL.revokeObjectURL(url), 800);
+      return;
+    }
+
+    // fallback
+    if (this.pdfDocDef) {
+      const fileName = (this.pdfSoNo ? this.pdfSoNo : 'SalesOrder') + '.pdf';
+      (pdfMake as any).createPdf(this.pdfDocDef).download(fileName);
+    }
+  }
+
+  private extractLinesFromRow(row: SoHeader): SoLine[] {
+    let lines: SoLine[] = [];
+    try {
+      if (Array.isArray(row?.lineItems)) lines = row.lineItems as SoLine[];
+      else if (row?.lineItems) lines = JSON.parse(row.lineItems as any);
+      else if ((row as any)?.poLines) {
+        const poLines = (row as any).poLines;
+        lines = Array.isArray(poLines) ? poLines : JSON.parse(poLines);
+      }
+    } catch {
+      lines = [];
+    }
+    return lines ?? [];
+  }
+
+  private buildSoPdfDoc(h: SoHeader, lines: SoLine[]): any {
+    const req = this.datePipe.transform(h?.requestedDate, 'dd-MM-yyyy') || '-';
+    const del = this.datePipe.transform(h?.deliveryDate, 'dd-MM-yyyy') || '-';
+    const status = this.statusToText(h?.approvalStatus ?? h?.status);
+
+    // ✅ clean subtotal (no TS 2881 warnings)
+    const subTotal = (lines || []).reduce((s, l: any) => {
+      const qty = Number(l?.quantity ?? l?.qty ?? 0);
+      const up  = Number(l?.unitPrice ?? l?.price ?? 0);
+      const total = Number(l?.total ?? (qty * up));
+      return s + (isNaN(total) ? 0 : total);
+    }, 0);
+
+    const grandTotal = Number(h?.grandTotal ?? subTotal) || subTotal;
+
+    const tableBody: any[] = [
+      [
+        { text: 'Item', style: 'th' },
+        { text: 'UOM', style: 'th' },
+        { text: 'Qty', style: 'th', alignment: 'right' },
+        { text: 'Unit Price', style: 'th', alignment: 'right' },
+        { text: 'Allocated', style: 'th', alignment: 'right' },
+        { text: 'Shortage', style: 'th', alignment: 'right' },
+        { text: 'Total', style: 'th', alignment: 'right' }
+      ]
+    ];
+
+    for (const l of (lines || [])) {
+      const qty = Number(l?.quantity ?? l?.qty ?? 0);
+      const up = Number(l?.unitPrice ?? l?.price ?? 0);
+      const locked = Number(l?.lockedQty ?? 0);
+      const shortage = Math.max(qty - locked, 0);
+      const total = Number(l?.total ?? (qty * up));
+
+      tableBody.push([
+        (l?.itemName || l?.item || '-'),
+        (l?.uom || '-'),
+        { text: qty.toString(), alignment: 'right' },
+        { text: up.toFixed(2), alignment: 'right' },
+        { text: locked.toString(), alignment: 'right' },
+        { text: shortage.toString(), alignment: 'right' },
+        { text: (isNaN(total) ? 0 : total).toFixed(2), alignment: 'right' }
+      ]);
+    }
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [30, 30, 30, 30],
+      content: [
+        { text: 'SALES ORDER', style: 'title' },
+
+        {
+          columns: [
+            [
+              { text: `SO No: ${h?.salesOrderNo || '-'}`, style: 'kv' },
+              { text: `Customer: ${h?.customerName || '-'}`, style: 'kv' }
+            ],
+            [
+              { text: `Requested Date: ${req}`, style: 'kv' },
+              { text: `Delivery Date: ${del}`, style: 'kv' },
+              { text: `Status: ${status}`, style: 'kv' }
+            ]
+          ],
+          columnGap: 20,
+          margin: [0, 10, 0, 12]
+        },
+
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', 45, 35, 55, 55, 55, 55],
+            body: tableBody
+          },
+          layout: 'lightHorizontalLines'
+        },
+
+        {
+          columns: [
+            { text: '' },
+            {
+              width: 240,
+              table: {
+                widths: ['*', 90],
+                body: [
+                  [{ text: 'Sub Total', bold: true }, { text: subTotal.toFixed(2), alignment: 'right' }],
+                  [{ text: 'Grand Total', bold: true }, { text: grandTotal.toFixed(2), alignment: 'right' }]
+                ]
+              },
+              layout: 'lightHorizontalLines',
+              margin: [0, 12, 0, 0]
+            }
+          ]
+        }
+      ],
+      styles: {
+        title: { fontSize: 16, bold: true, alignment: 'center' },
+        kv: { fontSize: 10, margin: [0, 2, 0, 2] },
+        th: { fontSize: 10, bold: true, fillColor: '#f3f4f6' }
+      }
+    };
+  }
 }

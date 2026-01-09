@@ -19,7 +19,7 @@ type WarehouseInfo = {
 
 type WarehouseMaster = { id: number; warehouseName: string };
 
-// 🔹 New tax mode values – same as Quotation
+// tax mode
 type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
 
 type SoLine = {
@@ -29,26 +29,22 @@ type SoLine = {
   itemId?: number;
   uom?: string;
 
-  // ✅ NEW
   description?: string;
 
   quantity?: number | string;
   unitPrice?: number | string;
 
-  // discount input (ALWAYS percent in UI)
   discount?: number | string;
   discountType?: 'PCT' | 'VAL';
 
   tax?: LineTaxMode;
 
-  // amounts
   lineGross?: number;
   lineNet?: number;
   lineTax?: number;
   total?: number;
   lineDiscount?: number;
 
-  // original snapshot
   __origQty?: number;
   __origGross?: number;
   __origNet?: number;
@@ -97,6 +93,11 @@ export class SalesOrderCreateComponent implements OnInit {
     customerId: 0,
     requestedDate: '',
     deliveryDate: '',
+
+    // ✅ NEW
+    deliveryTo: '',
+    remarks: '',
+
     shipping: 0,
     discount: 0,
     gstPct: 0,
@@ -284,6 +285,10 @@ export class SalesOrderCreateComponent implements OnInit {
         this.soHdr.requestedDate = this.toInputDate(head.requestedDate);
         this.soHdr.deliveryDate  = this.toInputDate(head.deliveryDate);
 
+        // ✅ NEW
+        this.soHdr.deliveryTo = head.deliveryTo ?? head.DeliveryTo ?? '';
+        this.soHdr.remarks    = head.remarks    ?? head.Remarks    ?? '';
+
         this.soHdr.shipping = Number(head.shipping ?? 0);
         this.soHdr.discount = Number(head.discount ?? 0);
         this.soHdr.gstPct   = Number(head.gstPct ?? 0);
@@ -327,7 +332,6 @@ export class SalesOrderCreateComponent implements OnInit {
             itemId: Number(l.itemId ?? 0) || undefined,
             uom: l.uom || l.uomName || '',
 
-            // ✅ NEW
             description: l.description ?? l.Description ?? '',
 
             quantity: qty,
@@ -428,10 +432,12 @@ export class SalesOrderCreateComponent implements OnInit {
         const head = res?.data || res || {};
         const lines = (head?.lines ?? []) as any[];
 
-        // ✅ Quotation -> DeliveryDate autobind (header)
         this.soHdr.deliveryDate = this.toInputDate(head?.deliveryDate ?? head?.DeliveryDate);
 
-        // GST & tax modes from Quotation
+        // ✅ optional: take from quotation if you have it
+        this.soHdr.deliveryTo = (head?.deliveryTo ?? head?.DeliveryTo ?? this.soHdr.deliveryTo ?? '');
+        this.soHdr.remarks    = (head?.remarks ?? head?.Remarks ?? this.soHdr.remarks ?? '');
+
         this.soHdr.gstPct = Number(head?.gstPct ?? head?.gst ?? 0);
         const gst = Number(this.soHdr.gstPct || 0);
 
@@ -452,29 +458,23 @@ export class SalesOrderCreateComponent implements OnInit {
             item: l.itemName,
             itemId: l.itemId,
             uom: l.uomName ?? '',
-
-            // ✅ Quotation line -> Description autobind
             description: (l.description ?? l.Description ?? '').toString(),
-
             quantity: qty,
             unitPrice: price,
             discount: discPct,
             discountType: 'PCT',
             tax: mode,
-
             lineGross: amt.gross,
             lineNet:   amt.net,
             lineTax:   amt.tax,
             total:     amt.total,
             lineDiscount: amt.discountAmt,
-
             __origQty: qty,
             __origGross: amt.gross,
             __origNet:   amt.net,
             __origTax:   amt.tax,
             __origTotal: amt.total,
             __origDiscount: amt.discountAmt,
-
             warehouses: wh,
             dropdownOpen: '',
             filteredOptions: []
@@ -561,7 +561,6 @@ export class SalesOrderCreateComponent implements OnInit {
       this.soLines[i].uom = opt.defaultUom || this.soLines[i].uom || '';
       if (!this.soLines[i].unitPrice) this.soLines[i].unitPrice = Number(opt.price || 0);
 
-      // optional: if item master has description
       if (!this.soLines[i].description && opt.description) {
         this.soLines[i].description = String(opt.description);
       }
@@ -594,9 +593,7 @@ export class SalesOrderCreateComponent implements OnInit {
     this.computeLineFromQty(i);
   }
 
-  // ✅ NEW: UnitPrice editable + calculation auto update
   onUnitPriceChange(i: number) {
-    // sanitize
     const L = this.soLines[i];
     const p = Number(L.unitPrice);
     if (!isFinite(p) || p < 0) L.unitPrice = 0;
@@ -667,6 +664,14 @@ export class SalesOrderCreateComponent implements OnInit {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please fill required header fields.' });
       return false;
     }
+
+    // ✅ NEW required field
+    if (this.isEmpty(this.soHdr.deliveryTo)) {
+      this.submitted = true;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Delivery To is required.' });
+      return false;
+    }
+
     if (this.soLines.length === 0) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please add at least one line.' });
       return false;
@@ -688,6 +693,11 @@ export class SalesOrderCreateComponent implements OnInit {
       customerId: this.soHdr.customerId,
       requestedDate: this.soHdr.requestedDate,
       deliveryDate: this.soHdr.deliveryDate,
+
+      // ✅ NEW
+      deliveryTo: (this.soHdr.deliveryTo || '').toString(),
+      remarks: (this.soHdr.remarks || '').toString(),
+
       shipping: Number(this.soHdr.shipping || 0),
 
       discount: t.discountLines,
@@ -707,10 +717,7 @@ export class SalesOrderCreateComponent implements OnInit {
         itemId: l.itemId!,
         itemName: (l.item || '').toString(),
         uom: l.uom || '',
-
-        // ✅ NEW
         description: (l.description || '').toString(),
-
         quantity: Number(l.quantity) || 0,
         unitPrice: Number(l.unitPrice) || 0,
         discount: Number(l.discount) || 0,
