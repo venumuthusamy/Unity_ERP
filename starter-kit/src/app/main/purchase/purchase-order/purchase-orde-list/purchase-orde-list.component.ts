@@ -1225,5 +1225,20 @@ private makeBlock(title: string, value: string) {
   };
 }
 
+async sendPoEmail(row: any) {
+  const res:any = await this.poService.getPOById(row.id).toPromise();
+  const po = res?.data ?? res;
+
+  const dto = this.buildPoPrintDto(po);
+  const blob = await this.generatePoPdfBlob(dto);
+
+  const fd = new FormData();
+  fd.append('pdf', blob, `${dto.purchaseOrderNo}.pdf`);
+
+  this.poService.emailSupplierPo(row.id, fd).subscribe({
+    next: () => Swal.fire('Sent', 'PO emailed to supplier', 'success'),
+    error: () => Swal.fire('Error', 'Failed to send email', 'error')
+  });
+}
 
 }

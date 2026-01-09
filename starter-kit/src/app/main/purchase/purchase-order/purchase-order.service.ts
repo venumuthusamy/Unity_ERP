@@ -43,4 +43,8 @@ export class POService {
         return this.http.get<any>(this.url+ `/PurchaseOrder/${encodeURIComponent(poNo)}/qr`);
     }
 
+    emailSupplierPo(id: number, formData: FormData) {
+        return this.http.post(`${this.url}/purchaseorder/${id}/email-supplier`, formData);
+    }
+
 }
