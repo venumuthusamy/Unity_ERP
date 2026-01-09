@@ -137,7 +137,7 @@ type SnapObject = { kind: 'object'; rows: { key: string; value: any }[]; arrays:
 
 type Snap = SnapEmpty | SnapArray | SnapObject;
 
-type ItemType = 'SALES' | 'PURCHASE' | 'BOTH' | null;
+
 
 @Component({
   selector: 'app-create-item-master',
@@ -149,6 +149,8 @@ export class CreateItemMasterComponent implements OnInit {
   /* Steps */
   private readonly stepsCreate = ['Summary'] as const;
   private readonly stepsEdit = ['Summary', 'Warehouses', 'Suppliers', 'BOM', 'Audit', 'Review'] as const;
+  itemsetList: any;
+  ItemTypeList: any;
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
   get lastStepIndex() { return this.stepsView.length - 1; }
   step = 0;
@@ -299,7 +301,7 @@ drawer: {
     this.getAllRecurrring();
     this.getAllSupplier();
     this.getAllStrategy();
-
+this.getItemType();
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.isEdit = true;
@@ -324,7 +326,11 @@ drawer: {
     }
     return t;
   }
-
+getItemType(){
+   this.itemsSvc.getAllItemType().subscribe((res: any) => {
+      this.ItemTypeList = res?.data ?? [];
+    });
+}
   /* -------------------- Edit loader -------------------- */
   private loadForEdit(id: number): void {
     forkJoin({
@@ -344,7 +350,7 @@ drawer: {
 
             itemCode: h.itemCode ?? h.sku ?? '',
             itemName: h.itemName ?? h.name ?? '',
-            itemType: (h.itemType ?? null) as ItemType,
+            itemType: (h.itemType ?? null),
 
             categoryId: h.categoryId ?? h.categoryID ?? null,
             uomId: h.uomId ?? h.uomID ?? null,
@@ -486,7 +492,7 @@ drawer: {
       ...this.item,
 
       // ✅ new fields
-      itemType: this.item.itemType,
+      ItemTypeId: this.item.itemType,
       categoryId: Number(this.item.categoryId),
       uomId: Number(this.item.uomId),
       budgetLineId: Number(this.item.budgetLineId),
@@ -1050,7 +1056,7 @@ drawer: {
       // ✅ NEW fields used in your HTML
       itemCode: '',
       itemName: '',
-      itemType: null as ItemType,
+      itemType: null,
       categoryId: null as number | null,
       uomId: null as number | null,
       budgetLineId: null as number | null,

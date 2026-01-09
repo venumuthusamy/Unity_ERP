@@ -79,9 +79,9 @@
         name="itemType"
         required>
         <option [ngValue]="null" disabled>Select Item Type</option>
-        <option [ngValue]="'SALES'">Sales Item</option>
-        <option [ngValue]="'PURCHASE'">Purchase Item</option>
-        <option [ngValue]="'BOTH'">Both</option>
+        <option *ngFor="let i of ItemTypeList" [ngValue]="i.id">
+          {{ i.itemTypeName }}
+        </option>
       </select>
     </div>
 
