@@ -44,7 +44,10 @@ export const menu: any[] = [
       { id: 'bin', title: 'Bin', type: 'item', icon: 'circle', url: '/master/bin', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'driver', title: 'Driver', type: 'item', icon: 'circle', url: '/master/driver', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'vehicle', title: 'Vehicle', type: 'item', icon: 'circle', url: '/master/vehicle', approvalRoles: ['Admin', 'Super Admin'] },
-      { id: 'bank', title: 'Bank', type: 'item', icon: 'circle', url: '/master/bank-list', approvalRoles: ['Admin', 'Super Admin'] }
+      { id: 'bank', title: 'Bank', type: 'item', icon: 'circle', url: '/master/bank-list', approvalRoles: ['Admin', 'Super Admin'] },
+      { id: 'itemType', title: 'ItemType', type: 'item', icon: 'circle', url: '/master/itemType', approvalRoles: ['Admin', 'Super Admin'] },
+      { id: 'itemSet', title: 'ItemSet', type: 'item', icon: 'circle', url: '/master/itemSet', approvalRoles: ['Admin', 'Super Admin'] },
+
     ]
   },
 
