@@ -122,6 +122,10 @@ pendingPrCount = 0;
 pendingPrSearch = '';
   modalLocation: any;
 
+ showEmailConfirmModal = false;
+emailConfirmRow: any = null;
+emailSending = false;
+
 
   // Print details 
       // ✅ PO PDF modal
@@ -1225,8 +1229,8 @@ private makeBlock(title: string, value: string) {
   };
 }
 
-async sendPoEmail(row: any) {
-  const res:any = await this.poService.getPOById(row.id).toPromise();
+async sendPoEmail(row: any, closeAfterSuccess = false) {
+  const res: any = await this.poService.getPOById(row.id).toPromise();
   const po = res?.data ?? res;
 
   const dto = this.buildPoPrintDto(po);
@@ -1236,9 +1240,47 @@ async sendPoEmail(row: any) {
   fd.append('pdf', blob, `${dto.purchaseOrderNo}.pdf`);
 
   this.poService.emailSupplierPo(row.id, fd).subscribe({
-    next: () => Swal.fire('Sent', 'PO emailed to supplier', 'success'),
-    error: () => Swal.fire('Error', 'Failed to send email', 'error')
+    next: () => {
+      Swal.fire('Sent', 'PO Emailed to supplier', 'success');
+
+      // ✅ close modal only after success
+      this.closeEmailConfirmModal(true);
+
+      // ensure flag reset
+      this.emailSending = false;
+    },
+    error: () => {
+      Swal.fire('Error', 'Failed to send email', 'error');
+
+      // keep modal open, just stop loader
+      this.emailSending = false;
+    }
   });
 }
 
+
+
+openEmailConfirm(row: any) {
+  // Only approved
+  if (!row || row.approvalStatus !== 2) return;
+
+  this.emailConfirmRow = row;
+  this.showEmailConfirmModal = true;
+}
+
+closeEmailConfirmModal(force = false) {
+  if (this.emailSending && !force) return; // keep user-block while sending
+  this.showEmailConfirmModal = false;
+  this.emailConfirmRow = null;
+  this.emailSending = false;
+}
+
+confirmSendEmail() {
+  if (!this.emailConfirmRow) return;
+
+  this.emailSending = true;
+
+  // call existing method, but tell it to close on success
+  this.sendPoEmail(this.emailConfirmRow, true);
+}
 }
