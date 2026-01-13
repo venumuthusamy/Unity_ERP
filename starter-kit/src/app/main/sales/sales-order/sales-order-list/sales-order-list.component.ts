@@ -11,9 +11,21 @@ import { PeriodCloseService } from 'app/main/financial/period-close-fx/period-cl
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 // pdfmake
+// pdfmake
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-(pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+
+// ✅ SAFE: supports BOTH export shapes
+const vfs =
+  (pdfFonts as any)?.pdfMake?.vfs ||   // common
+  (pdfFonts as any)?.vfs;              // some builds
+
+if (vfs) {
+  (pdfMake as any).vfs = vfs;
+} else {
+  console.warn('pdfMake vfs not found. Check vfs_fonts import shape:', pdfFonts);
+}
+
 
 type SoLine = {
   id?: number;

@@ -42,7 +42,6 @@
                    (focus)="onGrnFocus()"
                    placeholder="Search GRN…"
                    class="w-full rounded-lg border px-2.5 h-8 text-[13px] pr-7"
-                   [attr.aria-autocomplete]="'list'"
                    [attr.aria-expanded]="grnOpen" />
             <button type="button"
                     class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-[11px]"
@@ -55,7 +54,7 @@
 
           <ul *ngIf="grnOpen"
               class="absolute left-0 right-0 mt-1 max-h-48 overflow-auto bg-white border rounded-md shadow z-20">
-            <li *ngFor="let g of grnFiltered; trackBy: trackByGrn"
+            <li *ngFor="let g of grnFiltered; trackBy: trackByLine"
                 (click)="selectGrn(g)"
                 class="px-3 py-2 cursor-pointer hover:bg-blue-50 text-[13px]">
               <span class="font-medium">{{ g.grnNo }}</span>
@@ -116,6 +115,7 @@
 
       <!-- Lines table -->
       <div class="rounded-xl border border-gray-200 mt-2">
+
         <div class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr]
                     text-[12px] font-medium bg-[#0e3a4c] text-white whitespace-nowrap rounded-t-xl">
           <div class="px-2.5 py-2">Item</div>
@@ -128,11 +128,12 @@
         </div>
 
         <div formArrayName="lines">
+
           <div *ngIf="lines.length === 0" class="text-center text-[12.5px] text-gray-400 py-3">
             No lines yet.
           </div>
 
-          <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByIndex"
+          <div *ngFor="let row of lines.controls; let i = index; trackBy: trackByLine"
                [formGroupName]="i"
                class="grid grid-cols-[1.4fr_2.4fr_1fr_0.7fr_0.9fr_0.9fr_1fr] items-center border-t">
 
@@ -162,27 +163,33 @@
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="qty" (input)="onCellChange(i)" />
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="qty"
+                     (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="unitPrice" (input)="onCellChange(i)" />
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="unitPrice"
+                     (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5">
-              <input type="number" class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
-                     formControlName="discountPct" (input)="onCellChange(i)" />
+              <input type="number"
+                     class="w-full rounded-lg border px-2.5 h-8 text-[13px]"
+                     formControlName="discountPct"
+                     (input)="onCellChange(i)" />
             </div>
 
             <div class="px-2.5 py-1.5 text-right text-[13px]">
-              {{ row.get('lineTotal')?.value || 0 | number:'1.2-2' }}
+              {{ (row.get('lineTotal')?.value || 0) | number:'1.2-2' }}
             </div>
           </div>
         </div>
 
-        <!-- ✅ Footer totals as INPUT FIELDS -->
+        <!-- Footer totals -->
         <div class="border-t px-3 py-3 bg-slate-50 text-[13px]">
           <div class="flex justify-end">
             <div class="w-72 space-y-2">
