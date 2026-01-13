@@ -358,42 +358,50 @@ this.receivedPersonMobileNo = this.sanitizePhone((hdr as any).receivedPersonMobi
   }
 
   /* ---------------- Create mode: SO change -> SO lines ---------------- */
-  onSoChanged(soId: number | null) {
-    if (this.isEdit) return;
+onSoChanged(soId: number | null) {
+  if (this.isEdit) return;
 
-    this.soLines = [];
-    this.totalDeliverQty = 0;
+  this.soLines = [];
+  this.totalDeliverQty = 0;
 
-    if (!soId) return;
-
-    this.soSrv.getSOById(soId).subscribe((res: any) => {
-      const dto = res?.data ?? res ?? {};
-      const lines = dto.lineItemsList ?? dto.lineItems ?? dto.lines ?? dto.items ?? [];
-
-      this.soLines = (lines || []).map((l: any) => {
-        const ordered = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
-        const delivered = Number(l.deliveredQty ?? l.shippedQty ?? 0);
-        const pending = Math.max(ordered - delivered, 0);
-
-        return {
-          soLineId: Number(l.id ?? l.soLineId ?? 0),
-          itemId: Number(l.itemId ?? 0),
-          itemName: String(l.itemName ?? ''),
-          uom: String(l.uomName ?? l.uom ?? ''),
-          orderedQty: ordered,
-          pendingQty: pending || ordered,
-          deliverQty: pending || ordered,
-          notes: '',
-          warehouseId: l.warehouseId ?? null,
-          binId: l.binId ?? null,
-          supplierId: l.supplierId ?? null,
-          available: l.available ?? null
-        } as UiSoLine;
-      });
-
-      this.recalcTotals();
-    });
+  // ✅ clear location when cleared
+  if (!soId) {
+    this.routeText = '';
+    return;
   }
+
+  this.soSrv.getSOById(soId).subscribe((res: any) => {
+    const dto = res?.data ?? res ?? {};
+
+    // ✅ LOCATION AUTO FILL (deliveryTo -> routeText)
+    this.routeText = (dto.deliveryTo ?? '').toString();
+
+    const lines = dto.lineItemsList ?? dto.lineItems ?? dto.lines ?? dto.items ?? [];
+
+    this.soLines = (lines || []).map((l: any) => {
+      const ordered = Number(l.quantity ?? l.orderedQty ?? l.qty ?? 0);
+      const delivered = Number(l.deliveredQty ?? l.shippedQty ?? 0);
+      const pending = Math.max(ordered - delivered, 0);
+
+      return {
+        soLineId: Number(l.id ?? l.soLineId ?? 0),
+        itemId: Number(l.itemId ?? 0),
+        itemName: String(l.itemName ?? ''),
+        uom: String(l.uomName ?? l.uom ?? ''),
+        orderedQty: ordered,
+        pendingQty: pending || ordered,
+        deliverQty: pending || ordered,
+        notes: '',
+        warehouseId: l.warehouseId ?? null,
+        binId: l.binId ?? null,
+        supplierId: l.supplierId ?? null,
+        available: l.available ?? null
+      } as UiSoLine;
+    });
+
+    this.recalcTotals();
+  });
+}
 
   /* ---------------- Totals ---------------- */
   recalcTotals() {
