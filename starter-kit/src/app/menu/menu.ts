@@ -39,7 +39,7 @@ export const menu: any[] = [
       { id: 'taxcode', title: 'Taxcode', type: 'item', icon: 'circle', url: '/master/taxcode', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'catagory', title: 'Catagory', type: 'item', icon: 'circle', url: '/master/catagory', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'costingmethod', title: 'Costing Method', type: 'item', icon: 'circle', url: '/master/coastingmethod', approvalRoles: ['Admin', 'Super Admin'] },
-      { id: 'strategy', title: 'Strategy', type: 'item', icon: 'circle', url: '/master/strategy', approvalRoles: ['Admin', 'Super Admin'] },
+      { id: 'strategy', title: 'Frequency', type: 'item', icon: 'circle', url: '/master/strategy', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'stockissue', title: 'StockIssue', type: 'item', icon: 'circle', url: '/master/stockIssue', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'bin', title: 'Bin', type: 'item', icon: 'circle', url: '/master/bin', approvalRoles: ['Admin', 'Super Admin'] },
       { id: 'driver', title: 'Driver', type: 'item', icon: 'circle', url: '/master/driver', approvalRoles: ['Admin', 'Super Admin'] },

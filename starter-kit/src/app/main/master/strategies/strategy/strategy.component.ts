@@ -54,7 +54,7 @@ export class StrategyComponent implements OnInit {
 
 
   reset() {
-    this.modeHeader = "Create Strategy";
+    this.modeHeader = "Create Frequency";
     this.strategyName = "";
     this.id = 0;
   }
@@ -124,7 +124,7 @@ export class StrategyComponent implements OnInit {
       this.strategyName = this.strategyValue.strategyName;
       this.isDisplay = true;
       this.resetButton = false;
-      this.modeHeader = "Edit Strategy";
+      this.modeHeader = "Edit Frequency";
       this.isEditMode = true;
     });
   }

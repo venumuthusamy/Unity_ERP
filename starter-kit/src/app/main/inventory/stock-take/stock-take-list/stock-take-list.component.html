@@ -57,14 +57,18 @@
   <ng-template ngx-datatable-cell-template let-row="row">
     <span class="truncate-20"
           [title]="row.name">
-      {{ row.supplierName?.slice(0, 20) }}{{ row.supplierName?.length > 20 ? '...' : '' }}
+      {{  (row.supplierName && row.supplierName.trim().length)
+          ? (row.supplierName.length > 20 ? (row.supplierName | slice:0:20) + '...' : row.supplierName)
+          : 'ALL' }}
     </span>
   </ng-template>
 </ngx-datatable-column>
 
-                    <ngx-datatable-column name="Type" prop="takeTypeId" [width]="120">
-                        <ng-template ngx-datatable-cell-template let-value="value">
-                            {{ value === 1 ? 'Full' : 'Cycle' }}
+                    <ngx-datatable-column name="Type" prop="strategyId" [width]="120">
+                        <ng-template ngx-datatable-cell-template let-row="row">
+                            {{   row?.strategyName && row.strategyName.trim().length
+        ? row.strategyName
+        : 'ALL' }}
                         </ng-template>
                     </ngx-datatable-column>
 
