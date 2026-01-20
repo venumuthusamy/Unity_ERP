@@ -82,6 +82,7 @@ export const menu: any[] = [
     approvalRoles: ['Super Admin'],
     children: [
       { id: 'ItemMaster', title: 'Item Master', type: 'item', icon: 'circle', url: '/Inventory/List-itemmaster', teams: ['Purchase Team'], approvalRoles: ['Super Admin'] },
+              { id: 'material-requisition', title: 'Material-Requisition', type: 'item', icon: 'circle', url: '/Inventory/list-material-requisition', teams: ['Purchase Team'], approvalRoles: ['Super Admin'] },
       { id: 'StackOverview', title: 'Stock-Overview', type: 'item', icon: 'circle', url: '/Inventory/list-stackoverview', teams: ['Purchase Team'], approvalRoles: ['Super Admin'] },
       { id: 'StackTransfer', title: 'Stock-Transfer', type: 'item', icon: 'circle', url: '/Inventory/list-stocktransfer', teams: ['Purchase Team'], approvalRoles: ['Super Admin'] },
       { id: 'StockTake', title: 'Stock-Take', type: 'item', icon: 'circle', url: '/Inventory/list-stocktake', teams: ['Purchase Team'], approvalRoles: ['Super Admin'] },

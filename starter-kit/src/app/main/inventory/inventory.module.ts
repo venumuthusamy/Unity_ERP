@@ -22,6 +22,8 @@ import { StockAdjustmentComponent } from './stock-adjustment/stock-adjustment.co
 import { SharedModule } from 'app/shared/shared.module';
 import { StockReorderPlanningCreateComponent } from './stock-reorder-planning/stock-reorder-planning-create/stock-reorder-planning-create.component';
 import { StockReorderPlanningListComponent } from './stock-reorder-planning/stock-reorder-planning-list/stock-reorder-planning-list.component';
+import { MaterialRequisitionListComponent } from './material-requisation/material-requisition-list/material-requisition-list.component';
+import { MaterialRequisitionCreateComponent } from './material-requisation/material-requisition-create/material-requisition-create.component';
 const routes = [
   {
     path: 'Create-inventory',
@@ -108,6 +110,22 @@ const routes = [
     component: StockReorderPlanningCreateComponent,
     data: { animation: 'edit-stockreorderplanning' }
   },
+
+    {
+    path: 'create-material-requisition',
+    component: MaterialRequisitionCreateComponent,
+    data: { animation: 'create-stockreorderplanning' }
+  },
+      {
+    path: 'list-material-requisition',
+    component: MaterialRequisitionListComponent,
+    data: { animation: 'create-stockreorderplanning' }
+  },
+   {
+    path: 'Inventory/create-material-requisition/:id',
+    component: MaterialRequisitionCreateComponent,
+    data: { animation: 'edit-stockreorderplanning' }
+  },
 ]
 
 @NgModule({
@@ -125,6 +143,8 @@ const routes = [
      StockAdjustmentComponent,
      StockReorderPlanningCreateComponent,
      StockReorderPlanningListComponent,
+     MaterialRequisitionListComponent,
+     MaterialRequisitionCreateComponent,
   ],
   imports: [
     CommonModule,
