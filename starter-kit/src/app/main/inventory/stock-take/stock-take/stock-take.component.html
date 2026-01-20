@@ -9,11 +9,6 @@
     <!-- Header -->
     <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
         <h4 class="card-title mb-0" style="color:#2E5F73">Stock Take (Cycle / Full)</h4>
-
-        <span class="inline-flex items-center px-2 py-1 rounded-pill text-uppercase"
-            style="font-size:10px; font-weight:600; border:1px solid #dbe7ee; color:#2E5F73; background:#f5fafc;">
-            Plan → Freeze → Mobile Capture → Review → Post
-        </span>
     </div>
 
     <!-- Body -->
@@ -24,26 +19,26 @@
             <div class="col-sm-6 col-md-3">
                 <label class="form-label">Warehouse<span style="color:red">*</span></label>
                 <ng-select [items]="warehouseTypes" bindLabel="name" bindValue="id" [(ngModel)]="warehouseTypeId"
-                    placeholder="Select warehouse" (ngModelChange)="getSuppliersByWarehouse($event)" class="w-100">
+                    placeholder="Select warehouse"  class="w-100">
                 </ng-select>
             </div>
             <div class="col-sm-6 col-md-3">
-                <label class="form-label">Supplier<span style="color:red">*</span></label>
+                <label class="form-label">Supplier</label>
                 <ng-select [items]="supplierList" bindLabel="name" bindValue="id" [(ngModel)]="supplierId"
-                    (ngModelChange)="onSupplierChanged($event)" placeholder="Select Supplier" class="w-100">
+                    (ngModelChange)="onSupplierChanged($event)" placeholder="ALL Suppliers" class="w-100">
                 </ng-select>
             </div>
-            <div class="col-sm-6 col-md-3">
+            <!-- <div class="col-sm-6 col-md-3">
                 <label class="form-label">Type<span style="color:red">*</span></label>
                 <ng-select [items]="takeTypes" bindLabel="label" bindValue="id" [(ngModel)]="takeTypeId"
                     placeholder="Select type" (ngModelChange)="onTypeChanged($event)" class="w-100">
                 </ng-select>
-            </div>
+            </div> -->
 
             <div class="col-sm-6 col-md-3">
-                <label class="form-label">Strategy<span *ngIf="!strategyCheck" style="color:red">*</span></label>
+                <label class="form-label">Type</label>
                 <ng-select [items]="strategies" bindLabel="strategyName" bindValue="id" [(ngModel)]="strategyId"
-                    placeholder="Select strategy" class="w-100" [disabled]="strategyCheck">
+                     (ngModelChange)="onTypeChanged($event)" placeholder="ALL Types" class="w-100" [disabled]="strategyCheck">
                 </ng-select>
             </div>
 
@@ -62,8 +57,8 @@
 
         <!-- Table -->
         <div class="mt-2">
-            <button type="button" class="btn btn-outline-primary" (click)="onExportMobileTasks()">Export Mobile
-                Tasks</button>
+            <!-- <button type="button" class="btn btn-outline-primary" (click)="onExportMobileTasks()">Export Mobile
+                Tasks</button> -->
         </div>
 
         <div class="table-responsive mt-1">
@@ -71,6 +66,7 @@
                 <thead>
                     <tr>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Location</th>
+                        <th style="background-color:#2E5F73; color:white; width:200px;">Supplier</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Item</th>
                         <th style="background-color:#2E5F73; color:white; width:200px;">Barcode</th>
                         <!-- <th style="background-color:#2E5F73; color:white; width:120px;">Available</th> -->
@@ -91,8 +87,12 @@
                             <ng-select [items]="LocationTypes" bindLabel="binName" bindValue="id" [(ngModel)]="r.binId"
                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
+                        <td style="min-width:200px;">
+                            {{ r.supplierName || ('Supplier #' + r.supplierId) }}
+                            </td>
+
                         <td style="min-width: 200px;">
-                            <ng-select [items]="itemList" bindLabel="name" bindValue="id" [(ngModel)]="r.itemId"
+                            <ng-select [items]="itemList" bindLabel="itemName" bindValue="id" [(ngModel)]="r.itemId"
                                 placeholder="Item" class="w-100" disabled></ng-select>
                         </td>
                         <td style="min-width: 200px;"><input type="text" class="form-control" [(ngModel)]="r.barcode"
@@ -179,6 +179,7 @@
                         <tr>
                             <th style="width:42px;background-color:#2E5F73;color: #fff;"></th>
                             <th style="background-color:#2E5F73;color: #fff;">Location</th>
+                             <th style="background-color:#2E5F73; color:white; width:200px;">Supplier</th>
                             <th style="background-color:#2E5F73;color: #fff;">Item</th>
                             <th style="background-color:#2E5F73;color: #fff;">Barcode</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">
@@ -200,6 +201,10 @@
                             <td><input type="checkbox" [(ngModel)]="r.selected" (change)="onRowSelectedChanged()"></td>
                             <td class="text-truncate" style="max-width:220px;">{{ r.binName || getBinName(r.binId) }}
                             </td>
+                            <td style="min-width:200px;">
+                            {{ r.supplierName || ('Supplier #' + r.supplierId) }}
+                            </td>
+
                             <td class="text-truncate" style="max-width:220px;">
                                 {{ r.itemName || getItemName(r.itemId) }}
                             </td>

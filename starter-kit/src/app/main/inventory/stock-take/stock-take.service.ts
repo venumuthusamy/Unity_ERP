@@ -22,7 +22,7 @@ export class StockTakeService {
             .set('warehouseId', String(req.warehouseTypeId))
             .set('supplierId', String(req.supplierId))
             
-            .set('takeTypeId', String(req.takeTypeId));
+            //.set('takeTypeId', String(req.takeTypeId));
 
         // only add strategyId if defined (optional)
         if (req.strategyId != null) {

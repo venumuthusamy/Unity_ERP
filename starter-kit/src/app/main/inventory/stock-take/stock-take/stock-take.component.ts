@@ -31,6 +31,7 @@ interface StockTakeLine {
   _error?: string | null; // UI-only
   selected: any
   status:any
+  supplierName?: string | null;
 }
 
 @Component({
@@ -48,9 +49,9 @@ export class StockTakeComponent implements OnInit {
   ];
   strategies: any
   warehouseTypeId: any
-  supplierId:any
-  takeTypeId: any;
-  strategyId: any;
+  supplierId: number = 0;  // default ALL
+  takeTypeId: any;  
+  strategyId: number = 0;  // default ALL
   freeze: boolean = false;
   status: any
 
@@ -90,14 +91,19 @@ export class StockTakeComponent implements OnInit {
       strategy: this.strategyService.getStrategy(),
       item: this.itemMasterService.getAllItemMaster(),
       reason: this.StockissueService.getAllStockissue(),
-      //supplier:  this.supplierService.GetAllSupplier(),
+      supplier:  this.supplierService.GetAllSupplier(),
     }).subscribe((results: any) => {
       this.warehouseTypes = results.warehouse.data;
       this.LocationTypes = results.bin.data;
-      this.strategies = results.strategy.data;
+      const st = results.strategy.data ?? [];
+      this.strategies = [{ id: 0, strategyName: 'ALL' }, ...st];
       this.itemList = results.item.data;
       this.reasonList = results.reason.data;
-      // this.supplierList = results.supplier.data;
+      const sup = results.supplier.data ?? [];
+      this.supplierList = [{ id: 0, name: 'ALL' }, ...sup];
+
+      if (this.supplierId == null) this.supplierId = 0;
+      if (this.strategyId == null) this.strategyId = 0;
     });
     this.route.paramMap.subscribe((params: any) => {
       const idStr = params.get('id');
@@ -106,7 +112,7 @@ export class StockTakeComponent implements OnInit {
         this.stockTakeService.getStockTakeById(this.stockTakeId).subscribe((res: any) => {
           console.log(res)
           this.warehouseTypeId = res.data.warehouseTypeId,
-          //this.supplierId = res.data.supplierId,
+          this.supplierId = res.data.supplierId,
           this.takeTypeId = res.data.takeTypeId,
           this.strategyId = res.data.strategyId,
           this.freeze = res.data.freeze
@@ -137,16 +143,16 @@ export class StockTakeComponent implements OnInit {
     feather.replace();
   }
 
-  onTypeChanged(id: number) {
-    this.strategyId = null
-    this.takeTypeId = id;
-    if (this.takeTypeId == 1) {
-      this.strategyCheck = true;
-    } else {
-      this.strategyCheck = false;
-    }
+  // onTypeChanged(id: number) {
+  //   this.strategyId = null
+  //   this.takeTypeId = id;
+  //   if (this.takeTypeId == 1) {
+  //     this.strategyCheck = true;
+  //   } else {
+  //     this.strategyCheck = false;
+  //   }
 
-  }
+  // }
 
 
   onExportMobileTasks(): void {
@@ -190,7 +196,7 @@ export class StockTakeComponent implements OnInit {
 
   getItemName(id: number | string | null) {
     const x = this.itemList?.find(i => i.id === id);
-    return x?.name ?? String(id ?? '');
+    return x?.itemName ?? String(id ?? '');
   }
    getBinName(id: number | string | null) {
     const x = this.LocationTypes?.find(i => i.id === id);
@@ -200,11 +206,14 @@ export class StockTakeComponent implements OnInit {
     const x = this.reasonList.find(i => i.id === id);
     return x?.stockIssuesNames ?? String(id ?? '');
   }
-  onSupplierChanged(supplierId: number | null): void {
-    debugger
-    this.supplierId = supplierId;
-    this.resetLines();                // wipe any previous results
+  onSupplierChanged(v: number | null): void {
+  this.supplierId = Number(v ?? 0); // null => ALL
+  this.resetLines();
   }
+  onTypeChanged(v: number | null): void {
+  this.strategyId = Number(v ?? 0); // null => ALL
+  this.resetLines();
+}
    private resetLines(): void {
     this.lines = [];                  // new reference
     this.reviewRows = [];             // new reference
@@ -216,7 +225,8 @@ export class StockTakeComponent implements OnInit {
     this.showStockReview = false
     this.resetLines();
     debugger
-    if (!this.warehouseTypeId ||!this.supplierId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
+    // if (!this.warehouseTypeId ||!this.supplierId  || !this.takeTypeId || (Number(this.takeTypeId) === 2 && (!this.strategyId || this.strategyId === 0))) {
+    if (!this.warehouseTypeId ) {
       Swal.fire({
         title: "Failed",
         text: "Please Fill Mandatory Fields",
@@ -240,7 +250,7 @@ export class StockTakeComponent implements OnInit {
         }
 
         if(this.lines.length == 0){
-          { Swal.fire({ icon: 'warning', title: 'No Item Stocktake list' }); return; }
+          { Swal.fire({ icon: 'warning', title: 'No Items in Stocktake list.' }); return; }
         }
       },
       error: (err) => {
@@ -262,9 +272,9 @@ export class StockTakeComponent implements OnInit {
   private buildPlanReq() {
     return {
       warehouseTypeId: this.warehouseTypeId ?? null,
-      supplierId: this.supplierId ?? null,
-      takeTypeId: this.takeTypeId ?? null,
-      strategyId: this.strategyId ?? null,
+      supplierId: Number(this.supplierId ?? 0),
+      //takeTypeId: this.takeTypeId ?? null,
+      strategyId: Number(this.strategyId ?? 0),
       freeze: !!this.freeze,
     };
   }
@@ -276,6 +286,8 @@ export class StockTakeComponent implements OnInit {
       itemId: dto.itemId,
       itemName: dto.itemName ?? null,
       binId: dto.binId,
+      supplierId: dto.supplierId,
+       supplierName: dto.supplierName ?? '', 
       onHand: Number(dto.onHand) || 0,
       countedQty: 0,
       badCountedQty: 0,
@@ -336,7 +348,7 @@ export class StockTakeComponent implements OnInit {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
       supplierId: this.supplierId,
-      takeTypeId: this.takeTypeId,
+      //takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
       freeze: this.freeze,
       status: this.status,
@@ -350,7 +362,7 @@ export class StockTakeComponent implements OnInit {
           itemId: L.itemId,
           binId:L.binId,
           WarehouseTypeId: this.warehouseTypeId,
-          supplierId : this.supplierId,
+          supplierId: Number((L as any).supplierId ?? this.supplierId ?? 0),
           status: this.status,
           onHand: this.toNum(L.onHand),
 
@@ -472,7 +484,7 @@ export class StockTakeComponent implements OnInit {
       id: this.stockTakeId ?? 0,
       warehouseTypeId: this.warehouseTypeId,
       supplierId: this.supplierId,
-      takeTypeId: this.takeTypeId,
+      //takeTypeId: this.takeTypeId,
       strategyId: this.strategyId,
       freeze: this.freeze,
       status: this.status,
@@ -481,7 +493,7 @@ export class StockTakeComponent implements OnInit {
         itemId: r.itemId,
         binId : r.binId,
         WarehouseTypeId: this.warehouseTypeId,
-        supplierId : this.supplierId,
+        supplierId: Number((r as any).supplierId ?? this.supplierId ?? 0),
         status: this.status,
         onHand: this.toNum(r.onHand),
         countedQty: this.toNum(r.countedQty),
@@ -555,9 +567,9 @@ export class StockTakeComponent implements OnInit {
   getSuppliersByWarehouse(event){
     debugger
     this.supplierId = null
-    this.stockTakeService.GetSupplierByWarehouseId(event).subscribe((res:any)=>{
-      this.supplierList = res.data
-    })
+    // this.stockTakeService.GetSupplierByWarehouseId(event).subscribe((res:any)=>{
+    //   this.supplierList = res.data
+    // })
   }
 }
 

@@ -208,7 +208,7 @@
               <tr>
                 <th class="px-3 py-2 text-center">Warehouse</th>
                 <th class="px-3 py-2 text-center">Bin / Location</th>
-                <th class="px-3 py-2 text-center">Strategy</th>
+                <th class="px-3 py-2 text-center">Frequency</th>
                 <th class="px-3 py-2 text-center">On Hand</th>
                 <th class="px-3 py-2 text-center">Reserved</th>
                 <th class="px-3 py-2 text-center">Available</th>
@@ -839,9 +839,9 @@
           </div>
 
           <div class="prl-col-12 prl-md-6">
-            <label class="prl-label">Strategy</label>
+            <label class="prl-label">Frequency</label>
             <select class="prl-input" [(ngModel)]="whDraft.strategyId" name="strategyId" required>
-              <option [ngValue]="null" disabled>Select Strategy</option>
+              <option [ngValue]="null" disabled>Select Frequency</option>
               <option *ngFor="let s of strategyList" [ngValue]="s.id">{{ s.strategyName }}</option>
             </select>
           </div>
