@@ -22,6 +22,7 @@ export const locale = {
         TITLE: 'Inventory',
         INVENOTYR: 'Inventory',
         STACKOVERVIEW: 'StackOverview',
+        MATERIALREQUESITION: 'material-requisition',
         ITEMMASTER:'ItemMaster',
         STACKTRANSFER: 'STACKTRANSFER',
         STOCKTAKE: 'STOCKTAKE',

@@ -1,0 +1,184 @@
+<div class="content-body">
+  <section class="users-list-wrapper">
+    <div class="card">
+      <div class="row">
+        <!-- Title + page size -->
+        <div class="col-md-6 col-12">
+          <h4 class="card-text ml-2 mt-2" style="font-size:1.25rem;font-weight:600;color:#2E5F73">
+            Material Requisition List
+          </h4>
+
+          <div class="d-flex justify-content-between align-items-center m-1">
+            <label class="d-flex align-items-center">
+              Show
+              <select class="form-control mx-2" [(ngModel)]="pageSize">
+                <option *ngFor="let s of pageSizes" [value]="s">{{ s }}</option>
+              </select>
+              entries
+            </label>
+          </div>
+        </div>
+
+        <!-- Search + New -->
+        <div class="col-md-6 col-12 d-flex justify-content-start justify-content-md-end">
+          <div class="d-flex align-items-center justify-content-end pr-1 pb-1 pb-md-0">
+            <label class="d-flex align-items-center ml-1 ml-md-0">
+              Search:
+              <input
+                [(ngModel)]="searchValue"
+                type="search"
+                class="form-control ml-2"
+                (input)="applyFilter()"
+                placeholder="Req No / Requester / Outlet / Item" />
+            </label>
+
+            <button
+              (click)="goToCreateForm()"
+              class="btn m-1 d-inline-flex align-items-center"
+              style="background-color:#2E5F73; color:white; gap:6px;">
+              <i class="fas fa-plus-circle"></i>
+              <span>New</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading / Error -->
+      <div *ngIf="loading" class="px-3 pb-2 small text-muted">Loading…</div>
+      <div *ngIf="errorMsg" class="alert alert-danger mx-3 my-2">{{ errorMsg }}</div>
+
+      <ngx-datatable
+        class="bootstrap core-bootstrap item-table"
+        [rows]="filteredRows"
+        [rowHeight]="50"
+        [headerHeight]="50"
+        [footerHeight]="50"
+        [limit]="pageSize"
+        [columnMode]="'force'"
+        [scrollbarH]="false"
+        [reorderable]="true"
+        [rowIdentity]="rowIdentity"
+        [trackByProp]="'gridKey'">
+
+        <!-- REQ NO -->
+        <ngx-datatable-column name="REQ NO" prop="reqNo" [width]="220"></ngx-datatable-column>
+
+        <!-- OUTLET -->
+        <ngx-datatable-column name="OUTLET" [width]="110">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            {{ row.outletId ?? '-' }}
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- REQUESTER -->
+        <ngx-datatable-column name="REQUESTER" prop="requesterName" [width]="150"></ngx-datatable-column>
+
+        <!-- REQ DATE -->
+        <ngx-datatable-column name="REQ DATE" [width]="140">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            {{ row.reqDate ? (row.reqDate | date:'yyyy-MM-dd') : '-' }}
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- LINES -->
+        <!-- <ngx-datatable-column name="LINES" [width]="90">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            {{ row.lineCount ?? 0 }}
+          </ng-template>
+        </ngx-datatable-column> -->
+
+        <!-- TOTAL QTY -->
+        <ngx-datatable-column name="TOTAL QTY" [width]="120">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            {{ row.totalQty ?? 0 }}
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- STATUS -->
+        <ngx-datatable-column name="STATUS" [width]="180">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            <span class="badge badge-pill"
+                  [ngClass]="getStatusClass(row.status)">
+              {{ getStatusLabel(row.status) }}
+            </span>
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- ✅ ACTION (LAST) -->
+        <ngx-datatable-column name="ACTION" [width]="120" [sortable]="false" [canAutoResize]="false">
+          <ng-template ngx-datatable-cell-template let-row="row">
+            <div class="d-flex align-items-center" style="gap:14px;">
+              <!-- View -->
+              <i class="fas fa-eye"
+                 title="View"
+                 style="cursor:pointer; color:#2E5F73; font-size:16px;"
+                 (click)="openViewModal(row, viewModal)"></i>
+
+              <!-- Edit -->
+              <i class="fas fa-pen"
+                 title="Edit"
+                 style="cursor:pointer; color:#2E5F73; font-size:16px;"
+                 (click)="editReq(row)"></i>
+            </div>
+          </ng-template>
+        </ngx-datatable-column>
+
+      </ngx-datatable>
+    </div>
+  </section>
+</div>
+
+<!-- View Items Modal -->
+<ng-template #viewModal let-close="close" let-dismiss="dismiss">
+  <div class="modal-header">
+    <h5 class="modal-title">
+      {{ selectedReq?.reqNo }} - Items
+    </h5>
+    <button type="button" class="close" aria-label="Close" (click)="dismiss('x')">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="d-flex flex-wrap mb-2" style="gap:12px;">
+      <div><b>Outlet:</b> {{ selectedReq?.outletId ?? '-' }}</div>
+      <div><b>Requester:</b> {{ selectedReq?.requesterName ?? '-' }}</div>
+      <div><b>Date:</b> {{ selectedReq?.reqDate ? (selectedReq?.reqDate | date:'yyyy-MM-dd') : '-' }}</div>
+      <div><b>Status:</b> {{ getStatusLabel(selectedReq?.status) }}</div>
+    </div>
+
+    <div class="table-responsive border rounded">
+      <table class="table table-sm mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th style="background-color:#2E5F73;color:white;">Item Code</th>
+            <th style="background-color:#2E5F73;color:white;">Item Name</th>
+            <th style="background-color:#2E5F73;color:white;">UOM</th>
+            <th style="background-color:#2E5F73;color:white;" class="text-right">Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of selectedReq?.lines; let i = index"
+              [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'">
+            <td>{{ l.itemCode || '-' }}</td>
+            <td>{{ l.itemName || '-' }}</td>
+            <td>{{ l.uomName || '-' }}</td>
+            <td class="text-right">{{ l.qty ?? 0 }}</td>
+          </tr>
+
+          <tr *ngIf="(selectedReq?.lines?.length ?? 0) === 0">
+            <td colspan="4" class="text-center text-muted py-3">No items</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button (click)="close('ok')"
+            style="background:#2E5F73; color:#fff; border:0; border-radius:12px; padding:10px 18px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-times-circle"></i>
+      <span>Close</span>
+    </button>
+  </div>
+</ng-template>
