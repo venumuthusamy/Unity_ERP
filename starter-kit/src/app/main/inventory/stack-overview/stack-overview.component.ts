@@ -1,22 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import * as feather from 'feather-icons';
+import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 
-// Services
-import { ItemMasterService } from '../item-master/item-master.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
-import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 import { StackOverviewService } from './stack-overview.service';
-import { ApprovallevelService } from 'app/main/master/approval-level/approvallevel.service';
-import { Router } from '@angular/router';
-
-// Export libs
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-/* ===================== Interfaces ===================== */
+import { MaterialRequisitionService } from '../material-requisation/material-requisition.service';
 
 interface ApiItemRow {
   id?: number | string;
@@ -27,42 +15,42 @@ interface ApiItemRow {
   binName?: string;
   onHand?: number;
   reserved?: number;
-  min?: number;
-  minQty?: number;
   available?: number;
-  expiryDate?: string;
   warehouseId?: number;
   binId?: number;
-  qty?: number | null;            // may come from API as the quantity to show
+  supplierId?: number | null;
   supplierName?: string | null;
-  supplierId?: number | null;     // ✅ required for selection grouping
 }
 
 interface StockRow {
   idKey: string;
-  sku: string | null;
-  item: string;
   warehouse: string;
   bin: string;
   onHand: number;
-  reserved: number;
-  min: number;
   available: number;
-  expiry: Date | null;
+  sku: string | null;
+  item: string;
+  supplierId?: number | null;
+  supplierName: string;
   warehouseId?: number;
   binId?: number;
-
-  // UI fields
-  supplierName: string;
-  qty: number;
-
   apiRow?: ApiItemRow;
-  supplierId?: number | null;     // ✅ used in selection grouping
 }
 
-interface SimpleOption { id: number | string; name: string; }
+interface MrListItem {
+  id: number;
+  mrqNo: string;
+  outletId: number | null;
+  display: string;
+}
 
-/* ===================== Component ===================== */
+interface FromOutletOption {
+  id: number;
+  name: string;
+  label: string;
+  reqQty: number;
+  onHand: number;
+}
 
 @Component({
   selector: 'app-stack-overview',
@@ -70,93 +58,115 @@ interface SimpleOption { id: number | string; name: string; }
   styleUrls: ['./stack-overview.component.scss']
 })
 export class StackOverviewComponent implements OnInit {
-  /* Lists */
-  warehouses: Array<{ id: number | string; name: string }> = [];
-  stockIssueOptions: Array<SimpleOption> = [];
-  approvedByOptions: Array<SimpleOption> = [];
 
-  /* Filters */
-  selectedWarehouse: number | string | null = null;
-  minOnly = false;
-  expOnly = false;
-  searchText = '';
+  warehouses: Array<{ id: number; name: string }> = [];
+  mrList: MrListItem[] = [];
+  fromOutletOptions: FromOutletOption[] = [];
 
-  /* Data */
+  // ✅ transferred MR ids cache
+  transferredMrIds = new Set<number>();
+
+  selectedMrId: number | null = null;
+  selectedMrNo: string | null = null;
+
+  destinationOutletId: number | null = null;
+  destinationOutletName: string | null = null;
+
+  destinationBinId: number | null = null;
+  destinationBinName: string | null = null;
+
+  selectedFromOutletId: number | null = null;
+  selectedFromOutletName: string | null = null;
+
+  selectedSku: string | null = null;
+  selectedItemName: string | null = null;
+
+  requestedQty: number = 0;
+  requesterName: string | null = null;
+  reqDate: string | null = null;
+
   rows: StockRow[] = [];
   filteredRows: StockRow[] = [];
-  selectedKeys = new Set<string>();
-  exportFileName = '';
 
-  /* State */
   loading = false;
   errorMsg: string | null = null;
-
-  /* Adjust modal model */
-  adjust: {
-    row: StockRow | null;
-    stockIssueId: number | string | null;
-    stockIssueName: string | null;
-    originalInHand: number;
-    available: number;
-    reserved: number;
-    newInHand: number | null;
-    minAllowed: number;
-    maxAllowed: number;
-    qtyError: string | null;
-
-    approvedById: number | string | null;
-    approvedByName: string | null;
-    faultQty: number | null;
-    faultQtyError: string | null;
-  } = {
-    row: null,
-    stockIssueId: null,
-    stockIssueName: null,
-    originalInHand: 0,
-    available: 0,
-    reserved: 0,
-    newInHand: null,
-    minAllowed: 0,
-    maxAllowed: Number.MAX_SAFE_INTEGER,
-    qtyError: null,
-    approvedById: null,
-    approvedByName: null,
-    faultQty: null,
-    faultQtyError: null
-  };
+  transferErrorText: string | null = null;
 
   constructor(
-    private modalService: NgbModal,
-    private itemMasterService: ItemMasterService,
     private warehouseService: WarehouseService,
-    private stockIssueService: StockIssueService,
     private stockService: StackOverviewService,
-    private approvedlevelService: ApprovallevelService,
+    private mrService: MaterialRequisitionService,
     private router: Router
   ) {}
 
-  /* ===================== Lifecycle ===================== */
+  compareById = (a: any, b: any) => String(a) === String(b);
 
   ngOnInit(): void {
-    this.loadApproved();
     this.loadWarehouses();
-    this.loadMasterItem();
-    setTimeout(() => (feather as any)?.replace?.(), 0);
+    this.loadStockRows();
+
+    // ✅ Load transferred MR ids first, then load MR list and filter it
+    this.loadTransferredMrIdsAndMrList();
   }
 
-  /* ===================== Loaders ===================== */
+  private loadTransferredMrIdsAndMrList(): void {
+    this.stockService.getTransferredMrIds().subscribe({
+      next: (res: any) => {
+        const ids = Array.isArray(res?.data) ? res.data : [];
+        this.transferredMrIds = new Set<number>(ids.map((x: any) => Number(x)));
+        this.loadMrList(); // load MR list after we know transferred ids
+      },
+      error: (err) => {
+        console.error('Failed to load transferred MR ids', err);
+        // even if fail, still show MR list (fallback)
+        this.loadMrList();
+      }
+    });
+  }
 
   private loadWarehouses(): void {
     this.warehouseService.getWarehouse().subscribe({
       next: (res: any) => {
         const data = Array.isArray(res?.data) ? res.data : [];
-        this.warehouses = data.map((w: any) => ({ id: w.id, name: w.name || w.warehouseName || `WH-${w.id}` }));
+        this.warehouses = data.map((w: any) => ({
+          id: Number(w.id),
+          name: w.name || w.warehouseName || `WH-${w.id}`
+        }));
+        this.rebuildFromOutletOptions();
       },
       error: (err) => console.error('Error loading warehouses', err)
     });
   }
 
-  loadMasterItem(): void {
+  private loadMrList(): void {
+    this.mrService.GetMaterialRequest().subscribe({
+      next: (res: any) => {
+        const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const list: MrListItem[] = (data || []).map((x: any) => {
+          const id = Number(x.id ?? x.mrqId ?? 0);
+          const mrqNo = String(x.reqNo ?? x.mrqNo ?? x.mrNo ?? `MRQ-${id}`);
+          const outletId = x.outletId ?? x.OutletId ?? null;
+          return {
+            id,
+            mrqNo,
+            outletId: outletId != null ? Number(outletId) : null,
+            display: mrqNo
+          };
+        });
+
+        // ✅ FILTER: remove already transferred MR IDs
+        this.mrList = list.filter(m => !this.transferredMrIds.has(Number(m.id)));
+
+        // ✅ if currently selected MR became invalid, reset
+        if (this.selectedMrId && this.transferredMrIds.has(Number(this.selectedMrId))) {
+          this.resetAll();
+        }
+      },
+      error: (err) => console.error('Failed to load MRQ list', err)
+    });
+  }
+
+  private loadStockRows(): void {
     this.loading = true;
     this.errorMsg = null;
 
@@ -164,8 +174,8 @@ export class StackOverviewComponent implements OnInit {
       next: (res: any) => {
         if (res?.isSuccess && Array.isArray(res.data)) {
           this.rows = res.data.map((item: ApiItemRow) => this.toStockRow(item));
-          this.filteredRows = [...this.rows];
-          setTimeout(() => (feather as any)?.replace?.(), 0);
+          this.applyGrid();
+          this.rebuildFromOutletOptions();
         } else {
           this.errorMsg = 'No stock data found.';
         }
@@ -179,592 +189,295 @@ export class StackOverviewComponent implements OnInit {
     });
   }
 
-  loadStockissue(): void {
-    this.stockIssueService.getAllStockissue().subscribe({
-      next: (res: any) => {
-        const raw = Array.isArray(res?.data) ? res.data : [];
-        this.stockIssueOptions = raw
-          .filter((x: any) => x?.isActive)
-          .map((x: any) => ({ id: x.id, name: x.stockIssuesNames }));
-        setTimeout(() => (window as any).feather?.replace?.(), 0);
-      },
-      error: (err) => console.error('Failed to load stock issues', err)
-    });
-  }
-  loadApproved(): void {
-    this.approvedlevelService.getAllApprovalLevel().subscribe({
-      next: (res: any) => {
-        const raw = Array.isArray(res?.data) ? res.data : [];
-        this.approvedByOptions = raw.map((x: any) => ({
-          id: x.id,
-          name: x.name || x.levelName || `User-${x.id}`
-        }));
-      },
-      error: (err) => console.error('Failed to load approvers', err)
-    });
-  }
-
-  /* ===================== Normalize API → UI ===================== */
-
-  private parseExpiry(src?: string): Date | null {
-    if (!src) return null;
-    if (src.startsWith('0001-01-01')) return null;
-    const d = new Date(src);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
   private toStockRow(api: ApiItemRow): StockRow {
-    const warehouse = api.warehouseName ?? '';
-    const item = api.name ?? api.itemName ?? '';
-    const sku = api.sku ?? null;
-    const bin = api.binName ?? '';
+    const warehouse = String(api.warehouseName ?? '');
+    const bin = String(api.binName ?? '');
+
+    const sku = (api.sku ?? '').toString().trim() || null;
+    const item = (api.name ?? api.itemName ?? '').toString();
+
     const onHand = Number(api.onHand ?? 0);
     const reserved = Number(api.reserved ?? 0);
-    const min = Number(api.min ?? api.minQty ?? 0);
     const available = Number(api.available != null ? api.available : (onHand - reserved));
-    const expiry = this.parseExpiry(api.expiryDate);
 
-    // Prefer explicit qty if present; else use onHand
-    const qty = Number(api.qty ?? onHand);
     const supplierName = (api.supplierName ?? '').toString().trim() || '-';
     const supplierId = api.supplierId ?? null;
 
-    const keyParts = [
+    const idKey = [
       api.id ?? '',
       warehouse,
-      item,
-      sku ?? '',
       bin,
+      sku ?? '',
+      item,
       String(supplierId ?? '')
-    ];
-    const idKey = keyParts.join('|').toLowerCase();
+    ].join('|').toLowerCase();
 
     return {
       idKey,
       warehouse,
-      item,
-      sku,
       bin,
       onHand,
-      reserved,
-      min,
       available,
-      expiry,
+      sku,
+      item,
+      supplierName,
+      supplierId,
       warehouseId: api.warehouseId,
       binId: api.binId,
-      supplierName,
-      qty,
-      supplierId,
       apiRow: api
     };
   }
 
-  /* ===================== Filters ===================== */
+  trackByRow = (_: number, r: StockRow) => r.idKey;
 
-  applyFilters(): void {
+  onMrChanged(mrId: number | null): void {
+    this.transferErrorText = null;
+
+    if (!mrId) {
+      this.resetAll();
+      return;
+    }
+
+    // ✅ prevent selecting already transferred MR (edge-case)
+    if (this.transferredMrIds.has(Number(mrId))) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Already Transferred',
+        text: 'This MRQ already transferred, so it is not allowed.'
+      });
+      this.resetAll();
+      return;
+    }
+
+    this.selectedMrId = Number(mrId);
+
+    this.mrService.GetMaterialRequestById(Number(mrId)).subscribe({
+      next: (res: any) => {
+        const dto = res?.data ?? res ?? {};
+
+        this.selectedMrNo = String(dto.reqNo ?? dto.mrqNo ?? dto.mrNo ?? `MRQ-${mrId}`);
+
+        const outletId = dto.outletId ?? dto.OutletId ?? null;
+        this.destinationOutletId = outletId != null ? Number(outletId) : null;
+        this.destinationOutletName = this.getWarehouseNameById(this.destinationOutletId);
+
+        const bId = dto.binId ?? dto.BinId ?? null;
+        this.destinationBinId = bId != null ? Number(bId) : null;
+        this.destinationBinName = String(dto.binName ?? dto.BinName ?? '') || null;
+
+        this.requesterName = String(dto.requesterName ?? dto.RequesterName ?? '');
+        this.reqDate = String(dto.reqDate ?? dto.date ?? '');
+
+        const lines = dto.lines ?? dto.lineItemsList ?? dto.items ?? [];
+        const first = (Array.isArray(lines) && lines.length) ? lines[0] : {};
+
+        const sku = String(first.sku ?? first.Sku ?? first.itemCode ?? '');
+        const itemName = String(first.itemName ?? first.ItemName ?? first.name ?? '');
+
+        this.selectedSku = sku || null;
+        this.selectedItemName = itemName || null;
+        this.requestedQty = Number(first.qty ?? first.quantity ?? 0);
+
+        if (this.selectedFromOutletId != null && this.destinationOutletId != null) {
+          if (Number(this.selectedFromOutletId) === Number(this.destinationOutletId)) {
+            this.selectedFromOutletId = null;
+            this.selectedFromOutletName = null;
+          }
+        }
+
+        this.rebuildFromOutletOptions();
+        this.applyGrid();
+      },
+      error: (err) => {
+        console.error('Failed to load MRQ detail', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'MRQ Load Failed',
+          text: 'Could not load Material Requisition details.'
+        });
+      }
+    });
+  }
+
+  onFromOutletChanged(fromId: any): void {
+    const idNum = fromId == null || fromId === '' ? null : Number(fromId);
+    if (!idNum || Number.isNaN(idNum)) {
+      this.selectedFromOutletId = null;
+      this.selectedFromOutletName = null;
+    } else {
+      this.selectedFromOutletId = idNum;
+      this.selectedFromOutletName = this.getWarehouseNameById(idNum);
+    }
+
+    this.applyGrid();
+    this.rebuildFromOutletOptions();
+  }
+
+  private rebuildFromOutletOptions(): void {
+    const req = Number(this.requestedQty ?? 0);
+    const sku = (this.selectedSku ?? '').toLowerCase();
+    const onHandByWhId = new Map<number, number>();
+
+    if (sku) {
+      for (const r of this.rows) {
+        if ((r.sku ?? '').toLowerCase() !== sku) continue;
+        const wid = Number(r.warehouseId ?? 0);
+        if (!wid) continue;
+        onHandByWhId.set(wid, (onHandByWhId.get(wid) ?? 0) + Number(r.onHand ?? 0));
+      }
+    }
+
+    const destId = Number(this.destinationOutletId ?? -999);
+    const base = this.warehouses.filter(w => Number(w.id) !== destId);
+
+    this.fromOutletOptions = base.map(w => {
+      const whId = Number(w.id);
+      const onHand = Number(onHandByWhId.get(whId) ?? 0);
+      const name = w.name;
+      return {
+        id: whId,
+        name,
+        reqQty: req,
+        onHand,
+        label: `${name} | Req: ${req} | OnHand: ${onHand}`
+      };
+    });
+  }
+
+  private applyGrid(): void {
     let filtered = [...this.rows];
 
-    const whName = this.getWarehouseNameById(this.selectedWarehouse);
-    if (whName) {
-      filtered = filtered.filter(r => (r.warehouse ?? '').toLowerCase() === whName.toLowerCase());
+    if (this.selectedSku) {
+      const sku = this.selectedSku.toLowerCase();
+      filtered = filtered.filter(r => (r.sku ?? '').toLowerCase() === sku);
     }
 
-    if (this.minOnly) filtered = filtered.filter(r => r.onHand <= r.min);
-
-    if (this.expOnly) {
-      const today = this.startOfDay(new Date()).getTime();
-      const in30 = this.startOfDay(this.addDays(new Date(), 30)).getTime();
-      filtered = filtered.filter(r => {
-        if (!r.expiry) return false;
-        const dt = this.startOfDay(new Date(r.expiry)).getTime();
-        return dt >= today && dt <= in30;
-      });
+    if (this.destinationOutletName) {
+      const dn = this.destinationOutletName.toLowerCase();
+      filtered = filtered.filter(r => (r.warehouse ?? '').toLowerCase() !== dn);
     }
 
-    const tokens = this.tokenize(this.searchText);
-    if (tokens.length) {
-      filtered = filtered.filter(r => {
-        const hay = this.normalize([
-          r.item, r.sku, r.bin, r.warehouse, r.supplierName
-        ].filter(Boolean).join(' | '));
-        return tokens.every(t => hay.includes(t));
-      });
+    if (this.selectedFromOutletId != null) {
+      const fromName = this.getWarehouseNameById(this.selectedFromOutletId);
+      if (fromName) filtered = filtered.filter(r => (r.warehouse ?? '').toLowerCase() === fromName.toLowerCase());
     }
 
     this.filteredRows = filtered;
-    this.pruneSelectionToVisible();
   }
 
-  /* ===================== Selection ===================== */
+  canTransfer(): boolean {
+    this.transferErrorText = null;
 
-  private keyOf(r: StockRow): string { return r.idKey; }
-  trackByRow = (_: number, r: StockRow) => this.keyOf(r);
+    if (!this.selectedMrId) return (this.transferErrorText = 'Select a Material Requisition.'), false;
+    if (!this.destinationOutletId) return (this.transferErrorText = 'Destination outlet not found.'), false;
+    if (!this.selectedFromOutletId) return (this.transferErrorText = 'Select From Outlet.'), false;
+    if (!this.selectedSku) return (this.transferErrorText = 'SKU not found from MR.'), false;
+    if (!this.filteredRows?.length) return (this.transferErrorText = 'No rows available for this outlet.'), false;
 
-  isSelected(r: StockRow): boolean {
-    return this.selectedKeys.has(this.keyOf(r));
+    return true;
   }
-
-  private getSelectedRows(): StockRow[] {
-    return this.rows.filter(r => this.selectedKeys.has(this.keyOf(r)));
-  }
-
-  private getSelectedWarehouses(): Set<string> {
-    const set = new Set<string>();
-    for (const r of this.getSelectedRows()) set.add(r.warehouse);
-    return set;
-  }
-
-  private getSelectedSuppliers(): Set<string> {
-    const set = new Set<string>();
-    for (const r of this.getSelectedRows()) set.add(String(r.supplierId ?? ''));
-    return set;
-  }
-
-  get sameWarehouseSelected(): boolean {
-    const ws = this.getSelectedWarehouses();
-    return this.selectedKeys.size > 0 && ws.size === 1;
-  }
-
-  get sameSupplierSelected(): boolean {
-    const ss = this.getSelectedSuppliers();
-    return this.selectedKeys.size > 0 && ss.size === 1;
-  }
-
-  toggleRow(r: StockRow, ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    const k = this.keyOf(r);
-
-    if (checked && this.selectedKeys.size) {
-      const currentWh = this.getSelectedWarehouses();
-      const currentSup = this.getSelectedSuppliers();
-      const targetWh  = r.warehouse;
-      const targetSup = String(r.supplierId ?? '');
-
-      if ((currentWh.size === 1 && !currentWh.has(targetWh)) ||
-          (currentSup.size === 1 && !currentSup.has(targetSup))) {
-        (ev.target as HTMLInputElement).checked = false; // revert UI
-        return;
-      }
-    }
-
-    if (checked) this.selectedKeys.add(k);
-    else this.selectedKeys.delete(k);
-  }
-
-  isAllSelected(): boolean {
-    if (!this.filteredRows?.length) return false;
-    return this.filteredRows.every(r => this.selectedKeys.has(this.keyOf(r)));
-  }
-
-  isIndeterminate(): boolean {
-    if (!this.filteredRows?.length) return false;
-    const total = this.filteredRows.length;
-    let sel = 0;
-    for (const r of this.filteredRows) if (this.selectedKeys.has(this.keyOf(r))) sel++;
-    return sel > 0 && sel < total;
-  }
-
-  toggleAll(ev: Event): void {
-    const check = (ev.target as HTMLInputElement).checked;
-
-    if (!check) {
-      for (const r of this.filteredRows) this.selectedKeys.delete(this.keyOf(r));
-      return;
-    }
-
-    if (this.filteredRows.length) {
-      // Anchor = first visible row’s warehouse + supplier
-      const baseWh  = this.filteredRows[0].warehouse;
-      const baseSup = String(this.filteredRows[0].supplierId ?? '');
-
-      for (const r of this.filteredRows) {
-        if (r.warehouse === baseWh && String(r.supplierId ?? '') === baseSup) {
-          this.selectedKeys.add(this.keyOf(r));
-        }
-      }
-    }
-  }
-
-  private pruneSelectionToVisible(): void {
-    const visible = new Set(this.filteredRows.map(r => this.keyOf(r)));
-    this.selectedKeys.forEach(k => {
-      if (!visible.has(k)) this.selectedKeys.delete(k);
-    });
-  }
-
-  /* ===================== Adjust Modal ===================== */
-
-  openAdjustModal(tpl: any, row: StockRow) {
-    this.loadStockissue();
-
-    const original = Number(row.onHand ?? 0);
-    const reserved = Number(row.reserved ?? 0);
-    const available = Number(row.available ?? Math.max(0, original - reserved));
-
-    this.adjust = {
-      row,
-      stockIssueId: null,
-      stockIssueName: null,
-      originalInHand: original,
-      reserved,
-      available,
-      newInHand: Number(row.qty ?? 0),        // show the editable Qty
-      minAllowed: 0,
-      maxAllowed: Number.MAX_SAFE_INTEGER,
-      qtyError: null,
-
-      approvedById: null,
-      approvedByName: null,
-      faultQty: null,
-      faultQtyError: null
-    };
-
-    this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
-    setTimeout(() => (window as any).feather?.replace?.(), 0);
-  }
-
-  validateNewInHand() {
-    const raw = this.adjust.newInHand;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n < 0) {
-      this.adjust.qtyError = 'Enter a valid non-negative number.';
-      return;
-    }
-    if (!Number.isInteger(n)) {
-      this.adjust.qtyError = 'Whole numbers only.';
-      return;
-    }
-    this.adjust.qtyError = null;
-  }
-
-  onInHandBlur() {
-    const { minAllowed, maxAllowed } = this.adjust;
-    let v = Number(this.adjust.newInHand);
-    if (!Number.isFinite(v)) v = this.adjust.originalInHand;
-    if (v < minAllowed) v = minAllowed;
-    if (v > maxAllowed) v = maxAllowed;
-    this.adjust.newInHand = v;
-    this.validateNewInHand();
-  }
-
-  onApprovedByChange(selected: any): void {
-    const approver = this.approvedByOptions.find(x => x.id === selected);
-    this.adjust.approvedByName = approver ? approver.name : '';
-  }
-validateFaultQty() {
-  const raw = this.adjust.faultQty;
-  const reserved = Number(this.adjust.row?.reserved ?? 0); // ✅ reserved qty from selected row
-
-  if (raw == null || (raw as any) === '') {
-    this.adjust.faultQtyError = null;
-    return;
-  }
-
-  const n = Number(raw);
-  const cap = Number(this.adjust.newInHand ?? 0);
-
-  if (!Number.isFinite(n) || n < 0) {
-    this.adjust.faultQtyError = 'Fault qty cannot be negative.';
-    return;
-  }
-
-  if (!Number.isInteger(n)) {
-    this.adjust.faultQtyError = 'Whole numbers only.';
-    return;
-  }
-
-  // ✅ NEW VALIDATION RULE
-  if (n < reserved) {
-    this.adjust.faultQtyError = `Fault Qty cannot be less than Reserved Qty (${reserved}).`;
-    return;
-  }
-
-  if (n > cap) {
-    this.adjust.faultQtyError = `Fault qty must be ≤ ${cap}.`;
-    return;
-  }
-
-  this.adjust.faultQtyError = null;
-}
-
-
-  canSubmitAdjust(): boolean {
-    const hasRow = !!this.adjust.row;
-    const hasIssue = this.adjust.stockIssueId != null;
-    const hasQty = this.adjust.newInHand != null && this.adjust.qtyError == null;
-    const hasApprover = this.adjust.approvedById != null;
-    const faultOk = this.adjust.faultQtyError == null;
-    return !!(hasRow && hasIssue && hasQty && hasApprover && faultOk);
-  }
-
-  
-submitAdjust(modalRef: any) {
-  this.validateNewInHand();
-  this.validateFaultQty();
-  if (!this.canSubmitAdjust() || !this.adjust.row) return;
-
-  const row = this.adjust.row;
-  const enteredQty = Number(this.adjust.newInHand ?? 0);
-  const faultQty = Number(this.adjust.faultQty ?? 0);
-  const finalQty = enteredQty - faultQty;
-
-  if (finalQty < 0) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Invalid Quantity',
-      text: 'Final quantity cannot be negative.',
-      confirmButtonColor: '#d33'
-    });
-    return;
-  }
-
-  // 🔹 Build payload
-  const payload = {
-    itemId: Number(row.apiRow?.id ?? 0),
-    warehouseId: Number(row.warehouseId ?? 0),
-    binId: row.binId ?? null,
-    supplierId: Number(row.supplierId ?? 0),
-    faultQty: faultQty,       // 🔹 subtract this in IWS
-    finalOnHand: finalQty,    // 🔹 full final qty for ItemPrice
-    stockIssueId: Number(this.adjust.stockIssueId ?? 0),
-    approvedBy: this.adjust.approvedById,
-    updatedBy: 'system'
-  };
-
-  this.loading = true;
-  this.stockService.AdjustOnHand(payload).subscribe({
-    next: (res: any) => {
-      this.loading = false;
-
-      // 🔹 Update UI
-      row.onHand = finalQty;
-      row.qty = finalQty;
-      this.applyFilters();
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Adjustment Successful',
-        text: `Stock successfully updated.`,
-        confirmButtonColor: '#2E5F73'
-      });
-
-      modalRef.close('submitted');
-    },
-    error: (err) => {
-      this.loading = false;
-      console.error('Adjust failed', err);
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Adjustment Failed',
-        text: err?.error?.message || 'Could not adjust stock.',
-        confirmButtonColor: '#d33'
-      });
-    }
-  });
-}
-
-
-
-
-
-  /* ===================== Transfer ===================== */
 
   submitTransfer(): void {
-    if (!this.sameWarehouseSelected || !this.sameSupplierSelected) {
-      Swal.fire({ icon: 'warning', title: 'Selection required', text: 'Pick items from a single warehouse AND a single supplier.' });
-      return;
-    }
+    if (!this.canTransfer()) return;
 
-    const selRows = this.getSelectedRows();
-    if (!selRows.length) {
-      Swal.fire({ icon: 'info', title: 'Nothing to transfer', text: 'Select at least one row.' });
-      return;
-    }
+    const mrId = Number(this.selectedMrId ?? 0);
+    const fromWarehouseID = Number(this.selectedFromOutletId ?? 0);
+    const toWarehouseID = Number(this.destinationOutletId ?? 0);
+    const toBinId = Number(this.destinationBinId ?? 0);
 
     const now = new Date();
-    const userId = 1001; // replace with real current user
-    const toWarehouseID: number | null = 0;
-    const toBinId: number | null = 0;
+    const userId = 1001;
 
-    const payload = selRows.map(r => ({
+    const payload = (this.filteredRows ?? []).map(r => ({
       ItemId: Number(r.apiRow?.id ?? 0),
-      FromWarehouseID: Number(r.warehouseId ?? 0),
+      MrId: mrId,
+      FromWarehouseID: fromWarehouseID,
       ToWarehouseID: toWarehouseID,
       ToBinId: toBinId,
-      Available: Number(r.qty ?? 0),
-      OnHand: Number(r.qty ?? 0),
-      IsApproved: false,
+      Available: Number(r.available ?? 0),
+      OnHand: Number(r.onHand ?? 0),
+      isApproved: true,
       CreatedBy: userId,
       CreatedDate: now,
       UpdatedBy: userId,
       UpdatedDate: now,
-      FromWarehouseName: r.warehouse ?? '',
+      FromWarehouseName: this.selectedFromOutletName ?? '',
       ItemName: r.item ?? '',
       Sku: r.sku ?? '',
       BinId: r.binId ?? null,
       BinName: r.bin ?? '',
       Remarks: '',
-      SupplierId: Number(r.supplierId ?? 0), // supplier context
-      IsSupplierBased: true
+      SupplierId: (r.supplierId == null ? null : Number(r.supplierId)),
+      IsSupplierBased: false
     }));
 
-    this.stockService.insertStock(payload).subscribe({
-      next: _res => {
-        const transferRequests = selRows.map(r => ({
-          itemId: Number(r.apiRow?.id ?? 0),
-          warehouseId: Number(r.warehouseId ?? 0),
-          binId: r.binId ?? null,
-          supplierId: Number(r.supplierId ?? 0)
-        }));
+    this.loading = true;
 
-        this.stockService.markAsTransferredBulk(transferRequests).subscribe({
-          next: () => {
-            Swal.fire({
-              icon: 'success',
-              title: 'Transfer Successful',
-              text: 'Selected items have been transferred.',
-              confirmButtonColor: '#2E5F73'
-            }).then(() => {
-              this.loadMasterItem();
-              this.selectedKeys.clear();
-              this.router.navigate(['/Inventory/create-stocktransfer']);
-            });
-          },
-          error: err => {
-            console.error('Failed to mark transferred', err);
-            Swal.fire({
-              icon: 'warning',
-              title: 'Partial Success',
-              text: 'Stock inserted but some rows could not be marked as transferred.'
-            });
-          }
+    this.stockService.insertStock(payload).subscribe({
+      next: (_res: any) => {
+        this.loading = false;
+
+        // ✅ Remove this MR from dropdown immediately (UX)
+        this.transferredMrIds.add(mrId);
+        this.mrList = (this.mrList || []).filter(x => Number(x.id) !== mrId);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Transfer Created',
+          text: `MRQ saved and removed from dropdown.`,
+          confirmButtonColor: '#2E5F73'
+        }).then(() => {
+          // optional: reset current selection after transfer
+          this.resetAll();
+
+          this.router.navigate(['/Inventory/create-stocktransfer'], {
+            state: { mrId, toWarehouseID, fromWarehouseID, toBinId }
+          });
         });
       },
-      error: err => {
+      error: (err) => {
+        this.loading = false;
         console.error('Transfer failed', err);
         Swal.fire({
           icon: 'error',
           title: 'Transfer Failed',
-          text: 'Something went wrong during transfer.'
+          text: err?.error?.message || 'Something went wrong during transfer.'
         });
       }
     });
   }
 
-  /* ===================== Export ===================== */
-
-  openExportModal(tpl: any) {
-    this.exportFileName = this.safeFile(this.buildFixedFileBase()); // stock-overview-YYYYMMDDHHmmss
-    this.modalService.open(tpl, { centered: true, backdrop: 'static', keyboard: false });
-  }
-
-  private buildExportRows(): Array<Record<string, any>> {
-    return (this.filteredRows || []).map(r => ({
-      Warehouse: r.warehouse ?? '',
-      Item: r.item ?? '',
-      SKU: r.sku ?? '',
-      Bin: r.bin ?? '',
-      Supplier: r.supplierName ?? '',
-      OnHand: r.onHand ?? 0
-    }));
-  }
-
-  exportAsExcel(): void {
-    const data = this.buildExportRows();
-    const ws = XLSX.utils.json_to_sheet(data);
-    (ws as any)['!cols'] = [
-      { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
-      { wch: 18 }, { wch: 10 }
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock Overview');
-    const base = this.exportFileName || this.safeFile(this.buildFixedFileBase());
-    XLSX.writeFile(wb, `${base}.xlsx`);
-  }
-
-  exportAsPdf(): void {
-    const data = this.buildExportRows();
-    const headers = [['Warehouse', 'Item', 'SKU', 'Bin', 'Supplier', 'On Hand']];
-    const body = data.map(r => [r.Warehouse, r.Item, r.SKU, r.Bin, r.Supplier, r.OnHand]);
-
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(12);
-    doc.setFillColor(46, 95, 115);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 46, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.text('Stock Overview', 40, 30);
-
-    doc.setTextColor(0, 0, 0);
-    autoTable(doc, {
-      head: headers,
-      body,
-      startY: 64,
-      styles: { fontSize: 9, cellPadding: 6 },
-      headStyles: { fillColor: [46, 95, 115], textColor: [255, 255, 255] },
-      theme: 'grid',
-      tableWidth: 'auto',
-    });
-
-    const base = this.exportFileName || this.safeFile(this.buildFixedFileBase());
-    doc.save(`${base}.pdf`);
-  }
-
-  /* ===================== Misc Helpers ===================== */
-
-  getWarehouseNameById(id: number | string | null): string | null {
-    if (id == null || id === '') return null;
-    const w = this.warehouses.find(x => String(x.id) === String(id));
+  private getWarehouseNameById(id: number | null | undefined): string | null {
+    if (!id) return null;
+    const w = this.warehouses.find(x => Number(x.id) === Number(id));
     return w ? w.name : null;
   }
 
-  private startOfDay(d: Date): Date {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    return x;
+  private resetAll(): void {
+    this.selectedMrId = null;
+    this.selectedMrNo = null;
+
+    this.destinationOutletId = null;
+    this.destinationOutletName = null;
+
+    this.destinationBinId = null;
+    this.destinationBinName = null;
+
+    this.selectedFromOutletId = null;
+    this.selectedFromOutletName = null;
+
+    this.selectedSku = null;
+    this.selectedItemName = null;
+
+    this.requestedQty = 0;
+    this.requesterName = null;
+    this.reqDate = null;
+
+    this.rebuildFromOutletOptions();
+    this.applyGrid();
   }
 
-  private addDays(d: Date, days: number): Date {
-    const x = new Date(d);
-    x.setDate(x.getDate() + days);
-    return x;
-  }
-
-  private normalize(s: string | null | undefined): string {
-    return (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
-    }
-
-  private tokenize(s: string): string[] {
-    return this.normalize(s).split(' ').filter(Boolean);
-  }
-
-  private pad(n: number, w = 2): string { return String(n).padStart(w, '0'); }
-
-  private timestamp(): string {
-    const now = new Date();
-    return `${now.getFullYear()}${this.pad(now.getMonth() + 1)}${this.pad(now.getDate())}`
-         + `${this.pad(now.getHours())}${this.pad(now.getMinutes())}${this.pad(now.getSeconds())}`;
-  }
-
-  private sanitizeBaseName(s: string): string {
-    return (s || 'stock-overview')
-      .replace(/[\\/:*?"<>|]+/g, '')
-      .replace(/\s+/g, '-')
-      .trim()
-      || 'stock-overview';
-  }
-
-  private buildFixedFileBase(): string {
-    const base = this.sanitizeBaseName('stock-overview');
-    return `${base}-${this.timestamp()}`.toLowerCase();
-  }
-
-  private safeFile(s: string): string {
-    return this.sanitizeBaseName(s).toLowerCase();
-  }
-
-
-  goToStockOverviewList(){
-    this.router.navigate(['/Inventory/list-stackoverview']); 
+  goToStockOverviewList() {
+    this.router.navigate(['/Inventory/list-stackoverview']);
   }
 }

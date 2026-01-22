@@ -1,138 +1,251 @@
-@import '@core/scss/angular/libs/form-wizard.component.scss';
 @import '@core/scss/angular/libs/select.component.scss';
 
-/* Same height & padding for all three */
-.btn-eq {
-  padding: 10px 16px;           /* consistent */
-  line-height: 1;               /* avoids vertical wobble */
+.tw-page {
+  padding: 14px;
+  background: #f6f8fc;
+  min-height: calc(100vh - 120px);
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* Brand filled button */
-.btn-brand {
-  background-color: #2E5F73;
+/* Back button */
+.tw-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #2E5F73;
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 16px 10px 42px;
+  position: relative;
+  box-shadow: 0 6px 16px rgba(16, 24, 40, .10);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.tw-back-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(16, 24, 40, .14);
+}
+.tw-back-ico {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Card */
+.tw-card {
+  background: #fff;
+  border: 1px solid #e6edf7;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, .10);
+}
+
+/* Header */
+.tw-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 18px 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border-bottom: 1px solid #eef2f7;
+}
+
+.tw-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tw-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.tw-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Pills / badges */
+.tw-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.tw-pill-info {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #dbeafe;
+}
+.tw-pill-warn {
+  color: #b45309;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.tw-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.tw-metric {
+  min-width: 90px;
+}
+.tw-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+.tw-metric-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+.tw-metric-sep {
+  width: 1px;
+  height: 26px;
+  background: #eef2f7;
+}
+
+.tw-card-body {
+  padding: 18px;
+  background: #fff;
+}
+
+/* Labels + fields */
+.tw-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.tw-field {
+  position: relative;
+}
+
+.tw-input {
+  border-radius: 14px;
+  border: 1px solid #e6edf7;
+  padding: 12px 14px;
+  background: #fbfdff;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+.tw-input:focus {
+  border-color: rgba(46, 95, 115, .55);
+  box-shadow: 0 0 0 .2rem rgba(46, 95, 115, .14);
+}
+
+.tw-readonly {
+  background: #f3f6fb !important;
+  color: #475569;
+}
+
+/* ng-select */
+.tw-ng ::ng-deep .ng-select-container {
+  border-radius: 14px !important;
+  border: 1px solid #e6edf7 !important;
+  min-height: 46px !important;
+  background: #fbfdff !important;
+  box-shadow: none !important;
+}
+.tw-ng ::ng-deep .ng-select.ng-select-focused .ng-select-container {
+  border-color: rgba(46, 95, 115, .55) !important;
+  box-shadow: 0 0 0 .2rem rgba(46, 95, 115, .14) !important;
+}
+.tw-ng ::ng-deep .ng-placeholder {
+  color: #94a3b8 !important;
+  font-weight: 600;
+}
+.tw-ng ::ng-deep .ng-value {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Small helper text */
+.tw-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+.tw-mini {
+  font-size: 12px;
+  color: #64748b;
+}
+.tw-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.tw-inline-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+.tw-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2E5F73;
+  margin-right: 8px;
+  opacity: .7;
+}
+
+/* Footer */
+.tw-card-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fbfdff;
+  border-top: 1px solid #eef2f7;
+}
+
+.tw-btn {
+  border-radius: 14px;
+  padding: 10px 16px;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.tw-btn:active {
+  transform: translateY(1px);
+}
+
+.tw-btn-ghost {
+  background: #ffffff;
+  border-color: #e6edf7;
+  color: #0f172a;
+}
+.tw-btn-ghost:hover {
+  box-shadow: 0 8px 18px rgba(16, 24, 40, .10);
+}
+
+.tw-btn-primary {
+  background: #2E5F73;
   color: #fff;
   border-color: #2E5F73;
 }
-.btn-brand:hover {
-  filter: brightness(0.95);
+.tw-btn-primary:hover {
+  box-shadow: 0 10px 20px rgba(46, 95, 115, .24);
 }
-
-/* Optional: match your rounded style everywhere */
-.rounded-12 { border-radius: 12px; }
-
-$brand: #2E5F73;
-
-.uxv2 {
-  border: 0;
-  box-shadow: 0 18px 48px rgba(0,0,0,.16);
-  position: relative;
-  overflow: hidden;
-  background: #fff;
-
-  &__ribbon {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 6px;
-    background: $brand;
-  }
-
-  &__header {
-    border: 0;
-    padding: 16px 24px;
-    background: linear-gradient(180deg, rgba(46,95,115,.08), rgba(46,95,115,0) 70%);
-  }
-
-  &__body { padding: 10px 24px 22px; }
-
-  &__footer {
-    border: 0;
-    padding: 12px 24px 20px;
-    gap: .5rem;
-  }
-
-  &__label {
-    display: block;
-    font-size: .72rem;
-    letter-spacing: .06em;
-    font-weight: 700;
-    color: #5b6773;
-    margin-top: 1rem;
-  }
-
-  /* Read-only chip */
-  &__chip {
-    display: flex; align-items: center;
-    padding: .65rem .8rem;
-    border-radius: .75rem;
-    background: #f3f5f7;
-    border: 1px solid #e5e7eb;
-    color: #24323d;
-    min-height: 40px;
-    &.is-invalid { border-color: #dc3545; }
-  }
-
-  /* Textarea + input baseline */
-  &__textarea, &__input {
-    border-radius: .75rem;
-    border: 1px solid #e5e7eb;
-    &:focus {
-      border-color: $brand;
-      box-shadow: 0 0 0 .2rem rgba(46,95,115,.15);
-    }
-  }
-
-  /* Primary button */
-  &__primary {
-    background: $brand;
-    &:hover { background: darken($brand, 6%); }
-    &:active { background: darken($brand, 10%); }
-  }
-
-  /* ng-select theme */
-  &__select {
-    .ng-select-container {
-      min-height: 40px;
-      border-radius: .75rem;
-      border: 1px solid #e5e7eb;
-      box-shadow: none;
-      padding-left: .25rem;
-    }
-    &.ng-select-focused .ng-select-container {
-      border-color: $brand !important;
-      box-shadow: 0 0 0 .2rem rgba(46,95,115,.15) !important;
-    }
-    &.is-invalid .ng-select-container { border-color: #dc3545 !important; }
-  }
+.tw-btn-primary:disabled {
+  opacity: .6;
+  box-shadow: none;
 }
-
-/* Make ng-select dropdown render above modal */
-.ng-dropdown-panel { z-index: 2050 !important; }
-
-/* Make both buttons exactly the same size */
-/* same pill size for both buttons */
-.btn-pill{
-  padding: .45rem 1rem !important;   /* exact size match */
-  min-height: 40px;                  /* ensure equal height */
-  border-radius: .75rem !important;  /* pill shape */
-  font-weight: 600;
-  font-size: 1rem;
-  line-height: 1;                    /* keeps height tight */
-  box-shadow: 0 2px 6px rgba(0,0,0,.08);
-}
-.btn-pill i{ font-size: 1rem; line-height: 1; }
-
-/* cancel style (you already have similar) */
-.btn-cancel{
-  background:#E74C3C; color:#fff; border:0;
-  box-shadow: 0 2px 6px rgba(231,76,60,.25);
-}
-.btn-cancel:hover{ background: darken(#E74C3C,6%); color:#fff; }
-.btn-cancel:active{ background: darken(#E74C3C,10%); }
-
-/* submit style, same dimensions as cancel */
-.btn-submit{
-  background:#2E5F73; color:#fff; border:0;
-  box-shadow: 0 2px 6px rgba(46,95,115,.25);
-}
-.btn-submit:hover{ background: darken(#2E5F73,6%); color:#fff; }
-.btn-submit:active{ background: darken(#2E5F73,10%); }

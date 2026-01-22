@@ -122,7 +122,7 @@ const routes = [
     data: { animation: 'create-stockreorderplanning' }
   },
    {
-    path: 'Inventory/create-material-requisition/:id',
+    path: 'edit-material-requisition/:id',
     component: MaterialRequisitionCreateComponent,
     data: { animation: 'edit-stockreorderplanning' }
   },

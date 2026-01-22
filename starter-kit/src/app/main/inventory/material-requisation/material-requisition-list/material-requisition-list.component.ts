@@ -20,6 +20,7 @@ type MaterialReqRow = {
   id: number;
   reqNo: string;
   outletId?: number | null;
+    outletName?: number | null;
   requesterName?: string | null;
   reqDate?: string | Date | null;
   status?: number | null;
@@ -89,7 +90,7 @@ export class MaterialRequisitionListComponent implements OnInit {
     this.filteredRows = this.rows.filter(r => {
       const headerHay = [
         r.reqNo ?? '',
-        r.outletId ?? '',
+        r.outletName ?? '',
         r.requesterName ?? '',
         this.getStatusLabel(r.status)
       ].join(' ').toLowerCase();
@@ -117,7 +118,8 @@ export class MaterialRequisitionListComponent implements OnInit {
     this.modalRef = this.modalService.open(viewModal, {
       size: 'lg',
       centered: true,
-      backdrop: 'static'
+      backdrop: 'static',
+       windowClass: 'mrq-modal-xl'
     });
 
     this.modalRef.result.finally(() => {
@@ -160,6 +162,7 @@ export class MaterialRequisitionListComponent implements OnInit {
             id: Number(x.id ?? 0),
             reqNo: String(x.reqNo ?? ''),
             outletId: x.outletId ?? null,
+             outletName: x.outletName ?? null,
             requesterName: x.requesterName ?? null,
             reqDate: x.reqDate ?? null,
             status: x.status ?? null,
@@ -183,6 +186,14 @@ export class MaterialRequisitionListComponent implements OnInit {
 
   editReq(row: MaterialReqRow): void {
   // use your create form component route with id
-  this.router.navigate(['/Inventory/create-material-requisition', row.id]);
+  this.router.navigate(['/Inventory/edit-material-requisition', row.id]);
+}
+
+goStockOverview() {
+  this.router.navigate(['/Inventory/list-stackoverview']);
+}
+
+goStockTransfer() {
+  this.router.navigate(['/Inventory/list-stocktransfer']);
 }
 }

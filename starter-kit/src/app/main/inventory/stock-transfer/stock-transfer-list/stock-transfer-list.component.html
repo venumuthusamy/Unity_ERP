@@ -1,8 +1,8 @@
 <div class="content-wrapper p-0">
   <div class="content-body">
-    <!-- Stock Transfer List -->
     <section class="users-list-wrapper">
       <div class="card">
+
         <div class="row">
           <div class="col-md-6 col-12">
             <h4 class="card-text"
@@ -37,7 +37,7 @@
 
               <button (click)="openCreate()"
                       class="btn m-1 d-inline-flex align-items-center"
-                      style="background-color:#2E5F73;color:white;gap:4px;">
+                      style="background-color:#2E5F73;color:white;gap:6px;">
                 <i data-feather="plus-circle" class="w-4 h-4"></i>
                 <span>Go to Transfer</span>
               </button>
@@ -55,67 +55,81 @@
                        [scrollbarH]="true"
                        [reorderable]="true">
 
-          <!-- Removed the eye/lines column -->
-
-          <!-- SKU column with hyperlink -->
+          <!-- SKU -->
           <ngx-datatable-column name="SKU" prop="sku" [width]="140" [sortable]="true">
             <ng-template ngx-datatable-cell-template let-row="row">
               <a
                 [routerLink]="['/Inventory/stock-history']"
                 [queryParams]="{
                   sku: row.sku,
-                  itemId: row.itemIdNum ?? row.itemId ?? row.id,
-                  warehouseId: row.warehouseIdNum ?? row.warehouseId,
+                  itemId: row.itemIdNum ?? row.itemId,
+                  warehouseId: row.fromWarehouseIdNum ?? row.fromWarehouseId,
                   stockId: row.stockIdNum ?? row.stockId
                 }"
                 (click)="$event.stopPropagation()"
-                class="text-decoration-underline"
-                style="cursor:pointer; text-decoration: underline; color: #007bff;"
-              >
+                style="cursor:pointer; text-decoration: underline; color:#007bff;">
                 {{ row.sku }}
               </a>
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Item Name" prop="name" [width]="160"></ngx-datatable-column>
-          <ngx-datatable-column name="From Outlet" prop="fromWarehouseName" [width]="180"></ngx-datatable-column>
+          <!-- Item Name -->
+          <ngx-datatable-column name="Item Name" prop="itemName" [width]="220" [sortable]="true">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              {{ row?.itemName && row.itemName.trim() ? row.itemName : '—' }}
+            </ng-template>
+          </ngx-datatable-column>
 
-          <!-- To Warehouse -->
-          <ngx-datatable-column name="To Outlet" [width]="180">
+          <ngx-datatable-column name="From Outlet" prop="fromWarehouseName" [width]="200"></ngx-datatable-column>
+
+          <ngx-datatable-column name="To Outlet" [width]="200">
             <ng-template ngx-datatable-cell-template let-row="row">
               {{ row?.toWarehouseName && row.toWarehouseName.trim() ? row.toWarehouseName : '—' }}
             </ng-template>
           </ngx-datatable-column>
 
-          <!-- Transfer Qty -->
-          <ngx-datatable-column name="Transfer Qty" [width]="140">
+          <!-- ✅ Transfer Qty = DB transferQty only -->
+          <ngx-datatable-column name="Transfer Qty" [width]="140" [sortable]="true">
             <ng-template ngx-datatable-cell-template let-row="row">
-              {{ row?.transferQty === null || row?.transferQty === undefined ? '—' : row.transferQty }}
+              {{ row.transferQtyNum == null ? '—' : row.transferQtyNum }}
             </ng-template>
           </ngx-datatable-column>
 
-          <!-- Reason / Remarks -->
-          <ngx-datatable-column name="Reason" [width]="140">
+          <!-- Reason -->
+          <ngx-datatable-column name="Reason" [width]="160">
             <ng-template ngx-datatable-cell-template let-row="row">
               {{ row?.remarks && row.remarks.trim() ? row.remarks : '—' }}
             </ng-template>
           </ngx-datatable-column>
 
           <!-- Status -->
-          <ngx-datatable-column name="Status" [width]="140">
-            <ng-template let-row="row" ngx-datatable-cell-template>
+          <ngx-datatable-column name="Status" [width]="200">
+            <ng-template ngx-datatable-cell-template let-row="row">
               <span class="badge rounded-pill"
-                    [ngClass]="row.transferStatus === 'Transferred' ? 'bg-primary'
-                              : row.transferStatus === 'Pending' ? 'bg-warning'
+                    [ngClass]="row.statusNum === 3 ? 'bg-success'
+                              : row.statusNum === 2 ? 'bg-info'
+                              : row.statusNum === 1 ? 'bg-warning'
                               : 'bg-secondary'">
-                {{ row.transferStatus }}
+                {{ row.statusLabel }}
               </span>
             </ng-template>
           </ngx-datatable-column>
+
+          <!-- Action -->
+          <ngx-datatable-column name="Action" [width]="110" [sortable]="false" [canAutoResize]="false">
+            <ng-template ngx-datatable-cell-template let-row="row">
+              <button type="button"
+                      class="btn btn-sm btn-icon"
+                      [disabled]="row.statusNum !== 1"
+                      [title]="row.statusNum === 1 ? 'Edit' : 'Edit only for Pending (1)'"
+                      (click)="editTransfer(row); $event.stopPropagation();">
+                <i data-feather="edit-2"></i>
+              </button>
+            </ng-template>
+          </ngx-datatable-column>
+
         </ngx-datatable>
       </div>
     </section>
   </div>
 </div>
-
-<!-- Removed the Lines Modal entirely -->
