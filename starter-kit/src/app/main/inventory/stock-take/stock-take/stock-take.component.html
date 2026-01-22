@@ -183,7 +183,7 @@
                             <th style="background-color:#2E5F73;color: #fff;">Item</th>
                             <th style="background-color:#2E5F73;color: #fff;">Barcode</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">
-                                Available</th>
+                                OnHand Available/Fault</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">
                                 Accepted Qty</th>
                             <th class="text-end" style="background-color:#2E5F73;color: #fff;white-space:nowrap">Faulty
@@ -209,7 +209,7 @@
                                 {{ r.itemName || getItemName(r.itemId) }}
                             </td>
                             <td class="text-end">{{ toNum(r.barcode) }}</td>
-                            <td class="text-end">{{ toNum(r.onHand) }}</td>
+                            <td class="text-end"> {{ toNum(r.onHand) }} /  {{ toNum(r.badOnHand ?? 0) }}</td>
                             <td class="text-end">{{ toNum(r.countedQty) }}</td>
                             <td class="text-end">{{ toNum(r.badCountedQty) }}</td>
                             <td class="text-end">{{ toNum(r.countedQty) + toNum(r.badCountedQty) }}</td>

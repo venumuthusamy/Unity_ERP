@@ -370,7 +370,7 @@
 
     <!-- Extra columns (empty or future data placeholders) -->
     <!-- <td><span class="text-gray-800">{{ p.countedQty || '-' }}</span></td> -->
-    <td><span class="text-gray-800">{{ p.badCountedQty || '-' }}</span></td>
+    <td><span class="text-gray-800">{{ (p.badCountedQty ?? 0) }}</span></td>
     <td><span class="text-gray-800">{{ getReason(p.reasonId)  || '-' }}</span></td>
 
     <!-- Delete button -->
