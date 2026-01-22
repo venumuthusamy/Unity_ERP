@@ -24,6 +24,7 @@ import { SupplierComponent } from './main/businessPartners/supplier/supplier.com
 import { AuthGuard } from './auth/helpers';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MobileLinkInterceptor} from './main/purchase/mobile-receiving/mr-token.interceptor';
+import { RecipemastercreateComponent } from './main/Recipe/recipemastercreate/recipemastercreate.component';
 
 
 const appRoutes: Routes = [
@@ -68,6 +69,11 @@ const appRoutes: Routes = [
     loadChildren: () => import('./main/sales/sales.module').then(m => m.SalesModule),
     
      data: { roles: ['Sales Team', 'Admin', 'Super Admin'] }
+  },
+  {
+    path: 'Recipe',
+    loadChildren: () => import('./main/Recipe/recipe.module').then(m => m.RecipeModule),
+    
   },
   {
     path: 'admin/users',
