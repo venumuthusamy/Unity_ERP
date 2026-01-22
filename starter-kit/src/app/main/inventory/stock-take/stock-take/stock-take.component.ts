@@ -23,6 +23,7 @@ interface StockTakeLine {
   binId: number
   binName:any
   onHand: number | null;
+  badOnHand?: number | null;  
   countedQty: number | null;
   badCountedQty: number | null;
   barcode?: string | null;
@@ -289,6 +290,7 @@ export class StockTakeComponent implements OnInit {
       supplierId: dto.supplierId,
        supplierName: dto.supplierName ?? '', 
       onHand: Number(dto.onHand) || 0,
+      badOnHand: Number(dto.badOnHand) || 0,
       countedQty: 0,
       badCountedQty: 0,
       // barcode: dto.barcode ?? '',
