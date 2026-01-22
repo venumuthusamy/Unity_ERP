@@ -109,6 +109,20 @@ export const menu: any[] = [
       { id: 'Report', title: 'Report', type: 'item', icon: 'circle', url: '/Sales/Reports-create', teams: ['Sales Team'], approvalRoles: ['Super Admin'] }
     ]
   },
+    {
+    id: 'recipe',
+    title: 'Recipe',
+    translate: 'MENU.RECIPE.TITLE',
+    type: 'collapsible',
+    icon: 'shopping-cart',
+  //  teams: ['Sales Team'],
+   // approvalRoles: ['Super Admin'],
+    children: [
+      { id: 'recipe', title: 'Recipe Master', type: 'item', icon: 'circle', url: '/Recipe/recipelist',  approvalRoles: ['Super Admin'] },
+       { id: 'recipe', title: 'Production Planning', type: 'item', icon: 'circle', url: '/Recipe/productionplanninglist',  approvalRoles: ['Super Admin'] },
+     
+    ]
+  },
 
   // Financial (Finance Team OR Super Admin)
   {

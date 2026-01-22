@@ -1,0 +1,85 @@
+<div class="pp-page">
+  <div class="pp-title">Production Planning</div>
+
+  <div class="pp-topbar">
+    <div class="pp-left">
+      <label class="pp-label">Sales Order</label>
+      <select class="pp-select" [(ngModel)]="selectedSoId" (change)="onSoChange()">
+        <option [ngValue]="null">-- Select Sales Order --</option>
+        <option *ngFor="let so of soList" [ngValue]="so.id">
+          {{ so.salesOrderNo }} ({{ so.deliveryDate | date:'yyyy-MM-dd' }}) - {{ so.status }}
+        </option>
+      </select>
+    </div>
+
+    <button class="pp-btn primary" (click)="savePlan()" [disabled]="!selectedSoId || isLoading">
+      Save Plan
+    </button>
+  </div>
+
+  <div class="pp-card">
+    <div class="pp-card-head">
+      <div class="pp-card-title">Plan</div>
+      <div class="pp-hint" *ngIf="isLoading">Loading...</div>
+    </div>
+
+    <div class="pp-table-wrap">
+      <table class="pp-table">
+        <thead>
+          <tr>
+            <th style="width:40%;">Recipe</th>
+            <th style="width:30%;">Planned Qty</th>
+            <th style="width:30%;">Expected Output</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of planRows">
+            <td>{{ r.recipeName }}</td>
+            <td>{{ fmt(r.plannedQty) }}</td>
+            <td>{{ fmt(r.expectedOutput) }}</td>
+          </tr>
+          <tr *ngIf="!planRows.length">
+            <td colspan="3" class="pp-empty">Select SO to load recipes...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pp-card mt">
+    <div class="pp-card-head">
+      <div class="pp-card-title">Ingredient Explosion</div>
+      <button class="pp-btn danger" (click)="createPR()" [disabled]="!ingredients.length">
+        Create Purchase Requisition
+      </button>
+    </div>
+
+    <div class="pp-table-wrap">
+      <table class="pp-table">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th style="width:22%;">Required</th>
+            <th style="width:22%;">Available</th>
+            <th style="width:16%;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let i of ingredients">
+            <td class="pp-strong">{{ i.itemName }}</td>
+            <td>{{ fmt(i.requiredQty) }} {{ i.uom }}</td>
+            <td>{{ fmt(i.availableQty) }} {{ i.uom }}</td>
+            <td>
+              <span class="pp-badge" [ngClass]="i.status === 'OK' ? 'ok' : 'short'">
+                {{ i.status }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!ingredients.length">
+            <td colspan="4" class="pp-empty">No ingredients yet...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

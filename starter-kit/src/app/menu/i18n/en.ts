@@ -63,7 +63,12 @@ export const locale = {
         SALESINVOICE:'SalesInvoice',
         SALESORDER:'SalesOrder',
         SHARED:'Shared'
-      }
+      },
+       RECIPE: {
+        TITLE: 'Recipe',
+        RECIPEMASTER: 'RecipeMaster',
+       
+      },
     }
   }
 };
