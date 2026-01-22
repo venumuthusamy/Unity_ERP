@@ -7,7 +7,7 @@
       <select class="pp-select" [(ngModel)]="selectedSoId" (change)="onSoChange()">
         <option [ngValue]="null">-- Select Sales Order --</option>
         <option *ngFor="let so of soList" [ngValue]="so.id">
-          {{ so.salesOrderNo }} ({{ so.deliveryDate | date:'yyyy-MM-dd' }}) - {{ so.status }}
+          {{ so.salesOrderNo }} ({{ so.deliveryDate | date:'yyyy-MM-dd' }})
         </option>
       </select>
     </div>

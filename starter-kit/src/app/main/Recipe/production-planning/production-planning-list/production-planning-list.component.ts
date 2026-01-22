@@ -103,7 +103,9 @@ export class ProductionPlanningListComponent implements OnInit {
   //     error: (e) => Swal.fire('Failed', e?.error?.message || 'Explosion load failed', 'error')
   //   });
   // }
-
+goToCreate(): void {
+    this.router.navigate(['/Recipe/productionplanningcreate']); // adjust route
+  }
   closeExplosion(): void {
     this.showExplosionModal = false;
     this.explosionRows = [];
