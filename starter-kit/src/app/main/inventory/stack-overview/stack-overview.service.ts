@@ -63,4 +63,10 @@ export class StackOverviewService {
       GetStockTransferedList(): Observable<any[]> {
         return this.http.get<any[]>(this.url + StockAPIUrls.GetStockTransferedList);
     }
+      getTransferredMrIds(): Observable<any[]> {
+        return this.http.get<any[]>(this.url + StockAPIUrls.getTransferredMrIds);
+    }
+   GetMaterialTransferList(): Observable<any[]> {
+        return this.http.get<any[]>(this.url + StockAPIUrls.GetMaterialTransferList);
+    }
 }

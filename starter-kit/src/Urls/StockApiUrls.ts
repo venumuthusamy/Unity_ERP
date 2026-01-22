@@ -9,8 +9,10 @@ export class StockAPIUrls {
   public static readonly GetAllStockTransferedList = "/Stock/GetAllStockTransferedList";
   public static readonly AdjustOnHand = "/Stock/AdjustOnHand";
   public static readonly GetAllItemStockList = "/Stock/GetAllItemStockList";
-  public static readonly ApproveTransfersBulk = "/Stock/ApproveTransfersBulk";
+  public static readonly ApproveTransfersBulk = "/Stock/approve-bulk";
    public static readonly GetByIdStockHistory = "/Stock/GetByIdStockHistory/"; 
      public static readonly GetStockTransferedList = "/Stock/GetStockTransferedList";
+          public static readonly getTransferredMrIds = "/Stock/transferred-mr-ids";
+            public static readonly GetMaterialTransferList = "/Stock/GetMaterialTransferList";
 }
  

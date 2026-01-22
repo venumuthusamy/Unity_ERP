@@ -1,338 +1,196 @@
-<button class="btn mb-2 position-relative d-flex align-items-center justify-content-center"
-    style="background-color:#2E5F73; color:white; padding-left:2.25rem;" (click)="goToStockOverviewList()">
-    <i class="fas fa-arrow-left position-absolute" style="left:0.75rem; top:50%; transform:translateY(-50%);"
-        aria-hidden="true"></i>
-    Go to Stock Overview list
+<button
+  class="btn back-btn mb-2 position-relative d-flex align-items-center justify-content-center"
+  (click)="goToStockOverviewList()">
+  <i class="fas fa-arrow-left position-absolute back-ico" aria-hidden="true"></i>
+  Stock Overview List
 </button>
 
-
-<!-- Stock Overview Card -->
 <div class="card card-elevated rounded-16">
-  <!-- Header -->
   <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
-    <h4 class="card-title mb-0">Stock Overview</h4>
-
-    <div class="d-flex align-items-center flex-wrap gap-2">
-      <!-- OPEN EXPORT MODAL -->
-      <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center"
-              (click)="openExportModal(exportModal)">
-        <i class="fa-solid fa-file-export me-2" aria-hidden="true"></i>
-        <span>Export</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Body -->
-  <div class="card-body">
-    <!-- Filters -->
-    <div class="row g-3 align-items-end">
-      <!-- Warehouse -->
-      <div class="col-sm-6 col-md-3">
-        <label class="form-label">Outlet</label>
-        <ng-select
-          [items]="warehouses"
-          bindLabel="name"
-          bindValue="id"
-          placeholder="Search Outlet"
-          [(ngModel)]="selectedWarehouse"
-          (ngModelChange)="applyFilters()"
-          class="w-100">
-        </ng-select>
-      </div>
-
-      <!-- Below Min -->
-      <div class="col-sm-6 col-md-3">
-        <label class="form-label d-block">Below Min</label>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="minOnly"
-                 [(ngModel)]="minOnly" (ngModelChange)="applyFilters()">
-          <label class="form-check-label" for="minOnly">Show only</label>
-        </div>
-      </div>
-
-      <!-- Expiring (30d) -->
-      <div class="col-sm-6 col-md-3">
-        <label class="form-label d-block">Expiring (30d)</label>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="expOnly"
-                 [(ngModel)]="expOnly" (ngModelChange)="applyFilters()">
-          <label class="form-check-label" for="expOnly">Show only</label>
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="col-sm-6 col-md-3">
-        <label class="form-label">Search</label>
-        <input type="text"
-               class="form-control rounded-12"
-               placeholder="Item / SKU / Bin / Supplier"
-               [(ngModel)]="searchText"
-               (input)="applyFilters()">
-      </div>
+    <div class="hdr-title">
+      <div class="hdr-h">Stock Overview</div>
+      <div class="hdr-sub">Material Requisition based transfer</div>
     </div>
 
-    <!-- Loading / Error -->
-    <div *ngIf="loading" class="mt-3 small text-muted">Loading…</div>
-    <div *ngIf="!loading && errorMsg" class="mt-3 text-danger">{{ errorMsg }}</div>
-
-    <!-- Table -->
-<!-- Table -->
-<div class="table-responsive mt-4">
-  <table class="table table-bordered mb-0 table-soft">
-    <thead>
-      <tr>
-        <th style="width:44px; text-align:center; background-color:#2E5F73; color:white;">
-          <input type="checkbox"
-                 [checked]="isAllSelected()"
-                 [indeterminate]="isIndeterminate()"
-                 (change)="toggleAll($event)">
-        </th>
-        <th style="background-color:#2E5F73;color:white;">Supplier Name</th>
-        <th style="background-color:#2E5F73;color:white;">Outlet</th>
-        <th style="background-color:#2E5F73;color:white;">Item</th>
-        <th style="background-color:#2E5F73;color:white;">SKU</th>
-        <th style="background-color:#2E5F73;color:white;">Bin</th>
-        <th style="background-color:#2E5F73;color:white;">On Hand</th>
-        <!-- Removed: Reserved, Min, Available, Expiry -->
-        <th style="background-color:#2E5F73;color:white; width:120px;">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
-        <td class="text-center">
-          <input type="checkbox"
-                 [checked]="isSelected(r)"
-                 (change)="toggleRow(r, $event)">
-        </td>
-        <td>{{ r.supplierName }}</td>
-        <td>{{ r.warehouse }}</td>
-        <td>{{ r.item }}</td>
-        <td>{{ r.sku }}</td>
-        <td>{{ r.bin }}</td>
-        <td>{{ r.qty }}</td>
-        <td class="text-center">
-          <button type="button"
-                  class="btn btn-sm"
-                  (click)="openAdjustModal(modalDefault, r)"
-                  style="border:1px solid #2E5F73; color:#2E5F73; background:white;">
-            Adjust
-          </button>
-        </td>
-      </tr>
-      <tr *ngIf="!filteredRows?.length">
-        <td colspan="8" class="text-center text-muted">No rows match the filters.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-
-    <!-- Bottom actions -->
-    <div class="stock-actions-bottom d-flex justify-content-between align-items-center mt-3 pt-2">
-      <div class="text-muted small">
-        <ng-container *ngIf="selectedKeys.size; else noneSel">
-          {{ selectedKeys.size }} item(s) selected
-        </ng-container>
-        <ng-template #noneSel>No items selected</ng-template>
-      </div>
-
-      <button type="button"
-              class="btn"
-              [disabled]="selectedKeys.size === 0 || !sameWarehouseSelected || !sameSupplierSelected"
-              (click)="submitTransfer()"
-              style="background-color:#2E5F73;color:white;">
-        <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>
-        Transfer <span *ngIf="selectedKeys.size">({{ selectedKeys.size }})</span>
-      </button>
-
-      <div class="small text-danger mt-1"
-           *ngIf="selectedKeys.size > 0 && (!sameWarehouseSelected || !sameSupplierSelected)">
-        Select items from a single <b>Outlet</b> and a single <b>supplier</b> to enable Transfer.
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Adjust Stock Modal -->
-<!-- Adjust Stock Modal -->
-<ng-template #modalDefault let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">
-      Adjust Stock — <span class="text-uppercase">{{ adjust?.row?.item }}</span>
-    </h5>
-    <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
-      <span aria-hidden="true">&times;</span>
+    <button
+      type="button"
+      class="transfer-btn"
+      [disabled]="!canTransfer()"
+      (click)="submitTransfer()">
+      <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+      Transfer
     </button>
   </div>
 
-  <div class="modal-body" tabindex="0" ngbAutofocus>
-    <form #adjustForm="ngForm" (ngSubmit)="submitAdjust(modal)" novalidate>
-      <div class="mb-3 small text-muted">
-        {{ adjust?.row?.warehouse }}/{{ adjust?.row?.bin }}
-      </div>
+  <div class="card-body">
+
+    <!-- ===================== OPTIONS ===================== -->
+    <div class="options-card">
+      <div class="options-title">Options</div>
 
       <div class="row g-3">
-        <!-- Stock Issue -->
-        <div class="col-12 col-md-6">
-          <label class="form-label">Stock Issue <span class="text-danger">*</span></label>
+        <!-- Material Requisition -->
+        <div class="col-12 col-md-4">
+          <label class="form-label">Material Requisition</label>
+
           <ng-select
-            name="stockIssueId"
-            [items]="stockIssueOptions"
-            bindLabel="name"
+            [items]="mrList"
+            bindLabel="display"
             bindValue="id"
-            placeholder="Select a stock issue"
-            [(ngModel)]="adjust.stockIssueId"
-            (ngModelChange)="onStockIssueChange($event)"
-            [clearable]="false">
+            placeholder="Select MRQ"
+            [(ngModel)]="selectedMrId"
+            (ngModelChange)="onMrChanged($event)"
+            class="w-100">
           </ng-select>
-          <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.stockIssueId">
-            Please select a stock issue.
-          </div>
-          <div class="form-text" *ngIf="adjust.stockIssueName">
-            Selected: {{ adjust.stockIssueName }}
+
+          <div class="hint" *ngIf="selectedMrId">
+            Auto bind MRQ id: <b>{{ selectedMrId }}</b>
           </div>
         </div>
 
-        <!-- Qty (In-hand replacement) -->
-        <div class="col-12 col-md-6">
-          <label class="form-label">Qty <span class="text-danger">*</span></label>
-          <input type="number"
-                 class="form-control"
-                 name="newInHand"
-                 [(ngModel)]="adjust.newInHand"
-                 (input)="validateNewInHand()"
-                 (blur)="onInHandBlur()"
-                 min="0"
-                 [disabled]="true"
-                 required>
-          <div class="invalid-feedback d-block"
-               *ngIf="adjustForm.submitted && (adjust.newInHand == null || adjust.newInHand === undefined)">
-            Please enter a value.
+        <!-- Destination Outlet -->
+        <div class="col-12 col-md-4">
+          <label class="form-label">Destination Outlet (MR Outlet)</label>
+          <input class="form-control"
+                 [value]="destinationOutletName || ''"
+                 readonly
+                 placeholder="Auto from MRQ" />
+
+          <div class="hint" *ngIf="destinationOutletId">
+            Destination outlet excluded from From Outlet list.
           </div>
-          <div class="text-danger small" *ngIf="adjust.qtyError">{{ adjust.qtyError }}</div>
         </div>
 
-        <!-- Approved By (NEW) -->
+        <!-- ✅ Destination Bin -->
+        <div class="col-12 col-md-4">
+          <label class="form-label">Destination Bin (MR Bin)</label>
+          <input class="form-control"
+                 [value]="destinationBinName || ''"
+                 readonly
+                 placeholder="Auto from MRQ" />
+
+          <div class="hint" *ngIf="destinationBinId">
+            Auto bind BinId: <b>{{ destinationBinId }}</b>
+          </div>
+        </div>
+
+        <!-- From Outlet -->
         <div class="col-12 col-md-6">
-          <label class="form-label">Approved By <span class="text-danger">*</span></label>
+          <label class="form-label">From Outlet</label>
+
           <ng-select
-            name="approvedById"
-            [items]="approvedByOptions"
-            bindLabel="name"
+            [items]="fromOutletOptions"
+            bindLabel="label"
             bindValue="id"
-            placeholder="Select approver"
-            [(ngModel)]="adjust.approvedById"
-            (change)="onApprovedByChange($event)"
-            [clearable]="false">
+            [compareWith]="compareById"
+            placeholder="Select From Outlet"
+            [(ngModel)]="selectedFromOutletId"
+            (ngModelChange)="onFromOutletChanged($event)"
+            class="w-100">
+
+            <ng-template ng-option-tmp let-item="item">
+              <div class="opt-row">
+                <div class="opt-name">{{ item.name }}</div>
+                <div class="opt-meta">
+                  Req <b>{{ item.reqQty }}</b>
+                  <span class="sep">•</span>
+                  OnHand <b>{{ item.onHand }}</b>
+                </div>
+              </div>
+            </ng-template>
+
+            <ng-template ng-label-tmp let-item="item">
+              <span class="sel-name">{{ item.name }}</span>
+              <span class="sel-meta">Req {{ item.reqQty }} • OnHand {{ item.onHand }}</span>
+            </ng-template>
           </ng-select>
-          <div class="invalid-feedback d-block" *ngIf="adjustForm.submitted && !adjust.approvedById">
-            Please select an approver.
-          </div>
-          <div class="form-text" *ngIf="adjust.approvedByName">
-            Selected: {{ adjust.approvedByName }}
-          </div>
+
+          <div class="hint">Transfer will use selected From Outlet.</div>
         </div>
 
-        <!-- Fault Qty (NEW) -->
+        <!-- From Outlet Name preview -->
         <div class="col-12 col-md-6">
-          <label class="form-label">Fault Qty</label>
-          <input type="number"
-                 class="form-control"
-                 name="faultQty"
-                 [(ngModel)]="adjust.faultQty"
-                 (input)="validateFaultQty()"
-                 min="0"
-                 [max]="adjust?.newInHand || 0"
-                 placeholder="0">
-          <div class="text-danger small" *ngIf="adjust.faultQtyError">{{ adjust.faultQtyError }}</div>
-          <div class="form-text" *ngIf="adjust?.newInHand != null">
-            Max allowed: {{ adjust.newInHand }}
-          </div>
+          <label class="form-label">Selected From Outlet</label>
+          <input class="form-control"
+                 [value]="selectedFromOutletName || ''"
+                 readonly
+                 placeholder="Select From Outlet" />
+          <div class="hint">This outlet stock rows will be shown below.</div>
         </div>
-
-        <!-- (Optional) Note -->
-        <!--
-        <div class="col-12">
-          <label class="form-label">Note</label>
-          <textarea class="form-control" rows="2" [(ngModel)]="adjust.note" name="note" placeholder="Optional"></textarea>
-        </div>
-        -->
-      </div>
-    </form>
-  </div>
-
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss('cancel')">
-      Cancel
-    </button>
-    <button type="button"
-            class="btn"
-            [disabled]="!canSubmitAdjust()"
-            (click)="submitAdjust(modal)"
-            style="background-color:#2E5F73; color:white;">
-      Submit
-    </button>
-  </div>
-</ng-template>
-
-
-<!-- Export Modal -->
-<ng-template #exportModal let-modal>
-  <div class="prl-export-modal modal-content shadow-lg">
-    <!-- Header -->
-    <div class="modal-header border-0 pb-0">
-      <div class="d-flex align-items-center gap-2">
-        <div class="export-chip" aria-hidden="true">
-          <i class="fa-solid fa-share-from-square"></i>
-        </div>
-        <h5 class="modal-title mb-0" style="color:#2E5F73">Export Stock Overview</h5>
       </div>
 
-      <button type="button" class="btn btn-light btn-icon close-btn"
-              (click)="modal.dismiss('close')" aria-label="Close">
-        <i class="fa fa-times"></i>
-      </button>
+      <!-- SKU Card -->
+      <div class="sku-card" *ngIf="selectedSku">
+        <div class="sku-left">
+          <div class="sku-code">{{ selectedSku }}</div>
+          <div class="sku-name" *ngIf="selectedItemName">{{ selectedItemName }}</div>
+        </div>
+
+        <div class="sku-right">
+          <div class="mini-chip">
+            <span class="chip-k">Request Qty</span>
+            <span class="chip-v">{{ requestedQty }}</span>
+          </div>
+
+          <div class="meta-line">
+            Requester: <b>{{ requesterName || '-' }}</b>
+            <span class="dot">•</span>
+            Date: <b>{{ reqDate || '-' }}</b>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Body -->
-    <div class="modal-body pt-2">
-      <p class="text-muted mb-3">
-        Choose a format to export
-        <span class="d-block small mt-1">Tip: exports exactly what you see (current filters applied).</span>
-      </p>
+    <!-- ===================== Loading / Error ===================== -->
+    <div *ngIf="loading" class="mt-2 small text-muted">Loading…</div>
+    <div *ngIf="!loading && errorMsg" class="mt-2 text-danger small">{{ errorMsg }}</div>
 
-      <!-- Filename (display-only) -->
-      <div class="form-group mb-3">
-        <label class="form-label mb-1">Filename</label>
-        <div class="input-group">
-          <input
-            type="text"
-            class="form-control rounded-left-12"
-            [value]="exportFileName"
-            readonly
-            tabindex="-1"
-          />
-          <span class="input-group-text rounded-right-12 ext-hint">.xlsx / .pdf</span>
+    <!-- ===================== GRID ===================== -->
+    <div class="grid-card mt-3">
+      <div class="grid-head">
+        <div class="grid-title">Stock in selected outlet</div>
+
+        <div class="grid-sub" *ngIf="selectedFromOutletName">
+          From Outlet: <b>{{ selectedFromOutletName }}</b>
         </div>
       </div>
 
-      <!-- Buttons -->
-      <div class="export-grid">
-        <button type="button" class="btn btn-export btn-export-excel"
-                (click)="exportAsExcel(); modal.close('excel')">
-          <i class="fa fa-file-excel-o mr-2" aria-hidden="true"></i>
-          Excel
-          <span class="sub">(.xlsx)</span>
-        </button>
+      <div class="grid-table-wrap">
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th>Outlet</th>
+              <th>Supplier</th>
+              <th>Bin</th>
+              <th class="text-end">On Hand</th>
+              <th class="text-end">Available</th>
+            </tr>
+          </thead>
 
-        <button type="button" class="btn btn-export btn-export-pdf"
-                (click)="exportAsPdf(); modal.close('pdf')">
-          <i class="fa fa-file-pdf-o mr-2" aria-hidden="true"></i>
-          PDF
-          <span class="sub">(.pdf)</span>
-        </button>
+          <tbody>
+            <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
+              <td class="cell-strong">{{ r.warehouse }}</td>
+              <td class="cell-muted">{{ r.supplierName || '-' }}</td>
+              <td class="cell-muted">{{ r.bin }}</td>
+              <td class="text-end cell-num">{{ r.onHand }}</td>
+              <td class="text-end cell-num">{{ r.available }}</td>
+            </tr>
+
+            <tr *ngIf="!filteredRows?.length">
+              <td colspan="5" class="empty-state">
+                No rows found for selected SKU / outlet.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-foot" *ngIf="filteredRows?.length">
+        <span class="foot-pill">Showing {{ filteredRows.length }} row(s)</span>
       </div>
     </div>
+
+
+
   </div>
-</ng-template>
+</div>

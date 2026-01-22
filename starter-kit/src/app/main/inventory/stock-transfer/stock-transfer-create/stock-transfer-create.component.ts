@@ -1,94 +1,69 @@
-import { Component, OnInit, TemplateRef } from '@angular/core';
-import { Router } from '@angular/router';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 
 import { StackOverviewService } from '../../stack-overview/stack-overview.service';
-import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
-import { BinService } from 'app/main/master/bin/bin.service';
 import { StockAdjustmentService } from '../../stock-adjustment/stock-adjustment.service';
 
-/** ---- API & UI Types ---------------------------------------------------- */
+interface BinOpt {
+  id: number | string;
+  binName: string;
+  code?: string;
+}
 
-interface ApiItemRow {
-  itemId?: number | string;
-  id?: number | string;
+type TransferHeader = {
+  reqNo: string;
+  mrId: number;
+  sku: string;
+
+  fromWarehouseId: number;
+  fromWarehouseName: string;
+
+  toWarehouseId: number;
+  toWarehouseName: string;
+
+  binId: number | null;
+  binName: string | null;
+
+  toBinId: number | null;
+  toBinName: string | null;
+
+  requestQty: number;
+  transferQty: number | null;
+  status: number;
+};
+
+interface ApiTransferRow {
   stockId?: number | string;
+  itemId?: number | string;
 
   sku?: string;
-  name?: string;
-  itemName?: string;
-  warehouseName?: string;
-  binName?: string;
 
+  fromWarehouseId?: number | string;
+  fromWarehouseName?: string;
+
+  toWarehouseId?: number | string;
+  toWarehouseName?: string;
+
+  binId?: number | string | null;
+  binName?: string | null;
+
+  toBinId?: number | string | null;
+  toBinName?: string | null;
+
+  requestQty?: number | string;
+  transferQty?: number | string | null;
+
+  available?: number | string;
   onHand?: number | string;
   reserved?: number | string;
-  min?: number | string;
-  minQty?: number | string;
-  available?: number | string;
-
-  expiryDate?: string;
-  warehouseId?: number | string;
-  binId?: number | string;
-
-  isApproved?: boolean;
-  isTransfered?: boolean;
-  isFullTransfer?: boolean;
-  isPartialTransfer?: boolean;
-
-  transferQty?: number | string;
-
-  toWarehouseName?: string | null;
 
   supplierId?: number | string | null;
-  supplierName?: string | null;
+
+  status?: number | string;
+
+  remarks?: string | null;
 }
-
-type QtyErr = null | 'required' | 'negative' | 'decimal' | 'exceeds';
-
-interface StockRow {
-  idKey: string;
-  itemId?: number;                 // NEW
-  warehouseId?: number;            // already present in your code
-  sku: string | null;
-  item: string;
-  warehouse: string;
-  bin: string;
-  onHand: number;
-  reserved: number;
-  min: number;
-  available: number;
-  expiry: Date | null;
-  binId?: number;
-
-  supplierId?: number | null;
-  supplierName?: string | null;
-
-  apiRow?: ApiItemRow;
-  isApproved?: boolean;
-  isTransfered?: boolean;
-  isFullTransfer?: boolean;
-  isPartialTransfer?: boolean;
-
-  transferQty: number;
-
-  _qtyValid: boolean;
-  _qtyErr: QtyErr;
-
-  _sel?: boolean;
-}
-
-interface WarehouseOpt { id: number | string; name: string; }
-interface BinOpt { id: number | string; binName: string; code?: string; }
-
-interface SubmitModalState {
-  fromWarehouseId: number | string | null;
-  toWarehouseId: number | string | null;
-  toBinId: number | string | null;
-  remarks: string | null;
-}
-
-/** ---- Component --------------------------------------------------------- */
 
 @Component({
   selector: 'app-stock-transfer-create',
@@ -97,469 +72,379 @@ interface SubmitModalState {
 })
 export class StockTransferCreateComponent implements OnInit {
 
-  rows: StockRow[] = [];
-  filteredRows: StockRow[] = [];
+  header: TransferHeader | null = null;
+  rows: ApiTransferRow[] = [];
 
-  lockedWarehouse: string | null = null;
-  fromWarehouseName = '';
+  requestedQty = 0;
 
-  modal: SubmitModalState = { fromWarehouseId: null, toWarehouseId: null, toBinId: null, remarks: null };
-  modalTouched = false;
+  transferQty: number | null = null;
+  reason = '';
 
-  toWarehouseList: WarehouseOpt[] = [];
+  toBinId: number | null = null;
   toBinList: BinOpt[] = [];
   toBinLoading = false;
 
-  /** Group meta (recomputed after each edit) */
-  groupMeta = new Map<string, { totalOnHand: number; reserved: number; maxTransfer: number; used: number; remaining: number }>();
+  totalAvailable = 0;
+  maxQty = 0;
+
+  loading = false;
+
+  isEditMode = false;
+  editStockId: number | null = null;
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private stockService: StackOverviewService,
-    private warehouseService: WarehouseService,
-    private stockAdjustmentService: StockAdjustmentService,
-    private modalSvc: NgbModal
+    private stockAdjustmentService: StockAdjustmentService
   ) {}
 
   ngOnInit(): void {
-    this.loadMasterItem();
-  }
+    const mode = (this.route.snapshot.queryParamMap.get('mode') || '').toLowerCase();
+    const stockId = Number(this.route.snapshot.queryParamMap.get('stockId') || 0);
 
-  /* ---------------------------
-   * Selection helpers & guards
-   * --------------------------*/
-  get selectedRows(): StockRow[] { return this.filteredRows.filter(r => !!r._sel); }
-  get selectedCount(): number { return this.selectedRows.length; }
+    if (mode === 'edit' && stockId > 0) {
+      this.isEditMode = true;
+      this.editStockId = stockId;
 
-  get allVisibleChecked(): boolean {
-    const visible = this.filteredRows.filter(r => !this.isRowDisabled(r) && r._qtyValid);
-    return visible.length > 0 && visible.every(r => !!r._sel);
-  }
-
-  isRowDisabled(r: StockRow): boolean {
-  const crossWarehouse = !!this.lockedWarehouse && r.warehouse !== this.lockedWarehouse && !r._sel;
-  const noStock = (r.available ?? 0) <= 0;
-  return crossWarehouse || noStock;
-}
-
-
-  onToggleRow(nextValue: boolean, row: StockRow): void {
-    if (nextValue) {
-      if (this.lockedWarehouse && row.warehouse !== this.lockedWarehouse) {
-        row._sel = false;
-        Swal.fire({ icon: 'warning', title: 'Different warehouse', text: 'Please select rows from the same warehouse only.', timer: 1300, showConfirmButton: false });
-        return;
+      const st: any = history.state?.editRow;
+      if (st) {
+        this.bindFromApiRow(st, 'edit');
+      } else {
+        this.loadListAndBindByStockId(stockId);
       }
-      if (!row._qtyValid) {
-        row._sel = false;
-        Swal.fire({ icon: 'warning', title: 'Invalid quantity', text: 'Please enter a valid transfer quantity for this row.', timer: 1300, showConfirmButton: false });
-        return;
-      }
-      if (!this.lockedWarehouse) this.lockedWarehouse = row.warehouse;
-      row._sel = true;
     } else {
-      row._sel = false;
-      if (this.selectedRows.length === 0) this.lockedWarehouse = null;
+      this.isEditMode = false;
+      this.loadFromMaterialTransferList();
     }
-    this.fromWarehouseName = this.selectedRows.length ? this.selectedRows[0].warehouse : '';
   }
 
-  toggleSelectAll(ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
+  /* ===================== Helpers ===================== */
+  private toNum(v: any, fallback = 0): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }
 
-    if (!checked) {
-      this.filteredRows.forEach(r => (r._sel = false));
-      this.lockedWarehouse = null;
-      this.fromWarehouseName = '';
+  private toNumOrNull(v: any): number | null {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private str(v: any): string {
+    return (v ?? '').toString();
+  }
+
+  private extractItemId(row: any): number {
+    // ✅ Your API returns itemId directly
+    return this.toNum(
+      row?.itemId ??
+      row?.ItemId ??
+      row?.itemID ??
+      row?.ItemID ??
+      0,
+      0
+    );
+  }
+
+  private extractStockId(row: any): number {
+    return this.toNum(row?.stockId ?? row?.StockId ?? row?.id ?? row?.Id ?? 0, 0);
+  }
+
+  /* ===================== EDIT load by stockId ===================== */
+  private loadListAndBindByStockId(stockId: number) {
+    this.loading = true;
+
+    this.stockService.GetAllStockTransferedList().subscribe({
+      next: (res: any) => {
+        const list: any[] =
+          (res?.isSuccess && Array.isArray(res.data)) ? res.data :
+          (Array.isArray(res?.data) ? res.data :
+          (Array.isArray(res) ? res : []));
+
+        const row = list.find(x => Number(x.stockId ?? x.StockId ?? x.id ?? x.Id ?? 0) === stockId);
+        if (!row) {
+          this.loading = false;
+          Swal.fire('Not Found', 'Cannot find transfer row by stockId.', 'warning')
+            .then(() => this.goToStockTransferList());
+          return;
+        }
+
+        this.bindFromApiRow(row, 'edit');
+        this.loading = false;
+      },
+      error: (err: any) => {
+        console.error(err);
+        this.loading = false;
+        Swal.fire('Error', 'Failed to load transfer by stockId.', 'error');
+      }
+    });
+  }
+
+  /* ===================== CREATE load ===================== */
+  private getMaterialTransferList$() {
+    const svc: any = this.stockService as any;
+
+    if (typeof svc.getMaterialTransferList === 'function') return svc.getMaterialTransferList();
+    if (typeof svc.GetMaterialTransferList === 'function') return svc.GetMaterialTransferList();
+    if (typeof svc.getMaterialTransferedList === 'function') return svc.getMaterialTransferedList();
+    if (typeof svc.GetMaterialTransferedList === 'function') return svc.GetMaterialTransferedList();
+
+    throw new Error('Material transfer list method not found in StackOverviewService.');
+  }
+
+  private loadFromMaterialTransferList(): void {
+    this.loading = true;
+
+    let obs$;
+    try {
+      obs$ = this.getMaterialTransferList$();
+    } catch (e: any) {
+      this.loading = false;
+      Swal.fire('Service Missing', e?.message || 'Transfer list method not found', 'error');
       return;
     }
 
-    if (!this.lockedWarehouse) {
-      this.lockedWarehouse = this.filteredRows[0]?.warehouse ?? null;
-    }
-
-    this.filteredRows.forEach(r => {
-      const canSelect = r.warehouse === this.lockedWarehouse && !this.isRowDisabled(r) && r._qtyValid;
-      r._sel = canSelect;
-    });
-
-    this.fromWarehouseName = this.lockedWarehouse ?? '';
-  }
-
-  /* --------------- */
-  get sameWarehouseSelected(): boolean {
-    const sel = this.selectedRows;
-    if (sel.length === 0) return false;
-    const wh = sel[0].warehouse;
-    return sel.every(r => r.warehouse === wh);
-  }
-
-  openSubmitModal(tpl: TemplateRef<any>): void {
-    if (this.selectedCount === 0 || this.hasInvalidSelected()) return;
-
-    const firstRow = this.selectedRows[0];
-    const whName = firstRow.warehouse;
-
-    this.modalTouched = false;
-    this.modal = {
-      fromWarehouseId: firstRow.warehouseId!,
-      toWarehouseId: null,
-      toBinId: null,
-      remarks: null
-    };
-    this.fromWarehouseName = whName;
-
-    this.loadToWareHouse(whName, () => {
-      this.toBinList = [];
-      this.modalSvc.open(tpl, { centered: true, size: 'lg', backdrop: 'static' });
-    });
-  }
-
-  sameWarehouse(): boolean {
-    return !!this.modal.fromWarehouseId &&
-           !!this.modal.toWarehouseId &&
-           this.modal.fromWarehouseId === this.modal.toWarehouseId;
-  }
-
-  /** Submit from modal: includes transferQty per selected row */
-  submitFromModal(close: (reason?: any) => void): void {
-    this.modalTouched = true;
-    if (!this.modal.fromWarehouseId || !this.modal.toWarehouseId || this.sameWarehouse()) return;
-    if (!this.modal.toBinId) return;
-    if (this.hasInvalidSelected()) return;
-
-    const toId = Number(this.modal.toWarehouseId);
-    const toBinId = Number(this.modal.toBinId);
-    const remarks = (this.modal.remarks ?? '').trim() || null;
-
-    const keys = this.selectedRows.map(r => {
-      const { isFullTransfer, isPartialTransfer } = this.calcTransferFlags(r);
-
-      const stockIdRaw =
-        (r.apiRow as any)?.stockId ??
-        (r.apiRow as any)?.StockId;
-
-      const itemIdRaw =
-        (r.apiRow as any)?.itemId ??
-        (r.apiRow as any)?.ItemId ??
-        (r.apiRow as any)?.id;
-
-      const stockId = Number(stockIdRaw);
-      const itemId  = Number(itemIdRaw);
-
-      if (!Number.isFinite(stockId) || stockId <= 0) throw new Error(`Missing/invalid StockId for row ${r.idKey}`);
-      if (!Number.isFinite(itemId) || itemId <= 0) throw new Error(`Missing/invalid ItemId for row ${r.idKey}`);
-
-      r.isFullTransfer = isFullTransfer;
-      r.isPartialTransfer = isPartialTransfer;
-
-      return {
-        stockId,
-        itemId,
-        warehouseId: Number(r.warehouseId),         // FROM
-        binId: (r.binId == null ? null : Number(r.binId)),
-        toWarehouseId: toId,                         // TO
-        toBinId,
-        transferQty: Number(r.transferQty),
-        remarks,
-        isFullTransfer,
-        isPartialTransfer,
-        supplierId: (r.supplierId == null ? null : Number(r.supplierId))
-      };
-    });
-
-    this.stockService.ApproveTransfersBulk(keys).subscribe({
-      next: _ => {
-        this.removeSelectedFromData();
-        close();
-        Swal.fire('Submitted', 'Transfer sent for approval.', 'success');
-        this.router.navigate(['/Inventory/list-stocktransfer']);
-        this.loadMasterItem();
-      },
-      error: err => {
-        console.error(err);
-        Swal.fire('Failed', err?.message || 'Something went wrong', 'error');
-      }
-    });
-  }
-
-  private calcTransferFlags(r: StockRow) {
-    const avail = Math.max(0, Number(r.available ?? 0));
-    const qty   = Math.max(0, Number(r.transferQty ?? 0));
-    const remaining = Math.max(0, avail - qty);
-
-    const isFullTransfer    = qty > 0 && remaining === 0;
-    const isPartialTransfer = qty > 0 && remaining > 0;
-
-    return { isFullTransfer, isPartialTransfer, remaining };
-  }
-
-  cancel(): void {
-    this.router.navigate(['/inventory/stock-transfer']);
-  }
-
-  /* --------------- Data loading --------------- */
-  loadMasterItem(): void {
-    this.stockService.GetStockTransferedList().subscribe({
+    obs$.subscribe({
       next: (res: any) => {
-        const list: ApiItemRow[] = res?.isSuccess && Array.isArray(res.data) ? res.data : [];
-        this.rows = list.map(item => this.primeRow(this.toStockRow(item)));
+        const list: any[] =
+          (res?.isSuccess && Array.isArray(res.data)) ? res.data :
+          (Array.isArray(res?.data) ? res.data :
+          (Array.isArray(res) ? res : []));
 
-        // show items not yet transferred and without preset transfer qty
-        this.filteredRows = this.rows.filter(r =>
-          (r.isTransfered === false || r.isTransfered == null) &&
-          (r.isPartialTransfer === false || r.isPartialTransfer == null) &&
-          (r.transferQty == null || Number(r.transferQty) === 0)
-        );
-
-        // de-dup by composite key (includes supplierId)
-        const byKey = new Map<string, StockRow>();
-        for (const r of this.filteredRows) {
-          const k = r.idKey;
-          const curr = byKey.get(k);
-          if (!curr || Number(r.transferQty ?? 0) < Number(curr.transferQty ?? 0)) byKey.set(k, r);
+        if (!list.length) {
+          this.loading = false;
+          Swal.fire('No Data', 'Transfer list empty.', 'warning')
+            .then(() => this.goToStockTransferList());
+          return;
         }
-        this.filteredRows = Array.from(byKey.values());
 
-        // reset selection/lock and compute group meta
-        this.filteredRows.forEach(r => (r._sel = false));
-        this.lockedWarehouse = null;
-        this.fromWarehouseName = '';
-        this.groupMeta = this.computeGroupMeta();
-      },
-      error: (err) => {
-        console.error('Load stock transfer list failed', err);
-        this.rows = [];
-        this.filteredRows = [];
-        this.lockedWarehouse = null;
-        this.fromWarehouseName = '';
-        this.groupMeta = new Map();
-      }
-    });
-  }
+        const row = list[0];
+        this.bindFromApiRow(row, 'create');
 
-  loadToWareHouse(fromName: string, done?: () => void): void {
-    this.warehouseService.GetNameByWarehouseAsync(fromName).subscribe({
-      next: (res: any) => { this.toWarehouseList = (res?.data ?? []) as WarehouseOpt[]; done?.(); },
-      error: (err) => { console.error('Load To Warehouse failed', err); this.toWarehouseList = []; done?.(); }
-    });
-  }
-
-  onToWarehouseChange(warehouseId: number | string | null | undefined): void {
-    this.modal.toBinId = null;
-    this.toBinList = [];
-    if (!warehouseId) return;
-    this.loadToBinLocation(Number(warehouseId));
-  }
-
-  loadToBinLocation(warehouseId: number, done?: () => void): void {
-    this.toBinLoading = true;
-    this.stockAdjustmentService.GetBinDetailsbywarehouseID(warehouseId).subscribe({
-      next: (res: any) => {
-        const data = res?.data ?? res ?? [];
-        this.toBinList = data.map((b: any) => ({
-          id: b.id ?? b.Id,
-          binName: b.binName ?? b.BinName ?? b.name ?? b.Name,
-          code: b.code ?? b.Code ?? undefined,
-        }));
-        this.toBinLoading = false; done?.();
+        this.loading = false;
       },
       error: (err: any) => {
-        console.error('Load To Bin Location failed', err);
-        this.toBinLoading = false; this.toBinList = []; done?.();
+        console.error(err);
+        this.loading = false;
+        Swal.fire('Error', 'Failed to load transfer list.', 'error');
       }
     });
   }
 
-  /* --------------- Mapping helpers --------------- */
-  private parseExpiry(src?: string): Date | null {
-    if (!src) return null;
-    if (src.startsWith('0001-01-01')) return null;
-    const d = new Date(src);
-    return isNaN(d.getTime()) ? null : d;
-  }
+  /* ===================== ✅ MAIN BIND (ItemId FIXED) ===================== */
+  private bindFromApiRow(row: any, source: 'create' | 'edit') {
+    const requestQty = this.toNum(row.requestQty ?? row.RequestQty ?? row.requestedQty ?? row.RequestedQty ?? 0);
+    const apiTransferQty = this.toNumOrNull(row.transferQty ?? row.TransferQty);
 
-  private toStockRow(api: ApiItemRow): StockRow {
-    const warehouse = api.warehouseName ?? '';
-    const item = api.name ?? api.itemName ?? '';
-    const sku = api.sku ?? null;
-    const bin = api.binName ?? '';
+    const fromWarehouseId = this.toNum(row.fromWarehouseId ?? row.FromWarehouseId ?? 0);
+    const toWarehouseId   = this.toNum(row.toWarehouseId   ?? row.ToWarehouseId   ?? 0);
+    const status          = this.toNum(row.status ?? row.Status ?? 0);
 
-    const onHand = Number(api.onHand ?? 0);
-    const reserved = Number(api.reserved ?? 0);
-    const min = Number(api.min ?? api.minQty ?? 0);
-    const available = Number(api.available != null ? api.available : (onHand - reserved));
-    const expiry = this.parseExpiry(api.expiryDate);
+    const itemId = this.extractItemId(row);      // ✅ itemId from API
+    const stockId = this.extractStockId(row);    // ✅ stockId from API
 
-    const apiTransfer = (api.transferQty as any);
-    const preservedTransfer = (apiTransfer === null || apiTransfer === undefined) ? 0 : Number(apiTransfer);
+    this.header = {
+      reqNo: this.str(row.reqNo ?? row.ReqNo ?? ''),
+      mrId: this.toNum(row.mrId ?? row.MrId ?? 0),
+      sku: this.str(row.sku ?? row.Sku ?? ''),
 
-    const itemId = Number((api.itemId ?? api.id) as any);
-    const stockId = Number((api.stockId as any));
-    const supplierId = (api.supplierId == null ? null : Number(api.supplierId as any));
-    const supplierName = (api.supplierName ?? null);
+      fromWarehouseId,
+      fromWarehouseName: this.str(row.fromWarehouseName ?? row.FromWarehouseName ?? ''),
 
-    return {
-      idKey: [stockId || '', itemId || '', (supplierId ?? ''), warehouse, item, sku ?? '', bin].join('|').toLowerCase(),
-      itemId,
-      warehouse,
-      sku,
-      item,
-      bin,
+      toWarehouseId,
+      toWarehouseName: this.str(row.toWarehouseName ?? row.ToWarehouseName ?? ''),
+
+      binId: (row.binId ?? row.BinId) == null ? null : this.toNum(row.binId ?? row.BinId),
+      binName: (row.binName ?? row.BinName ?? null),
+
+      toBinId: (row.toBinId ?? row.ToBinId) == null ? null : this.toNum(row.toBinId ?? row.ToBinId),
+      toBinName: (row.toBinName ?? row.ToBinName ?? null),
+
+      requestQty,
+      transferQty: apiTransferQty,
+      status
+    };
+
+    this.requestedQty = requestQty;
+
+    // transferQty null => show 0
+    this.transferQty = (apiTransferQty == null) ? 0 : apiTransferQty;
+
+    // reason/remarks
+    this.reason = this.str(row.remarks ?? row.Remarks ?? row.reason ?? row.Reason ?? '');
+
+    // ToBin preset
+    this.toBinId = this.header.toBinId;
+
+    // load bins
+    if (this.header.toWarehouseId) this.onToOutletChanged(this.header.toWarehouseId);
+
+    // Available calc
+    const onHand = this.toNum(row.onHand ?? row.OnHand ?? 0);
+    const reserved = this.toNum(row.reserved ?? row.Reserved ?? 0);
+    const available = (row.available ?? row.Available) != null
+      ? this.toNum(row.available ?? row.Available ?? 0)
+      : (onHand - reserved);
+
+    // ✅ rows store itemId (this is what payload uses)
+    this.rows = [{
+      stockId: stockId,
+      itemId: itemId, // ✅ IMPORTANT
+      sku: row.sku ?? row.Sku,
+
+      fromWarehouseId,
+      fromWarehouseName: row.fromWarehouseName ?? row.FromWarehouseName,
+      toWarehouseId,
+      toWarehouseName: row.toWarehouseName ?? row.ToWarehouseName,
+
+      binId: row.binId ?? row.BinId ?? null,
+      binName: row.binName ?? row.BinName ?? null,
+
+      toBinId: row.toBinId ?? row.ToBinId ?? null,
+      toBinName: row.toBinName ?? row.ToBinName ?? null,
+
       onHand,
       reserved,
-      min,
       available,
-      expiry,
-      warehouseId: Number(api.warehouseId as any),
-      binId: api.binId == null ? undefined : Number(api.binId as any),
-      supplierId,
-      supplierName,
-      apiRow: api,
-      isApproved: !!api.isApproved,
-      isTransfered: !!api.isTransfered,
-      isFullTransfer: !!api.isFullTransfer,
-      isPartialTransfer: !!api.isPartialTransfer,
-      transferQty: Number.isFinite(preservedTransfer) ? preservedTransfer : 0,
-      _qtyValid: false,
-      _qtyErr: 'required',
-      _sel: false
-    };
+
+      supplierId: row.supplierId ?? row.SupplierId ?? null,
+      status,
+      requestQty,
+      transferQty: apiTransferQty,
+      remarks: row.remarks ?? row.Remarks ?? null
+    }];
+
+    this.totalAvailable = Math.max(0, this.toNum(available, 0));
+    this.maxQty = Math.max(0, Math.min(this.requestedQty, this.totalAvailable));
+
+    // clamp transferQty to max
+    const t = this.toNum(this.transferQty, 0);
+    this.transferQty = Math.max(0, Math.min(t, this.maxQty));
+
+    // Debug
+    // console.log('[BIND OK]', { source, stockId, itemId, requestQty, available });
   }
 
-  private primeRow(row: StockRow): StockRow {
-    const n = Number(row.transferQty ?? 0);
-    const valid = this.validateQty(n, row.available);
-    return { ...row, transferQty: Number.isFinite(n) ? n : 0, _qtyValid: valid.ok, _qtyErr: valid.err };
+  /* ===================== Bins ===================== */
+  onToOutletChanged(toWarehouseId: number | string | null | undefined): void {
+    this.toBinList = [];
+    if (!toWarehouseId) return;
+
+    const wid = this.toNum(toWarehouseId, 0);
+    if (!wid) return;
+
+    this.toBinLoading = true;
+    this.stockAdjustmentService.GetBinDetailsbywarehouseID(wid).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res ?? [];
+        this.toBinList = (Array.isArray(data) ? data : []).map((b: any) => ({
+          id: b.id ?? b.Id,
+          binName: b.binName ?? b.BinName ?? b.name ?? b.Name,
+          code: b.code ?? b.Code ?? undefined
+        }));
+        this.toBinLoading = false;
+      },
+      error: (err: any) => {
+        console.error(err);
+        this.toBinLoading = false;
+        this.toBinList = [];
+      }
+    });
   }
 
-  /* --------------- Group logic --------------- */
-  /** same item + same warehouse → one group */
-  groupKey(r: StockRow) {
-    return `${r.warehouseId || 0}|${r.itemId || 0}`;
+  /* ===================== Validate + Submit ===================== */
+  private validate(): string | null {
+    if (!this.header) return 'Header missing.';
+    if (!this.header.toWarehouseId) return 'To Outlet missing.';
+    if (!this.toBinId) return 'Select To Bin.';
+
+    const r = this.rows?.[0];
+    const itemId = this.toNum(r?.itemId, 0);
+    const stockId = this.toNum(r?.stockId, 0);
+
+    if (!itemId) return 'ItemId missing from API row.';
+    if (!stockId) return 'StockId missing from API row.';
+
+    const qty = this.toNum(this.transferQty, 0);
+    if (qty <= 0) return 'Enter Transfer Qty.';
+    if (!Number.isInteger(qty)) return 'Whole numbers only.';
+    if (qty > Number(this.maxQty)) return `Cannot exceed ${this.maxQty}.`;
+
+    if (this.isEditMode && Number(this.header.status) !== 1) {
+      return 'Only Pending (Status=1) can edit.';
+    }
+    return null;
   }
 
-  /** compute per-group caps */
-  private computeGroupMeta() {
-    const meta = new Map<string, { totalOnHand: number; reserved: number; maxTransfer: number; used: number; remaining: number }>();
+  submitTransferFinal(): void {
+    const err = this.validate();
+    if (err) { Swal.fire('Validation', err, 'warning'); return; }
+    if (!this.header) return;
 
-    for (const r of this.filteredRows) {
-      const k = this.groupKey(r);
-      const m = meta.get(k) || { totalOnHand: 0, reserved: 0, maxTransfer: 0, used: 0, remaining: 0 };
+    const qty = this.toNum(this.transferQty, 0);
+    const remarks = (this.reason ?? '').trim() || null;
 
-      m.totalOnHand += Math.max(0, Number(r.onHand ?? 0));
+    const toId = this.toNum(this.header.toWarehouseId, 0);
+    const toBinId = this.toNum(this.toBinId, 0);
 
-      // reserved is common inside group – take max (avoids double count)
-      const rsv = Math.max(0, Number(r.reserved ?? 0));
-      m.reserved = Math.max(m.reserved, rsv);
+    const r = this.rows[0];
+    const avail = Math.max(0, this.toNum(r?.available ?? 0, 0));
 
-      m.used += Math.max(0, Number(r.transferQty ?? 0));
-
-      meta.set(k, m);
+    if (avail <= 0) {
+      Swal.fire('No Stock', 'No available stock for this transfer.', 'warning');
+      return;
     }
 
-    for (const [k, m] of meta) {
-      m.maxTransfer = Math.max(0, m.totalOnHand - m.reserved);
-      m.remaining = Math.max(0, m.maxTransfer - m.used);
-    }
-    return meta;
+    const itemId = this.toNum(r?.itemId, 0);
+    const stockId = this.toNum(r?.stockId, 0);
+
+    const payload: any[] = [{
+      stockId: stockId,
+      itemId: itemId,
+
+      warehouseId: this.toNum(this.header.fromWarehouseId, 0), // FromWarehouseId
+      binId: (r.binId == null ? null : this.toNum(r.binId, 0)),
+
+      toWarehouseId: toId,
+      toBinId: toBinId,
+
+      transferQty: Math.min(qty, avail),
+
+      // ✅ important for backend partial/full
+      requestedQty: this.requestedQty,
+
+      remarks,
+      supplierId: (r.supplierId == null ? null : this.toNum(r.supplierId, 0)),
+      mrId: this.toNum(this.header.mrId, 0),
+      reqNo: this.header.reqNo,
+      sku: this.header.sku
+    }];
+
+    this.loading = true;
+
+    this.stockService.ApproveTransfersBulk(payload).subscribe({
+      next: _ => {
+        this.loading = false;
+        Swal.fire(
+          this.isEditMode ? 'Updated' : 'Submitted',
+          this.isEditMode ? 'Stock Transfer updated successfully.' : 'Stock Transfer submitted successfully.',
+          'success'
+        ).then(() => this.goToStockTransferList());
+      },
+      error: (e: any) => {
+        this.loading = false;
+        console.error(e);
+        Swal.fire('Failed', e?.error?.error || e?.error?.message || e?.message || 'Something went wrong', 'error');
+      }
+    });
   }
 
-  /** remaining available for a row considering its previous qty */
-  groupRemainingForRow(r: StockRow): number {
-    const k = this.groupKey(r);
-    const g = this.groupMeta.get(k);
-    if (!g) return Math.max(0, Number(r.available ?? r.onHand ?? 0));
-    const prevThis = Math.max(0, Number(r.transferQty ?? 0));
-    return Math.max(0, (g.remaining ?? 0) + prevThis);
+  goBack(): void {
+    this.goToStockTransferList();
   }
 
-  /* --------------- Quantity validation --------------- */
-  private validateQty(n: number, _available: number): { ok: boolean; err: QtyErr } {
-    if (n == null || Number.isNaN(n) || n === 0) return { ok: false, err: 'required' };
-    if (!Number.isInteger(n)) return { ok: false, err: 'decimal' };
-    if (n < 0) return { ok: false, err: 'negative' };
-    return { ok: true, err: null };
-  }
-
-  onQtyChange(row: StockRow, value: any) {
-    let n = Number(value);
-
-    if (value === '' || value === null || Number.isNaN(n)) {
-      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'required'; this.recomputeMeta(); return;
-    }
-    if (!Number.isInteger(n)) {
-      n = Math.floor(n);
-      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'decimal'; this.recomputeMeta(); return;
-    }
-    if (n < 0) {
-      row.transferQty = 0; row._qtyValid = false; row._qtyErr = 'negative'; this.recomputeMeta(); return;
-    }
-
-    // group cap logic
-    const prevThis = Math.max(0, Number(row.transferQty ?? 0));
-    // recompute meta first to get latest numbers excluding this edit
-    this.groupMeta = this.computeGroupMeta();
-    const groupRemaining = this.groupRemainingForRow(row); // includes prevThis
-    const rowCap = Math.max(0, Number(row.available ?? row.onHand ?? 0));
-    const finalCap = Math.min(groupRemaining, rowCap);
-
-    if (n > finalCap) {
-      row.transferQty = n; row._qtyValid = false; row._qtyErr = 'exceeds'; this.recomputeMeta(); return;
-    }
-
-    row.transferQty = n;
-    row._qtyValid = n >= 0;
-    row._qtyErr = row._qtyValid ? null : 'required';
-    this.recomputeMeta();
-  }
-
-  digitsOnly(e: KeyboardEvent) {
-    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
-    if (allowed.includes(e.key)) return;
-    if (!/^\d$/.test(e.key)) e.preventDefault();
-  }
-
-  hasInvalidSelected(): boolean {
-    return this.filteredRows?.some(r => {
-      if (!r._sel) return false;
-      const stockId =
-        (r.apiRow as any)?.stockId ??
-        (r.apiRow as any)?.StockId;
-      const okStock = Number.isFinite(Number(stockId)) && Number(stockId) > 0;
-      return !r._qtyValid || !okStock;
-    }) ?? false;
-  }
-
-  private recomputeMeta() {
-    this.groupMeta = this.computeGroupMeta();
-  }
-
-  /* --------------- Template helpers --------------- */
-  trackByRow = (_: number, r: StockRow) => r.idKey;
-
-  badgeToneClasses(tone: 'blue' | 'green' | 'amber' | 'red' = 'blue') {
-    const map: Record<string, { bg: string; text: string; border: string }> = {
-      blue:  { bg: 'bg-blue-50',  text: 'text-blue-700',  border: 'border-blue-100' },
-      green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
-      amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
-      red:   { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-100' },
-    };
-    const t = map[tone] ?? map.blue;
-    return `${t.bg} ${t.text} ${t.border}`;
-  }
-
-  private removeSelectedFromData(): void {
-    const toRemove = new Set(this.selectedRows.map(r => r.idKey));
-    this.rows = this.rows.filter(r => !toRemove.has(r.idKey));
-    this.filteredRows = this.filteredRows.filter(r => !toRemove.has(r.idKey));
-    this.filteredRows.forEach(r => (r._sel = false));
-    this.lockedWarehouse = null;
-    this.fromWarehouseName = '';
-    this.groupMeta = this.computeGroupMeta();
-  }
-
-  goToStockTransferList(){
-     this.router.navigate(['/Inventory/list-stocktransfer']); 
+  goToStockTransferList(): void {
+    this.router.navigate(['/Inventory/list-stocktransfer']);
   }
 }

@@ -4,7 +4,9 @@
     <!-- ✅ TOP HEADER (Title + Breadcrumb + Save/Close at right) -->
     <div class="mrq-topbar">
       <div class="mrq-topbar-left">
-        <h2 class="mrq-heading">Material Requisition Form</h2>
+        <h2 class="mrq-heading">
+          {{ isEdit ? 'Edit Material Requisition Form' : 'Create Material Requisition Form' }}
+        </h2>
         <div class="mrq-subheading">Inventory → Material Requisition</div>
       </div>
 
@@ -19,7 +21,7 @@
       </div>
     </div>
 
-    <!-- ✅ Header fields (only 3) -->
+    <!-- ✅ Header fields -->
     <div class="mrq-form mrq-form-3">
 
       <!-- Outlet -->
@@ -35,6 +37,8 @@
           placeholder="Select Outlet"
           [searchable]="true"
           [clearable]="false"
+          [disabled]="isEdit"
+          (change)="onOutletChanged()"
         >
           <ng-template ng-option-tmp let-item="item">
             {{ item.name }}
@@ -42,11 +46,38 @@
         </ng-select>
       </div>
 
+      <!-- ✅ Bin (NEW) -->
+      <div class="mrq-field">
+        <label>Bin</label>
+
+        <ng-select
+          class="mrq-outlet-ng"
+          [items]="binList"
+          bindLabel="binName"
+          bindValue="id"
+          [(ngModel)]="header.BinId"
+          placeholder="Select Bin"
+          [searchable]="true"
+          [clearable]="false"
+          [disabled]="!header.OutletId"
+        >
+          <ng-template ng-option-tmp let-item="item">
+            {{ item.binName }}
+          </ng-template>
+        </ng-select>
+
+        <small class="text-muted" *ngIf="header.OutletId && !binList.length">
+          No bins found for selected outlet.
+        </small>
+      </div>
+
+      <!-- Requester -->
       <div class="mrq-field">
         <label>Requester Name</label>
         <input class="mrq-input" type="text" [(ngModel)]="header.requesterName" readonly />
       </div>
 
+      <!-- Date -->
       <div class="mrq-field">
         <label>Requested Date</label>
         <div class="mrq-date">
@@ -87,6 +118,7 @@
                 placeholder="Select Item"
                 dropdownPosition="bottom"
                 (change)="onItemChanged(i)"
+                [disabled]="isEdit"
               >
                 <ng-template ng-option-tmp let-item="item">
                   <div class="opt-row">
@@ -127,18 +159,18 @@
                 (click)="removeRow(i)"
                 [disabled]="lines.length === 1"
               >
-<i class="fas fa-trash-alt"></i>
+                <i class="fas fa-trash-alt"></i>
               </button>
             </td>
           </tr>
         </tbody>
       </table>
 
- <div class="mrq-grid-footer">
-  <button class="mrq-addline-btn" type="button" (click)="addRow()">
-    + Add line
-  </button>
-</div>
+      <div class="mrq-grid-footer">
+        <button class="mrq-addline-btn" type="button" (click)="addRow()">
+          + Add line
+        </button>
+      </div>
     </div>
 
   </div>
