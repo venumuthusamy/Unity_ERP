@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import Swal from 'sweetalert2';
+import { Router } from '@angular/router';
 
 
 @Component({
@@ -20,7 +21,7 @@ export class ProductionPlanningComponent implements OnInit {
   planRows: PlanRowDto[] = [];
   ingredients: IngredientRowDto[] = [];
 
-  constructor(private api: ProductionPlanService) {}
+  constructor(private api: ProductionPlanService,private router: Router) {}
 
   ngOnInit(): void {
     this.api.getSalesOrders().subscribe({
@@ -67,13 +68,38 @@ export class ProductionPlanningComponent implements OnInit {
     });
   }
 
-  createPR() {
-    const shortage = this.ingredients.filter(x => x.status === 'Shortage');
-    if (!shortage.length) return Swal.fire('OK', 'No shortage items.', 'success');
+  // createPR() {
+  //   const shortage = this.ingredients.filter(x => x.status === 'Shortage');
+  //   if (!shortage.length) return Swal.fire('OK', 'No shortage items.', 'success');
 
-    // Here you can call your PR API later
-    Swal.fire('Info', `Shortage items: ${shortage.length}. Hook PR insert API here.`, 'info');
-  }
+  //   // Here you can call your PR API later
+  //   Swal.fire('Info', `Shortage items: ${shortage.length}. Hook PR insert API here.`, 'info');
+  // }
+  createPR() {
+  const payload = {
+  salesOrderId: this.selectedSoId,
+  warehouseId: this.warehouseId,
+  outletId: this.outletId,
+  userId: Number(localStorage.getItem('id') || 0),
+  userName: (localStorage.getItem('username') || '').trim(),
+  deliveryDate: null,
+  note: `Auto from Production Planning SO:${this.selectedSoId}`
+};
+
+  this.api.createPrFromRecipeShortage(payload).subscribe({
+    next: (res) => {
+      if (res?.prId > 0) {
+        Swal.fire('Success', `PR created. PR Id: ${res.prId}`, 'success');
+      } else {
+        Swal.fire('Info', res?.message || 'No shortage items', 'info');
+      }
+    },
+    error: (err) => {
+      Swal.fire('Error', err?.error?.message || 'Failed', 'error');
+    }
+  });
+}
+
 
   fmt(v: any) {
     const n = Number(v ?? 0);

@@ -50,4 +50,20 @@ export class ProductionPlanService {
   savePlan(payload: { salesOrderId: number; outletId?: number; warehouseId?: number; createdBy?: string }) {
     return this.http.post(`${this.url}/ProductionPlan/save`, payload);
   }
+  createPrFromRecipeShortage(payload: {
+  salesOrderId: number;
+  warehouseId: number;
+  outletId: number;
+  userId: number;
+  userName: string;
+  deliveryDate?: string | null;
+  note?: string | null;
+}) {
+  return this.http.post<any>(
+    `${this.url}/PurchaseRequest/create-from-recipe-shortage`,
+    payload
+  );
+}
+
+
 }
