@@ -121,7 +121,7 @@
         <button class="pp2-btn danger"
                 type="button"
                 (click)="createPR()"
-                [disabled]="!ingredients.length">
+                [disabled]="!ingredients.length || disableCreateButton">
           <span class="pp2-ic">🛒</span>
           Create PR
         </button>

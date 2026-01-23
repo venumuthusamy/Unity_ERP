@@ -20,6 +20,7 @@ export class ProductionPlanningComponent implements OnInit {
 
   planRows: PlanRowDto[] = [];
   ingredients: IngredientRowDto[] = [];
+  disableCreateButton: boolean;
 
   constructor(private api: ProductionPlanService,private router: Router) {}
 
@@ -93,8 +94,10 @@ export class ProductionPlanningComponent implements OnInit {
   this.api.createPrFromRecipeShortage(payload).subscribe({
     next: (res) => {
       if (res?.prId > 0) {
+        this.disableCreateButton = true
         Swal.fire('Success', `PR created. PR Id: ${res.prId}`, 'success');
       } else {
+        this.disableCreateButton = false
         Swal.fire('Info', res?.message || 'No shortage items', 'info');
       }
     },
