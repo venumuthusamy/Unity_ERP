@@ -63,6 +63,7 @@ interface ApiTransferRow {
   status?: number | string;
 
   remarks?: string | null;
+  isApproved?: number | string | boolean | null;
 }
 
 @Component({
@@ -136,7 +137,6 @@ export class StockTransferCreateComponent implements OnInit {
   }
 
   private extractItemId(row: any): number {
-    // ✅ Your API returns itemId directly
     return this.toNum(
       row?.itemId ??
       row?.ItemId ??
@@ -151,6 +151,56 @@ export class StockTransferCreateComponent implements OnInit {
     return this.toNum(row?.stockId ?? row?.StockId ?? row?.id ?? row?.Id ?? 0, 0);
   }
 
+  private getStatus(row: any): number {
+    return this.toNum(row?.status ?? row?.Status ?? 0, 0);
+  }
+
+  private getIsApproved(row: any): boolean {
+    const v = row?.isApproved ?? row?.IsApproved;
+    if (typeof v === 'boolean') return v;
+    return this.toNum(v, 0) === 1;
+  }
+
+  /* ===================== ✅ CREATE MODE ROW PICKER ===================== */
+  private pickCreateRow(list: any[]): any | null {
+    if (!Array.isArray(list) || !list.length) return null;
+
+    // normalize helpers
+    const sid = (x: any) => this.extractStockId(x);
+    const st  = (x: any) => this.getStatus(x);
+    const tq  = (x: any) => this.toNumOrNull(x?.transferQty ?? x?.TransferQty);
+    const rq  = (x: any) => this.toNum(x?.requestQty ?? x?.RequestQty ?? x?.requestedQty ?? x?.RequestedQty ?? 0, 0);
+    const approved = (x: any) => this.getIsApproved(x);
+
+    // 1) Prefer PENDING row (most common: Status=1)
+    // If your system uses different number for pending, adjust here.
+    const pendingCandidates = list.filter(x => st(x) === 1);
+    if (pendingCandidates.length) {
+      // If multiple pending, pick latest stockId
+      pendingCandidates.sort((a,b) => sid(b) - sid(a));
+      return pendingCandidates[0];
+    }
+
+    // 2) Prefer NOT approved and transferQty is null/0 (draft/new)
+    const draft = list.filter(x => !approved(x) && (tq(x) == null || tq(x) === 0));
+    if (draft.length) {
+      draft.sort((a,b) => sid(b) - sid(a));
+      return draft[0];
+    }
+
+    // 3) If API already returns remaining requestQty, pick the one with smallest requestQty (remaining)
+    // Example: after partial, remaining row might have rq=5 while original row has rq=10
+    const nonZeroRq = list.filter(x => rq(x) > 0);
+    if (nonZeroRq.length) {
+      nonZeroRq.sort((a,b) => rq(a) - rq(b) || (sid(b) - sid(a)));
+      return nonZeroRq[0];
+    }
+
+    // 4) Fallback to latest row by stockId
+    const sorted = [...list].sort((a,b) => sid(b) - sid(a));
+    return sorted[0];
+  }
+
   /* ===================== EDIT load by stockId ===================== */
   private loadListAndBindByStockId(stockId: number) {
     this.loading = true;
@@ -162,7 +212,7 @@ export class StockTransferCreateComponent implements OnInit {
           (Array.isArray(res?.data) ? res.data :
           (Array.isArray(res) ? res : []));
 
-        const row = list.find(x => Number(x.stockId ?? x.StockId ?? x.id ?? x.Id ?? 0) === stockId);
+        const row = list.find(x => this.extractStockId(x) === stockId);
         if (!row) {
           this.loading = false;
           Swal.fire('Not Found', 'Cannot find transfer row by stockId.', 'warning')
@@ -219,9 +269,14 @@ export class StockTransferCreateComponent implements OnInit {
           return;
         }
 
-        const row = list[0];
-        this.bindFromApiRow(row, 'create');
+        // ✅ IMPORTANT: pick correct row for CREATE mode (NOT list[0])
+        const picked = this.pickCreateRow(list) ?? list[0];
 
+        // Debug if you want
+        // console.log('CREATE LIST:', list);
+        // console.log('PICKED:', picked);
+
+        this.bindFromApiRow(picked, 'create');
         this.loading = false;
       },
       error: (err: any) => {
@@ -232,7 +287,7 @@ export class StockTransferCreateComponent implements OnInit {
     });
   }
 
-  /* ===================== ✅ MAIN BIND (ItemId FIXED) ===================== */
+  /* ===================== MAIN BIND ===================== */
   private bindFromApiRow(row: any, source: 'create' | 'edit') {
     const requestQty = this.toNum(row.requestQty ?? row.RequestQty ?? row.requestedQty ?? row.RequestedQty ?? 0);
     const apiTransferQty = this.toNumOrNull(row.transferQty ?? row.TransferQty);
@@ -241,8 +296,8 @@ export class StockTransferCreateComponent implements OnInit {
     const toWarehouseId   = this.toNum(row.toWarehouseId   ?? row.ToWarehouseId   ?? 0);
     const status          = this.toNum(row.status ?? row.Status ?? 0);
 
-    const itemId = this.extractItemId(row);      // ✅ itemId from API
-    const stockId = this.extractStockId(row);    // ✅ stockId from API
+    const itemId = this.extractItemId(row);
+    const stockId = this.extractStockId(row);
 
     this.header = {
       reqNo: this.str(row.reqNo ?? row.ReqNo ?? ''),
@@ -287,10 +342,9 @@ export class StockTransferCreateComponent implements OnInit {
       ? this.toNum(row.available ?? row.Available ?? 0)
       : (onHand - reserved);
 
-    // ✅ rows store itemId (this is what payload uses)
     this.rows = [{
       stockId: stockId,
-      itemId: itemId, // ✅ IMPORTANT
+      itemId: itemId,
       sku: row.sku ?? row.Sku,
 
       fromWarehouseId,
@@ -321,9 +375,6 @@ export class StockTransferCreateComponent implements OnInit {
     // clamp transferQty to max
     const t = this.toNum(this.transferQty, 0);
     this.transferQty = Math.max(0, Math.min(t, this.maxQty));
-
-    // Debug
-    // console.log('[BIND OK]', { source, stockId, itemId, requestQty, available });
   }
 
   /* ===================== Bins ===================== */
@@ -403,7 +454,7 @@ export class StockTransferCreateComponent implements OnInit {
       stockId: stockId,
       itemId: itemId,
 
-      warehouseId: this.toNum(this.header.fromWarehouseId, 0), // FromWarehouseId
+      warehouseId: this.toNum(this.header.fromWarehouseId, 0),
       binId: (r.binId == null ? null : this.toNum(r.binId, 0)),
 
       toWarehouseId: toId,
@@ -411,7 +462,6 @@ export class StockTransferCreateComponent implements OnInit {
 
       transferQty: Math.min(qty, avail),
 
-      // ✅ important for backend partial/full
       requestedQty: this.requestedQty,
 
       remarks,
