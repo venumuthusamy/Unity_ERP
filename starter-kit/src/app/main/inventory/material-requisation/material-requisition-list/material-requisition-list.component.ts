@@ -65,18 +65,22 @@ export class MaterialRequisitionListComponent implements OnInit {
   rowIdentity = (row: MaterialReqRow) => row.gridKey;
 
   // ✅ Status mapping you asked
-  getStatusLabel(status?: number | null): string {
+ getStatusLabel(status?: number | null): string {
+    // ✅ API status only
     if (status === 1) return 'Pending';
-    if (status === 2) return 'Out of Delivery';
-    if (status === 3) return 'Transfer Completed';
+    if (status === 2) return 'Partial Transfer Out';
+    if (status === 3) return 'Full Transfer Out';
+    if (status === 4) return 'Delivered';
     return '-';
   }
+
 
   // badge color
   getStatusClass(status?: number | null): string {
     if (status === 1) return 'badge-warning';  // pending
-    if (status === 2) return 'badge-info';     // out
-    if (status === 3) return 'badge-success';  // completed
+    if (status === 2) return 'badge-info';
+     if (status === 3) return 'badge-info';     // out
+    if (status === 4) return 'badge-success';  // completed
     return 'badge-light';
   }
 
