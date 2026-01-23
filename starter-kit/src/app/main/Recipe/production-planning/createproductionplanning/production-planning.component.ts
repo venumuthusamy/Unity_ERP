@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
-
+import { IngredientRowDto, PlanRowDto, ProductionPlanService, SoHeaderDto } from '../production-plan.service';
 
 @Component({
   selector: 'app-production-planning',
@@ -29,7 +29,10 @@ export class ProductionPlanningComponent implements OnInit {
       error: () => Swal.fire('Error', 'Failed to load Sales Orders', 'error')
     });
   }
-
+  shortageCount(): number {
+    const list = this.ingredients || [];
+    return list.filter(i => (i?.status || '') !== 'OK').length;
+  }
   onSoChange() {
     if (!this.selectedSoId) {
       this.planRows = [];
@@ -75,6 +78,7 @@ export class ProductionPlanningComponent implements OnInit {
   //   // Here you can call your PR API later
   //   Swal.fire('Info', `Shortage items: ${shortage.length}. Hook PR insert API here.`, 'info');
   // }
+  
   createPR() {
   const payload = {
   salesOrderId: this.selectedSoId,
@@ -105,5 +109,5 @@ export class ProductionPlanningComponent implements OnInit {
     const n = Number(v ?? 0);
     return (Math.round(n * 1000) / 1000).toString();
   }
-}import { IngredientRowDto, PlanRowDto, ProductionPlanService, SoHeaderDto } from '../production-plan.service';
+}
 
