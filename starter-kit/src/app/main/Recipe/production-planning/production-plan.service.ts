@@ -85,4 +85,8 @@ export class ProductionPlanService {
     return this.http.get<ProductionPlanListRow[]>(`${this.url}/ProductionPlan/list-with-lines`);
   }
 
+  getShortageGrnAlerts() {
+  return this.http.get<any>(`${this.url}/ProductionPlan/shortage-grn-alerts`);
+  }
+
 }

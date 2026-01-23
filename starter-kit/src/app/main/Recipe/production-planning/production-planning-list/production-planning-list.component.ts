@@ -17,10 +17,18 @@ export class ProductionPlanningListComponent implements OnInit {
   explosionRows: any[] = [];
    modalTitle = '';
 planLines: ProductionPlanLineDto[] = [];
+
+showShortageGrnModal = false;
+shortageGrnList: any[] = [];
+shortageGrnCount = 0;
+shortageGrnSearch = '';
+
   constructor(private srv: ProductionPlanService, private router: Router) {}
 
   ngOnInit(): void {
     this.load();
+    this.loadShortageGrnCount();
+
   }
 
   load(): void {
@@ -111,4 +119,48 @@ goToCreate(): void {
     this.showExplosionModal = false;
     this.explosionRows = [];
   }
+
+  openShortageGrnAlerts() {
+  this.showShortageGrnModal = true;
+  this.loadShortageGrnAlerts();
+}
+
+closeShortageGrnModal() {
+  this.showShortageGrnModal = false;
+}
+
+loadShortageGrnAlerts() {
+  this.srv.getShortageGrnAlerts().subscribe({
+    next: (res: any) => {
+      this.shortageGrnList = res?.data ?? [];
+      this.shortageGrnCount = res?.count ?? this.shortageGrnList.length;
+    },
+    error: () => {
+      this.shortageGrnList = [];
+      this.shortageGrnCount = 0;
+    }
+  });
+}
+
+loadShortageGrnCount() {
+  this.srv.getShortageGrnAlerts().subscribe({
+    next: (res: any) => {
+      const list = res?.data ?? [];
+      this.shortageGrnCount = res?.count ?? list.length;
+    },
+    error: () => this.shortageGrnCount = 0
+  });
+}
+
+filteredShortageGrnList(): any[] {
+  const v = (this.shortageGrnSearch || '').toLowerCase().trim();
+  if (!v) return this.shortageGrnList;
+
+  return this.shortageGrnList.filter((x: any) =>
+    String(x.productionPlanId || '').includes(v) ||
+    String(x.salesOrderNo || '').toLowerCase().includes(v) ||
+    String(x.grnNo || '').toLowerCase().includes(v)
+  );
+}
+
 }
