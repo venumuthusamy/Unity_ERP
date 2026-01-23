@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
-import { ProductionPlanService } from '../production-plan.service';
+import { ProductionPlanLineDto, ProductionPlanService } from '../production-plan.service';
 @Component({
   selector: 'app-production-planning-list',
   templateUrl: './production-planning-list.component.html',
@@ -15,23 +15,24 @@ export class ProductionPlanningListComponent implements OnInit {
 
   showExplosionModal = false;
   explosionRows: any[] = [];
-
+   modalTitle = '';
+planLines: ProductionPlanLineDto[] = [];
   constructor(private srv: ProductionPlanService, private router: Router) {}
 
   ngOnInit(): void {
-    //this.load();
+    this.load();
   }
 
-  // load(): void {
-  //   this.srv.list().subscribe({
-  //     next: (res) => {
-  //       const data = res?.data ?? [];
-  //       this.rows = data;
-  //       this.allRows = data;
-  //     },
-  //     error: (e) => console.error(e)
-  //   });
-  // }
+  load(): void {
+    this.srv.getProductionPlanList().subscribe({
+      next: (res:any) => {
+        const data = res?.data ?? [];
+        this.rows = data;
+        this.allRows = data;
+      },
+      error: (e) => console.error(e)
+    });
+  }
 
   applyFilter(): void {
     const v = (this.searchValue || '').toLowerCase();
@@ -91,18 +92,18 @@ export class ProductionPlanningListComponent implements OnInit {
   //   });
   // }
 
-  // openExplosion(row: any): void {
-  //   const id = Number(row?.id || 0);
-  //   if (!id) return;
+ openExplosion(row: any): void {
+    const lines = (row?.lines ?? []) as ProductionPlanLineDto[];
 
-  //   this.srv.explosion(id).subscribe({
-  //     next: (res) => {
-  //       this.explosionRows = res?.data ?? [];
-  //       this.showExplosionModal = true;
-  //     },
-  //     error: (e) => Swal.fire('Failed', e?.error?.message || 'Explosion load failed', 'error')
-  //   });
-  // }
+    this.planLines = lines;
+    this.modalTitle = `Plan Lines - Plan #${row?.id ?? ''}${row?.salesOrderNo ? ' / ' + row.salesOrderNo : ''}`;
+
+    this.showExplosionModal = true;
+
+    if (!lines.length) {
+      Swal.fire('No Lines', 'This plan has no lines.', 'info');
+    }
+  }
 goToCreate(): void {
     this.router.navigate(['/Recipe/productionplanningcreate']); // adjust route
   }

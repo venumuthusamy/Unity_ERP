@@ -6,13 +6,13 @@
         <div class="row">
           <div class="col-md-3 col-12">
             <h4 class="card-text"
-                style="margin-left:0.85rem;margin-top:0.75rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
+                style="margin-left:0.85rem;margin-top:1rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
               Production Plan List
             </h4>
           </div>
 
           <div class="col-md-9 col-12 d-flex justify-content-end">
-            <div class="d-flex align-items-center pr-1 pb-1 pb-md-0" style="gap:10px;">
+            <div class="d-flex align-items-center pr-1 pb-1 pb-md-0 mt-1" style="gap:10px;">
               <label class="d-flex align-items-center">
                 Search:
                 <input class="form-control ml-25" type="search" [(ngModel)]="searchValue"
@@ -91,15 +91,16 @@
   </div>
 </div>
 
-<!-- Explosion Modal (same clean style) -->
+<!-- Lines Modal -->
 <div *ngIf="showExplosionModal" (click)="closeExplosion()"
      style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div (click)="$event.stopPropagation()"
        style="width:900px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
 
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef2f7;">
-      <h3 style="margin:0;font-size:20px;font-weight:700;color:#374151;">Explosion (MRP)</h3>
-      <button (click)="closeExplosion()" style="border:0;background:transparent;font-size:22px;cursor:pointer;color:#6b7280;">×</button>
+      <h3 style="margin:0;font-size:20px;font-weight:600;color:#374151;">{{ modalTitle || 'Plan Lines' }}</h3>
+      <button (click)="closeExplosion()"
+              style="border:0;background:transparent;font-size:22px;cursor:pointer;color:#6b7280;">×</button>
     </div>
 
     <div style="padding:16px 20px;">
@@ -107,26 +108,29 @@
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#111827;">
           <thead>
             <tr style="background:#2E5F73;color:#fff;">
-              <th style="padding:10px 12px;text-align:left;">Ingredient</th>
-              <th style="padding:10px 12px;text-align:right;width:130px;">Required</th>
-              <th style="padding:10px 12px;text-align:right;width:130px;">Available</th>
-              <th style="padding:10px 12px;text-align:right;width:130px;">Shortage</th>
+              <th style="padding:10px 12px;text-align:left;width:60px;">#</th>
+              <th style="padding:10px 12px;text-align:left;">Finished Item</th>
+              <th style="padding:10px 12px;text-align:right;width:140px;">Planned Qty</th>
+              <th style="padding:10px 12px;text-align:right;width:160px;">Expected Output</th>
+              <th style="padding:10px 12px;text-align:right;width:110px;">RecipeId</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr *ngFor="let r of explosionRows; let i=index"
+            <tr *ngFor="let l of planLines; let i=index"
                 [style.background]="i%2===0 ? '#fcfdff' : '#ffffff'"
                 style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:10px 12px;">{{ r.ingredientName }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ r.requiredQty | number:'1.0-2' }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ r.availableQty | number:'1.0-2' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;"
-                  [style.color]="r.shortageQty>0 ? 'red' : 'green'">
-                {{ r.shortageQty | number:'1.0-2' }}
+              <td style="padding:10px 12px;">{{ i + 1 }}</td>
+              <td style="padding:10px 12px;">
+                {{ l.finishedItemName || ('ItemId: ' + l.finishedItemId) }}
               </td>
+              <td style="padding:10px 12px;text-align:right;">{{ l.plannedQty | number:'1.0-2' }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ l.expectedOutput | number:'1.0-2' }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ l.recipeId }}</td>
             </tr>
-            <tr *ngIf="!explosionRows?.length">
-              <td colspan="4" style="padding:14px 12px;text-align:center;color:#6b7280;">No data</td>
+
+            <tr *ngIf="!planLines?.length">
+              <td colspan="5" style="padding:14px 12px;text-align:center;color:#6b7280;">No lines</td>
             </tr>
           </tbody>
         </table>
@@ -135,10 +139,11 @@
 
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #eef2f7;">
       <button (click)="closeExplosion()"
-              style="background:#2E5F73;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">
+              style="background:#2E5F73;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;">
         Close
       </button>
     </div>
 
   </div>
 </div>
+

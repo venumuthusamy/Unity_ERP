@@ -29,7 +29,24 @@ export interface IngredientRowDto {
   availableQty: number;
   status: 'OK' | 'Shortage';
 }
-
+export interface ProductionPlanLineDto {
+  id: number;
+  productionPlanId: number;
+  recipeId: number;
+  finishedItemId?: number;
+  finishedItemName?: string;
+  plannedQty: number;
+  expectedOutput: number;
+}
+export interface ProductionPlanListRow {
+  id: number;
+  salesOrderId?: number;
+  salesOrderNo?: string;
+  planDate?: string; // ISO
+  status?: string;
+  totalShortage?: number; // optional if backend provides
+  lines?: ProductionPlanLineDto[];
+}
 export interface ProductionPlanResponseDto {
   planRows: PlanRowDto[];
   ingredients: IngredientRowDto[];
@@ -64,6 +81,8 @@ export class ProductionPlanService {
     payload
   );
 }
-
+ getProductionPlanList(): Observable<ProductionPlanListRow[]> {
+    return this.http.get<ProductionPlanListRow[]>(`${this.url}/ProductionPlan/list-with-lines`);
+  }
 
 }
