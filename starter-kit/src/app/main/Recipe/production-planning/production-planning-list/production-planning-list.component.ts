@@ -22,7 +22,7 @@ showShortageGrnModal = false;
 shortageGrnList: any[] = [];
 shortageGrnCount = 0;
 shortageGrnSearch = '';
-
+selectedOption = 10;
   constructor(private srv: ProductionPlanService, private router: Router) {}
 
   ngOnInit(): void {
@@ -104,7 +104,8 @@ shortageGrnSearch = '';
     const lines = (row?.lines ?? []) as ProductionPlanLineDto[];
 
     this.planLines = lines;
-    this.modalTitle = `Plan Lines - Plan #${row?.id ?? ''}${row?.salesOrderNo ? ' / ' + row.salesOrderNo : ''}`;
+     this.modalTitle = `Plan Lines - Plan ${row?.salesOrderNo ? ' / ' + row.salesOrderNo : ''}`;
+
 
     this.showExplosionModal = true;
 
@@ -162,5 +163,35 @@ filteredShortageGrnList(): any[] {
     String(x.grnNo || '').toLowerCase().includes(v)
   );
 }
+ remove(id: number): void {
+  Swal.fire({
+    title: 'Delete Plan?',
+    text: `Plan Id: ${id}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete',
+    cancelButtonText: 'Cancel'
+  }).then(r => {
+    if (!r.isConfirmed) return;
 
+    this.srv.deletePlan(id).subscribe({
+      next: (res: any) => {
+        Swal.fire('Deleted', 'Production plan deleted', 'success');
+
+        // ✅ remove from UI list without reloading (fast)
+        this.rows = (this.rows || []).filter(x => Number(x?.id) !== Number(id));
+        this.allRows = (this.allRows || []).filter(x => Number(x?.id) !== Number(id));
+
+        // optional: if modal open for that plan close
+        if (this.showExplosionModal) this.closeExplosion();
+      },
+      error: (e) => {
+        Swal.fire('Failed', e?.error?.message || 'Delete failed', 'error');
+      }
+    });
+  });
+}
+  onLimitChange(e: any): void {
+    this.selectedOption = Number(e?.target?.value || 10);
+  }
 }

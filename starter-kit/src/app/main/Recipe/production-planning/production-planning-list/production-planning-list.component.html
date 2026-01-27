@@ -9,6 +9,18 @@
                 style="margin-left:0.85rem;margin-top:1rem;font-size:1.25rem;font-weight:600;color:#2E5F73;">
               Production Plan List
             </h4>
+              <div class="d-flex justify-content-between align-items-center m-1">
+              <label class="d-flex align-items-center">
+                Show
+                <select class="form-control mx-25" (change)="onLimitChange($event)">
+                  <option [selected]="selectedOption===10" value="10">10</option>
+                  <option [selected]="selectedOption===25" value="25">25</option>
+                  <option [selected]="selectedOption===50" value="50">50</option>
+                  <option [selected]="selectedOption===100" value="100">100</option>
+                </select>
+                entries
+              </label>
+            </div>
           </div>
 
           <div class="col-md-9 col-12 d-flex justify-content-end">
@@ -23,9 +35,9 @@
                       style="background:#2E5F73;color:#fff;gap:6px;" (click)="goToCreate()"
                       >
                 <i data-feather="plus-circle"></i>
-                <span>Add</span>
+                <span>Create From SO</span>
               </button>
-              <button
+               <button
                 type="button"
                 class="btn d-inline-flex align-items-center justify-content-center flex-shrink-0 position-relative"
                 style="border:1px solid #2E5F73; color:#2E5F73; background:white; width:44px; height:38px; padding:0;"
@@ -41,7 +53,6 @@
                   {{ shortageGrnCount }}
                 </span>
               </button>
-
             </div>
           </div>
         </div>
@@ -64,7 +75,7 @@
             </ng-template>
           </ngx-datatable-column>
 
-          <ngx-datatable-column name="Plan ID" prop="id" [width]="100"></ngx-datatable-column>
+          <ngx-datatable-column name="Plan ID" prop="productionPlanNo" [width]="100"></ngx-datatable-column>
           <ngx-datatable-column name="SO NO" prop="salesOrderNo" [width]="160"></ngx-datatable-column>
 
           <ngx-datatable-column name="Plan Date" prop="planDate" [width]="140">
@@ -95,9 +106,10 @@
 
                 <!-- Delete icon -->
                 <i class="fas fa-trash text-danger"
-                   style="cursor:pointer;"
-                   (click)="remove(row.id)"
-                   title="Delete"></i>
+   style="cursor:pointer;"
+   (click)="remove(row.id)"
+   title="Delete"></i>
+
               </div>
             </ng-template>
           </ngx-datatable-column>
@@ -112,7 +124,7 @@
 <div *ngIf="showExplosionModal" (click)="closeExplosion()"
      style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div (click)="$event.stopPropagation()"
-       style="width:900px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+      style="width:800px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
 
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef2f7;">
       <h3 style="margin:0;font-size:20px;font-weight:600;color:#374151;">{{ modalTitle || 'Plan Lines' }}</h3>
@@ -125,11 +137,11 @@
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#111827;">
           <thead>
             <tr style="background:#2E5F73;color:#fff;">
-              <th style="padding:10px 12px;text-align:left;width:60px;">#</th>
-              <th style="padding:10px 12px;text-align:left;">Finished Item</th>
-              <th style="padding:10px 12px;text-align:right;width:140px;">Planned Qty</th>
-              <th style="padding:10px 12px;text-align:right;width:160px;">Expected Output</th>
-              <th style="padding:10px 12px;text-align:right;width:110px;">RecipeId</th>
+              
+              <th style="padding:10px 12px;text-align:left;width:220px;">Finished Item</th>
+              <th style="padding:10px 12px;text-align:left;width:120px;">Planned Qty</th>
+              <th style="padding:10px 12px;text-align:left;width:160px;">Expected Output</th>
+             
             </tr>
           </thead>
 
@@ -137,13 +149,13 @@
             <tr *ngFor="let l of planLines; let i=index"
                 [style.background]="i%2===0 ? '#fcfdff' : '#ffffff'"
                 style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:10px 12px;">{{ i + 1 }}</td>
-              <td style="padding:10px 12px;">
+             
+              <td style="padding:10px 12px;text-align:left">
                 {{ l.finishedItemName || ('ItemId: ' + l.finishedItemId) }}
               </td>
-              <td style="padding:10px 12px;text-align:right;">{{ l.plannedQty | number:'1.0-2' }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ l.expectedOutput | number:'1.0-2' }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ l.recipeId }}</td>
+              <td style="padding:10px 12px;text-align:left;">{{ l.plannedQty | number:'1.0-2' }}</td>
+              <td style="padding:10px 12px;text-align:left;">{{ l.expectedOutput | number:'1.0-2' }}</td>
+              
             </tr>
 
             <tr *ngIf="!planLines?.length">

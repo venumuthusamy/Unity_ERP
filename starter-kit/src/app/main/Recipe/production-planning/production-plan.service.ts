@@ -48,17 +48,28 @@ export interface ProductionPlanListRow {
   lines?: ProductionPlanLineDto[];
 }
 export interface ProductionPlanResponseDto {
+  productionPlanId?: number;
   planRows: PlanRowDto[];
   ingredients: IngredientRowDto[];
 }
+
 @Injectable({ providedIn: 'root' })
 export class ProductionPlanService {
  private url = environment.apiUrl; 
   constructor(private http: HttpClient) {}
 
-  getSalesOrders(): Observable<SoHeaderDto[]> {
-    return this.http.get<SoHeaderDto[]>(`${this.url}/ProductionPlan/salesorders`);
+getSalesOrders(includeSoId?: number): Observable<SoHeaderDto[]> {
+  const params: any = {};
+
+  if (includeSoId && includeSoId > 0) {
+    params.includeSoId = includeSoId;
   }
+
+  return this.http.get<SoHeaderDto[]>(
+    `${this.url}/ProductionPlan/salesorders`,
+    { params }
+  );
+}
 
   getBySo(soId: number, warehouseId: number): Observable<ProductionPlanResponseDto> {
     return this.http.get<ProductionPlanResponseDto>(`${this.url}/ProductionPlan/so/${soId}?warehouseId=${warehouseId}`);
@@ -88,5 +99,15 @@ export class ProductionPlanService {
   getShortageGrnAlerts() {
   return this.http.get<any>(`${this.url}/ProductionPlan/shortage-grn-alerts`);
   }
+getPlanById(id: number) {
+  return this.http.get<any>(`${this.url}/ProductionPlan/${id}`);
+}
 
+updatePlan(payload: any) {
+  return this.http.put<any>(`${this.url}/ProductionPlan/update`, payload);
+}
+
+deletePlan(planId: number) {
+  return this.http.delete<any>(`${this.url}/ProductionPlan/${planId}`);
+}
 }

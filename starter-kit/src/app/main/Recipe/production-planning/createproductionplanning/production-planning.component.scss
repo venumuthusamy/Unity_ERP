@@ -1,6 +1,7 @@
 /* ===== New UI: clean, flat, modern (no big blue headers) ===== */
 .pp2{
-  min-height: 100vh;
+   min-height: auto !important;   /* remove 100vh */
+  height: auto !important;
   padding: 18px;
   font-family: "Segoe UI", Arial, sans-serif;
   background: #f6f8fc;
@@ -12,8 +13,8 @@
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
-  gap: 14px;
-  margin-bottom: 12px;
+ // gap: 14px;
+ // margin-bottom: 12px;
 }
 
 .pp2-title{
