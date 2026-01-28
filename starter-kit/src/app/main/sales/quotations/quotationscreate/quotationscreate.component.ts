@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
+
 import { ItemsService } from 'app/main/master/items/items.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { UomService } from 'app/main/master/uom/uom.service';
@@ -16,25 +17,17 @@ import { CustomerMasterService } from 'app/main/businessPartners/customer-master
 import { CurrencyService } from 'app/main/master/currency/currency.service';
 import { PaymentTermsService } from 'app/main/master/payment-terms/payment-terms.service';
 import { QuotationHeader, QuotationLine, QuotationsService } from '../quotations.service';
+import { ItemsetService } from 'app/main/master/itemset/itemsetservice/itemset.service';
 
-// ---------- Types ----------
-type SimpleItem = {
-  id: number;
-  itemName: string;
-  itemCode?: string;
-  uomName?: string;
-  uomId?: number;
-  catagoryName: string;
-};
-
+type SimpleItem = { id: number; itemName: string; itemCode?: string; uomId?: number; catagoryName: string };
 type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
-
 type Country = { id: number; countryName: string; gstPercentage: number };
 type Customer = { id: number; name: string; countryId: number };
 type CurrencyRow = { id: number; name: string };
 type PaymentTermsRow = { id: number; name: string };
-
 type DiscountType = 'VALUE' | 'PERCENT';
+type LineSource = 'ITEM' | 'ITEMSET';
+type ItemSetHeaderRow = { id: number; setName: string; description?: string };
 
 type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
   uomId: number | null;
@@ -45,12 +38,20 @@ type UiLine = Omit<QuotationLine, 'uom' | 'uomId'> & {
   lineNet?: number;
   lineTax?: number;
   lineTotal?: number;
+
+  isSetHeader?: boolean;
+  itemSetId?: number | null;
+  setName?: string;
+  isFromSet?: boolean;
+
+  itemName?: string;
+
+  // ✅ extra helper to backfill if needed
+  uomName?: string | null;
 };
 
 type UiQuotationHeader = Omit<QuotationHeader, 'validityDate'> & {
   deliveryDate: string | null;
-
-  // ✅ NEW header textarea fields
   remarks?: string;
   deliveryTo?: string;
 
@@ -63,6 +64,8 @@ type UiQuotationHeader = Omit<QuotationHeader, 'validityDate'> & {
   discountInput: number;
   docDiscount: number;
   discountManual: boolean;
+
+  lineSource: LineSource;
 };
 
 @Component({
@@ -72,12 +75,15 @@ type UiQuotationHeader = Omit<QuotationHeader, 'validityDate'> & {
   encapsulation: ViewEncapsulation.None
 })
 export class QuotationscreateComponent implements OnInit {
-  @ViewChild('itemSearchInput', { static: false })
-  itemSearchInput!: ElementRef<HTMLInputElement>;
+  // dropdown containers (page)
   @ViewChild('customerBox') customerBox!: ElementRef<HTMLElement>;
   @ViewChild('currencyBox') currencyBox!: ElementRef<HTMLElement>;
   @ViewChild('paymentBox') paymentBox!: ElementRef<HTMLElement>;
+  @ViewChild('itemSetBox') itemSetBox!: ElementRef<HTMLElement>;
+
+  // modal refs
   @ViewChild('modalItemBox') modalItemBox!: ElementRef<HTMLElement>;
+  @ViewChild('itemSearchInput', { static: false }) itemSearchInput!: ElementRef<HTMLInputElement>;
 
   header: UiQuotationHeader = {
     status: 0,
@@ -85,7 +91,6 @@ export class QuotationscreateComponent implements OnInit {
     currencyId: 0,
     fxRate: 1,
     paymentTermsId: 0,
-
     deliveryDate: null,
 
     subtotal: 0,
@@ -94,7 +99,6 @@ export class QuotationscreateComponent implements OnInit {
     grandTotal: 0,
     needsHodApproval: false,
 
-    // ✅ NEW
     remarks: '',
     deliveryTo: '',
 
@@ -108,11 +112,14 @@ export class QuotationscreateComponent implements OnInit {
     discountType: 'PERCENT',
     discountInput: 0,
     docDiscount: 0,
-    discountManual: false
+    discountManual: false,
+
+    lineSource: 'ITEM'
   };
 
   minDate = '';
 
+  // lookups
   customers: Customer[] = [];
   countries: Country[] = [];
   activeCustomerCountry: Country | null = null;
@@ -131,11 +138,27 @@ export class QuotationscreateComponent implements OnInit {
   customerDdOpen = false;
   filteredCustomers: Customer[] = [];
 
-  lines: UiLine[] = [];
-  hoverAdd = false;
   itemsList: SimpleItem[] = [];
   uomList: Array<{ id: number; name: string }> = [];
 
+  // ✅ uomName -> uomId map
+  private uomNameToId = new Map<string, number>();
+
+  // grid lines
+  lines: UiLine[] = [];
+  hoverAdd = false;
+
+  // itemset multi
+  itemSets: ItemSetHeaderRow[] = [];
+  itemSetSearch = '';
+  itemSetDdOpen = false;
+  filteredItemSets: ItemSetHeaderRow[] = [];
+  selectedItemSets: ItemSetHeaderRow[] = [];
+  pendingItemSet: ItemSetHeaderRow | null = null;
+
+  private editId: number | null = null;
+
+  // modal state
   showModal = false;
   editingIndex: number | null = null;
 
@@ -144,8 +167,8 @@ export class QuotationscreateComponent implements OnInit {
     itemSearch: string;
     qty: number | null;
     uomId: number | null;
-    unitPrice: number;
-    discountPct: number;
+    unitPrice: number | null;
+    discountPct: number | null;
     taxMode: LineTaxMode;
     description: string;
     dropdownOpen: boolean;
@@ -155,7 +178,7 @@ export class QuotationscreateComponent implements OnInit {
     itemSearch: '',
     qty: null,
     uomId: null,
-    unitPrice: 0,
+    unitPrice: null,
     discountPct: 0,
     taxMode: 'Standard-Rated',
     description: '',
@@ -164,8 +187,6 @@ export class QuotationscreateComponent implements OnInit {
   };
 
   modalPreview: { net: number; tax: number; total: number } | null = null;
-
-  private editId: number | null = null;
 
   constructor(
     private router: Router,
@@ -177,20 +198,75 @@ export class QuotationscreateComponent implements OnInit {
     private countriesService: CountriesService,
     private customerService: CustomerMasterService,
     private currencyService: CurrencyService,
-    private paymentTermsService: PaymentTermsService
+    private paymentTermsService: PaymentTermsService,
+    private itemSetService: ItemsetService
   ) {}
 
-  // -------- TaxMode → TaxCodeId mapping --------------
+  // =========================
+  // ✅ UOM Helpers
+  // =========================
+  private normalizeUomName(v: any): string {
+    return String(v ?? '').trim().toLowerCase();
+  }
+
+  private rebuildUomMap() {
+    this.uomNameToId.clear();
+    for (const u of this.uomList || []) {
+      const key = this.normalizeUomName(u.name);
+      if (key) this.uomNameToId.set(key, u.id);
+    }
+  }
+
+  private getUomIdFromItemMaster(itemId: number): number | null {
+    const it = this.itemsList.find(x => x.id === itemId);
+    return (it?.uomId ?? null) as any;
+  }
+
+  private resolveUomIdFromItemSetRow(row: any, itemId: number): number | null {
+    // 1) if API gives uomId
+    const rawUomId = row?.uomId ?? row?.UomId;
+    if (rawUomId !== null && rawUomId !== undefined && rawUomId !== '') {
+      const n = Number(rawUomId);
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+
+    // 2) if API gives uomName (your case)
+    const uomName = row?.uomName ?? row?.UomName;
+    const key = this.normalizeUomName(uomName);
+    if (key && this.uomNameToId.has(key)) return this.uomNameToId.get(key)!;
+
+    // 3) fallback from item master
+    return this.getUomIdFromItemMaster(itemId);
+  }
+
+  private backfillMissingUoms() {
+    if (!this.lines?.length) return;
+    let changed = false;
+
+    for (const l of this.lines) {
+      if (l.isSetHeader) continue;
+      if ((l.uomId === null || l.uomId === undefined) && l.uomName) {
+        const key = this.normalizeUomName(l.uomName);
+        const id = key ? this.uomNameToId.get(key) : null;
+        if (id) {
+          l.uomId = id;
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) this.computeTotals();
+  }
+
+  // =========================
+  // TaxMode → TaxCodeId mapping
+  // =========================
   private taxModeToTaxCodeId(mode?: LineTaxMode): number {
     switch (mode) {
-      case 'Standard-Rated':
-        return 1;
-      case 'Zero-Rated':
-        return 2;
-      case 'Exempt':
-        return 3;
-      default:
-        return 1;
+      case 'Standard-Rated': return 1;
+      case 'Zero-Rated': return 2;
+      case 'Exempt': return 3;
+      default: return 1;
     }
   }
 
@@ -200,32 +276,25 @@ export class QuotationscreateComponent implements OnInit {
     return ['Zero-Rated'];
   }
 
-  // ---------- Lifecycle ----------
   ngOnInit(): void {
     this.setMinDate();
     this.loadLookups();
 
     const idStr = this.route.snapshot.paramMap.get('id');
     this.editId = idStr ? +idStr : null;
-    if (this.editId) this.loadForEdit(this.editId);
-
-    this.currencySearch = this.header.currency || '';
-    this.paymentTermsSearch = this.header.paymentTerms || '';
   }
 
+  // close dropdowns when clicking outside
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent) {
     const t = ev.target as Node;
 
-    if (this.customerDdOpen && this.customerBox && !this.customerBox.nativeElement.contains(t)) {
-      this.customerDdOpen = false;
-    }
-    if (this.currencyDdOpen && this.currencyBox && !this.currencyBox.nativeElement.contains(t)) {
-      this.currencyDdOpen = false;
-    }
-    if (this.paymentTermsDdOpen && this.paymentBox && !this.paymentBox.nativeElement.contains(t)) {
-      this.paymentTermsDdOpen = false;
-    }
+    if (this.customerDdOpen && this.customerBox && !this.customerBox.nativeElement.contains(t)) this.customerDdOpen = false;
+    if (this.currencyDdOpen && this.currencyBox && !this.currencyBox.nativeElement.contains(t)) this.currencyDdOpen = false;
+    if (this.paymentTermsDdOpen && this.paymentBox && !this.paymentBox.nativeElement.contains(t)) this.paymentTermsDdOpen = false;
+    if (this.itemSetDdOpen && this.itemSetBox && !this.itemSetBox.nativeElement.contains(t)) this.itemSetDdOpen = false;
+
+    // modal dropdown close (outside item box)
     if (this.showModal && this.modal.dropdownOpen && this.modalItemBox && !this.modalItemBox.nativeElement.contains(t)) {
       this.modal.dropdownOpen = false;
     }
@@ -234,19 +303,8 @@ export class QuotationscreateComponent implements OnInit {
   @HostListener('document:keydown.escape')
   onEsc() {
     this.customerDdOpen = this.currencyDdOpen = this.paymentTermsDdOpen = false;
-    if (this.modal) this.modal.dropdownOpen = false;
-  }
-
-  // ---------- Helpers ----------
-  private toDateInput(v: string | Date | null | undefined): string | null {
-    if (!v) return null;
-    const d = typeof v === 'string' ? new Date(v) : v;
-    if (isNaN(d.getTime())) return null;
-
-    // yyyy-mm-dd for <input type="date">
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 10);
+    this.itemSetDdOpen = false;
+    if (this.showModal) this.closeModal();
   }
 
   setMinDate() {
@@ -269,110 +327,56 @@ export class QuotationscreateComponent implements OnInit {
     return this.itemsList.find(x => x.id === id)?.itemName;
   }
 
-  getUomName = (id?: number | null) =>
-    this.uomList.find(u => u.id === id)?.name ?? '';
+  getUomName = (id?: number | null) => this.uomList.find(u => u.id === id)?.name ?? '';
 
-  // ---------- Load existing QT ----------
-  private loadForEdit(id: number) {
-    this.qt.getById(id).subscribe((res: any) => {
-      const dto = res?.data ?? res ?? null;
-      if (!dto) return;
+  // switch source
+  onLineSourceChange() {
+    if (this.showModal) this.closeModal();
 
-      const discAmount = Number(dto.docDiscount ?? dto.discount ?? 0) || 0;
-      const discType = (dto.discountType as DiscountType) || 'PERCENT';
-
-      const incomingDate = dto.deliveryDate ?? dto.DeliveryDate ?? dto.validityDate ?? dto.ValidityDate;
-
-      this.header = {
-        ...this.header,
-        ...dto,
-        customerId: Number(dto.customerId ?? this.header.customerId ?? 0),
-        currencyId: Number(dto.currencyId ?? this.header.currencyId ?? 0),
-        paymentTermsId: Number(dto.paymentTermsId ?? this.header.paymentTermsId ?? 0),
-
-        deliveryDate: this.toDateInput(incomingDate),
-
-        // ✅ NEW header fields
-        remarks: String(dto.remarks ?? dto.Remarks ?? this.header.remarks ?? ''),
-        deliveryTo: String(dto.deliveryTo ?? dto.DeliveryTo ?? this.header.deliveryTo ?? ''),
-
-        discountType: discType,
-        discountInput:
-          discType === 'PERCENT'
-            ? Number(dto.discountInput ?? 0) || 0
-            : discAmount,
-        docDiscount: discAmount,
-        discountManual: discAmount > 0
-      };
-
-      (this.header as any).id = Number(dto.id);
-
-      if (dto.customerName) this.customerSearch = String(dto.customerName);
-
-      if (dto.currencyName || dto.currency) {
-        this.header.currency = String(dto.currencyName ?? dto.currency);
-        this.currencySearch = this.header.currency!;
-      }
-
-      if (dto.paymentTermsName || dto.paymentTerms) {
-        this.header.paymentTerms = String(dto.paymentTermsName ?? dto.paymentTerms);
-        this.paymentTermsSearch = this.header.paymentTerms!;
-      }
-
-      const apiLines = dto.lines ?? [];
-      this.lines = apiLines.map((l: any) => {
-        const rawMode = String(l.taxMode ?? l.TaxMode ?? '').toUpperCase();
-        let taxMode: LineTaxMode;
-
-        if (rawMode === 'EXCLUSIVE' || rawMode === 'STANDARD-RATED' || rawMode === 'STANDARD_RATED') {
-          taxMode = 'Standard-Rated';
-        } else if (rawMode === 'INCLUSIVE' || rawMode === 'ZERO-RATED' || rawMode === 'ZERO_RATED') {
-          taxMode = 'Zero-Rated';
-        } else if (rawMode === 'EXEMPT' || rawMode === 'NO GST') {
-          taxMode = 'Exempt';
-        } else {
-          taxMode = this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated';
-        }
-
-        return {
-          itemId: Number(l.itemId ?? l.ItemId ?? 0),
-          itemName: String(l.itemName ?? l.ItemName ?? ''),
-          uomId: (l.uomId ?? l.UomId ?? null) !== null ? Number(l.uomId ?? l.UomId) : null,
-          qty: Number(l.qty ?? l.Qty ?? 0),
-          unitPrice: Number(l.unitPrice ?? l.UnitPrice ?? 0),
-          discountPct: Number(l.discountPct ?? l.DiscountPct ?? 0),
-
-          description: String(l.description ?? l.Description ?? l.remarks ?? l.Remarks ?? ''),
-
-          taxMode,
-          taxCodeId: l.taxCodeId ?? l.TaxCodeId ?? this.taxModeToTaxCodeId(taxMode),
-          lineNet: Number(l.lineNet ?? l.LineNet ?? 0),
-          lineTax: Number(l.lineTax ?? l.LineTax ?? 0),
-          lineTotal: Number(l.lineTotal ?? l.LineTotal ?? 0)
-        } as UiLine;
-      });
-
-      this.onCustomerChange(this.header.customerId ?? null);
-      this.computeTotals();
-    });
+    if (this.header.lineSource === 'ITEM') {
+      this.selectedItemSets = [];
+      this.pendingItemSet = null;
+      this.itemSetSearch = '';
+      this.lines = this.lines.filter(l => !l.isFromSet && !l.isSetHeader);
+    }
+    this.computeTotals();
   }
 
-  // ---------- Lookups ----------
+  onLineChanged(i: number) {
+    const l = this.lines[i];
+    if (!l || l.isSetHeader) return;
+
+    const qty = l.qty === null || l.qty === undefined ? 0 : +l.qty;
+    const price = l.unitPrice === null || l.unitPrice === undefined ? 0 : +l.unitPrice;
+
+    l.qty = qty < 0 ? 0 : qty;
+    l.unitPrice = price < 0 ? 0 : price;
+
+    const disc = +l.discountPct || 0;
+    l.discountPct = Math.min(100, Math.max(0, disc));
+
+    l.taxCodeId = this.taxModeToTaxCodeId(l.taxMode);
+    this.computeLine(l);
+    this.computeTotals();
+  }
+
+  // Load lookups
   loadLookups() {
     this.chartOfAccountService.getAllChartOfAccount().subscribe(() => {
       this.itemsService.getAllItem().subscribe((ires: any) => {
         const raw = ires?.data ?? [];
-        this.itemsList = raw.map(
-          (item: any) =>
-            ({
-              id: Number(item.id ?? item.itemId ?? 0),
-              itemName: item.itemName ?? item.name ?? '',
-              itemCode: item.itemCode ?? '',
-              uomName: item.uomName ?? item.uom ?? '',
-              uomId: Number(item.uomId ?? item.UomId ?? item.uomid ?? 0),
-              catagoryName: item.catagoryName
-            } as SimpleItem)
-        );
+        this.itemsList = raw.map((item: any) => ({
+          id: Number(item.id ?? item.itemId ?? 0),
+          itemName: item.itemName ?? item.name ?? '',
+          itemCode: item.itemCode ?? '',
+          uomId: Number(item.uomId ?? item.UomId ?? item.uomid ?? 0),
+          catagoryName: item.catagoryName
+        })) as SimpleItem[];
+
+        // if modal open and dropdown open -> refresh list
+        if (this.showModal && this.modal.dropdownOpen) {
+          this.filterModalItemsOnly();
+        }
       });
     });
 
@@ -381,6 +385,12 @@ export class QuotationscreateComponent implements OnInit {
         id: Number(u.id ?? u.Id),
         name: String(u.name ?? u.Name ?? '').trim()
       }));
+
+      // ✅ build uomName->uomId map
+      this.rebuildUomMap();
+
+      // ✅ if itemset lines already added before uomlist comes
+      this.backfillMissingUoms();
     });
 
     this.countriesService.getCountry().subscribe((res: any) => {
@@ -397,14 +407,6 @@ export class QuotationscreateComponent implements OnInit {
           name: String(c.customerName ?? c.CustomerName ?? '').trim(),
           countryId: Number(c.countryId ?? c.CountryId ?? 0)
         }));
-
-        if (this.header.customerId) {
-          const cu = this.customers.find(x => x.id === this.header.customerId);
-          if (cu) this.customerSearch = cu.name;
-          this.onCustomerChange(this.header.customerId);
-        } else {
-          this.computeTotals();
-        }
       });
     });
 
@@ -414,14 +416,6 @@ export class QuotationscreateComponent implements OnInit {
         id: Number(r.id ?? r.Id),
         name: String(r.currencyName ?? r.CurrencyName ?? '').trim()
       })) as CurrencyRow[];
-
-      if (this.header.currencyId) {
-        const row = this.currenciesSrv.find(x => x.id === this.header.currencyId);
-        if (row) {
-          this.header.currency = row.name;
-          this.currencySearch = row.name;
-        }
-      }
     });
 
     this.paymentTermsService.getAllPaymentTerms().subscribe((res: any) => {
@@ -430,18 +424,19 @@ export class QuotationscreateComponent implements OnInit {
         id: Number(r.id ?? r.Id),
         name: String(r.paymentTermsName ?? r.PaymentTermsName ?? '').trim()
       })) as PaymentTermsRow[];
+    });
 
-      if (this.header.paymentTermsId) {
-        const row = this.paymentTermsSrv.find(x => x.id === this.header.paymentTermsId);
-        if (row) {
-          this.header.paymentTerms = row.name;
-          this.paymentTermsSearch = row.name;
-        }
-      }
+    this.itemSetService.getAllItemSet().subscribe((res: any) => {
+      const data = res?.data ?? res ?? [];
+      this.itemSets = data.map((x: any) => ({
+        id: Number(x.id ?? x.Id),
+        setName: String(x.setName ?? x.SetName ?? x.name ?? '').trim(),
+        description: String(x.description ?? x.Description ?? '').trim()
+      })) as ItemSetHeaderRow[];
     });
   }
 
-  // ---------- Customer / GST ----------
+  // Customer
   openCustomerDropdown() {
     this.customerDdOpen = true;
     this.filteredCustomers = (this.customers || []).slice(0, 50);
@@ -451,16 +446,14 @@ export class QuotationscreateComponent implements OnInit {
     const q = (this.customerSearch || '').trim().toLowerCase();
     this.filteredCustomers = !q
       ? (this.customers || []).slice(0, 50)
-      : (this.customers || [])
-          .filter(c => (c.name || '').toLowerCase().includes(q))
-          .slice(0, 50);
+      : (this.customers || []).filter(c => (c.name || '').toLowerCase().includes(q)).slice(0, 50);
     this.customerDdOpen = true;
   }
 
   selectCustomer(c: Customer) {
     this.customerSearch = c.name;
     this.customerDdOpen = false;
-    if (this.header.customerId !== c.id) this.onCustomerChange(c.id);
+    this.onCustomerChange(c.id);
   }
 
   onCustomerChange(custId: number | null) {
@@ -468,25 +461,32 @@ export class QuotationscreateComponent implements OnInit {
     const cust = this.customers.find(x => x.id === custId) || null;
     this.header.countryId = cust?.countryId ?? null;
 
-    const country =
-      this.countries.find(c => c.id === (cust?.countryId ?? -1)) || null;
-
+    const country = this.countries.find(c => c.id === (cust?.countryId ?? -1)) || null;
     this.activeCustomerCountry = country;
     this.header.taxPct = country?.gstPercentage ?? 0;
 
     const gst = +this.header.taxPct || 0;
     if (gst !== 9) {
       this.lines.forEach(l => {
-        if (l.taxMode === 'Standard-Rated' || l.taxMode === 'Exempt') {
+        if (!l.isSetHeader && (l.taxMode === 'Standard-Rated' || l.taxMode === 'Exempt')) {
           l.taxMode = 'Zero-Rated';
+          l.taxCodeId = this.taxModeToTaxCodeId('Zero-Rated');
+          this.computeLine(l);
         }
       });
+    }
+
+    if (this.showModal) {
+      if ((+this.header.taxPct || 0) !== 9 && this.modal.taxMode !== 'Zero-Rated') {
+        this.modal.taxMode = 'Zero-Rated';
+      }
+      this.previewLineTotals();
     }
 
     this.computeTotals();
   }
 
-  // ---------- Currency ----------
+  // Currency
   openCurrencyDropdown() {
     this.currencyDdOpen = true;
     this.filteredCurrencies = this.currenciesSrv.slice();
@@ -508,7 +508,7 @@ export class QuotationscreateComponent implements OnInit {
     this.computeTotals();
   }
 
-  // ---------- Payment terms ----------
+  // Payment terms
   openPaymentTermsDropdown() {
     this.paymentTermsDdOpen = true;
     this.filteredPaymentTerms = this.paymentTermsSrv.slice();
@@ -529,6 +529,115 @@ export class QuotationscreateComponent implements OnInit {
     this.header.paymentTerms = p.name;
   }
 
+  // ItemSet Multi-select
+  trackByItemSetId = (_: number, s: ItemSetHeaderRow) => s.id;
+
+  toggleItemSetDropdown() {
+    this.itemSetDdOpen = !this.itemSetDdOpen;
+    if (this.itemSetDdOpen) this.filterItemSets();
+  }
+
+  openItemSetDropdown() {
+    this.itemSetDdOpen = true;
+    this.filteredItemSets = (this.itemSets || []).slice(0, 60);
+  }
+
+  filterItemSets() {
+    const q = (this.itemSetSearch || '').trim().toLowerCase();
+    this.filteredItemSets = !q
+      ? (this.itemSets || []).slice(0, 60)
+      : (this.itemSets || []).filter(s => (s.setName || '').toLowerCase().includes(q)).slice(0, 60);
+    this.itemSetDdOpen = true;
+  }
+
+  selectItemSetCandidate(s: ItemSetHeaderRow) {
+    this.pendingItemSet = s;
+    this.itemSetSearch = s.setName;
+    this.itemSetDdOpen = false;
+  }
+
+  addSelectedItemSet() {
+    if (!this.pendingItemSet) return;
+    const set = this.pendingItemSet;
+
+    if (this.selectedItemSets.some(x => x.id === set.id)) {
+      Swal.fire({ icon: 'info', title: 'Already added', text: 'This item set already added', confirmButtonColor: '#2E5F73' });
+      return;
+    }
+
+    this.selectedItemSets.push(set);
+    this.pendingItemSet = null;
+    this.itemSetSearch = '';
+    this.itemSetDdOpen = false;
+
+    this.loadItemSetItemsAndAppend(set.id, set.setName);
+  }
+
+  removeItemSet(setId: number) {
+    this.selectedItemSets = this.selectedItemSets.filter(s => s.id !== setId);
+    this.lines = this.lines.filter(l => l.itemSetId !== setId);
+    this.computeTotals();
+  }
+
+  private loadItemSetItemsAndAppend(itemSetId: number, setName: string) {
+    this.itemSetService.getByIdItemSet(itemSetId).subscribe((res: any) => {
+      const dto = res?.data ?? res ?? null;
+      if (!dto) return;
+
+      const items: any[] = dto.items ?? dto.itemSetItems ?? dto.lines ?? [];
+
+      // set header row
+      this.lines.push({
+        itemId: 0,
+        uomId: null,
+        qty: 0,
+        unitPrice: 0,
+        discountPct: 0,
+        taxMode: 'Zero-Rated',
+        isSetHeader: true,
+        isFromSet: true,
+        itemSetId,
+        setName,
+        description: ''
+      } as UiLine);
+
+      const defaultTax: LineTaxMode = (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated';
+
+      for (const it of items) {
+        const itemId = Number(it.itemId ?? it.ItemId ?? it.id ?? it.ItemMasterId ?? 0);
+        if (!itemId) continue;
+
+        // ✅ IMPORTANT FIX: resolve uomId from uomName/uomId/itemmaster
+        const uomId = this.resolveUomIdFromItemSetRow(it, itemId);
+
+        const line: UiLine = {
+          itemId,
+          itemName: String(it.itemName ?? it.ItemName ?? this.getItemName(itemId) ?? ''),
+          uomId,
+          qty: null as any,
+          unitPrice: null as any,
+          discountPct: 0,
+          description: String(it.description ?? it.Description ?? ''),
+          taxMode: defaultTax,
+          taxCodeId: this.taxModeToTaxCodeId(defaultTax),
+          isFromSet: true,
+          itemSetId,
+          setName,
+          isSetHeader: false,
+
+          // keep uomName for backfill if needed
+          uomName: it.uomName ?? it.UomName ?? null
+        };
+
+        this.computeLine(line);
+        this.lines.push(line);
+      }
+
+      this.computeTotals();
+    });
+  }
+
+  // Discount
   onDiscountChange() {
     this.header.discountManual = true;
     this.computeTotals();
@@ -542,15 +651,9 @@ export class QuotationscreateComponent implements OnInit {
 
     if (newType === 'VALUE') {
       const pct = Math.min(Math.max(input, 0), 100);
-      const amount = subtotal * (pct / 100);
-      this.header.discountInput = this.round2(amount);
+      this.header.discountInput = this.round2(subtotal * (pct / 100));
     } else {
-      const amount = input;
-      if (subtotal > 0) {
-        this.header.discountInput = this.round2((amount * 100) / subtotal);
-      } else {
-        this.header.discountInput = 0;
-      }
+      this.header.discountInput = subtotal > 0 ? this.round2((input * 100) / subtotal) : 0;
     }
 
     this.header.discountType = newType;
@@ -558,10 +661,16 @@ export class QuotationscreateComponent implements OnInit {
     this.computeTotals();
   }
 
-  // ---------- Line calculation ----------
+  // Line calculation
   private computeLine(l: UiLine): { base: number; discount: number } {
-    const qty = +l.qty || 0;
-    const price = +l.unitPrice || 0;
+    if (l.isSetHeader) {
+      l.lineNet = l.lineTax = l.lineTotal = 0;
+      return { base: 0, discount: 0 };
+    }
+
+    const qty = l.qty === null || l.qty === undefined ? 0 : +l.qty;
+    const price = l.unitPrice === null || l.unitPrice === undefined ? 0 : +l.unitPrice;
+
     const discP = Math.min(Math.max(+l.discountPct || 0, 0), 100);
 
     const gross = qty * price;
@@ -570,12 +679,9 @@ export class QuotationscreateComponent implements OnInit {
 
     const rate = l.taxMode === 'Standard-Rated' ? +this.header.taxPct || 0 : 0;
 
-    const lineNet = afterDisc;
-    const lineTax = rate > 0 ? (afterDisc * rate) / 100 : 0;
-
-    l.lineNet = this.round2(lineNet);
-    l.lineTax = this.round2(lineTax);
-    l.lineTotal = this.round2(lineNet + lineTax);
+    l.lineNet = this.round2(afterDisc);
+    l.lineTax = this.round2(rate > 0 ? (afterDisc * rate) / 100 : 0);
+    l.lineTotal = this.round2((l.lineNet || 0) + (l.lineTax || 0));
 
     return { base: gross, discount: discountAmt };
   }
@@ -587,6 +693,8 @@ export class QuotationscreateComponent implements OnInit {
     let hod = false;
 
     for (const l of this.lines) {
+      if (l.isSetHeader) continue;
+
       const { base, discount } = this.computeLine(l);
       baseSubtotal += base;
       lineDiscTotal += discount;
@@ -598,16 +706,12 @@ export class QuotationscreateComponent implements OnInit {
     this.header.subtotal = this.round2(baseSubtotal);
     this.header.taxAmount = this.round2(tax);
 
-    const rounding = this.header.rounding || 0;
-
     let discountAmt: number;
 
     if (this.header.discountManual) {
       const input = +this.header.discountInput || 0;
-
       if (this.header.discountType === 'PERCENT') {
-        const pct = Math.min(Math.max(input, 0), 100);
-        discountAmt = this.header.subtotal * (pct / 100);
+        discountAmt = this.header.subtotal * (Math.min(Math.max(input, 0), 100) / 100);
       } else {
         discountAmt = input;
       }
@@ -615,223 +719,63 @@ export class QuotationscreateComponent implements OnInit {
       discountAmt = lineDiscTotal;
     }
 
-    if (discountAmt < 0) discountAmt = 0;
-    if (discountAmt > this.header.subtotal) discountAmt = this.header.subtotal;
-
+    discountAmt = Math.min(Math.max(discountAmt, 0), this.header.subtotal);
     this.header.docDiscount = this.round2(discountAmt);
 
-    if (!this.header.discountManual) {
-      if (this.header.discountType === 'PERCENT') {
-        if (this.header.subtotal > 0) {
-          this.header.discountInput = this.round2((discountAmt * 100) / this.header.subtotal);
-        } else {
-          this.header.discountInput = 0;
-        }
-      } else {
-        this.header.discountInput = this.round2(discountAmt);
-      }
-    }
-
+    const rounding = this.header.rounding || 0;
     const netAfterDiscount = this.header.subtotal - this.header.docDiscount;
     this.header.grandTotal = this.round2(netAfterDiscount + this.header.taxAmount + rounding);
+
     this.header.needsHodApproval = hod;
   }
 
-  // ---------- Modal / items ----------
-  trackByItemId = (_: number, it: SimpleItem) => it.id;
+  private validateBeforeSave(): boolean {
+    if (this.header.lineSource === 'ITEMSET') {
+      for (const l of this.lines) {
+        if (l.isSetHeader) continue;
+        const q = l.qty === null || l.qty === undefined ? 0 : +l.qty;
+        const p = l.unitPrice === null || l.unitPrice === undefined ? 0 : +l.unitPrice;
 
-  onModalItemFocus(open: boolean = true): void {
-    this.modal.dropdownOpen = open;
-    if (open) {
-      const q = (this.modal.itemSearch || '').trim().toLowerCase();
-      this.modal.filteredItems = q
-        ? this.itemsList.filter(x => (x.itemName || '').toLowerCase().includes(q)).slice(0, 100)
-        : this.itemsList.slice(0, 100);
+        if (q <= 0 || p <= 0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Enter Qty & Unit Price',
+            text: `Please enter Qty & Unit Price for item: ${l.itemName || this.getItemName(l.itemId)}`,
+            confirmButtonColor: '#2E5F73'
+          });
+          return false;
+        }
+      }
     }
+    return true;
   }
 
-  filterModalItems() {
-    const q = (this.modal.itemSearch || '').trim().toLowerCase();
-    this.modal.filteredItems = !q
-      ? this.itemsList.slice(0, 100)
-      : this.itemsList
-          .filter(x =>
-            (x.itemName || '').toLowerCase().includes(q) ||
-            (x.itemCode || '').toLowerCase().includes(q)
-          )
-          .slice(0, 100);
-    this.modal.dropdownOpen = true;
-  }
-
-  selectModalItem(row: SimpleItem) {
-    this.modal.itemId = row.id;
-    this.modal.itemSearch = row.itemName;
-    this.modal.uomId = row.uomId ?? null;
-
-    this.modal.dropdownOpen = false;
-
-    // focus qty
-    setTimeout(() => {
-      try {
-        this.itemSearchInput?.nativeElement?.blur();
-      } catch {}
-    }, 0);
-
-    this.previewLineTotals();
-  }
-
-  previewLineTotals() {
-    if (!this.modal.itemId || !this.modal.qty) {
-      this.modalPreview = null;
-      return;
-    }
-
-    const tmp: UiLine = {
-      itemId: this.modal.itemId!,
-      itemName: this.modal.itemSearch,
-      uomId: this.modal.uomId ?? null,
-      qty: +this.modal.qty!,
-      unitPrice: +this.modal.unitPrice || 0,
-      discountPct: +this.modal.discountPct || 0,
-      description: (this.modal.description || '').trim(),
-      taxMode: this.modal.taxMode || 'Standard-Rated',
-      taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
-    };
-
-    this.computeLine(tmp);
-
-    this.modalPreview = {
-      net: tmp.lineNet || 0,
-      tax: tmp.lineTax || 0,
-      total: tmp.lineTotal || 0
-    };
-  }
-
-  // ---------- Modal open/close ----------
-  openAdd() {
-    this.editingIndex = null;
-    this.modal = {
-      itemId: null,
-      itemSearch: '',
-      qty: null,
-      uomId: null,
-      unitPrice: 0,
-      discountPct: 0,
-      taxMode: this.header.taxPct === 9 ? 'Standard-Rated' : 'Zero-Rated',
-      description: '',
-      dropdownOpen: false,
-      filteredItems: []
-    };
-    this.modalPreview = null;
-    this.showModal = true;
-  }
-
-  openEdit(i: number) {
-    this.editingIndex = i;
-    const l = this.lines[i];
-
-    this.modal = {
-      itemId: l.itemId || null,
-      itemSearch: (l as any).itemName || this.getItemName(l.itemId) || '',
-      qty: l.qty || null,
-      uomId: l.uomId ?? null,
-      unitPrice: l.unitPrice || 0,
-      discountPct: l.discountPct || 0,
-      taxMode: (l.taxMode as LineTaxMode) || 'Standard-Rated',
-      description: l.description ?? '',
-      dropdownOpen: false,
-      filteredItems: []
-    };
-
-    this.previewLineTotals();
-    this.showModal = true;
-  }
-
-  closeModal() {
-    this.showModal = false;
-    this.modal.dropdownOpen = false;
-    this.modalPreview = null;
-  }
-
-  onModalContainer(ev: MouseEvent) {
-    const t = ev.target as Node;
-    if (this.modal.dropdownOpen && this.modalItemBox && !this.modalItemBox.nativeElement.contains(t)) {
-      this.modal.dropdownOpen = false;
-    }
-    ev.stopPropagation();
-  }
-
-  submitModal() {
-    if (!this.modal.itemId || !this.modal.qty) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Required',
-        text: 'Item and Qty are required',
-        confirmButtonColor: '#2E5F73'
-      });
-      return;
-    }
-
-    const payload: UiLine = {
-      itemId: this.modal.itemId!,
-      itemName: this.modal.itemSearch,
-      uomId: this.modal.uomId ?? null,
-      qty: +this.modal.qty!,
-      unitPrice: +this.modal.unitPrice || 0,
-      discountPct: +this.modal.discountPct || 0,
-      description: (this.modal.description || '').trim(),
-      taxMode: this.modal.taxMode || 'Standard-Rated',
-      taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode)
-    };
-
-    this.computeLine(payload);
-
-    if (this.editingIndex === null) {
-      this.lines.push(payload);
-    } else {
-      this.lines[this.editingIndex] = { ...this.lines[this.editingIndex], ...payload };
-    }
-
-    this.computeTotals();
-    this.closeModal();
-  }
-
-  remove(i: number) {
-    this.lines.splice(i, 1);
-    this.computeTotals();
-  }
-
-  // ---------- Save ----------
   save() {
+    if (!this.validateBeforeSave()) return;
+
     const dto: any = {
       ...this.header,
-
-      // ✅ make sure these go to API
       remarks: (this.header.remarks || '').trim(),
       deliveryTo: (this.header.deliveryTo || '').trim(),
-
       deliveryDate: this.header.deliveryDate,
-
-      // optional backward compatibility
       validityDate: this.header.deliveryDate,
+      lineSource: this.header.lineSource,
 
-      discountType: this.header.discountType,
-      docDiscount: this.header.docDiscount,
-      discountInput: this.header.discountInput,
-      currencyId: this.header.currencyId ?? null,
-      paymentTermsId: this.header.paymentTermsId ?? null,
-
-      lines: this.lines.map(l => ({
-        ...l,
-        description: (l.description || '').trim(),
-        remarks: (l.description || '').trim(),
-        uomId: l.uomId ?? null,
-        qty: +l.qty,
-        unitPrice: +l.unitPrice,
-        discountPct: +l.discountPct,
-        taxMode: l.taxMode || 'Standard-Rated',
-        taxCodeId: l.taxCodeId ?? this.taxModeToTaxCodeId(l.taxMode)
-      }))
+      lines: this.lines
+        .filter(l => !l.isSetHeader)
+        .map(l => ({
+          ...l,
+          description: (l.description || '').trim(),
+          uomId: l.uomId ?? null,
+          qty: +l.qty || 0,
+          unitPrice: +l.unitPrice || 0,
+          discountPct: +l.discountPct || 0,
+          taxMode: l.taxMode || 'Zero-Rated',
+          taxCodeId: l.taxCodeId ?? this.taxModeToTaxCodeId(l.taxMode),
+          itemSetId: l.itemSetId ?? null,
+          setName: l.setName ?? null,
+          isFromSet: !!l.isFromSet
+        }))
     };
 
     if (!dto.number || !dto.number.trim?.()) {
@@ -841,48 +785,200 @@ export class QuotationscreateComponent implements OnInit {
     if (dto.id) {
       this.qt.update(dto.id, dto).subscribe({
         next: () => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Updated',
-            text: 'Quotation Updated Successfully',
-            confirmButtonColor: '#2E5F73'
-          });
+          Swal.fire({ icon: 'success', title: 'Updated', text: 'Quotation Updated Successfully', confirmButtonColor: '#2E5F73' });
           this.router.navigate(['/Sales/Quotation-list']);
         },
-        error: () =>
-          Swal.fire({
-            icon: 'error',
-            title: 'Failed',
-            text: 'Update failed',
-            confirmButtonColor: '#d33'
-          })
+        error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Update failed', confirmButtonColor: '#d33' })
       });
     } else {
       this.qt.create(dto).subscribe({
-        next: (res: any) => {
-          const id = res && typeof res === 'object' ? res.data : res;
-          Swal.fire({
-            icon: 'success',
-            title: 'Saved',
-            text: `Quotation #${id} Created Successfully`,
-            confirmButtonColor: '#2E5F73'
-          });
-          (this.header as any).id = id;
+        next: () => {
+          Swal.fire({ icon: 'success', title: 'Saved', text: 'Quotation Created Successfully', confirmButtonColor: '#2E5F73' });
           this.router.navigate(['/Sales/Quotation-list']);
         },
-        error: () =>
-          Swal.fire({
-            icon: 'error',
-            title: 'Failed',
-            text: 'Create failed',
-            confirmButtonColor: '#d33'
-          })
+        error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Create failed', confirmButtonColor: '#d33' })
       });
     }
   }
 
-  // ---------- Navigation ----------
   goToList() {
     this.router.navigate(['/Sales/Quotation-list']);
+  }
+
+  // =========================================================
+  // ✅ MODAL (CLICK ONLY DROPDOWN)
+  // =========================================================
+  trackByItemId = (_: number, it: SimpleItem) => it.id;
+
+  openAdd() {
+    if (this.header.lineSource !== 'ITEM') return;
+
+    this.editingIndex = null;
+    this.modalPreview = null;
+
+    this.modal = {
+      itemId: null,
+      itemSearch: '',
+      qty: null,
+      uomId: null,
+      unitPrice: null,
+      discountPct: 0,
+      taxMode: (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated',
+      description: '',
+      dropdownOpen: false,
+      filteredItems: []
+    };
+
+    this.showModal = true;
+    document.body.classList.add('prl-modal-open');
+
+    setTimeout(() => {
+      try { this.itemSearchInput?.nativeElement?.focus(); } catch {}
+    }, 0);
+  }
+
+  openEdit(i: number) {
+    if (this.header.lineSource !== 'ITEM') return;
+
+    const l = this.lines[i];
+    if (!l || l.isSetHeader || l.isFromSet) return;
+
+    this.editingIndex = i;
+
+    this.modal = {
+      itemId: l.itemId || null,
+      itemSearch: l.itemName || this.getItemName(l.itemId) || '',
+      qty: (l.qty as any) ?? null,
+      uomId: l.uomId ?? null,
+      unitPrice: (l.unitPrice as any) ?? null,
+      discountPct: (l.discountPct as any) ?? 0,
+      taxMode: (l.taxMode as LineTaxMode) || 'Zero-Rated',
+      description: l.description ?? '',
+      dropdownOpen: false,
+      filteredItems: []
+    };
+
+    this.showModal = true;
+    document.body.classList.add('prl-modal-open');
+
+    this.previewLineTotals();
+
+    setTimeout(() => {
+      try { this.itemSearchInput?.nativeElement?.focus(); } catch {}
+    }, 0);
+  }
+
+  closeModal() {
+    this.showModal = false;
+    this.modal.dropdownOpen = false;
+    this.modalPreview = null;
+    document.body.classList.remove('prl-modal-open');
+  }
+
+  onModalContainer(ev: MouseEvent) {
+    ev.stopPropagation();
+  }
+
+  // ✅ CLICK ONLY toggle
+  toggleModalItemDropdown() {
+    this.modal.dropdownOpen = !this.modal.dropdownOpen;
+    if (this.modal.dropdownOpen) {
+      this.filterModalItemsOnly();
+      setTimeout(() => {
+        try { this.itemSearchInput?.nativeElement?.focus(); } catch {}
+      }, 0);
+    }
+  }
+
+  // ✅ typing should filter ONLY IF dropdown already open
+  onModalItemInput() {
+    if (!this.modal.dropdownOpen) return;
+    this.filterModalItemsOnly();
+  }
+
+  // ✅ filter only (do NOT force open)
+  private filterModalItemsOnly() {
+    const q = (this.modal.itemSearch || '').trim().toLowerCase();
+
+    this.modal.filteredItems = !q
+      ? this.itemsList.slice(0, 120)
+      : this.itemsList
+          .filter(x =>
+            (x.itemName || '').toLowerCase().includes(q) ||
+            (x.itemCode || '').toLowerCase().includes(q)
+          )
+          .slice(0, 120);
+  }
+
+  selectModalItem(row: SimpleItem) {
+    this.modal.itemId = row.id;
+    this.modal.itemSearch = row.itemName;
+    this.modal.uomId = row.uomId ?? null; // ✅ item master uomId bind
+    this.modal.dropdownOpen = false;
+    this.previewLineTotals();
+  }
+
+  previewLineTotals() {
+    const qty = +(this.modal.qty ?? 0);
+    const price = +(this.modal.unitPrice ?? 0);
+    const discPct = Math.min(100, Math.max(0, +(this.modal.discountPct ?? 0)));
+
+    const gross = qty * price;
+    const discAmt = gross * (discPct / 100);
+    const afterDisc = gross - discAmt;
+
+    const gst = +this.header.taxPct || 0;
+    const rate = this.modal.taxMode === 'Standard-Rated' ? gst : 0;
+
+    const net = this.round2(afterDisc);
+    const tax = this.round2(rate > 0 ? (afterDisc * rate) / 100 : 0);
+    const total = this.round2(net + tax);
+
+    if (qty > 0 || price > 0 || discPct > 0) this.modalPreview = { net, tax, total };
+    else this.modalPreview = null;
+  }
+
+  submitModal() {
+    if (!this.modal.itemId) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Item is required', confirmButtonColor: '#2E5F73' });
+      return;
+    }
+
+    const payload: UiLine = {
+      itemId: this.modal.itemId!,
+      itemName: this.modal.itemSearch,
+      uomId: this.modal.uomId ?? null,
+      qty: +(this.modal.qty ?? 0),
+      unitPrice: +(this.modal.unitPrice ?? 0),
+      discountPct: +(this.modal.discountPct ?? 0),
+      description: (this.modal.description || '').trim(),
+      taxMode: this.modal.taxMode,
+      taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode),
+      isFromSet: false,
+      isSetHeader: false,
+      itemSetId: null,
+      setName: ''
+    };
+
+    this.computeLine(payload);
+
+    if (this.editingIndex === null) this.lines.push(payload);
+    else this.lines[this.editingIndex] = { ...this.lines[this.editingIndex], ...payload };
+
+    this.computeTotals();
+    this.closeModal();
+  }
+
+  remove(i: number) {
+    const l = this.lines[i];
+    if (!l) return;
+
+    if (l.isSetHeader && l.itemSetId) {
+      this.removeItemSet(l.itemSetId);
+      return;
+    }
+
+    this.lines.splice(i, 1);
+    this.computeTotals();
   }
 }
